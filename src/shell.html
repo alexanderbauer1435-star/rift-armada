@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#05070f">
+<title>Rift Armada</title>
+<style>:root{color-scheme:dark}html,body{margin:0}[hidden]{display:none!important}</style>
+<style>
+/*FONT*/
+/* Brückenkonsole: dunkles Blauschwarz, türkise Leuchtkanten, kondensierte Schrift. Alle Maße im Gefecht hängen an --ui. */
+:root { --ui: 15px; --bg: #05070f; --panel: rgba(10,16,30,0.86); --panel2: rgba(16,24,44,0.92); --line: rgba(143,227,255,0.28); --acc: #8fe3ff; --acc2: #ffb86b; --txt: #e6eef6; --dim: #9fb0c3; --good: #7ddc6b; --bad: #ff5b47; --warn: #ffc23e; }
+html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: "Barlow Condensed", "DIN Alternate", Bahnschrift, "Roboto Condensed", "Arial Narrow", sans-serif; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
+#app { position: fixed; inset: 0; overflow: hidden; }
+#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+button { font: inherit; color: inherit; }
+.key { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0.45em 0.8em; min-height: 2.6em; cursor: pointer; font-size: var(--ui); font-weight: 600; letter-spacing: 0.03em; display: inline-flex; align-items: center; justify-content: center; gap: 0.4em; text-transform: uppercase; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+.key:active, .key.on { background: rgba(143,227,255,0.22); border-color: var(--acc); }
+.key.arm { border-color: var(--acc); color: #fff; background: rgba(143,227,255,0.14); }
+.key.warn { border-color: var(--bad); }
+.key:disabled, .key.off { opacity: 0.4; cursor: default; }
+.key.big { font-size: calc(var(--ui) * 1.25); padding: 0.6em 1.4em; min-width: 11em; }
+/* ---------- Gefechtsleisten ---------- */
+#hud { position: absolute; inset: 0; pointer-events: none; font-size: var(--ui); }
+#hud > * { pointer-events: auto; }
+#top { position: absolute; top: 0; left: 0; right: 0; height: 2.2em; display: flex; align-items: center; gap: 0.9em; padding: 0 0.7em; background: linear-gradient(rgba(5,7,15,0.9), rgba(5,7,15,0.55)); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top); box-sizing: content-box; }
+.res { display: flex; align-items: center; gap: 0.3em; font-weight: 600; font-size: 1.05em; min-width: 4.2em; }
+.ico { width: 1em; height: 1em; display: inline-block; border-radius: 50%; }
+.ico.ice { background: radial-gradient(circle at 35% 35%, #fff, #8fc3e6 60%, #3f6f93); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
+.ico.ore { background: radial-gradient(circle at 35% 35%, #ffd9a0, #c89050 60%, #5b4328); clip-path: polygon(25% 5%, 75% 5%, 100% 50%, 75% 95%, 25% 95%, 0 50%); border-radius: 0; }
+.ico.energy { background: none; color: #ffe066; font-weight: 700; width: auto; }
+.ico.cp { background: none; color: #fff; width: auto; }
+.ico.relic { background: none; color: #c9a0ff; width: auto; }
+.ico.wave { background: none; color: #b4ff3c; width: auto; }
+#resWave.hot { color: #ff8a6a; }
+.res.bio .ico.ice { background: radial-gradient(circle at 35% 35%, #f2ffb0, #8be04a 60%, #2e6b1a); border-radius: 50%; transform: none; }
+#resRelic.zero { opacity: 0.45; }
+.res.low { color: var(--bad); animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.45; } }
+#clock { margin-left: auto; font-weight: 600; opacity: 0.85; }
+#bPause { min-height: 1.8em; padding: 0.2em 0.7em; }
+#mini { position: absolute; right: 0.5em; top: calc(2.6em + env(safe-area-inset-top)); width: 9.5em; height: 9.5em; border: 1px solid var(--line); border-radius: 6px; background: #05070f; touch-action: none; }
+#groups { position: absolute; left: 0.4em; top: 40%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 0.35em; }
+.grp { width: 2.4em; height: 2.4em; min-height: 0; padding: 0; border-radius: 50%; opacity: 0.55; }
+.grp.has { opacity: 1; border-color: var(--acc); }
+#bottom { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; gap: 0.5em; padding: 0.4em 0.5em calc(0.4em + env(safe-area-inset-bottom)); pointer-events: none; }
+#bottom > * { pointer-events: auto; }
+#selCard { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.4em 0.6em; min-width: 10em; max-width: 14em; }
+#selCard h3 { margin: 0 0 0.2em; font-size: 1.15em; font-weight: 600; color: var(--acc); display: flex; justify-content: space-between; gap: 0.5em; }
+#selCard .sub { color: var(--dim); font-size: 0.9em; }
+.bar { height: 0.45em; background: rgba(0,0,0,0.5); border-radius: 3px; margin-top: 0.25em; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--good); }
+.bar.sh i { background: var(--acc); }
+.bar.prog i { background: #fff; }
+.sellist { display: flex; flex-wrap: wrap; gap: 0.25em; margin-top: 0.3em; }
+.sellist button { background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 0.15em 0.4em; font-size: 0.95em; min-height: 0; }
+.sellist button.hurt { border-color: var(--warn); }
+#build { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.35em 0.5em; max-width: 34em; display: flex; flex-direction: column; gap: 0.35em; }
+#tabs { display: flex; gap: 0.3em; }
+#tabs button { flex: 1; min-height: 1.9em; padding: 0.2em 0.3em; font-size: 0.92em; }
+#items { display: flex; flex-wrap: wrap; gap: 0.35em; max-height: 36vh; overflow-y: auto; touch-action: pan-y; align-content: flex-start; }
+.item { position: relative; width: 6.6em; min-height: 3em; flex-direction: column; gap: 0.1em; padding: 0.3em 0.3em; text-transform: none; }
+.item .nm { font-weight: 600; font-size: 0.92em; line-height: 1.05; white-space: normal; text-align: center; }
+.item .cost { font-size: 0.82em; color: var(--dim); display: flex; gap: 0.5em; }
+.item .cost b { font-weight: 600; color: var(--txt); }
+.item .lock { font-size: 0.78em; color: var(--warn); }
+.item .q { position: absolute; right: 0.3em; top: 0.2em; background: var(--acc); color: #000; border-radius: 1em; padding: 0 0.4em; font-size: 0.8em; font-weight: 700; }
+.item.done { opacity: 0.55; border-color: var(--good); } .item.done .q { background: var(--good); }
+.item .pb { position: absolute; left: 0.3em; right: 0.3em; bottom: 0.2em; height: 3px; background: rgba(255,255,255,0.15); }
+.item .pb i { display: block; height: 100%; background: var(--acc); }
+#cmds { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.35em; max-width: 12em; }
+#cmds .key { width: 3.4em; min-height: 2.9em; padding: 0.2em; flex-direction: column; gap: 0; font-size: 0.9em; line-height: 1.1; }
+#cmds .key small { font-size: 0.75em; opacity: 0.8; text-transform: none; }
+#cmds .key.ab { position: relative; overflow: hidden; border-color: var(--acc2); }
+#cmds .key.ab.cd { opacity: 0.75; border-color: var(--line); }
+#cmds .key.ab .cdb { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--acc2); }
+#cmds .key.ab.cd .cdb { background: var(--dim); }
+#cmds .key.ab .big { font-size: 1.3em; line-height: 1; }
+#cmds .key.ab small { font-size: 0.68em; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#cmds .key.sub { border-color: #c9a0ff; }
+.subs { display: flex; gap: 0.25em; margin-top: 0.3em; }
+.subs span { flex: 1; text-align: center; font-size: 0.85em; color: var(--dim); position: relative; padding-bottom: 0.35em; }
+.subs span i { position: absolute; left: 10%; right: 10%; bottom: 0; height: 3px; background: rgba(0,0,0,0.5); }
+.subs span i b { display: block; height: 100%; background: var(--good); }
+.subs span.mid i b { background: var(--warn); } .subs span.low i b { background: var(--bad); }
+.subs span.aim { color: #c9a0ff; }
+.crew { color: var(--dim); font-size: 0.9em; display: flex; justify-content: space-between; }
+.crew b { color: var(--txt); font-weight: 600; }
+.cmdr { color: var(--acc2); font-size: 0.9em; }
+/* ---------- Doktrin ---------- */
+#doctrine .win { max-width: min(96vw, 52em); padding: 0.8em 1em; }
+.dcards { display: flex; gap: 0.6em; justify-content: center; flex-wrap: wrap; }
+.dcard { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 0.55em 0.75em; width: 15.5em; cursor: pointer; text-align: left; position: relative; }
+.dcard.on { border-color: var(--acc2); box-shadow: 0 0 18px rgba(255,184,107,0.25); }
+.dcard h4 { margin: 0; font-size: 1.2em; color: var(--acc); display: flex; justify-content: space-between; align-items: baseline; gap: 0.4em; }
+.dcard h4 small { color: var(--dim); font-size: 0.75em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+.dcard .style { color: var(--acc2); font-weight: 600; font-size: 0.95em; margin: 0.1em 0 0.25em; }
+.dcard p { margin: 0.2em 0; color: var(--txt); font-size: 0.92em; }
+.dcard ul { margin: 0.25em 0 0.3em; padding-left: 1.1em; font-size: 0.9em; }
+.dcard li { margin: 0.05em 0; }
+.dcard .vs { display: grid; grid-template-columns: auto 1fr; gap: 0.1em 0.5em; font-size: 0.88em; margin-top: 0.3em; }
+.dcard .vs b { color: var(--good); font-weight: 600; } .dcard .vs b.w { color: var(--bad); }
+.dcard .vs span { color: var(--dim); }
+.dcard .fit { color: var(--dim); font-size: 0.86em; margin-top: 0.3em; font-style: italic; }
+.dcard .rec { position: absolute; right: 0.6em; top: -0.7em; background: var(--acc2); color: #000; font-weight: 700; font-size: 0.78em; padding: 0.1em 0.5em; border-radius: 1em; text-transform: uppercase; letter-spacing: 0.04em; }
+.dcard .rec.enemy { background: var(--line); color: var(--txt); }
+#docConfirm { min-width: 14em; }
+.bar.charge i { background: var(--acc2); }
+@media (max-height: 460px) { #doctrine .win { padding: 0.5em 0.8em; } #doctrine h2 { font-size: 1.2em; } #docIntro { display: none; } .dcard { width: 14em; font-size: 0.86em; padding: 0.4em 0.6em; } .dcard ul { margin: 0.15em 0; } .dcard .fit { display: none; } #doctrine .row { margin: 0.3em 0; } }
+#toasts { position: absolute; left: 50%; top: calc(3em + env(safe-area-inset-top)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 0.3em; pointer-events: none; max-width: 80%; }
+.toast { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0.3em 0.8em; font-size: 1.05em; animation: tin 0.25s ease-out; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.toast.good { border-color: var(--good); } .toast.warn { border-color: var(--warn); } .toast.bad { border-color: var(--bad); }
+@keyframes tin { from { opacity: 0; transform: translateY(-6px); } }
+#tip { position: absolute; left: 50%; bottom: 9em; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--acc); border-radius: 10px; padding: 0.5em 0.8em; max-width: 24em; font-size: 1em; pointer-events: none; z-index: 5; }
+#tip h4 { margin: 0 0 0.2em; color: var(--acc); font-size: 1.1em; }
+#tip .cost { color: var(--acc2); font-weight: 600; }
+#tip p { margin: 0.2em 0 0; color: var(--txt); }
+#tip .req { color: var(--warn); }
+#info { position: absolute; left: 50%; bottom: 8.6em; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0.3em 0.8em; font-size: 1em; pointer-events: none; }
+/* ---------- Fenster ---------- */
+.ovl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(2,4,10,0.72); z-index: 10; font-size: var(--ui); }
+.win { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 1.2em 1.4em; max-width: min(92vw, 36em); max-height: 88vh; overflow: auto; box-shadow: 0 0 40px rgba(143,227,255,0.12); }
+.win h2 { margin: 0 0 0.5em; font-size: 1.6em; color: var(--acc); letter-spacing: 0.06em; text-transform: uppercase; }
+.win h2.bad { color: var(--bad); } .win h2.good { color: var(--good); }
+.row { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 0.5em 0; align-items: center; }
+.fine { color: var(--dim); font-size: 0.95em; margin: 0.3em 0; }
+.lbl { color: var(--dim); min-width: 6em; }
+/* ---------- Hauptmenü ---------- */
+#menu { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, rgba(5,7,15,0.3), rgba(5,7,15,0.88) 70%); font-size: var(--ui); overflow: auto; }
+#title { font-size: 3.6em; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; color: #fff; text-shadow: 0 0 24px rgba(143,227,255,0.6), 0 0 2px #fff; margin: 0; }
+#title small { display: block; font-size: 0.32em; letter-spacing: 0.4em; color: var(--acc); font-weight: 600; }
+.page { display: flex; flex-direction: column; align-items: center; gap: 0.6em; }
+.menuBtns { display: flex; flex-direction: column; gap: 0.5em; margin-top: 1em; }
+.cards { display: flex; gap: 0.5em; flex-wrap: wrap; justify-content: center; max-width: 44em; margin: 0 auto; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 0.5em 0.8em; width: 13.5em; cursor: pointer; text-align: left; }
+.card.on { border-color: var(--acc); background: rgba(143,227,255,0.12); }
+.card h4 { margin: 0 0 0.2em; font-size: 1.2em; }
+.card p { margin: 0; color: var(--dim); font-size: 0.92em; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.seg button { background: transparent; border: 0; padding: 0.35em 0.8em; min-height: 2.2em; font-weight: 600; cursor: pointer; }
+.seg button.on { background: rgba(143,227,255,0.22); color: #fff; }
+#setup .row { justify-content: center; }
+#setup { max-height: 100vh; overflow-y: auto; padding: 0.5em 0; }
+#setup .card p { font-size: 0.74em; }
+#setup .card { width: 13.2em; padding: 0.4em 0.65em; }
+#setup .card h4 { font-size: 1.05em; }
+#loading { z-index: 20; }
+#help .win p, #help .win li { font-size: 1em; }
+#endStats { display: grid; grid-template-columns: auto auto auto; gap: 0.2em 1em; margin: 0.5em 0; }
+#endStats b { color: var(--acc); }
+#vers { position: absolute; right: 0.6em; bottom: 0.4em; color: var(--dim); font-size: 0.85em; }
+@media (max-height: 520px) { .menuBtns { display: grid; grid-template-columns: repeat(2, minmax(10em, 1fr)); gap: 0.45em 0.6em; margin-top: 0.6em; } .menuBtns #mCamp { grid-column: 1 / -1; } .menuBtns .key.big { min-width: 0; padding: 0.4em 1em; } }
+#hud.mis #toasts { left: auto; right: 11em; transform: none; align-items: flex-end; max-width: calc(100% - 25em); }
+@media (max-height: 460px) { :root { --ui: 13px; } #mini { width: 7.5em; height: 7.5em; } #title { font-size: 2.6em; } #selCard .desc { display: none; } .item { width: 6.2em; } }
+@media (max-height: 360px) { :root { --ui: 11.5px; } }
+
+/* ---------- Mehrspieler ---------- */
+#mp .win { max-width: min(96vw, 50em); width: min(96vw, 50em); }
+.mpPane .row { margin-top: 0.7em; }
+.mpCode { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.9em; align-items: start; }
+#mpQr { display: block; width: min(230px, 40vw, 48vh); height: auto; aspect-ratio: 1; image-rendering: pixelated; border-radius: 6px; background: #fff; }
+.mpSide { display: flex; flex-direction: column; gap: 0.5em; min-width: 0; }
+.mpSide p { margin: 0; }
+.mpBtns { display: flex; flex-wrap: wrap; gap: 0.4em; }
+.mpTxt { display: block; width: 100%; box-sizing: border-box; resize: none; background: rgba(0,0,0,0.4); color: var(--txt); border: 1px solid var(--line); border-radius: 8px; padding: 0.4em 0.5em; font: 12px/1.3 ui-monospace, Menlo, Consolas, monospace; word-break: break-all; }
+.mpAns { margin-top: 0.8em; padding-top: 0.7em; border-top: 1px solid var(--line); }
+.mpIn { display: flex; flex-direction: column; gap: 0.5em; }
+.mpNet { margin-top: 0.7em; display: flex; flex-direction: column; align-items: flex-start; gap: 0.5em; }
+.mpTurn { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); gap: 0.4em; width: 100%; }
+.mpTurn input { min-width: 0; background: rgba(0,0,0,0.4); color: var(--txt); border: 1px solid var(--line); border-radius: 6px; padding: 0.4em; font: 12px ui-monospace, Menlo, monospace; }
+.mpTurn input.bad { border-color: var(--bad); }
+.mpMsg { margin: 0.7em 0 0; font-weight: 600; color: var(--dim); }
+.mpMsg.good { color: var(--good); } .mpMsg.warn { color: var(--acc2); } .mpMsg.bad { color: var(--bad); }
+.mpGrid { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1em; align-items: start; }
+.mpGrid .row { margin: 0.35em 0; }
+#mpPrev { width: 9.5em; height: 9.5em; border: 1px solid var(--line); border-radius: 8px; display: block; }
+.mpState { display: flex; align-items: center; gap: 0.4em; margin: 0 0 0.3em; font-weight: 600; color: var(--bad); }
+.mpState.on { color: var(--good); }
+.mpState i { width: 0.6em; height: 0.6em; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
+.mpRight { display: flex; flex-direction: column; gap: 0.35em; width: 11em; }
+.mpRight .key { width: 100%; }
+#mpStart { font-size: calc(var(--ui) * 1.15); }
+.seg.ro button { cursor: default; }
+.seg.ro button:not(.on) { opacity: 0.45; }
+#mpWait { position: absolute; top: 3em; left: 50%; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--acc2); border-radius: 10px; padding: 0.4em 1em; font-weight: 600; z-index: 9; font-size: var(--ui); }
+#mMp.on { border-color: var(--good); }
+@media (max-width: 640px) { .mpCode, .mpGrid { grid-template-columns: 1fr; } }
+
+
+/* ---------- Conquest ---------- */
+#conq { position: absolute; inset: 0; z-index: 11; background: #04060d; font-size: var(--ui); display: flex; flex-direction: column; }
+#cqSetup { flex: 1; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 0.5em; padding: 0.8em 1em; touch-action: pan-y; background: radial-gradient(ellipse at 50% 30%, rgba(90,30,20,0.35), rgba(4,6,13,0.95) 70%); }
+#cqSetup h2 { margin: 0; color: var(--acc2); letter-spacing: 0.18em; text-transform: uppercase; font-size: 2em; text-shadow: 0 0 18px rgba(255,184,107,0.4); text-align: center; }
+#cqSetup .fine { max-width: 44em; text-align: center; }
+#cqFacs { max-width: 54em; }
+#cqFacs .card { width: 11.6em; }
+#cqFacs .card p { font-size: 0.82em; }
+#cqRec { color: var(--acc2); font-size: 0.92em; text-align: center; }
+#cqMapPane { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+#cqTop { display: flex; align-items: center; gap: 0.7em; padding: 0.25em 0.6em; padding-top: calc(0.25em + env(safe-area-inset-top)); border-bottom: 1px solid var(--line); background: rgba(5,7,15,0.9); flex-wrap: nowrap; overflow: hidden; }
+#cqTop .key { min-height: 2em; padding: 0.2em 0.7em; }
+#cqTitle { font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; white-space: nowrap; color: var(--fc); }
+#cqStats { display: flex; gap: 0.9em; color: var(--dim); white-space: nowrap; overflow: hidden; font-size: 0.95em; }
+#cqStats b { color: var(--txt); font-weight: 600; }
+#cqStats .cease { color: var(--good); }
+#cqBody { flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) 16.5em; min-height: 0; }
+#cqMapWrap { position: relative; min-height: 0; min-width: 0; }
+#cqMap { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#cqHint { position: absolute; left: 0.6em; bottom: 0.5em; color: var(--dim); font-size: 0.85em; pointer-events: none; text-shadow: 0 0 6px #000; }
+#cqSide { border-left: 1px solid var(--line); background: var(--panel); overflow-y: auto; padding: 0.5em 0.6em; display: flex; flex-direction: column; gap: 0.55em; touch-action: pan-y; }
+#cqSel h3 { margin: 0; font-size: 1.25em; display: flex; align-items: baseline; justify-content: space-between; gap: 0.5em; }
+#cqSel h3 small { color: var(--dim); font-size: 0.65em; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; }
+#cqSel .sub { color: var(--dim); font-size: 0.92em; }
+#cqSel .bonus { font-size: 0.9em; margin: 0.3em 0; line-height: 1.3; }
+#cqSel .pips { display: flex; gap: 0.8em; font-size: 0.9em; color: var(--dim); margin: 0.2em 0; }
+#cqSel .pips b { color: var(--acc2); letter-spacing: 0.1em; font-weight: 600; }
+#cqSel .warn { color: var(--bad); font-weight: 600; font-size: 0.92em; margin: 0.3em 0; }
+#cqSel .note { color: var(--acc); font-size: 0.9em; margin: 0.25em 0; }
+#cqSel .acts { display: flex; flex-direction: column; gap: 0.35em; margin-top: 0.45em; }
+#cqSel .acts .key { width: 100%; justify-content: space-between; text-transform: none; font-size: 1em; }
+#cqSel .acts .key small { color: var(--dim); font-weight: 500; }
+.cqSec { color: var(--acc); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.78em; font-weight: 700; margin-bottom: 0.2em; }
+#cqAdvBox { display: grid; grid-template-columns: auto 1fr auto; gap: 0.4em; align-items: center; }
+#cqAdvBox canvas { width: 2.6em; height: 2.6em; border-radius: 6px; border: 1px solid var(--line); }
+.infBar { position: relative; height: 0.5em; border-radius: 3px; background: linear-gradient(90deg, rgba(125,220,107,0.55), rgba(255,255,255,0.1) 50%, rgba(255,91,71,0.55)); }
+.infBar i { position: absolute; top: -0.25em; width: 0.35em; height: 1em; border-radius: 2px; background: #fff; box-shadow: 0 0 6px #fff; transform: translateX(-50%); }
+#cqAdvNames { display: flex; justify-content: space-between; font-size: 0.8em; color: var(--dim); margin-top: 0.15em; }
+#cqAdvFx { font-size: 0.85em; color: var(--acc2); margin-top: 0.2em; }
+#cqThreats ul { list-style: none; margin: 0; padding: 0; font-size: 0.9em; }
+#cqThreats li { margin: 0.15em 0; cursor: pointer; } #cqThreats li b { color: var(--bad); }
+#cqFleet { font-size: 0.9em; color: var(--dim); line-height: 1.35; }
+#cqFleet b { color: var(--txt); font-weight: 600; }
+@media (max-width: 700px) and (orientation: portrait) { #cqBody { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr); } #cqSide { border-left: 0; border-top: 1px solid var(--line); } }
+@media (max-height: 460px) { #cqBody { grid-template-columns: minmax(0, 1fr) 15em; } #cqStats .opt { display: none; } }
+/* Ereignisse des Feldzugs */
+#cqEv { z-index: 13; }
+#cqMenuWin { z-index: 13; }
+#help { z-index: 14; }
+#cqEv .win { max-width: min(96vw, 46em); width: min(96vw, 46em); border-top: 3px solid var(--fc); padding: 0.8em 1.1em; }
+#cqEvPic { width: 5.4em; height: 5.4em; }
+#cqEvTitle { color: var(--fc); }
+#cqEvBody { margin: 0.5em 0; }
+.cqLine { display: grid; grid-template-columns: 2.7em minmax(0, 1fr); gap: 0.55em; align-items: start; margin: 0.45em 0; }
+.cqLine canvas { width: 2.7em; height: 2.7em; border-radius: 6px; border: 1px solid var(--line); }
+.cqLine b { display: block; font-size: 0.88em; font-weight: 700; }
+.cqLine span { line-height: 1.32; }
+.cqRep { list-style: none; padding: 0; margin: 0.3em 0; }
+.cqRep li { display: grid; grid-template-columns: 1.3em minmax(0, 1fr); gap: 0.3em; margin: 0.28em 0; line-height: 1.3; }
+.cqRep li i { font-style: normal; text-align: center; }
+.cqRep .good i { color: var(--good); } .cqRep .bad i, .cqRep .bad { color: var(--bad); } .cqRep .warn i { color: var(--warn); } .cqRep .brood i { color: #8be04a; } .cqRep .big { color: var(--acc2); font-weight: 600; } .cqRep .info i, .cqRep .own i { color: var(--dim); }
+.cqLog { border-left: 2px solid #c9a0ff; padding: 0.2em 0 0.2em 0.7em; font-style: italic; line-height: 1.4; margin: 0.5em 0; }
+#cqEvOpts { display: flex; gap: 0.6em; flex-wrap: wrap; justify-content: center; margin: 0.4em 0; }
+#cqEvOpts .dcard { width: 17.5em; }
+#cqEvOpts .dcard .by { color: var(--dim); font-size: 0.82em; margin-top: 0.3em; }
+#cqEvQ { font-weight: 600; margin: 0.6em 0 0.3em; }
+/* ---------- Kampagne ---------- */
+#pCamp { width: min(100vw, 62em); max-height: 100vh; overflow-y: auto; padding: 0.6em 0.9em 0.8em; box-sizing: border-box; touch-action: pan-y; }
+.campHead { text-align: center; }
+.campHead h2 { margin: 0; color: var(--acc); letter-spacing: 0.22em; text-transform: uppercase; font-size: 2em; text-shadow: 0 0 18px rgba(143,227,255,0.45); }
+.campHead p { margin: 0.15em auto 0.4em; max-width: 42em; }
+.acts { display: flex; flex-direction: column; gap: 0.4em; width: 100%; }
+.act { display: grid; grid-template-columns: 10.5em 1fr; gap: 0.6em; align-items: center; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--fc); border-radius: 10px; padding: 0.35em 0.6em; }
+.act h3 { margin: 0; font-size: 1.15em; color: var(--fc); text-transform: uppercase; letter-spacing: 0.06em; line-height: 1.1; }
+.act h3 small { display: block; color: var(--dim); font-size: 0.68em; letter-spacing: 0.08em; font-weight: 600; }
+.mis { display: flex; gap: 0.4em; flex-wrap: wrap; }
+.mcard { position: relative; background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0.25em 1.6em 0.3em 0.6em; min-width: 9em; text-align: left; cursor: pointer; }
+.mcard b { display: block; font-size: 1.05em; font-weight: 600; }
+.mcard small { color: var(--dim); font-size: 0.78em; letter-spacing: 0.06em; text-transform: uppercase; }
+.mcard.done { border-color: rgba(125,220,107,0.55); }
+.mcard.done::after { content: '✓'; position: absolute; right: 0.5em; top: 0.3em; color: var(--good); font-weight: 700; }
+.mcard.lock { opacity: 0.35; cursor: default; }
+.mcard.next { border-color: var(--acc); box-shadow: 0 0 14px rgba(143,227,255,0.28); }
+.mcard .stars { color: var(--acc2); margin-left: 0.35em; letter-spacing: 0; }
+.chron { font-size: 0.92em; color: var(--dim); max-width: 46em; text-align: center; margin: 0.5em auto 0; }
+.chron b { color: var(--acc2); font-weight: 600; }
+@media (max-width: 640px) { .act { grid-template-columns: 1fr; } }
+/* Einsatzbesprechung */
+#brief { z-index: 12; }
+#brief .win { max-width: min(96vw, 48em); width: min(96vw, 48em); padding: 0.9em 1.1em; border-top: 3px solid var(--fc); }
+.bHead { display: flex; gap: 0.8em; align-items: center; }
+.pic { border-radius: 10px; border: 1px solid var(--line); background: #000; flex: none; display: block; }
+#briefPic { width: 6.6em; height: 6.6em; }
+.bHead h2 { margin: 0; color: var(--fc); }
+.bAct { color: var(--dim); font-size: 0.88em; text-transform: uppercase; letter-spacing: 0.14em; font-weight: 600; }
+.bWho { color: var(--acc2); font-size: 0.98em; }
+.bText p { margin: 0.45em 0; line-height: 1.34; font-size: 1.05em; }
+.bCols { display: grid; grid-template-columns: 1fr 1fr; gap: 0.2em 1.2em; }
+.bGoals { margin: 0.2em 0; padding: 0; list-style: none; }
+.bGoals li { padding-left: 1.2em; position: relative; margin: 0.18em 0; }
+.bGoals li::before { content: '◆'; position: absolute; left: 0; color: var(--fc); font-size: 0.78em; top: 0.18em; }
+.bGoals li.side::before { content: '◇'; color: var(--acc2); }
+.bGoals li.side, .bGoals li small { color: var(--dim); }
+.bGoals li.more { color: var(--dim); font-style: italic; } .bGoals li.more::before { content: '…'; color: var(--dim); }
+.bHints { font-size: 0.92em; color: var(--dim); margin: 0.2em 0; padding-left: 1.1em; }
+.bHints li { margin: 0.15em 0; }
+.bCarry { border-left: 2px solid var(--acc2); padding: 0.1em 0 0.1em 0.6em; font-size: 0.95em; margin: 0.5em 0; line-height: 1.35; }
+.bCarry b { color: var(--acc2); font-weight: 600; }
+.bSec { color: var(--fc); text-transform: uppercase; letter-spacing: 0.12em; font-size: 0.82em; margin-top: 0.55em; font-weight: 700; }
+@media (max-width: 640px), (max-height: 460px) { .bCols { grid-template-columns: 1fr; } #briefPic { width: 5em; height: 5em; } .bText p { font-size: 1em; } }
+/* Titelkarte, Funk, Ziele */
+#misTitle { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); text-align: center; pointer-events: none; animation: mtitle 4.6s ease-out forwards; z-index: 4; text-shadow: 0 0 18px rgba(0,0,0,0.9); white-space: nowrap; }
+#misTitle small { display: block; color: var(--fc); font-size: 1em; letter-spacing: 0.3em; text-transform: uppercase; font-weight: 600; }
+#misTitle b { display: block; font-size: 2.6em; letter-spacing: 0.14em; text-transform: uppercase; color: #fff; font-weight: 700; }
+#misTitle span { display: block; color: var(--dim); font-size: 0.95em; letter-spacing: 0.2em; text-transform: uppercase; }
+@keyframes mtitle { 0% { opacity: 0; letter-spacing: 0.3em; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; } }
+#misBox { position: absolute; left: 3.3em; top: calc(2.7em + env(safe-area-inset-top)); width: min(21em, 40vw); display: flex; flex-direction: column; align-items: flex-start; gap: 0.35em; pointer-events: none; }
+#misBox > * { pointer-events: auto; }
+#radio { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.5em; width: 100%; box-sizing: border-box; background: var(--panel2); border: 1px solid var(--line); border-left: 3px solid var(--rc); border-radius: 10px; padding: 0.35em 0.5em; animation: rin 0.3s ease-out; cursor: pointer; box-shadow: 0 0 18px rgba(0,0,0,0.5); }
+@keyframes rin { from { opacity: 0; transform: translateX(-10px); } }
+#radioPic { width: 3.7em; height: 3.7em; border-radius: 7px; }
+#radio .rh { display: flex; align-items: baseline; gap: 0.4em; }
+#radioName { font-weight: 700; color: var(--rc); font-size: 0.98em; line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#radioRole { color: var(--dim); font-size: 0.78em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex: 1; }
+#radioMore { color: var(--acc2); font-size: 0.8em; font-weight: 700; }
+#radioText { font-size: 1em; line-height: 1.24; margin-top: 0.1em; min-height: 2.4em; }
+#goalsBox { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.28em 0.55em 0.3em; font-size: 0.92em; cursor: pointer; max-width: 100%; box-sizing: border-box; }
+#goalsBox h4 { margin: 0; font-size: 0.82em; color: var(--acc); text-transform: uppercase; letter-spacing: 0.12em; display: flex; justify-content: space-between; gap: 1em; }
+#goalsBox h4::after { content: '▴'; color: var(--dim); } #goalsBox.fold h4::after { content: '▾'; }
+#goalsList { margin: 0.15em 0 0; padding: 0; list-style: none; }
+#goalsList li { display: flex; gap: 0.4em; line-height: 1.18; margin: 0.14em 0; }
+#goalsList li i { font-style: normal; width: 1em; flex: none; text-align: center; color: var(--acc); }
+#goalsList li.done { color: var(--dim); } #goalsList li.done i { color: var(--good); }
+#goalsList li.fail { color: var(--dim); text-decoration: line-through; } #goalsList li.fail i { color: var(--bad); }
+#goalsList li.side span:first-of-type { color: var(--dim); } #goalsList li.side i { color: var(--acc2); }
+#goalsList li .v { margin-left: auto; color: var(--acc2); font-weight: 600; white-space: nowrap; padding-left: 0.5em; }
+#goalsBox.fold #goalsList { display: none; }
+#goalsBox.flash { animation: gflash 1.4s ease-out; }
+@keyframes gflash { 0% { border-color: var(--acc2); box-shadow: 0 0 18px rgba(255,184,107,0.55); } 100% { border-color: var(--line); box-shadow: none; } }
+@media (max-height: 460px) { #radioPic { width: 3.1em; height: 3.1em; } #misBox { width: min(19em, 38vw); } #misTitle b { font-size: 2em; } }
+/* Entscheidung */
+#ask .win { max-width: min(96vw, 44em); border-top: 3px solid var(--fc); }
+#askPic { width: 5em; height: 5em; }
+#askWho { color: var(--fc); }
+#askQ { margin: 0.6em 0 0.8em; line-height: 1.38; font-size: 1.08em; }
+.askOpts { display: flex; gap: 0.6em; flex-wrap: wrap; justify-content: center; }
+.askOpts .dcard { width: 17.5em; }
+.askOpts .dcard:active { border-color: var(--acc2); }
+/* Nachbesprechung */
+#endMis { margin: 0.2em 0 0.4em; }
+#endGoals { margin: 0.3em 0; padding: 0; list-style: none; }
+#endGoals li { margin: 0.14em 0; } #endGoals li b { display: inline-block; width: 1.3em; }
+#endGoals li.ok b { color: var(--good); } #endGoals li.no b { color: var(--bad); } #endGoals li.no { color: var(--dim); } #endGoals small { color: var(--dim); }
+#endChoice { color: var(--acc2); margin: 0.4em 0; }
+#endOutro { border-left: 2px solid var(--acc); padding: 0.15em 0 0.15em 0.7em; margin: 0.6em 0; font-style: italic; line-height: 1.38; }
+.tutHL { position: relative; z-index: 3; border-color: var(--acc2) !important; box-shadow: 0 0 0 2px var(--acc2), 0 0 18px rgba(255,184,107,0.8) !important; animation: tutp 1.1s ease-in-out infinite; }
+@keyframes tutp { 50% { box-shadow: 0 0 0 4px rgba(255,184,107,0.4), 0 0 26px rgba(255,184,107,0.9); } }
+#endOutro.tip { font-style: normal; color: var(--dim); border-color: var(--acc2); }
+#pLog .bSec { color: var(--acc); }
+#pLogList { list-style: none; margin: 0.2em 0 0.4em; padding: 0; max-height: 34vh; overflow-y: auto; touch-action: pan-y; font-size: 0.95em; }
+#pLogList li { margin: 0.25em 0; line-height: 1.3; } #pLogList b { font-weight: 600; margin-right: 0.35em; }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="view"></canvas>
+  <div id="hud" hidden>
+    <div id="top">
+      <div class="res" id="resIce"><span class="ico ice"></span><span id="rIce">0</span></div>
+      <div class="res" id="resOre"><span class="ico ore"></span><span id="rOre">0</span></div>
+      <div class="res" id="resEnergy"><span class="ico energy">⚡</span><span id="rEnergy">+0</span></div>
+      <div class="res" id="resCp"><span class="ico cp">★</span><span id="rCp">0/0</span></div>
+      <div class="res" id="resWave" hidden title="Welle"><span class="ico wave">≋</span><span id="rWave">0</span></div>
+      <div class="res" id="resRelic" title="Relikte"><span class="ico relic">◆</span><span id="rRelic">0</span></div>
+      <div id="clock">0:00</div>
+      <button class="key" id="bRange" data-tip="Reichweiten und Schussfelder der Auswahl anzeigen">◎</button>
+      <button class="key" id="bPause" data-al="Pause">❚❚</button>
+    </div>
+    <canvas id="mini"></canvas>
+    <div id="groups">
+      <button class="key grp" data-g="1">1</button><button class="key grp" data-g="2">2</button><button class="key grp" data-g="3">3</button><button class="key grp" data-g="4">4</button><button class="key grp" data-g="5">5</button>
+    </div>
+    <div id="bottom">
+      <div id="selCard" hidden></div>
+      <div id="build" hidden><div id="tabs"></div><div id="items"></div></div>
+      <div id="cmds"></div>
+    </div>
+    <div id="misBox" hidden>
+      <div id="radio" hidden><canvas id="radioPic" class="pic" width="112" height="112"></canvas><div><div class="rh"><span id="radioName"></span><span id="radioRole"></span><span id="radioMore"></span></div><div id="radioText"></div></div></div>
+      <div id="goalsBox"><h4><span>Ziele</span><span id="goalsN"></span></h4><ul id="goalsList"></ul></div>
+    </div>
+    <div id="misTitle" hidden></div>
+    <div id="toasts"></div>
+    <div id="info" hidden></div>
+    <div id="tip" hidden></div>
+  </div>
+  <div id="menu">
+    <div class="page" id="pHome">
+      <h1 id="title">Rift Armada<small>Runde 9 · Vorabfassung</small></h1>
+      <div class="menuBtns">
+        <button class="key big arm" id="mCamp" data-l="Kampagne">Kampagne</button>
+        <button class="key big" id="mConq" data-l="Conquest">Conquest</button>
+        <button class="key big" id="mSkirm" data-l="Gefecht">Gefecht</button>
+        <button class="key big" id="mWaves" data-l="Wellen">Wellen</button>
+        <button class="key big" id="mCont" data-l="Fortsetzen" hidden>Fortsetzen</button>
+        <button class="key big" id="mMp" data-l="Mehrspieler">Mehrspieler</button>
+        <button class="key big" id="mSandbox" data-l="Übungsplatz">Übungsplatz</button>
+        <button class="key big" id="mSettings" data-l="Einstellungen">Einstellungen</button>
+        <button class="key big" id="mHelp" data-l="Hilfe">Hilfe</button>
+        <button class="key" id="mFull" data-l="Vollbild">Vollbild</button>
+      </div>
+      <p class="fine" id="mNote" hidden></p>
+    </div>
+    <div class="page" id="setup" hidden>
+      <h2 style="margin:0;color:var(--acc)" id="setupTitle">Gefecht</h2>
+      <div class="row"><span class="lbl">Modus</span><div class="seg" id="modeSeg"></div></div>
+      <div class="row"><span class="lbl">Fraktion</span><div class="cards" id="facCards"></div></div>
+      <div class="row" id="rowMap"><span class="lbl">Karte</span><div class="seg" id="mapSeg"></div></div>
+      <div class="row" id="rowOpp"><span class="lbl">Gegner</span><div class="seg" id="oppSeg"></div><span class="lbl" style="min-width:0">Stärke</span><div class="seg" id="lvlSeg"></div></div>
+      <div class="row" id="rowOppF"><span class="lbl">Gegnerfraktion</span><div class="seg" id="oppFSeg"></div></div>
+      <div class="row" id="rowAllies" hidden><span class="lbl">Verbündete (KI)</span><div class="seg" id="alliesSeg"></div><span class="lbl" style="min-width:0">Stärke</span><div class="seg" id="allyLvlSeg"></div></div>
+      <div class="row"><span class="lbl">Startmittel</span><div class="seg" id="resSeg"></div></div>
+      <p class="fine" id="mapDesc"></p>
+      <div class="row"><button class="key" id="mBack">Zurück</button><button class="key big arm" id="mStart">Start</button></div>
+    </div>
+    <div class="page" id="pCamp" hidden>
+      <div class="campHead"><h2>Quarantine</h2><p class="fine">Vierzig Jahre nach der Stille flackern die Tore der Erbauer wieder. Ein Prolog, fünf Akte, vier Fraktionen – und etwas, das durch die Tore kommt. Deine Entscheidungen reisen mit bis ins Finale.</p></div>
+      <div class="acts" id="campActs"></div>
+      <p class="chron" id="campChron" hidden></p>
+      <div class="row" style="justify-content:center"><button class="key" id="campBack">Zurück</button><button class="key" id="campAll">Alle freischalten</button></div>
+    </div>
+    <div id="vers">Rift Armada · Fassung %V%</div>
+  </div>
+
+  <div id="mpWait" hidden><span id="mpWaitT"></span></div>
+  <div class="ovl" id="mp" hidden><div class="win">
+    <div class="row" style="justify-content:space-between;margin-top:0"><h2 id="mpTitle" style="margin:0">Mehrspieler</h2><button class="key" id="mpX">✕</button></div>
+    <div id="mpHome" class="mpPane">
+      <p class="fine">Zwei Geräte, jedes mit dieser Datei, im selben WLAN oder über einen Hotspot verbunden. Ein Gerät eröffnet, das andere tritt bei. Dazu tauschen die Geräte zwei Codes aus: per Kamera als QR-Code oder kopiert und hinübergeschickt.</p>
+      <div class="row"><button id="mpHost" class="key big arm">Spiel eröffnen</button><button id="mpJoin" class="key big">Beitreten</button></div>
+      <div id="mpNet" class="mpNet">
+        <button id="mpInet" class="key">Über das Internet</button>
+        <p id="mpInetNote" class="fine" hidden>Für Geräte in verschiedenen Netzen. Der Code enthält dann auch die öffentliche IP-Adresse deines Anschlusses, und öffentliche Adressdienste (STUN von Google und Cloudflare) erfahren sie ebenfalls. Gib den Code nur an Mitspieler, denen du vertraust. Hinter strengen Netzen braucht es zusätzlich einen eigenen TURN-Server.</p>
+        <div id="mpTurn" class="mpTurn" hidden>
+          <input id="mpTurnUrl" type="text" spellcheck="false" autocomplete="off" placeholder="turn:server.example:3478">
+          <input id="mpTurnUser" type="text" spellcheck="false" autocomplete="off" placeholder="Name">
+          <input id="mpTurnPass" type="password" autocomplete="off" placeholder="Passwort">
+        </div>
+      </div>
+      <p id="mpOff" class="fine" hidden></p>
+    </div>
+    <div id="mpShow" class="mpPane" hidden>
+      <div class="mpCode">
+        <canvas id="mpQr" width="200" height="200"></canvas>
+        <div class="mpSide">
+          <p class="fine" id="mpShowStep"></p>
+          <p id="mpShowText"></p>
+          <div class="mpBtns"><button id="mpCopy" class="key">Code kopieren</button><button id="mpShare" class="key" hidden>Teilen</button></div>
+          <textarea id="mpOwn" class="mpTxt" rows="3" readonly spellcheck="false"></textarea>
+        </div>
+      </div>
+      <div id="mpAns" class="mpAns">
+        <p class="fine">Schritt 2 von 2: Antwort-Code des anderen Geräts</p>
+        <div class="mpIn">
+          <textarea id="mpIn2" class="mpTxt" rows="2" spellcheck="false" autocomplete="off" placeholder="Antwort-Code hier einfügen"></textarea>
+          <div class="mpBtns"><button id="mpScan2" class="key" hidden>Scannen</button><button id="mpPaste2" class="key" hidden>Einfügen</button><button id="mpGo2" class="key arm">Verbinden</button></div>
+        </div>
+      </div>
+      <div class="row"><button id="mpBack" class="key">Abbrechen</button></div>
+    </div>
+    <div id="mpEnter" class="mpPane" hidden>
+      <p class="fine">Schritt 1 von 2: Code des eröffnenden Geräts. Mit der Kamera scannen oder den kopierten Code einfügen.</p>
+      <div class="mpIn">
+        <textarea id="mpIn1" class="mpTxt" rows="3" spellcheck="false" autocomplete="off" placeholder="Code hier einfügen"></textarea>
+        <div class="mpBtns"><button id="mpScan1" class="key" hidden>Scannen</button><button id="mpPaste1" class="key" hidden>Einfügen</button><button id="mpGo1" class="key arm">Weiter</button></div>
+      </div>
+      <div class="row"><button id="mpBack1" class="key">Zurück</button></div>
+    </div>
+    <div id="mpCam" class="mpPane" hidden>
+      <video id="mpVideo" playsinline muted style="width:100%;max-height:50vh;border-radius:8px;background:#000"></video>
+      <div class="row"><button id="mpCamX" class="key">Abbrechen</button></div>
+    </div>
+    <div id="mpLobby" class="mpPane" hidden>
+      <div class="mpGrid">
+        <div>
+          <p id="mpState" class="mpState"><i></i><span id="mpStateT"></span></p>
+          <div class="row"><span class="lbl">Deine Fraktion</span><div class="seg" id="mpFac"></div></div>
+          <div class="row"><span class="lbl">Mitspieler</span><b id="mpPeerN"></b><small class="fine" id="mpPeerS"></small></div>
+          <div class="row"><span class="lbl">Spielart</span><div class="seg" id="mpKind"></div></div>
+          <p id="mpKindInfo" class="fine"></p>
+          <div class="row"><span class="lbl">Karte</span><div class="seg" id="mpMap"></div></div>
+          <div class="row" id="mpAlliesRow"><span class="lbl">KI-Verbündete</span><div class="seg" id="mpAllies"></div></div>
+          <div class="row" id="mpLvlRow"><span class="lbl">KI-Stärke</span><div class="seg" id="mpLvl"></div></div>
+          <div class="row" id="mpResRow"><span class="lbl">Startmittel</span><div class="seg" id="mpRes"></div></div>
+        </div>
+        <div>
+          <canvas id="mpPrev" width="220" height="220"></canvas>
+          <p id="mpMapInfo" class="fine" style="max-width:11em"></p>
+          <div class="mpRight">
+            <button id="mpRoll" class="key">Neu würfeln</button>
+            <button id="mpStart" class="key arm">Gefecht starten</button>
+            <button id="mpLeave" class="key">Verbindung trennen</button>
+          </div>
+          <p id="mpLobbyNote" class="fine" style="max-width:11em"></p>
+        </div>
+      </div>
+    </div>
+    <p id="mpMsg" class="mpMsg" hidden></p>
+  </div></div>
+  <div class="ovl" id="mpLost" hidden><div class="win">
+    <p class="fine">Mehrspieler</p>
+    <h2 id="mpLostT"></h2>
+    <p id="mpLostB"></p>
+    <div class="row"><button id="mpAi" class="key big arm">Mit KI weiterspielen</button><button id="mpLostMenu" class="key big">Zum Hauptmenü</button></div>
+  </div></div>
+  <div id="conq" hidden>
+    <div id="cqSetup">
+      <h2>Conquest of the Caldera</h2>
+      <p class="fine">Der Kessel mit zwanzig Systemen. Jede Runde eine Tat: angreifen, verteidigen oder befestigen – dann ziehen die anderen Mächte, und Torstürme tragen die Brood in den Kessel. Gehaltene Systeme stärken jede Schlacht, dein Flaggschiff steigt über den ganzen Feldzug auf. Wähle deine Fraktion.</p>
+      <div class="cards" id="cqFacs"></div>
+      <div class="row"><span class="lbl">Schwierigkeit</span><div class="seg" id="cqLvl"></div></div>
+      <p id="cqRec" hidden></p>
+      <p class="fine" id="cqSaveNote" hidden></p>
+      <div class="row" style="justify-content:center"><button class="key" id="cqBack">Zurück</button><button class="key big" id="cqCont" hidden>Feldzug fortsetzen</button><button class="key big arm" id="cqNew">Neuer Feldzug</button></div>
+    </div>
+    <div id="cqMapPane" hidden>
+      <div id="cqTop"><button class="key" id="cqMenuB">☰</button><span id="cqTitle"></span><span id="cqStats"></span></div>
+      <div id="cqBody">
+        <div id="cqMapWrap"><canvas id="cqMap"></canvas><div id="cqHint"></div></div>
+        <div id="cqSide">
+          <div id="cqSel"></div>
+          <div><div class="cqSec">Berater</div><div id="cqAdvBox"><canvas id="cqAdvA" width="80" height="80"></canvas><div><div class="infBar"><i id="cqInf"></i></div><div id="cqAdvNames"><span id="cqAdvAN"></span><span id="cqAdvBN"></span></div></div><canvas id="cqAdvB" width="80" height="80"></canvas></div><div id="cqAdvFx"></div></div>
+          <div id="cqThreats"></div>
+          <div><div class="cqSec">Flotte</div><div id="cqFleet"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="ovl" id="cqEv" hidden><div class="win">
+    <div class="bHead"><canvas id="cqEvPic" class="pic" width="160" height="160"></canvas><div><div class="bAct" id="cqEvKind"></div><h2 id="cqEvTitle" style="margin:0"></h2></div></div>
+    <div id="cqEvBody"></div>
+    <p id="cqEvQ" hidden></p>
+    <div id="cqEvOpts"></div>
+    <div class="row" style="justify-content:center" id="cqEvRow"><button class="key big arm" id="cqEvGo">Weiter</button><button class="key" id="cqEvAlt" hidden></button></div>
+  </div></div>
+  <div class="ovl" id="cqMenuWin" hidden><div class="win">
+    <h2>Feldzug</h2>
+    <p class="fine" id="cqMenuNote"></p>
+    <div class="row"><button class="key arm" id="cqMResume">Weiter</button><button class="key" id="cqMHelp">Hilfe</button><button class="key" id="cqMMain">Hauptmenü</button></div>
+    <div class="row"><button class="key warn" id="cqMQuit">Feldzug aufgeben</button></div>
+  </div></div>
+  <div class="ovl" id="brief" hidden><div class="win">
+    <div class="bHead"><canvas id="briefPic" class="pic" width="200" height="200"></canvas><div><div class="bAct" id="briefAct"></div><h2 id="briefName"></h2><div class="bWho" id="briefWho"></div></div></div>
+    <div class="bText" id="briefText"></div>
+    <div class="bCarry" id="briefCarry" hidden></div>
+    <div class="bCols">
+      <div><div class="bSec">Ziele</div><ul class="bGoals" id="briefGoals"></ul></div>
+      <div><div class="bSec">Hinweise</div><ul class="bHints" id="briefHints"></ul></div>
+    </div>
+    <div class="row" id="briefFacRow" hidden><span class="lbl">Fraktion</span><div class="seg" id="briefFac"></div></div>
+    <div class="row"><span class="lbl">Schwierigkeit</span><div class="seg" id="briefLvl"></div></div>
+    <div class="row"><button class="key" id="briefBack">Zurück</button><button class="key big arm" id="briefGo">Mission starten</button></div>
+  </div></div>
+  <div class="ovl" id="ask" hidden><div class="win">
+    <div class="bHead"><canvas id="askPic" class="pic" width="150" height="150"></canvas><div><div class="bAct">Entscheidung</div><h2 id="askWho" style="margin:0"></h2></div></div>
+    <p id="askQ"></p>
+    <div class="askOpts" id="askOpts"></div>
+  </div></div>
+  <div class="ovl" id="doctrine" hidden><div class="win">
+    <h2 style="margin-bottom:0.2em">Doktrin wählen</h2>
+    <p class="fine" id="docIntro" style="margin-top:0"></p>
+    <div class="dcards" id="docCards"></div>
+    <div class="row" style="justify-content:center"><button class="key" id="docLater">Später</button><button class="key arm" id="docConfirm" hidden>Festlegen</button></div>
+  </div></div>
+  <div class="ovl" id="pause" hidden><div class="win">
+    <h2>Pause</h2>
+    <p class="fine" id="pNote" hidden></p>
+    <div id="pLog" hidden><div class="bSec">Funkprotokoll</div><ul id="pLogList"></ul></div>
+    <div class="row"><button class="key arm" id="pResume">Weiter</button><button class="key" id="pSettings">Einstellungen</button><button class="key" id="pHelp">Hilfe</button></div>
+    <div class="row"><button class="key" id="pRestart">Neustart</button><button class="key warn" id="pQuit">Hauptmenü</button><button class="key" id="pFull">Vollbild</button></div>
+  </div></div>
+  <div class="ovl" id="end" hidden><div class="win">
+    <h2 id="endTitle">Sieg</h2>
+    <p id="endText" class="fine"></p>
+    <div id="endMis" hidden><ul id="endGoals"></ul><p id="endChoice" hidden></p><p id="endOutro" hidden></p></div>
+    <div id="endStats"></div>
+    <div class="row"><button class="key arm" id="eNext" hidden>Weiter</button><button class="key arm" id="eAgain">Noch einmal</button><button class="key" id="eMenu">Hauptmenü</button></div>
+  </div></div>
+  <div class="ovl" id="settings" hidden><div class="win">
+    <h2>Einstellungen</h2>
+    <div class="row"><span class="lbl">Geräusche</span><input type="range" id="sVol" min="0" max="100" step="5"><span id="sVolV"></span></div>
+    <div class="row"><span class="lbl">Musik</span><input type="range" id="sMus" min="0" max="100" step="5"><span id="sMusV"></span></div>
+    <div class="row"><span class="lbl">Tasten</span><div class="seg" id="sScale"></div></div>
+    <div class="row"><span class="lbl">Tempo</span><div class="seg" id="sSpeed"></div></div>
+    <div class="row"><span class="lbl">Balken</span><div class="seg" id="sBars"></div></div>
+    <div class="row"><span class="lbl">Qualität</span><div class="seg" id="sQual"></div></div>
+    <div class="row"><span class="lbl">Sprache · Language</span><div class="seg" id="sLang"></div></div>
+    <div class="row"><button class="key arm" id="sClose">Schließen</button></div>
+  </div></div>
+  <div class="ovl" id="help" hidden><div class="win">
+    <h2>Hilfe</h2>
+    <p><b>Neu hier?</b> Kampagne → Ausbildung führt in zehn kurzen Schritten durch die Bedienung. Die Taste, die gerade gebraucht wird, leuchtet orange.</p>
+    <p><b>Ziel:</b> Zerstöre alle Stationen und Bauschiffe der Gegner. Wer keine Station und kein Bauschiff mehr hat, scheidet aus.</p>
+    <p><b>Wirtschaft:</b> Frachter bauen Eis an Eismonden und Erz an Erzbrocken ab und liefern an die Raffinerie. Reaktoren liefern Energie; bei Mangel laden Schilde und bauen Werften langsamer. Kommandopunkte begrenzen die Flotte, Relais geben mehr.</p>
+    <p><b>Bauen:</b> Bauschiff wählen, Station im Baumenü antippen, Platz antippen. Stationen lassen sich auf drei Stufen ausbauen und ändern dabei sichtbar ihre Form. Die Kommandobasis ist ab Stufe 2 bewaffnet.</p>
+    <p><b>Forschung:</b> Labor wählen und eine Technologie antippen, eine zugleich. Labor Stufe II und III schalten weitere frei; das Labor schaltet außerdem Kreuzer (Stufe I) und Großschiffe (Stufe II) frei.</p>
+    <p><b>Bedienung:</b> Ein Finger wischen verschiebt, zwei Finger zoomen. Tippen wählt, Tippen auf ein Ziel befiehlt (fliegen, angreifen, abbauen). Doppelt tippen wählt alle Schiffe dieses Typs. Langes Drücken auf freien Raum: Angriffsmarsch. »Auswahl« zieht einen Rahmen. Langes Drücken auf eine Taste zeigt die Erklärung. Gruppen 1–5: tippen wählt, lange drücken speichert. Der Übungsplatz im Hauptmenü hat alles freigeschaltet und Zielscheiben.</p>
+    <p><b>Kampf:</b> Strahlen sind stark gegen Schilde, kinetische Waffen gegen Panzerung und Hülle. Torpedos treffen hart, werden aber von Punktverteidigung abgeschossen. Schiffe haben Schussfelder, die Taste ◎ zeigt sie. Abschüsse bringen Erfahrung.</p>
+    <p><b>Subsysteme und Crew:</b> Jedes Schiff hat Antrieb, Waffen, Schilde, Sensoren und Lebenserhaltung. Treffer auf die Hülle schwächen sie; mit der Taste »Ziel« wählst du ein Subsystem, das deine Schiffe beim nächsten Angriff gezielt beschießen. Ohne Lebenserhaltung schwindet die Crew; ohne Crew treibt ein Schiff als Wrack. Eigene Wracks besetzt ein Bauschiff in der Nähe neu, fremde lassen sich entern.</p>
+    <p><b>Entern:</b> Boarder und Dropship setzen Marines auf ein Ziel über (Taste »Entern«, dann Ziel antippen). Ist die Crew besiegt, gehört das Schiff dir. Erst die Crew schwächen, dann entern.</p>
+    <p><b>Fähigkeiten:</b> Viele Schiffe haben eine Spezialfähigkeit (orangene Taste, langes Drücken erklärt sie). »Auto« lässt das Schiff sie selbst einsetzen. Flaggschiffe (eines je Partei, Werft III) haben drei Fähigkeiten, die Doktrin gibt eine vierte.</p>
+    <p><b>Doktrin:</b> Mit Kommandobasis Stufe II wählst du einmalig eine Doktrin: dauerhafte Boni, ein exklusives Schiff und eine Flaggschiff-Fähigkeit. Die Karten zeigen, wogegen sie stark oder schwach ist.</p>
+    <p><b>Golden Legion:</b> Heldenschiffe mit Namen, Begleitdrohnen und Lichtlanzen, die zum Teil durch Schilde gehen. Gefallene Helden ruhen als Wrack: ein Restorer daneben erweckt sie, mit allem Rang. Der Last Sovereign steht einmal pro Partie wieder auf. Superwaffe Sunbreaker: Sterneneruption in einem Bereich.</p>
+    <p><b>The Nexus:</b> Alles muss am Netz hängen: Stationen brauchen einen verbundenen Knoten in Reichweite, sonst sind sie abgeschaltet (»Kein Netz«). Harvester liefern sofort, solange sie im Netz stehen. Drei Shards verschmelzen zu einem Prism, drei Prisms zu einem Monolith (Taste »Verschmelzen«). Binder übernehmen Feinde mit wenig Hülle. Superwaffe Resonanz: alle kleinen Feindschiffe im Bereich wechseln die Seite.</p>
+    <p><b>The Brood:</b> Lebende Schiffe ohne Schild, die sich von selbst heilen; alles kostet nur Biomasse. Grazer fressen Eis, Erz und Wracks (Wrack antippen). Larven sind billig und mutieren per Taste in Schwarm, Spitter, Ravager oder Leech (Kokon, kostet den Preisunterschied); Spitter werden zum Acid Maw. Säure brennt nach dem Treffer weiter und ignoriert Panzerung, Bisse gehen durch Panzerung, Parasiten schlüpfen nach 12 Sekunden als Schwarm. Sporenteppiche und Sporennester heilen die Brood und zersetzen Feinde. Leviathan und Matriarch verschlingen angeschlagene Schiffe. Superwaffe Brutsturm: ein Sturm aus Schwärmen irgendwo auf der Karte.</p>
+    <p><b>Kampagne »Quarantine«:</b> Ein Prolog, fünf Akte und eine Bonusmission, jede mit eigener Karte, Zielen und Funksprüchen. Jeder Akt spielt eine andere Fraktion, im Finale wählst du selbst. Tippe auf den Funkspruch, um weiterzublättern, und auf »Ziele«, um die Liste einzuklappen. An drei Stellen triffst du eine Entscheidung; sie verändert spätere Missionen und das Ende. Fortschritt und Entscheidungen bleiben auf dem Gerät gespeichert, eine laufende Mission setzt »Fortsetzen« fort.</p>
+    <p><b>Conquest of the Caldera:</b> Feldzug auf der Sektorkarte mit zwanzig Systemen. Tippe ein System an: Nachbarn deiner Systeme (über Torsysteme auch jedes andere Tor) kannst du angreifen – als echte Schlacht oder berechnet. Eigene Systeme lassen sich befestigen; kündigt eine Macht einen Angriff an, kannst du ihn selbst abwehren, sonst entscheidet die Befestigung. Werftsysteme geben Begleitschiffe, Reliktwelten Relikte und Logbücher, Rohstoffwelten Startmittel, Torsysteme Sprünge. Überlebende Veteranen und das Flaggschiff behalten ihre Erfahrung. Zwei Berater ziehen dich in verschiedene Richtungen; ab der Mitte erwacht die Matriarch am Haupttor. Fällt deine Hauptwelt, ist der Feldzug verloren.</p>
+    <p><b>Ruinen und Stätten:</b> Ein Schiff neben einer Ruine scannt sie: Relikte, ein Technikfragment, aufgedeckte Karte oder eine Falle. Große Stätten (Zitadelle, Archiv, Wächter, Sternenschmiede) werden mit Kampfschiffen gehalten; die Karte zeigt den Fortschritt. Relikte (violett) braucht man für Sprungtore.</p>
+    <p><b>Sprungtore:</b> Flackernde Tore öffnen sich alle 50 Sekunden kurz für jeden. Tote Tore aktiviert man, indem man sie 20 Sekunden hält und drei Relikte zahlt. Der Besitzer wählt: Brücke (jeder kann hindurch), Sperre (nur er), Lanze (lädt zwei Minuten, dann trifft ein Energiestoß alles am Partnertor; nach dreimal Torsturm). Hindurchfliegen heißt: durch die Mitte des Tors fliegen.</p>
+    <p><b>Sonneneruption:</b> Wird 25 Sekunden vorher angekündigt. Wer dann im Freien steht, verliert Schilde und Hülle; im Schatten von Monden, Asteroiden, Stätten und Stationen ist man sicher.</p>
+    <p><b>Mehrspieler:</b> Zwei Geräte mit derselben Datei, im selben WLAN oder Hotspot (oder »Über das Internet«). Ein Gerät eröffnet und zeigt einen Code, das andere scannt ihn oder fügt ihn ein und antwortet mit einem eigenen Code. In der Lobby wählt das eröffnende Gerät 1 gegen 1, Gemeinsam gegen zwei KI, 2 gegen 2 mit KI-Partnern oder Quarantine Line zu zweit. Beide Geräte rechnen dieselbe Partie; Befehle wirken einen Hauch später. Die Pause gilt für beide. Bricht die Verbindung ab, übernimmt auf Wunsch die KI die andere Seite.</p>
+    <p><b>Superwaffe:</b> Mit Basis III und Labor II baubar (Reiter »Spezial«). Sie lädt lange. Exodus-Tor: versetzt alle Schiffe am Tor an einen Punkt der Karte. Massetreiber: schwerer Einschlag an einem Punkt, auch für eigene Schiffe gefährlich. Der Gegner wird gewarnt.</p>
+    <p><b>Tastatur:</b> WASD/Pfeile verschieben, Rad zoomt, Rechtsklick befiehlt, Strg+Rechtsklick Angriffsmarsch, H Halt, G Stellung, 1–5 Gruppen, Umschalt+Ziffer speichert, P Pause.</p>
+    <div class="row"><button class="key arm" id="helpClose">Schließen</button></div>
+  </div></div>
+  <div class="ovl" id="loading" hidden><div class="win"><h2>Lädt …</h2><p class="fine">Die Karte wird aufgebaut.</p></div></div>
+</div>
+<!--SCRIPT-->
+</body>
+</html>

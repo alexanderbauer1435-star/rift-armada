@@ -1,0 +1,20 @@
+{
+  "name": "rift-armada-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Android-Hülle (Capacitor) für Rift Armada. Das Spiel selbst ist die Offline-Datei aus ../build.",
+  "scripts": {
+    "web": "node copy-web.js",
+    "sync": "node copy-web.js && npx cap sync android"
+  },
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.2",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/screen-orientation": "8.0.2",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
+}

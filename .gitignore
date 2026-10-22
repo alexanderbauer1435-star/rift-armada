@@ -1,0 +1,21 @@
+# Erzeugtes
+build/
+node_modules/
+tools/node_modules/
+tools/shots/
+tools/i18n/scan-result.json
+app/node_modules/
+app/www/
+app/android/app/build/
+app/android/build/
+app/android/.gradle/
+app/android/local.properties
+app/android/capacitor-cordova-android-plugins/
+app/android/app/src/main/assets/public/
+# Arbeitskopie der RTS-Quellen (nur zum Nachschlagen, gehört nicht hierher)
+rts-src/
+# Signaturschlüssel nie ins Repository
+*.jks
+*.keystore
+signing/
+__pycache__/

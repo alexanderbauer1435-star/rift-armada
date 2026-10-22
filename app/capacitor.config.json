@@ -1,0 +1,11 @@
+{
+  "appId": "com.riftarmada.game",
+  "appName": "Rift Armada",
+  "webDir": "www",
+  "android": {
+    "backgroundColor": "#04060d",
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false
+  }
+}
