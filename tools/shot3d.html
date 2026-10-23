@@ -54,15 +54,15 @@ T3.setup = function (opts) {
   const ax = s.x + Math.cos(dir) * 760, ay = s.y + Math.sin(dir) * 760;
   ['ravager', 'ravager', 'spitter', 'swarm', 'swarm', 'leviathan', 'leech'].forEach((id, i) => { const a = dir + Math.PI + (i - 3) * 0.25; const u = addShip(g, id, 1, ax + Math.cos(a) * 120, ay + Math.sin(a) * 120, dir + Math.PI); u.o = { t: 'amove', x: s.x, y: s.y }; });
   /* Gastschiffe weiterer Fraktionen (Mars, Legion, Nexus) als neutrale Flotte des Gegners südlich der Basis */
-  ['olympus', 'hammer', 'needle', 'paladin', 'cherub', 'monolith', 'shard', 'prism'].forEach((id, i) => { const u = addShip(g, id, 1, s.x - 420 + i * 110, s.y + 520, -Math.PI / 2); u.o = { t: 'hold' }; u.hold = true; });
+  ['olympus', 'hammer', 'needle', 'paladin', 'cherub', 'monolith', 'shard', 'prism'].forEach((id, i) => { const u = addShip(g, id, 1, s.x - 100 + i * 120, s.y - 720, Math.PI / 2); u.o = { t: 'hold' }; u.hold = true; });
   /* ein Wrack und ein Derelict */
-  const der = addShip(g, 'bulwark', 1, s.x + 150, s.y + 420, 1.0); der.derelict = true; der.o = { t: 'hold' }; der.hold = true;
-  g.wrecks.push({ x: s.x - 200, y: s.y + 380, ang: 0.6, type: 'lancer', owner: 1, until: g.time + 60, id: 9999 });
+  const der = addShip(g, 'bulwark', 1, s.x + 150, s.y + 260, 1.0); der.derelict = true; der.o = { t: 'hold' }; der.hold = true;
+  g.wrecks.push({ x: s.x - 200, y: s.y + 240, ang: 0.6, type: 'lancer', owner: 1, until: g.time + 60, id: 9999 });
   for (const p of g.players) { recalcPower(g, p.id); recalcCp(g, p.id); }
   updateVision(g);
   T3.view = { vp: T3.vp, seen: (x, y) => { if (T3.vp < 0) return true; const p = g.players[T3.vp]; return !!p.explored[clamp((y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((x / VIS) | 0, 0, g.vw - 1)]; }, visible: e => T3.vp < 0 || canSee(g, T3.vp, e), pcol, fog: null, detail: 1 };
   RA3D.setGame(g, T3.vp);
-  return { base: { x: s.x, y: s.y, ang: dir }, yard: { x: yard.x, y: yard.y }, fight: { x: s.x + Math.cos(dir) * 450, y: s.y + Math.sin(dir) * 450 }, foe: { x: fs.x, y: fs.y }, guests: { x: s.x - 50, y: s.y + 520 } };
+  return { base: { x: s.x, y: s.y, ang: dir }, yard: { x: yard.x, y: yard.y }, fight: { x: s.x + Math.cos(dir) * 450, y: s.y + Math.sin(dir) * 450 }, foe: { x: fs.x, y: fs.y }, guests: { x: s.x + 320, y: s.y - 720 } };
 };
 T3.step = function (n) { const g = T3.g; for (let i = 0; i < n; i++) { stepGame(g); for (const e of g.ev) RA3D.event(e, g); g.ev.length = 0; } };
 T3.setVp = function (vp) { T3.vp = vp; T3.view.vp = vp; };
@@ -76,7 +76,8 @@ T3.render = function (cx, cy, zoom, opts) {
     T3.time += dt; if (opts.tick) T3.step(1);
     T3.view.fog = fogUpdate();
     RA3D.setCam(cx, cy, zoom, W, H, dpr);
-    if (opts.extra) opts.extra();
+    /* Probe der Sofort-Primitive und der Bauvorschau */
+    if (opts.demo) { RA3D.ghost('alliance', 'turret', 1, cx + 160, cy + 110, true); RA3D.ghost('alliance', 'reactor', 1, cx - 170, cy + 120, false); RA3D.ring(cx, cy + 60, 90, '#8cffaa', 1.5, { dash: 5, march: true }); RA3D.ring(cx, cy + 60, 120, 'rgba(255,255,255,0.3)', 1); RA3D.line(cx, cy + 60, cx + 200, cy - 80, '#8cffaa', 1, { alpha: 0.6 }); RA3D.disc(cx - 120, cy - 60, 50, '#c9a0ff', 0.15); RA3D.ring(cx - 120, cy - 60, 50, '#c9a0ff', 2, { a0: -Math.PI / 2, a1: Math.PI * 0.6 }); }
     RA3D.frame(T3.g, dt, T3.time, T3.view);
   }
   const ms = (performance.now() - t0) / frames, st = RA3D.stats();
@@ -97,6 +98,13 @@ T3.checkProj = function () {
   let worst = 0; const W = innerWidth, H = innerHeight;
   for (const [sx, sy] of [[W / 2, H / 2], [10, 10], [W - 10, H - 10], [W / 2, H - 5], [W * 0.2, H * 0.8]]) { const w = RA3D.unproject(sx, sy), p = RA3D.project(w.x, w.y); if (!p) { worst = 1e9; continue; } worst = Math.max(worst, Math.hypot(p.x - sx, p.y - sy)); }
   return worst;
+};
+/* Draw-Calls je Wurzelknoten der Szene (sichtbar und im Sichtkegel) */
+T3.breakdown = function () {
+  const { S, CAM } = RA3D._, out = {};
+  const count = (o, name) => { if (!o.visible) return; if ((o.isMesh || o.isSprite || o.isPoints || o.isLine) && (o.isInstancedMesh ? o.count > 0 : true) && (!o.frustumCulled || CAM.frustum.intersectsObject(o))) out[name] = (out[name] || 0) + 1; for (const c of o.children) count(c, name); };
+  for (const c of S.scene.children) count(c, c.name || c.type);
+  return out;
 };
 window.T3 = T3;
 </script>

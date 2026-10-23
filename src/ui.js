@@ -789,6 +789,8 @@ function loadPrefs() {
   let d = {};
   try { d = JSON.parse(localStorage.getItem('ra.prefs') || '{}') || {}; Object.assign(SET, d.set || {}); Object.assign(MENU, d.menu || {}); } catch (e) { /* keine Einstellungen */ }
   if (!d.set || (d.set.lang !== 'de' && d.set.lang !== 'en')) SET.lang = langDefault();
+  /* Grafik: Vorgabe 3D; Prüfläufe (Playwright) laufen in 2D, 3D prüft tools/game3d.js mit eigener Einstellung */
+  if (!d.set || (d.set.gfx !== '2d' && d.set.gfx !== '3d')) { let wd = false; try { wd = !!navigator.webdriver; } catch (e) { /* kein Browser */ } SET.gfx = wd ? '2d' : '3d'; }
 }
 function savePrefs() { try { localStorage.setItem('ra.prefs', JSON.stringify({ set: SET, menu: MENU })); } catch (e) { /* Speicher gesperrt */ } }
 function applySet() {

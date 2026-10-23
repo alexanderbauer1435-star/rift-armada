@@ -31,10 +31,11 @@ export function supported() {
   try { const c = document.createElement('canvas'); return !!(window.WebGL2RenderingContext && c.getContext('webgl2')); } catch (e) { return false; }
 }
 
-export function initScene(canvas) {
+export function initScene(canvas, opts = {}) {
   try {
     S.canvas = canvas;
-    S.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: false });
+    /* preserveDrawingBuffer nur für Prüfbilder (Playwright liest sonst einen unfertigen Puffer) */
+    S.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: !!opts.preserve });
   } catch (e) { console.warn('RA3D: WebGL nicht verfügbar', e); return false; }
   const r = S.renderer;
   r.setPixelRatio(1); r.setClearColor('#04060d', 1);
@@ -81,8 +82,9 @@ export function setDetail(d) {
 /* Bild zeichnen: über den Composer (Bloom) bei Detail 2, sonst direkt */
 export function render() {
   if (!S.ok) return;
+  const info = S.renderer.info; info.autoReset = false; info.reset();
   if (S.detail >= 2) S.composer.render(); else S.renderer.render(S.scene, S.camera);
-  const i = S.renderer.info.render; S.info.calls = i.calls; S.info.tris = i.triangles;
+  S.info.calls = info.render.calls; S.info.tris = info.render.triangles;
 }
 
 export function disposeScene() {

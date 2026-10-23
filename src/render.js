@@ -48,7 +48,7 @@ R.resize = function () {
 R.clampCam = function () {
   const g = R.g, cam = R.cam;
   if (!g) return;
-  const ew = g.map.w, eh = g.map.h, minZ = Math.max(0.22, Math.min(R.cssW / ew, R.cssH / eh) * 0.95);
+  const ew = g.map.w, eh = g.map.h, minZ = Math.max(0.22, Math.min(R.cssW / ew, R.cssH / eh) * (R.mode3d ? 1.5 : 0.95));
   cam.z = clamp(cam.z, minZ, 2.4);
   const vw = R.cssW / cam.z, vh = R.cssH / cam.z, pad = 120 / cam.z, pb = R.padB / cam.z, pt = R.padT / cam.z;
   cam.x = vw >= ew + pad * 2 ? (ew - vw) / 2 : clamp(cam.x, -pad, ew - vw + pad);

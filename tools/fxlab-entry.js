@@ -109,21 +109,29 @@ const SC = {
   exodus: { ev: [{ at: 0, ev: { t: 'superfire', kind: 'exodus', x: 0, y: 0 } }, { at: 0.3, ev: { t: 'exodus', x: -170, y: 60, r: 14, to: 1 } }, { at: 0.5, ev: { t: 'exodus', x: 150, y: -40, r: 14, to: 0 } }], times: [0.25, 0.8, 1.5] },
   brood: { ev: [{ at: 0, ev: { t: 'superfire', kind: 'broodstorm', x: 0, y: 0, r: 180 } }], times: [0.3, 1.0, 2.0] },
   rings: { ev: [{ at: 0, ev: { t: 'built', x: -200, y: -120, owner: 0 } }, { at: 0, ev: { t: 'jump', x: -60, y: -120, r: 14 } }, { at: 0, ev: { t: 'breach', x: 120, y: -120, r: 40 } }, { at: 0, ev: { t: 'resurrect', x: -180, y: 100 } }, { at: 0, ev: { t: 'bound', fx: -40, fy: 160, x: 60, y: 100 } }, { at: 0, ev: { t: 'devour', x: 200, y: 100, tx: 260, ty: 160, r: 14 } }, { at: 0, ev: { t: 'hatch', x: 240, y: 0, r: 12 } }, { at: 0, ev: { t: 'dormant', x: 0, y: 20 } }], times: [0.3, 0.8] },
+  /* Lasttest: viele Explosionen, Geschosse und Strahlen zugleich – prüft Verdrängung im Vorrat und die Rechenzeit */
+  stress: {
+    ev: [{ at: 0, do: g => { for (let i = 0; i < 160; i++) g.proj.push(proj(['kin', 'kin', 'acid', 'torp', 'rail'][i % 5], -300 + Math.random() * 600, -200 + Math.random() * 400, Math.random() * 6.28, 300, i % 5 === 2 ? '#b4ff3c' : '#ffd27a', i % 2)); g.byId.get(1).beams = [{ tid: 2, t: 1, extra: null }, { tid: 3, t: 1, extra: null }]; g.byId.get(6).beams = [{ tid: 4, t: 1, extra: [3, 2] }, null]; } },
+      ...Array.from({ length: 40 }, (_, i) => ({ at: i * 0.05, ev: { t: 'die', x: -280 + Math.random() * 560, y: -180 + Math.random() * 360, r: 10 + Math.random() * 20, big: i % 3 === 0, owner: i % 2 } })),
+      { at: 0.5, ev: { t: 'bdie', x: 0, y: 0, r: 60, owner: 2 } }, { at: 0.8, ev: { t: 'strike', x: 150, y: 80, r: 150 } }],
+    step: (g, dt) => { for (const q of g.proj) { q.x += Math.cos(q.ang) * q.sp * dt; q.y += Math.sin(q.ang) * q.sp * dt; } },
+    times: [1.0, 2.0]
+  },
   damage: { ev: [], step: (g, dt) => { if (Math.random() < 10 * dt) FX.spawn.smoke(-170, 60, 10, 2); if (Math.random() < 6 * dt) FX.spawn.spark(150, -40, 3, 50, '#ffd27a'); }, times: [1.5, 3] }
 };
 let inited = false;
 function run(name, t) {
   const sc = SC[name]; if (!sc) throw new Error('kein Szenario ' + name);
-  if (!inited) { FX.init(scene, THREE, mats, 2); inited = true; }
+  if (!inited) { FX.init(scene, THREE, mats, undefined); inited = true; }
   FX.clear(); G = mkG(); buildBodies();
-  let time = 0; const dt = 1 / 60, ev = sc.ev.slice();
+  let time = 0, cpu = 0, frames = 0; const dt = 1 / 60, ev = sc.ev.slice();
   while (time < t - 1e-6) {
     for (let i = 0; i < ev.length; i++) if (ev[i].at <= time + 1e-6) { const q = ev.splice(i--, 1)[0]; if (q.ev) FX.event(q.ev, G, VIEW); else q.do(G); }
     if (sc.step) sc.step(G, dt);
     time += dt; G.time = time;
-    FX.frame(G, dt, time, VIEW, camera);
+    const t0 = performance.now(); FX.frame(G, dt, time, VIEW, camera); cpu += performance.now() - t0; frames++;
   }
   composer.render();
-  return FX.stats();
+  return Object.assign(FX.stats(), { cpuMs: +(cpu / Math.max(1, frames)).toFixed(2) });
 }
 window.FXLAB = { run, setCam, setDetail: d => FX.setDetail(d), list: Object.keys(SC), times: n => SC[n].times };

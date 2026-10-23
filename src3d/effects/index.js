@@ -48,10 +48,11 @@ export function init(scene, THREE, kitMats, d) {
   for (const k in B) root.add(B[k].mesh);
   P.spr = new Pool(CAP[0], SP.F); P.smoke = new Pool(CAP[1], SP.F); P.quad = new Pool(CAP[2], QP.F); P.chunk = new Pool(CAP[3], CP.F);
   P.ring = new Pool(CAP[4], RP.F); P.dome = new Pool(CAP[5], DP.F); P.disc = new Pool(CAP[6], KP.F);
-  setDetail(d === undefined ? 2 : d);
+  setDetail(d === undefined ? detail : d);
 }
 export function setDetail(d) {
   detail = Math.max(0, Math.min(2, d | 0)); K = KF[detail];
+  if (!P.spr) return;   /* vor init: nur merken */
   const L = LIM[detail]; P.spr.lim = L[0]; P.smoke.lim = L[1]; P.quad.lim = L[2]; P.chunk.lim = L[3]; P.ring.lim = L[4]; P.dome.lim = L[5]; P.disc.lim = L[6];
 }
 export function clear() { for (const k in P) P[k].clear(); later = []; }
@@ -102,7 +103,7 @@ function fire(x, y, r, life, n, h = H.proj, spread = 0.7) {
   for (let i = 0; i < n; i++) {
     const a = Math.random() * TAU, dd = i ? rnd(0.2, 1) * r * spread : 0, el = i ? rnd(-0.3, 0.6) * r * spread : 0;
     const sc = i ? rnd(0.45, 0.85) : 1, v = i ? rnd(18, 50) : 8;
-    spr(P.spr, x + Math.cos(a) * dd, h + el, y + Math.sin(a) * dd, Math.cos(a) * v, rnd(4, 20), Math.sin(a) * v, life * rnd(0.7, 1.15), r * 0.3 * sc, r * 1.7 * sc, c, 0.85, TILE.fire, CM.fire, 1.2, 1, rnd(-2, 2), i ? rnd(0, 0.3) : 0);
+    spr(P.spr, x + Math.cos(a) * dd, h + el, y + Math.sin(a) * dd, Math.cos(a) * v, rnd(4, 20), Math.sin(a) * v, life * rnd(0.7, 1.15), r * 0.5 * sc, r * 1.7 * sc, c, 0.85, TILE.fire, CM.fire, 1.2, 1, rnd(-2, 2), i ? rnd(0, 0.3) : 0);
   }
 }
 function smoke(x, y, r, n, life = 1.6, h = H.proj, vh = 9) {
@@ -139,12 +140,12 @@ function disc(x, y, rx, rz, rot, mode, life, hex = '#ffffff', env = 0) {
 /* Explosion: Blitz, Kern, Feuerbälle, Druckring, Funken, Trümmer, Rauch; Fraktionsfarbe als Akzent im Ring */
 function explode(x, y, r, big, hex, h = H.proj, outer = true) {
   const acc = hex || '#ffb060';
-  flash(x, y, r * (big ? 1.6 : 1.3), '#fff2d0', big ? 0.22 : 0.16, h + r * 0.3, TILE.glow, 1.0, 0.8);
+  flash(x, y, r * (big ? 1.6 : 1.5), '#fff2d0', big ? 0.22 : 0.18, h + r * 0.3, TILE.glow, 1.0, 0.8);
   spr(P.spr, x, h + r * 0.3, y, 0, 0, 0, big ? 0.22 : 0.16, r * 0.4, r * 1.0, col('#ffffff'), 1, TILE.dot, CM.flash, 0, 1.3);
-  fire(x, y, r * (big ? 1.8 : 1.15), big ? 1.1 : 0.65, big ? 12 : 6, h + r * 0.25);
-  ring(x, y, r * (big ? 2.6 : 2.0), acc, big ? 0.7 : 0.45, r * 0.12, 1, 0.7);
+  fire(x, y, r * (big ? 1.8 : 1.5), big ? 1.1 : 0.7, big ? 12 : 7, h + r * 0.25);
+  ring(x, y, r * (big ? 2.6 : 2.4), acc, big ? 0.7 : 0.5, r * 0.12, 1, 0.7);
   if (big && outer) ring(x, y, r * 3.6, '#ffd9b0', 0.9, r * 0.16, 1, 0.3);
-  spark(x, y, big ? 40 : 16, big ? 240 : 150, '#ffd27a', big ? 1.0 : 0.65, h + r * 0.2, 1.6, 1.2);
+  spark(x, y, big ? 40 : 20, big ? 240 : 170, '#ffd27a', big ? 1.0 : 0.7, h + r * 0.2, 1.6, 1.2);
   debris(x, y, big ? 22 : 8, big ? 150 : 90, r, h + r * 0.2);
   smoke(x, y, r * 1.3, big ? 10 : 4, big ? 2.6 : 1.5, h + r * 0.2);
   if (big) later.push({ at: now + rnd(0.25, 0.5), fn: () => { fire(x + rnd(-r, r) * 0.6, y + rnd(-r, r) * 0.6, r * 0.7, 0.7, 3, h + r * 0.4); spark(x, y, 8, 120, '#ffb070', 0.6, h); } });
@@ -198,7 +199,7 @@ export function event(e, g, view) {
     case 'built': ring(e.x, e.y, 60, pc(e.owner), 0.8, 2.5); break;
     case 'upgrade': ring(e.x, e.y, 70, '#ffffff', 1, 2.5); break;
     case 'place': ring(e.x, e.y, 40, '#ffffff', 0.5, 2); break;
-    case 'ability': ring(e.x, e.y, e.r ? Math.min(e.r, 320) : 40, '#ffb86b', e.r ? 0.9 : 0.5, 2.5); break;
+    case 'ability': ring(e.x, e.y, e.r ? Math.min(e.r, 320) : 40, '#ffb86b', e.r ? 0.9 : 0.5, 1.5, 1, 0.5); break;
     case 'abfx': flash(e.x, e.y, 16, '#dff4ff', 0.2, H.proj); break;
     case 'lance': line(e.x, e.y, e.tx, e.ty, 5, '#ffffff', 0.45, QMODE.flat, H.proj, H.proj, 1.6, 0.95); line(e.x, e.y, e.tx, e.ty, 14, '#8fe3ff', 0.6, QMODE.flat, H.proj, H.proj, 1, 0.5); flash(e.tx, e.ty, 40, '#dff4ff', 0.4, H.proj, TILE.star, 1.2); spark(e.tx, e.ty, 20, 200, '#bfe9ff', 0.6, H.proj); shake(5); break;
     case 'board': line(e.fx, e.fy, e.x, e.y, 2, '#ffb86b', 0.5, QMODE.flat, H.proj, H.proj, 1, 0.8); spark(e.x, e.y, 10, 60, '#ffd27a', 0.6, H.proj); break;
@@ -209,7 +210,7 @@ export function event(e, g, view) {
     case 'exodus': { const r = e.r || 12; ring(e.x, e.y, r * 2.2, '#8fe3ff', 0.6, 2.5); flash(e.x, e.y, r * 1.6, '#dff4ff', 0.35, H.proj + r * 0.3, TILE.star, 1.3); glow(e.x, e.y, H.proj + r * 0.3, r * 1.2, r * 3, '#8fe3ff', 0.5, 0.5); if (e.to === 0) spark(e.x, e.y, 8, 90, '#bfe9ff', 0.5, H.proj); break; }
     case 'superfire':
       if (e.kind === 'exodus') { disc(e.x, e.y, 150, 150, 0, DMODE.vortex, 1.8, '#ffffff', 0); ring(e.x, e.y, 140, '#8fe3ff', 1.2, 3); glow(e.x, e.y, H.proj + 6, 60, 140, '#8fe3ff', 1.6, 0.35); spark(e.x, e.y, 24, 160, '#bfe9ff', 0.9, H.proj + 4, 1.3, 1.5); }
-      else if (e.kind === 'broodstorm') { const r = e.r || 200; disc(e.x, e.y, r * 1.2, r * 1.2, 0, DMODE.storm, 1.8, '#ffffff', 0); ring(e.x, e.y, r * 1.4, '#b4ff3c', 1.3, 4); smoke(e.x, e.y, r * 0.5, 20, 3, H.proj, 14); spark(e.x, e.y, 30, 200, '#d6ff6a', 0.8, H.proj, 1.3, 1.6); for (let i = 0; i < 40 * K; i++) { const a = Math.random() * TAU, dd = Math.random() * r * 0.5; spr(P.spr, e.x + Math.cos(a) * dd, H.proj, e.y + Math.sin(a) * dd, Math.cos(a) * rnd(10, 40), rnd(8, 30), Math.sin(a) * rnd(10, 40), rnd(1.5, 3), 2.5, 1, col('#b4ff3c'), 0.8, TILE.ember, CM.fixed, 0.6, 1.1); } shake(8); }
+      else if (e.kind === 'broodstorm') { const r = e.r || 200; disc(e.x, e.y, r * 1.2, r * 1.2, 0, DMODE.storm, 1.8, '#ffffff', 0); ring(e.x, e.y, r * 1.4, '#b4ff3c', 1.3, 4); smoke(e.x, e.y, r * 0.3, 10, 3, H.proj, 14); spark(e.x, e.y, 30, 200, '#d6ff6a', 0.8, H.proj, 1.3, 1.6); for (let i = 0; i < 60 * K; i++) { const a = Math.random() * TAU, dd = Math.random() * r * 0.5; spr(P.spr, e.x + Math.cos(a) * dd, H.proj, e.y + Math.sin(a) * dd, Math.cos(a) * rnd(10, 50), rnd(8, 30), Math.sin(a) * rnd(10, 50), rnd(1.5, 3.5), 4.5, 2, col('#b4ff3c'), 0.9, TILE.ember, CM.fixed, 0.5, 1.3); } shake(8); }
       else if (e.kind === 'strike') { if (e.sx !== undefined) { flash(e.sx, e.sy, 50, '#ffe0a0', 0.4, H.proj + 20, TILE.glow, 1.1); spark(e.sx, e.sy, 12, 120, '#ffd27a', 0.5, H.proj + 20); } shake(8); }
       else if (e.kind === 'sunbreak') { ring(e.x, e.y, (e.r || 260) * 1.1, '#ffb070', 1.4, 5); flash(e.x, e.y, (e.r || 260) * 0.5, '#fff2d0', 0.5, H.proj + 10, TILE.glow, 1.2); shake(6); }
       else { ring(e.x, e.y, (e.r || 200) * 1.2, '#eadcff', 1.2, 3); flash(e.x, e.y, 60, '#ffffff', 0.4, H.proj + 6, TILE.star, 1.2); }
@@ -224,7 +225,7 @@ export function event(e, g, view) {
     case 'ruin': ring(e.x, e.y, 60, e.result === 'trap' ? '#ff5b47' : '#9ff0c0', 1, 2.5); break;
     case 'siteWon': ring(e.x, e.y, 120, '#9ff0c0', 1.3, 3); break;
     case 'gateOn': ring(e.x, e.y, 110, '#9ff0c0', 1.2, 3); flash(e.x, e.y, 70, '#9ff0c0', 0.5, H.proj + 10); break;
-    case 'gateLance': line(e.fx, e.fy, e.x, e.y, 10, '#ff8c64', 0.6, QMODE.flat, H.proj + 8, H.proj, 1, 0.6); line(e.fx, e.fy, e.x, e.y, 3, '#fff0e0', 0.45, QMODE.flat, H.proj + 8, H.proj, 1.6, 0.95); explode(e.x, e.y, 60, true, '#ff8a5a', H.proj); ring(e.x, e.y, 300, '#ff8a5a', 1.2, 5, 1, 0.7); shake(12); break;
+    case 'gateLance': line(e.fx, e.fy, e.x, e.y, 10, '#ff8c64', 0.6, QMODE.flat, H.proj + 8, H.proj, 1, 0.6); line(e.fx, e.fy, e.x, e.y, 3, '#fff0e0', 0.45, QMODE.flat, H.proj + 8, H.proj, 1.6, 0.95); explode(e.x, e.y, 60, true, '#ff8a5a', H.proj, false); ring(e.x, e.y, 300, '#ff8a5a', 1.2, 24, 1, 0.45); shake(12); break;
     case 'gateStorm': ring(e.x, e.y, 200, '#ff5b47', 1.5, 5); smoke(e.x, e.y, 80, 16, 3, H.proj, 12); break;
     case 'wake': ring(e.x, e.y, 150, '#9ff0c0', 1.5, 4); shake(8); break;
     case 'phase': ring(e.x, e.y, (e.r || 12) * 1.6, '#ffffff', 0.3, 1.5); break;
@@ -240,7 +241,6 @@ export function event(e, g, view) {
 }
 
 /* ------------------------------------------------------------ Frame */
-let dtAcc = 0;
 export function frame(g, dt, time, view, cam) {
   if (!T) return;
   dt = Math.min(dt || 0, 0.1); now = time;
@@ -278,8 +278,8 @@ function beamsOf(list, g, dt, time, view) {
       const pulse = 0.92 + 0.08 * Math.sin(time * 28 + s.id);
       if (bm.extra) for (const eid of bm.extra) { const e2 = g.byId.get(eid); if (!e2 || e2.dead) continue; B.quad.write(sx, h0, sy, e2.x, h1, e2.y, bw * 2.2, QMODE.flat, c[0], c[1], c[2], 0.35); B.quad.write(sx, h0, sy, e2.x, h1, e2.y, bw * 0.5, QMODE.flat, 1.5, 1.5, 1.5, 0.8); B.spr.write(e2.x, h1, e2.y, bw * 6, 0, TILE.glow, c[0], c[1], c[2], 0.6); }
       B.quad.write(sx, h0, sy, tx, h1, ty, bw * 6 * pulse, QMODE.flat, c[0], c[1], c[2], 0.16);
-      B.quad.write(sx, h0, sy, tx, h1, ty, bw * 2.6 * pulse, QMODE.flat, c[0], c[1], c[2], 0.5);
-      B.quad.write(sx, h0, sy, tx, h1, ty, bw * 0.8, QMODE.flat, 1.7, 1.7, 1.7, 0.95);
+      B.quad.write(sx, h0, sy, tx, h1, ty, bw * 2.6 * pulse, QMODE.flat, c[0], c[1], c[2], 0.6);
+      B.quad.write(sx, h0, sy, tx, h1, ty, bw * 0.65, QMODE.flat, 1.6, 1.6, 1.6, 0.95);
       B.spr.write(sx, h0, sy, bw * 7, 0, TILE.glow, c[0], c[1], c[2], 0.8);
       B.spr.write(tx, h1, ty, bw * 9 * pulse, time * 3, TILE.glow, c[0], c[1], c[2], 0.75);
       B.spr.write(tx, h1, ty, bw * 2.5, 0, TILE.dot, 1.4, 1.4, 1.4, 0.8);
@@ -302,7 +302,8 @@ function projectiles(g, dt, time, view) {
       B.caps.write(q.x, h, q.y, 0, Math.PI / 2 - q.ang, 0, 1.1, 1.1, 1.1, 0.35, 0.22, 0.2, 0.19);
       B.spr.write(q.x - dx * 3, h, q.y - dy * 3, 13, 0, TILE.glow, c[0], c[1], c[2], 0.85);
       B.spr.write(q.x - dx * 3.5, h, q.y - dy * 3.5, 3.2, 0, TILE.dot, 1.5, 1.35, 1.1, 0.9);
-      if (detail > 0 && Math.random() < 28 * dt) { trail(q.x - dx * 6, q.y - dy * 6, h, '#ff9a50', 4, 0.45, rnd(-6, 6), rnd(2, 8), rnd(-6, 6), 1, TILE.glow); }
+      B.quad.write(q.x - dx * 34, h, q.y - dy * 34, q.x - dx * 3, h, q.y - dy * 3, 4.5, QMODE.tail, c[0], c[1], c[2], 0.7);
+      if (detail > 0 && Math.random() < 30 * dt) { trail(q.x - dx * 6, q.y - dy * 6, h, '#ff9a50', 7, 0.6, rnd(-6, 6), rnd(2, 8), rnd(-6, 6), 0.8, TILE.glow); }
       if (detail > 0 && Math.random() < 14 * dt * K) spr(P.smoke, q.x - dx * 7, h, q.y - dy * 7, rnd(-5, 5), rnd(3, 9), rnd(-5, 5), rnd(0.7, 1.2), 2.5, 9, [0.2, 0.19, 0.18], 0.5, TILE.smoke, CM.smoke, 0.5, 1, rnd(-1, 1));
     } else if (kind === 'rail') {
       const c = col('#9fd0ff');
@@ -325,9 +326,9 @@ function projectiles(g, dt, time, view) {
     } else {
       /* kin, bite, para: kurzer Leuchtstrich in Waffenfarbe mit hellem Kern und Glutpunkt */
       const c = col(q.col || wpnColOf(g, q, null)), bite = kind === 'bite';
-      B.quad.write(q.x - dx * (bite ? 7 : 14), h, q.y - dy * (bite ? 7 : 14), q.x, h, q.y, bite ? 3 : 2.6, QMODE.tail, c[0], c[1], c[2], 0.6);
-      B.quad.write(q.x - dx * 9, h, q.y - dy * 9, q.x + dx * 1.5, h, q.y + dy * 1.5, 1, QMODE.tail, white[0] * 1.4, white[1] * 1.4, white[2] * 1.4, 0.95);
-      B.spr.write(q.x, h, q.y, 7, 0, TILE.glow, c[0], c[1], c[2], 0.55);
+      B.quad.write(q.x - dx * (bite ? 7 : 16), h, q.y - dy * (bite ? 7 : 16), q.x, h, q.y, bite ? 3.4 : 3.2, QMODE.tail, c[0], c[1], c[2], 0.65);
+      B.quad.write(q.x - dx * 10, h, q.y - dy * 10, q.x + dx * 1.5, h, q.y + dy * 1.5, 1.2, QMODE.tail, white[0] * 1.4, white[1] * 1.4, white[2] * 1.4, 0.95);
+      B.spr.write(q.x, h, q.y, 9, 0, TILE.glow, c[0], c[1], c[2], 0.55);
     }
   }
 }

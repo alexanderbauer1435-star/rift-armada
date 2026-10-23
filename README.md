@@ -47,6 +47,17 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 14 (Runde 12, 3D): Die Spielwelt wird in 3D gezeichnet (Three.js r170, alles prozedural, keine Modelldateien):
+  src3d/ enthält den Renderer (index.js setzt window.RA3D; scene/camera/world/entities/overlay/fog) und die Effekte
+  (src3d/effects: Strahlen, Geschosse, Explosionen, Schilde, Superwaffen in neun instanzierten Puffern), die Modelle liegen
+  in src3d/models (Baukasten kit.js, factions/stations/world). `bash tools/build3d.sh` bündelt alles nach src/render3d.js
+  (~1,2 MB), tools/build.py hängt es vor render.js ein. render.js bleibt der Rahmen: in 3D leitet es die Kamera ab
+  (Perspektive, Neigung 0,95 rad, Zoom = Pixel je Einheit in der Bildmitte), übergibt Kreise/Linien/Bauvorschau als
+  Sofort-Primitive, reicht Ereignisse an RA3D.event weiter und zeichnet auf der durchsichtigen 2D-Leinwand nur noch
+  Balken, Rangabzeichen, Texte und den Auswahlrahmen; fx.js ist dann stumm (nur Texte). Einstellungen → Grafik 3D | 2D,
+  Vorgabe 3D, Rückfall auf 2D ohne WebGL2. Detailstufen: Fernmodelle und weniger Animation bei Detail 0/1 (die
+  automatische Qualitätsregel senkt auch die 3D-Stufe). Schnittstelle in src3d/SPEC.md; Prüfung: node tools/game3d.js
+  (3D im echten Spiel: Projektion, Auswahl, Umschalten, Speichern), tools/shot3d.js (Renderer allein), tools/fxlab.js.
 - Fassung 13 (Runde 11, Aufstellung): Sprachwahl Deutsch/Englisch ganz oben im Hauptmenü, ohne gespeicherte
   Einstellung ist Englisch die Vorgabe. Kartengröße Klein/Mittel/Groß (MAP_SIZES: die Karte wird nach dem Aufbau
   gestreckt, Gürtel- und Nebelradien mit, Felsen leicht; Taschen und Korridore bleiben erhalten). Bis zu acht Spieler im

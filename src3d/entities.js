@@ -16,13 +16,15 @@
    ab 30 % kommen über effects.spawn (falls vorhanden). Das Spiel wird nie beschrieben.
    ===================================================================== */
 import * as THREE from 'three';
-import { BUILD, BUILDB, mats, animate, bake, setCharge } from './models/kit.js';
+import { BUILD, BUILDB, mats, animate, bake, keepFor, flameTime, applyAim, applyCharge, farGeometry, farMaterial } from './models/kit.js';
 import SDATA from './models/stations.json';
 import SHIPJ from './models/ships.json';
 import { S, CAM_DIR } from './scene.js';
-import { inView } from './camera.js';
+import { inView, CAM } from './camera.js';
 import { ring, disc } from './overlay.js';
 
+/* Fernmodelle (ein Mesh mit Vertexfarben + Flammen) unterhalb dieser Zoomstufen, je Detailstufe */
+const FAR_SHIP = [1.6, 1.05, 0.8], FAR_STATION = [1.2, 0.85, 0.7];
 const TAU = Math.PI * 2;
 const E = { tpl: new Map(), sets: new Map(), stations: new Map(), prev: new Map(), domes: [], domeN: 0, domeMat: null, ghost: new Map(), ghostCur: null, fx: null, pcol: null, root: null };
 const M4 = new THREE.Matrix4(), M4b = new THREE.Matrix4(), POS = new THREE.Vector3(), SCL = new THREE.Vector3(1, 1, 1), EUL = new THREE.Euler(0, 0, 0, 'YZX'), QUAT = new THREE.Quaternion(), COL = new THREE.Color();
@@ -34,7 +36,7 @@ export function initEntities() {
   E.domeMat = new THREE.ShaderMaterial({
     uniforms: { uCol: { value: new THREE.Color('#8fe3ff') }, uT: { value: 0 } },
     vertexShader: 'varying vec3 vN; varying vec3 vV; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
-    fragmentShader: 'uniform vec3 uCol; uniform float uT; varying vec3 vN; varying vec3 vV; void main() { float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.5); float a = 0.05 + 0.55 * f + 0.06 * sin(uT * 6.0); gl_FragColor = vec4(uCol * (0.6 + 0.8 * f), a); #include <tonemapping_fragment> #include <colorspace_fragment> }',
+    fragmentShader: 'uniform vec3 uCol; uniform float uT; varying vec3 vN; varying vec3 vV; void main() { float f = pow(1.0 - abs(dot(normalize(vN), normalize(vV))), 2.5); float a = 0.05 + 0.55 * f + 0.06 * sin(uT * 6.0); gl_FragColor = vec4(uCol * (0.6 + 0.8 * f), a);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
   });
 }
@@ -72,51 +74,55 @@ function buildShip(def, color) {
 function tplOf(def, color) {
   const key = def.id + '|' + (color || '');
   let t = E.tpl.get(key); if (t) return t;
-  const root = bake(buildShip(def, color), { face: 'up' });
+  const root = bake(buildShip(def, color), { face: 'up', keep: keepFor('ship', S.detail), flames: true });
   const parts = [];
   root.traverse(o => {
-    if (o.isMesh && !o.isInstancedMesh) parts.push({ node: o, geo: o.geometry, mat: o.material, flame: !!o.userData.flame, shadow: o.castShadow !== false, order: o.renderOrder });
+    if (o.isMesh && !o.isInstancedMesh) parts.push({ node: o, geo: o.geometry, mat: o.material, flame: !!(o.material.userData && o.material.userData.isFlame), shadow: o.castShadow !== false && !o.material.transparent, order: o.renderOrder });
     else if (o.isSprite || o.isPoints || o.isLine || o.isInstancedMesh) o.visible = false;
   });
   root.updateMatrixWorld(true);
-  t = { key, root, parts, def, t: -1 }; E.tpl.set(key, t); return t;
+  /* Fernmodell aus einem frischen, ungebackenen Aufbau (kleine Teile fallen weg) */
+  const farGeo = farGeometry(buildShip(def, color), Math.max(1.2, def.len * 0.03));
+  t = { key, root, parts, def, t: -1, farParts: [{ node: root, geo: farGeo, mat: null, flame: false, shadow: true, order: 0, far: true }].concat(parts.filter(p => p.flame)) }; E.tpl.set(key, t); return t;
 }
-function setOf(tpl, kind) {
-  const key = tpl.key + '|' + kind;
+function setOf(tpl, kind, far) {
+  const key = tpl.key + '|' + kind + (far ? '|far' : '');
   let s = E.sets.get(key); if (s) return s;
-  s = { tpl, kind, n: 0, cap: 0, ims: [], last: 0 };
+  s = { tpl, kind, far: !!far, parts: far ? tpl.farParts : tpl.parts, n: 0, cap: 0, ims: [], last: 0 };
   grow(s, 16); E.sets.set(key, s); return s;
 }
 function grow(s, cap) {
   const old = s.ims, keep = Math.min(s.n, s.cap);
   s.ims = []; s.cap = cap;
-  s.tpl.parts.forEach((p, j) => {
-    const mat = s.kind === 'wreck' ? variant(p.mat, 'wreck') : p.mat;
-    const im = new THREE.InstancedMesh(p.geo, mat, cap); im.frustumCulled = false; im.castShadow = p.shadow && S.detail >= 2; im.receiveShadow = true; im.renderOrder = p.order; im.count = 0;
+  s.parts.forEach((p, j) => {
+    const mat = p.far ? farMaterial(s.kind) : s.kind === 'wreck' ? variant(p.mat, 'wreck') : p.mat;
+    /* Flammen: eigene Geometrie je Menge mit Streckfaktor je Instanz (iFlame) */
+    let geo = p.geo; if (p.flame) { geo = p.geo.clone(); geo.setAttribute('iFlame', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage)); }
+    const im = new THREE.InstancedMesh(geo, mat, cap); im.frustumCulled = false; im.castShadow = p.shadow && S.detail >= 2; im.receiveShadow = true; im.renderOrder = p.order; im.count = 0;
     im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, WHITE); im.instanceColor.setUsage(THREE.DynamicDrawUsage);
     /* schon in diesem Frame gesetzte Instanzen übernehmen */
-    if (old[j] && keep) { im.instanceMatrix.array.set(old[j].instanceMatrix.array.subarray(0, keep * 16)); if (old[j].instanceColor) im.instanceColor.array.set(old[j].instanceColor.array.subarray(0, keep * 3)); }
+    if (old[j] && keep) { im.instanceMatrix.array.set(old[j].instanceMatrix.array.subarray(0, keep * 16)); if (old[j].instanceColor) im.instanceColor.array.set(old[j].instanceColor.array.subarray(0, keep * 3)); if (p.flame) geo.attributes.iFlame.array.set(old[j].geometry.attributes.iFlame.array.subarray(0, keep)); }
     im.visible = false; im.name = 'ships:' + s.kind; E.root.add(im);
     s.ims.push(im);
   });
-  for (const im of old) { E.root.remove(im); im.dispose(); }
+  for (const im of old) { E.root.remove(im); if (im.geometry.attributes.iFlame) im.geometry.dispose(); im.dispose(); }
 }
 /* eine Instanz (Schiff oder Wrack) anfügen: Lage M4, Farbe COL, Flammenfaktor k (−1 = keine Flammen) */
 function push(s, k, tint) {
   if (s.n >= s.cap) grow(s, s.cap * 2);
-  const i = s.n++, parts = s.tpl.parts;
+  const i = s.n++, parts = s.parts;
   for (let j = 0; j < parts.length; j++) {
     const p = parts[j], im = s.ims[j];
     if (!p.node.visible) { M4b.makeScale(0, 0, 0); im.setMatrixAt(i, M4b); continue; }
     M4b.multiplyMatrices(M4, p.node.matrixWorld);
-    if (p.flame) { if (k < 0) { M4b.makeScale(0, 0, 0); } else { SCL.set(1, 1, 0.2 + k); M4b.scale(SCL); } }
+    if (p.flame) im.geometry.attributes.iFlame.setX(i, k < 0 ? 0 : 0.2 + k);
     im.setMatrixAt(i, M4b); im.setColorAt(i, tint);
   }
 }
 function finish() {
   for (const s of E.sets.values()) {
     const n = s.n;
-    for (const im of s.ims) { im.count = n; im.visible = n > 0; if (n) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; } }
+    for (const im of s.ims) { im.count = n; im.visible = n > 0; if (n) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; if (im.geometry.attributes.iFlame) im.geometry.attributes.iFlame.needsUpdate = true; } }
     s.n = 0;
   }
 }
@@ -132,41 +138,54 @@ function buildStation(f, def, lv, color) {
   let g;
   if (fn) g = fn(M, def, lv);
   else { g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.CylinderGeometry(def.r, def.r, def.r * 0.3, 24, 1), M.hull2)); }
-  bake(g, { face: 'cam', faceDir: CAM_DIR });
-  g.traverse(o => { if (o.isMesh && o.castShadow === undefined) o.castShadow = true; if (o.userData.aim) o.userData.aimHold = true; });
+  bake(g, { face: 'cam', faceDir: CAM_DIR, keep: keepFor('station', S.detail), flames: true, station: true });
+  g.traverse(o => { if (o.isMesh && o.castShadow === undefined) o.castShadow = true; if (o.isMesh && o.material.transparent) o.castShadow = false; });
   return g;
 }
 function stationKey(b, color) { return (b.def.f || b.f) + '|' + b.role + '|' + b.lv + '|' + color + '|' + (b.done ? 1 : 0); }
-function stationEntry(b, color) {
-  const f = b.def.f || b.f, m = buildStation(f, b.def, b.lv, color);
-  if (!b.done) remat(m, 'ghost', color, false);
-  const e = { m, key: stationKey(b, color), aim: [], berth: null, berthType: '', berthMats: null, berthM: null, charge: -1, hasCharge: false };
-  m.traverse(o => { if (o.userData.aim) e.aim.push(o); if (o.userData.berth && !e.berth) e.berth = o; if (o.userData.charge || o.userData.chargeAt !== undefined) e.hasCharge = true; });
-  E.root.add(m);
-  return e;
+/* Eintrag je Station; Voll- und Fernmodell entstehen erst, wenn sie gebraucht werden */
+function stationEntry(b, color) { return { m: null, far: null, key: stationKey(b, color), f: b.def.f || b.f, def: b.def, lv: b.lv, color, done: b.done, berth: null, berthType: '', berthMats: null, berthM: null, charge: -1, aimA: undefined }; }
+function fullStation(e) {
+  if (e.m) return e.m;
+  const m = buildStation(e.f, e.def, e.lv, e.color);
+  if (!e.done) remat(m, 'ghost', e.color, false);
+  m.traverse(o => { if (o.userData.berth && !e.berth) e.berth = o; });
+  m.visible = false; E.root.add(m); e.m = m; e.charge = -1; e.aimA = undefined;
+  return m;
 }
-function dropStation(e) { E.root.remove(e.m); }
+const FARST = new Map();
+function farStation(e) {
+  if (e.far) return e.far;
+  const key = e.f + '|' + e.def.id + '|' + e.lv + '|' + e.color;
+  let geo = FARST.get(key);
+  if (!geo) { const fn = BUILDB[e.f + ':' + e.def.id], M = mats(e.f, e.color); const raw = fn ? fn(M, e.def, e.lv) : new THREE.Group(); geo = farGeometry(raw, Math.max(1.5, e.def.r * 0.03)); FARST.set(key, geo); }
+  const m = new THREE.Mesh(geo, farMaterial('normal')); m.castShadow = S.detail >= 2; m.receiveShadow = true; m.visible = false; E.root.add(m); e.far = m;
+  return m;
+}
+function dropStation(e) { if (e.m) E.root.remove(e.m); if (e.far) E.root.remove(e.far); }
 /* Schiff im Bauplatz der Werft (eigene halbdurchsichtige Materialien je Werft) */
 function berthShip(e, type, def, color) {
   if (e.berthType === type) return;
   if (e.berthM) { e.berth.remove(e.berthM); e.berthM = null; e.berthMats = null; }
   e.berthType = type;
   if (!type || !e.berth || !def) return;
-  const m = bake(buildShip(def, color), { face: 'up' });
-  m.traverse(o => { if (o.isSprite || o.isPoints) o.visible = false; });
+  const m = bake(buildShip(def, color), { face: 'up', keep: keepFor('ship', S.detail), flames: true });
+  m.traverse(o => { if (o.isSprite || o.isPoints || (o.material && o.material.userData.isFlame)) o.visible = false; o.castShadow = false; });
   e.berthMats = remat(m, 'ghost', '', true);
   const max = (e.berth.userData.berth && e.berth.userData.berth.len) || 60, k = Math.min(1, max / def.len);
   m.scale.setScalar(k); e.berth.add(m); e.berthM = m;
 }
 
 /* ------------------------------------------------------------ Bauvorschau */
+/* Bauvorschau nach dem Rendern wieder ausblenden (ghost() wird vor frame() aufgerufen) */
+export function hideGhost() { if (E.ghostCur) { E.ghostCur.visible = false; E.ghostCur = null; } }
 export function ghost(f, role, lv, x, y, ok, color) {
   const key = f + '|' + role + '|' + (lv || 1) + '|' + (ok ? 1 : 0);
   let m = E.ghost.get(key);
   if (!m) {
     const def = bdefOf(f, role); if (!def) return;
     m = buildStation(f, def, lv || 1, color); remat(m, 'ghost', ok ? '#7dff9a' : '#ff5b47', false);
-    m.traverse(o => { o.castShadow = false; }); m.visible = false; E.root.add(m); E.ghost.set(key, m);
+    m.traverse(o => { o.castShadow = false; if (o.material && o.material.userData.isFlame) o.visible = false; }); m.visible = false; E.root.add(m); E.ghost.set(key, m);
   }
   m.position.set(x, 0.5, y); m.visible = true; E.ghostCur = m;
 }
@@ -181,9 +200,8 @@ function dome(x, y, r, t) {
 /* ------------------------------------------------------------ je Frame */
 export function updateEntities(g, dt, t, view) {
   const fx = E.fx && typeof E.fx.spawn === 'object' ? E.fx.spawn : null, det = S.detail;
-  const pcol = view.pcol, vis = view.visible, seen = view.vp < 0 ? () => true : view.seen, vp = view.vp;
-  if (E.ghostCur) { E.ghostCur.visible = false; E.ghostCur = null; }
-  E.domeN = 0;
+  const pcol = view.pcol, vis = view.visible, seen = view.vp < 0 ? () => true : view.seen, vp = view.vp, farShips = CAM.zoom < FAR_SHIP[S.detail], farSt = CAM.zoom < FAR_STATION[S.detail];
+  E.domeN = 0; flameTime(t);
   /* Vorlagen animieren (einmal je Typ und Farbe) */
   for (const tp of E.tpl.values()) { if (tp.t !== t) { animate(tp.root, t, dt); tp.root.updateMatrixWorld(true); tp.t = t; } }
   /* Schiffe */
@@ -191,7 +209,7 @@ export function updateEntities(g, dt, t, view) {
     if (u.dead || !vis(u)) continue;
     const def = u.def, R = Math.max(def.len * 0.7, def.r * 1.6);
     if (!inView(u.x, u.y, R, 10)) continue;
-    const col = pcol(u.owner), tp = tplOf(def, col), set = setOf(tp, u.derelict ? 'wreck' : 'normal');
+    const col = pcol(u.owner), tp = tplOf(def, col), set = setOf(tp, u.derelict ? 'wreck' : 'normal', farShips);
     /* Lage: schweben, rollen in Kurven (aus der Kursänderung) */
     let pv = E.prev.get(u.id); if (!pv) { pv = { ang: u.ang, roll: 0 }; E.prev.set(u.id, pv); }
     const da = dt > 0 ? angDiff(u.ang, pv.ang) / dt : 0; pv.ang = u.ang;
@@ -234,7 +252,7 @@ export function updateEntities(g, dt, t, view) {
   for (const w of g.wrecks) {
     if (!seen(w.x, w.y) || !inView(w.x, w.y, 60, 5)) continue;
     const u = g.byId.get(w.id), def = (u && u.def) || (typeof SHIPS !== 'undefined' && SHIPS[w.type]); if (!def) continue;
-    const set = setOf(tplOf(def, pcol(w.owner)), 'wreck'), left = w.until - g.time, kf = Math.max(0.05, Math.min(1, left / 20));
+    const set = setOf(tplOf(def, pcol(w.owner)), 'wreck', farShips), left = w.until - g.time, kf = Math.max(0.05, Math.min(1, left / 20));
     POS.set(w.x, -2, w.y); EUL.set(Math.cos(w.id) * 0.12, Math.PI / 2 - (w.ang + Math.sin(w.id) * 0.3), Math.sin(w.id) * 0.3); QUAT.setFromEuler(EUL); SCL.set(1, 1, 1); M4.compose(POS, QUAT, SCL);
     COL.setScalar(kf); push(set, -1, COL);
   }
@@ -248,10 +266,18 @@ export function updateEntities(g, dt, t, view) {
     const col = pcol(b.owner), key = stationKey(b, col);
     let e = E.stations.get(b.id);
     if (!e || e.key !== key) { if (e) dropStation(e); e = stationEntry(b, col); E.stations.set(b.id, e); }
-    const m = e.m, sh = seen(b.x, b.y) && inView(b.x, b.y, b.def.r * 1.4, b.def.r * 0.6);
-    m.visible = sh; if (!sh) continue;
-    m.position.set(b.x, 0, b.y);
+    const sh = seen(b.x, b.y) && inView(b.x, b.y, b.def.r * 1.4, b.def.r * 0.6);
+    if (!sh) { if (e.m) e.m.visible = false; if (e.far) e.far.visible = false; continue; }
+    /* fern und fertig: Fernmodell (ein Draw-Call), sonst Vollmodell */
+    const useFar = farSt && b.done, m = useFar ? farStation(e) : fullStation(e);
+    if (useFar) { if (e.m) e.m.visible = false; } else if (e.far) e.far.visible = false;
+    m.visible = true; m.position.set(b.x, 0, b.y);
     const v = vis(b);
+    if (useFar) {
+      if (b.upg) ring(b.x, b.y, b.def.r + 6, '#ffffff', 2, { dash: 4, a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * (b.upg.prog || 0) });
+      if (b.role === 'super' && v) ring(b.x, b.y, b.def.r + 4, '#ffb86b', 3, { alpha: 0.55, a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * Math.min(1, b.charge || 0) });
+      continue;
+    }
     if (!b.done) {
       m.scale.set(1, 0.08 + 0.92 * b.prog, 1);
       ring(b.x, b.y, b.def.r, '#c8dcff', 1.5, { dash: 6, alpha: 0.5 });
@@ -262,8 +288,8 @@ export function updateEntities(g, dt, t, view) {
     }
     m.scale.set(1, 1, 1);
     /* Geschütze, Ladung, Werft */
-    if (b.aimA !== undefined) for (const h of e.aim) h.rotation.y = Math.PI / 2 - b.aimA;
-    if (e.hasCharge && b.charge !== undefined && Math.abs(b.charge - e.charge) > 0.004) { e.charge = b.charge; setCharge(m, Math.min(1, b.charge)); }
+    if (b.aimA !== undefined && b.aimA !== e.aimA) { e.aimA = b.aimA; applyAim(m, b.aimA); }
+    if (b.role === 'super' && Math.abs((b.charge || 0) - e.charge) > 0.004) { e.charge = b.charge || 0; applyCharge(m, Math.min(1, e.charge)); }
     if (b.role === 'yard' && e.berth) {
       const q0 = b.q && b.q.length ? b.q[0].id : '';
       let def = null; if (q0) { const any = g.ships.find(u => u.type === q0); def = any ? any.def : shipDef(q0); }
@@ -273,7 +299,7 @@ export function updateEntities(g, dt, t, view) {
     if (b.upg) ring(b.x, b.y, b.def.r + 6, '#ffffff', 2, { dash: 4, a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * (b.upg.prog || 0) });
     if (b.role === 'super' && v) { const full = b.charge >= 1; ring(b.x, b.y, b.def.r + 4, '#ffb86b', 3, { alpha: full ? 0.6 + 0.3 * Math.sin(t * 5) : 0.55, a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * Math.min(1, b.charge || 0) }); if (full && b.owner === vp) disc(b.x, b.y, b.def.r * 1.6, '#ffb070', 0.14 + 0.08 * Math.sin(t * 4)); }
     if (b.give > 0 && v) ring(b.x, b.y, b.def.r * 1.15, '#8fe3ff', 2, { alpha: 0.18 });
-    if (b.role === 'spore' && v) { const lv = b.def.lv[b.lv - 1], r = lv && lv.aura; if (r) { disc(b.x, b.y, r, '#b4ff3c', 0.07); ring(b.x, b.y, r, '#b4ff3c', 1, { dash: 5, alpha: 0.25 }); } }
+    if (b.role === 'spore' && v) { const lv = b.def.lv[b.lv - 1], r = lv && lv.aura; if (r) { disc(b.x, b.y, r, '#b4ff3c', 0.13); ring(b.x, b.y, r, '#b4ff3c', 1, { dash: 5, alpha: 0.3 }); } }
     if (b.boarding > 0 && v) { const n = Math.min(10, Math.ceil(b.boarding / 12)), c = pcol(b.boardBy); for (let i = 0; i < n; i++) { const a = t * 2.5 + i * TAU / n; ring(b.x, b.y, b.def.r * 0.6, c, 3, { a0: a - 0.08, a1: a + 0.08 }); } }
     if (v && fx && det > 1 && b.hull < b.hullMax * 0.5 && Math.random() < 0.12) { if (fx.smoke) fx.smoke(b.x + (Math.random() - 0.5) * b.def.r, b.y + (Math.random() - 0.5) * b.def.r, 14, 1); if (fx.spark && Math.random() < 0.3) fx.spark(b.x, b.y, 2, 50, '#ffd27a'); }
     animate(m, t, dt);
@@ -284,9 +310,10 @@ export function updateEntities(g, dt, t, view) {
 export function clearEntities() {
   if (!E.root) return;
   for (const s of E.sets.values()) for (const im of s.ims) { E.root.remove(im); im.dispose(); }
-  E.sets.clear(); E.tpl.clear(); E.prev.clear();
+  E.sets.clear(); E.tpl.clear(); E.prev.clear(); FARST.clear();
   for (const e of E.stations.values()) dropStation(e); E.stations.clear();
   for (const m of E.ghost.values()) E.root.remove(m); E.ghost.clear(); E.ghostCur = null;
 }
 export function disposeEntities() { clearEntities(); if (E.root) { S.scene.remove(E.root); E.root = null; } }
+export const _E = E;
 export function entityStats() { let sets = 0, inst = 0; for (const s of E.sets.values()) { sets++; inst += s.ims.length; } return { tpl: E.tpl.size, sets, ims: inst, stations: E.stations.size }; }

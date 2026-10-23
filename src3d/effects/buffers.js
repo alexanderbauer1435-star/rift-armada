@@ -281,37 +281,37 @@ void main() {
   } else if (m == 1) {
     /* Riss: längliche Wunde – dunkler Spalt, grün glühende Ränder, violetter Hof. k = 0,8 ruhig, 1,6 Welle */
     float kk = min(k, 1.3);
-    float wob = 0.14 + 0.05 * sin(t * 3.0 + q.x * 5.0 + ph);
-    float lenf = 1.0 - smoothstep(0.72, 1.0, abs(q.x));
-    float slit = (1.0 - smoothstep(wob * 0.7, wob, abs(q.y))) * lenf;
-    float rim = (1.0 - smoothstep(0.0, 0.06, abs(abs(q.y) - wob))) * lenf * (0.55 + 0.45 * abs(sin(t * 3.0 + ph)));
-    float core = (1.0 - smoothstep(0.0, wob * 0.35, abs(q.y))) * lenf * (0.4 + 0.3 * sin(t * 5.0 + q.x * 8.0));
-    float halo = (1.0 - smoothstep(0.1, 1.0, d)) * 0.4 * k;
-    vec3 green = vec3(0.6, 0.95, 0.3) * kk;
-    col = mix(vec3(0.45, 0.2, 0.65), vec3(0.05, 0.02, 0.09), slit);
-    col += green * rim * 0.9 + green * core * 0.5;
-    a = max(halo, slit * 0.95); a = max(a, rim * 0.9);
+    float wob = (0.1 + 0.2 * sin(acos(clamp(abs(q.x) * 1.3, 0.0, 1.0)))) * (1.0 + 0.18 * sin(t * 3.0 + q.x * 5.0 + ph));
+    float lenf = 1.0 - smoothstep(0.74, 0.78, abs(q.x));
+    float slit = (1.0 - smoothstep(wob * 0.85, wob, abs(q.y))) * lenf;
+    float rim = (1.0 - smoothstep(0.0, 0.035, abs(abs(q.y) - wob))) * lenf * (0.55 + 0.45 * abs(sin(t * 3.0 + ph)));
+    float core = (1.0 - smoothstep(0.0, wob * 0.5, abs(q.y))) * lenf * (0.25 + 0.2 * sin(t * 5.0 + q.x * 8.0)) * smoothstep(0.78, 0.4, abs(q.x));
+    float halo = (1.0 - smoothstep(0.05, 1.0, d)) * 0.16 * min(k, 1.1);
+    vec3 green = vec3(0.4, 0.95, 0.18) * min(kk, 1.0);
+    col = mix(vec3(0.3, 0.1, 0.45), vec3(0.04, 0.015, 0.07), slit);
+    col += green * rim * 0.7 + green * core * 0.45;
+    a = max(halo, slit * 0.96); a = max(a, rim * 0.95);
   } else if (m == 2) {
     /* Eruption: brennende Scheibe – gelbweißer Kern, orange, dunkelroter Saum, flackernder Rand. k = Restdauer 0…1 */
-    float e = d * 1.2 + 0.06 * sin(ang * 9.0 + t * 7.0 + ph) + 0.04 * sin(ang * 17.0 - t * 11.0 + ph) + 0.06 * noise(q * 6.0 + t * 0.9);
+    float e = d * 1.2 + 0.035 * sin(ang * 9.0 + t * 7.0 + ph) + 0.03 * sin(ang * 17.0 - t * 11.0 + ph) + 0.1 * noise(q * 6.0 + t * 0.9) + 0.05 * noise(q * 14.0 - t * 1.3);
     float fl = 0.92 + 0.08 * sin(t * 23.0 + ph) + 0.04 * sin(t * 41.0);
-    vec3 c = mix(vec3(1.35, 1.15, 0.7), vec3(1.2, 0.5, 0.12), smoothstep(0.1, 0.5, e));
-    c = mix(c, vec3(0.55, 0.1, 0.02), smoothstep(0.5, 0.95, e));
-    c *= 0.8 + 0.4 * noise(q * 5.0 - t * 0.6 + ph);
+    vec3 c = mix(vec3(1.55, 1.35, 0.85), vec3(1.15, 0.42, 0.08), smoothstep(0.05, 0.45, e));
+    c = mix(c, vec3(0.42, 0.06, 0.01), smoothstep(0.45, 0.85, e));
+    c *= 0.6 + 0.8 * noise(q * 5.0 - t * 0.6 + ph);
     col = c * fl; a = (1.0 - smoothstep(0.75, 1.0, e)) * (0.55 + 0.45 * k) * 0.85;
   } else if (m == 3) {
     /* Wirbel (Exodus): blau-weiße Spirale, dreht sich */
     float sp = sin(ang * 3.0 - 7.0 * log(d + 0.06) + t * 6.0 + ph);
-    float band = smoothstep(0.15, 0.9, sp);
-    float rad = (1.0 - smoothstep(0.55, 1.0, d)) * (0.35 + 0.65 * (1.0 - d));
-    col = mix(vec3(0.5, 0.85, 1.0), vec3(1.4, 1.5, 1.6), smoothstep(0.45, 0.0, d));
-    a = (band * rad + (1.0 - smoothstep(0.0, 0.18, d)) * 0.8) * k;
+    float band = smoothstep(0.3, 0.95, sp);
+    float rad = (1.0 - smoothstep(0.5, 1.0, d)) * (0.3 + 0.7 * (1.0 - d));
+    col = mix(vec3(0.35, 0.7, 1.0), vec3(1.1, 1.25, 1.4), smoothstep(0.5, 0.0, d));
+    a = (band * rad * 0.65 + (1.0 - smoothstep(0.0, 0.16, d)) * 0.8) * k;
   } else if (m == 4) {
     /* Brutsturm: grün-violetter Ausbruch mit laufenden Speichen */
     float spokes = 0.5 + 0.5 * sin(ang * 6.0 + t * 4.0 + ph - d * 6.0);
     float n = noise(q * 5.0 + t * 0.4);
-    col = mix(vec3(0.7, 1.0, 0.25), vec3(0.6, 0.25, 0.8), smoothstep(0.2, 0.9, d + 0.2 * n));
-    a = (1.0 - smoothstep(0.35, 1.0, d)) * (0.35 + 0.65 * spokes) * k;
+    col = mix(vec3(0.7, 1.0, 0.25), vec3(0.5, 0.2, 0.7), smoothstep(0.2, 0.9, d + 0.2 * n));
+    a = (1.0 - smoothstep(0.3, 1.0, d)) * (0.3 + 0.7 * spokes) * k * 0.6;
   } else {
     /* weiches Leuchten am Boden */
     a = (1.0 - smoothstep(0.0, 1.0, d)) * k;

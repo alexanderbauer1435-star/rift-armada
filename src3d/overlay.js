@@ -19,7 +19,7 @@ export function initOverlay() {
   alloc(24000);
   const mat = new THREE.ShaderMaterial({
     vertexShader: 'attribute vec4 col; varying vec4 vCol; void main() { vCol = col; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'varying vec4 vCol; void main() { gl_FragColor = vCol; #include <tonemapping_fragment> #include <colorspace_fragment> }',
+    fragmentShader: 'varying vec4 vCol; void main() { gl_FragColor = vCol;\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
     transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide
   });
   O.mesh = new THREE.Mesh(O.geo, mat); O.mesh.frustumCulled = false; O.mesh.renderOrder = 50; O.mesh.name = 'overlay';

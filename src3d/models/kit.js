@@ -355,11 +355,68 @@ export function animate(root, t, dt) {
      sonst bleiben sie Sprites) und ebenfalls verschmolzen; Punkte (Points) je Material zusammengelegt.
    - Meshes mit Kindern werden zu Gruppen, ihr Körper wandert in den Puffer; leere Gruppen fallen weg.
    opts: { keep: Kennzeichenliste (Standard LIVE), face: 'cam' | 'up' | null, faceDir: Vector3, drop: Liste von
-   Kennzeichen, die vor dem Verschmelzen gelöscht werden (z. B. ['pulse', 'bob'] für Nebelschwaden) }.
+   Kennzeichen, die vor dem Verschmelzen gelöscht werden (z. B. ['pulse', 'bob'] für Nebelschwaden),
+   flames: alle Triebwerksflammen zu EINEM Mesh (Streckung im Vertex-Shader, siehe flameMat),
+   station: Geschützköpfe (aim) und Ladesegmente (chargeAt) mit einbacken und im Shader drehen/ausblenden
+   (stationMat, applyAim, applyCharge) – ein Materialklon je Station und Material }.
    Das Ergebnis ist derselbe Wurzelknoten; Draw-Calls je Modell ≈ Anzahl der Materialien + lebendige Knoten. */
 export const LIVE = ['flame', 'blink', 'spin', 'pulse', 'orbit', 'bob', 'sway', 'aim', 'charge', 'chargeAt', 'berth', 'dock'];
 export function isLive(o, keep = LIVE) { const u = o.userData; for (const k of keep) if (u[k] !== undefined && u[k] !== false) return true; return false; }
-const BAKE = { glow: new Map(), quad: new Map(), fold: new Map(), quadGeo: null };
+/* Kennzeichen, die im Spiel je Detailstufe lebendig bleiben (alles andere wird eingebacken). Flammen werden immer
+   zu EINEM Mesh je Modell verschmolzen (opts.flames) und im Shader gestreckt; aim/charge/berth/dock braucht das Spiel. */
+export function keepFor(kind, detail) {
+  const d = Math.max(0, Math.min(2, detail | 0));
+  if (kind === 'ship') return d < 2 ? [] : ['spin', 'orbit', 'bob', 'sway', 'pulse'];
+  if (kind === 'station') return d === 0 ? ['aim', 'charge', 'chargeAt', 'berth', 'dock'] : d === 1 ? ['aim', 'charge', 'chargeAt', 'berth', 'dock', 'spin'] : ['aim', 'charge', 'chargeAt', 'berth', 'dock', 'spin', 'orbit', 'sway', 'bob', 'pulse', 'blink'];
+  return d === 0 ? ['charge', 'chargeAt', 'berth', 'spin'] : d === 1 ? ['charge', 'chargeAt', 'berth', 'spin', 'orbit', 'sway', 'pulse'] : ['charge', 'chargeAt', 'berth', 'spin', 'orbit', 'sway', 'pulse', 'bob', 'blink'];
+}
+const BAKE = { glow: new Map(), quad: new Map(), fold: new Map(), quadGeo: null, flame: new Map() };
+/* Flammenmaterial: Klon des Plume-Materials; der Vertex-Shader streckt jede Flamme entlang ihrer Achse
+   (Attribut fdir = Anteil der Ecke entlang der Düsenachse) um den Faktor iFlame (je Instanz; ohne Instanzen 1)
+   mal Flackern (Attribut fphase wie o.id in animate()). uT = Zeit, von entities.js gesetzt (flameTime). */
+function flameMat(plume) {
+  let m = BAKE.flame.get(plume); if (m) return m;
+  m = plume.clone(); m.name = 'bakedFlame'; m.userData.isFlame = true;
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uT = { value: 0 }; m.userData.shader = sh;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute vec3 fdir; attribute float fphase; uniform float uT;\n#ifdef USE_INSTANCING\nattribute float iFlame;\n#endif')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float fk = 1.0;\n#ifdef USE_INSTANCING\nfk = iFlame;\n#endif\nfloat fs = fk * (0.8 + sin(uT * 37.0 + fphase) * 0.12 + sin(uT * 13.0 + fphase * 3.0) * 0.08); transformed += fdir * (fs - 1.0); }');
+  };
+  m.customProgramCacheKey = () => 'bakedFlame';
+  BAKE.flame.set(plume, m); return m;
+}
+/* Zeit aller Flammen-Shader setzen */
+export function flameTime(t) { for (const m of BAKE.flame.values()) if (m.userData.shader) m.userData.shader.uniforms.uT.value = t; }
+/* Stations-Variante eines Materials (ein Klon je Station und Material, opts.station): Geschützköpfe (userData.aim)
+   und Ladesegmente (userData.chargeAt) werden mit eingebacken; der Vertex-Shader dreht jede Ecke um den Drehpunkt
+   ihres Kopfes (Attribute aimIdx, aimPivot; uniform uAim[16], Index 15 = kein Kopf) und der Fragment-Shader lässt
+   Ecken mit Ladeschwelle cAt > uCharge weg. u = gemeinsame Uniform-Objekte der Station (userData.u). */
+const AIM_N = 16;
+function stationMat(m, u, ctx) {
+  let c = ctx.get(m); if (c) return c;
+  c = m.clone(); c.name = (m.name || '') + '+station'; c.userData.isStation = true; c.userData.u = u;
+  c.onBeforeCompile = (sh) => {
+    sh.uniforms.uAim = u.uAim; sh.uniforms.uCharge = u.uCharge;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nattribute float aimIdx; attribute vec3 aimPivot; attribute float cAt; uniform float uAim[' + AIM_N + ']; varying float vCAt;')
+      .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n{ float nA = uAim[int(aimIdx + 0.5)]; float nC = cos(nA), nS = sin(nA); objectNormal = vec3(nC * objectNormal.x + nS * objectNormal.z, objectNormal.y, -nS * objectNormal.x + nC * objectNormal.z); }')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float pA = uAim[int(aimIdx + 0.5)]; float pC = cos(pA), pS = sin(pA); vec3 d = transformed - aimPivot; transformed = aimPivot + vec3(pC * d.x + pS * d.z, d.y, -pS * d.x + pC * d.z); vCAt = cAt; }');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform float uCharge; varying float vCAt;')
+      .replace('#include <clipping_planes_fragment>', 'if (vCAt >= 0.0 && vCAt > uCharge) discard;\n#include <clipping_planes_fragment>');
+  };
+  const base = m.customProgramCacheKey && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile ? m.customProgramCacheKey() : '';
+  c.customProgramCacheKey = () => 'station|' + base;
+  ctx.set(m, c); return c;
+}
+/* Ladung 0…1 einer gebackenen Station/eines Tores: Shader-Segmente und lebendige charge-Knoten */
+export function applyCharge(root, k) { if (root.userData.u) root.userData.u.uCharge.value = k; setCharge(root, k); }
+/* Zielwinkel (rad wie ang) aller Geschützköpfe einer gebackenen Station */
+export function applyAim(root, aimA) {
+  const u = root.userData.u, heads = root.userData.heads; if (!u || !heads) return;
+  for (let i = 0; i < heads.length; i++) u.uAim.value[i] = Math.PI / 2 - aimA - heads[i].base;
+}
 /* Textur-Kennung (Bildquelle) für Material-Signaturen */
 const texId = t => t && t.source ? t.source.uuid : t ? t.uuid : '';
 /* Signatur: gleiche Signatur → dasselbe Material nach dem Falten der Texturkachelung */
@@ -410,7 +467,17 @@ function quadMat(sm) {
   return q;
 }
 export function bake(root, opts = {}) {
-  const keep = opts.keep || LIVE, live = o => o === root || isLive(o, keep);
+  const keep = (opts.keep || LIVE).filter(k => !(opts.flames && k === 'flame') && !(opts.station && (k === 'aim' || k === 'chargeAt'))), live = o => o === root || isLive(o, keep);
+  /* nächster Knoten mit Kennzeichen key (eigener oder Vorfahr) bis zum lebendigen Besitzer */
+  const upTo = (o, key) => { for (let p = o; p && p !== root && !(p !== o && live(p)); p = p.parent) if (p.userData[key] !== undefined && p.userData[key] !== false) return p; return null; };
+  const flameOf = o => opts.flames ? upTo(o, 'flame') : null;
+  /* Station: Geschützköpfe nummerieren (höchstens 15), gemeinsame Uniforms, Materialklone je Station */
+  let heads = null, U = null; const ctx = new Map();
+  if (opts.station) {
+    heads = []; root.traverse(o => { if (o.userData.aim && heads.length < AIM_N - 1) { heads.push({ node: o, base: o.rotation.y }); o.userData.aimHold = true; } });
+    U = { uAim: { value: new Float32Array(AIM_N) }, uCharge: { value: 1 } };
+    root.userData.u = U; root.userData.heads = heads;
+  }
   if (opts.drop) root.traverse(o => { for (const k of opts.drop) delete o.userData[k]; });
   /* Meshes mit Kindern: Körper abtrennen, Knoten wird Gruppe */
   const split = [];
@@ -449,28 +516,34 @@ export function bake(root, opts = {}) {
     if (o === root || live(o) || o.isInstancedMesh || o.isLine) return;
     if (!(o.isMesh || o.isPoints)) return;
     if (o.children.length) return;
-    let vis = true; for (let p = o.parent; p && p !== root && !live(p); p = p.parent) if (!p.visible) { vis = false; break; }
-    if (!o.visible || !vis) { rm.push(o); return; }
-    const c = canonMat(o.material), geo = o.geometry;
+    /* unsichtbare Teile fallen weg – außer Ladesegmente (chargeAt), die nur gerade aus sind */
+    let vis = true; for (let p = o.parent; p && p !== root && !live(p); p = p.parent) if (!p.visible && p.userData.chargeAt === undefined) { vis = false; break; }
+    if ((!o.visible && o.userData.chargeAt === undefined) || !vis) { rm.push(o); return; }
+    const fl = flameOf(o), geo = o.geometry; let c = fl ? { mat: flameMat(o.material), color: null, tile: null } : canonMat(o.material);
     if (!geo || !geo.attributes.position) return;
+    const st = !!(opts.station && !fl && !o.isPoints); if (st) c = { mat: stationMat(c.mat, U, ctx), color: c.color, tile: c.tile };
     const attrs = Object.keys(geo.attributes).filter(k => k !== 'color' || !c.color).sort().join(',');
-    const key = (o.isPoints ? 'P' : 'M') + '|' + c.mat.uuid + '|' + attrs + '|' + (o.castShadow ? 1 : 0) + '|' + o.renderOrder;
+    const key = (o.isPoints ? 'P' : 'M') + '|' + c.mat.uuid + '|' + attrs + '|' + (c.mat.isMeshBasicMaterial ? 0 : o.castShadow ? 1 : 0) + '|' + o.renderOrder + (fl ? '|F' : '');
     const b = owner(o); if (!buckets.has(b)) buckets.set(b, new Map());
-    const mm = buckets.get(b); if (!mm.has(key)) mm.set(key, { mat: c.mat, items: [], points: o.isPoints, shadow: false, recv: false, order: o.renderOrder });
-    const e = mm.get(key); e.items.push({ o, color: c.color, tile: c.tile }); e.shadow ||= o.castShadow; e.recv ||= o.receiveShadow;
+    const mm = buckets.get(b); if (!mm.has(key)) mm.set(key, { mat: c.mat, items: [], points: o.isPoints, shadow: false, recv: false, order: o.renderOrder, flame: !!fl, station: st });
+    const e = mm.get(key); const hd = st ? upTo(o, 'aim') : null, ca = st ? upTo(o, 'chargeAt') : null;
+    e.items.push({ o, color: c.color, tile: c.tile, fl, head: hd ? heads.findIndex(h => h.node === hd) : -1, cat: ca ? ca.userData.chargeAt : -1 }); e.shadow ||= o.castShadow && !c.mat.isMeshBasicMaterial; e.recv ||= o.receiveShadow;
   });
   for (const o of rm) o.parent.remove(o);
   const inv = new THREE.Matrix4(), rel = new THREE.Matrix4(), n3 = new THREE.Matrix3(), v = new THREE.Vector3();
   for (const [b, mm] of buckets) {
     inv.copy(b.matrixWorld).invert();
     for (const e of mm.values()) {
-      const one = e.items.length === 1 && !e.items[0].color && !e.items[0].tile && e.items[0].o.parent === b;
+      const one = e.items.length === 1 && !e.items[0].color && !e.items[0].tile && !e.flame && !e.station && e.items[0].o.parent === b;
       if (one) continue; /* schon ein einzelnes Mesh direkt am Besitzer */
       /* Attribute des Ergebnisses: alle gemeinsamen (position, normal, uv, color, vein, …); nicht indiziert */
-      const first = e.items[0].o.geometry, names = Object.keys(first.attributes).filter(k => k !== 'color' || !e.items[0].color);
+      const first = e.items[0].o.geometry, names = Object.keys(first.attributes).filter(k => k !== 'color' || !e.items[0].color).sort((a, b) => (a === 'position' ? -1 : b === 'position' ? 1 : 0));
       const sizes = {}; for (const k of names) sizes[k] = first.attributes[k].itemSize;
       const wantColor = !!e.items[0].color; if (wantColor) { names.push('color'); sizes.color = 3; }
       const needNormal = !e.points && !names.includes('normal'); if (needNormal) { names.push('normal'); sizes.normal = 3; }
+      if (e.flame) { names.push('fdir', 'fphase'); sizes.fdir = 3; sizes.fphase = 1; }
+      if (e.station) { names.push('aimIdx', 'aimPivot', 'cAt'); sizes.aimIdx = 1; sizes.aimPivot = 3; sizes.cAt = 1; }
+      const fb = new THREE.Vector3(), fa = new THREE.Vector3(), fm = new THREE.Matrix4(), pv = new THREE.Vector3();
       let total = 0; for (const it of e.items) { const g = it.o.geometry; total += g.index ? g.index.count : g.attributes.position.count; }
       const out = {}; for (const k of names) out[k] = new Float32Array(total * sizes[k]);
       let w = 0;
@@ -478,6 +551,10 @@ export function bake(root, opts = {}) {
         const o = it.o, g = o.geometry; if (needNormal && !g.attributes.normal) g.computeVertexNormals();
         rel.multiplyMatrices(inv, o.matrixWorld); n3.getNormalMatrix(rel);
         const flip = !e.points && rel.determinant() < 0, idx = g.index, cnt = idx ? idx.count : g.attributes.position.count, step = e.points ? 1 : 3;
+        /* Flamme: Düsenursprung und -achse (lokal +Z des Flammenknotens) im Besitzerraum */
+        if (it.fl) { fm.multiplyMatrices(inv, it.fl.matrixWorld); fb.setFromMatrixPosition(fm); fa.set(fm.elements[8], fm.elements[9], fm.elements[10]).normalize(); }
+        /* Geschützkopf: Drehpunkt im Besitzerraum */
+        if (it.head >= 0) { fm.multiplyMatrices(inv, heads[it.head].node.matrixWorld); pv.setFromMatrixPosition(fm); }
         for (let i = 0; i < cnt; i += step) for (let j = 0; j < step; j++) {
           const vi = idx ? idx.getX(i + (flip ? [0, 2, 1][j] : j)) : i + (flip ? [0, 2, 1][j] : j);
           for (const k of names) {
@@ -486,6 +563,11 @@ export function bake(root, opts = {}) {
             else if (k === 'normal') { if (a) { v.fromBufferAttribute(a, vi).applyMatrix3(n3).normalize(); dst[base] = v.x; dst[base + 1] = v.y; dst[base + 2] = v.z; } }
             else if (k === 'color' && it.color) { dst[base] = it.color.r; dst[base + 1] = it.color.g; dst[base + 2] = it.color.b; }
             else if (k === 'uv' && it.tile) { dst[base] = a.getX(vi) * it.tile[0] + it.tile[2]; dst[base + 1] = a.getY(vi) * it.tile[1] + it.tile[3]; }
+            else if (k === 'fdir') { const d = (out.position[w * 3] - fb.x) * fa.x + (out.position[w * 3 + 1] - fb.y) * fa.y + (out.position[w * 3 + 2] - fb.z) * fa.z; dst[base] = fa.x * d; dst[base + 1] = fa.y * d; dst[base + 2] = fa.z * d; }
+            else if (k === 'fphase') dst[base] = (it.fl.id % 1000) * 0.137;
+            else if (k === 'aimIdx') dst[base] = it.head >= 0 ? it.head : AIM_N - 1;
+            else if (k === 'aimPivot') { if (it.head >= 0) { dst[base] = pv.x; dst[base + 1] = pv.y; dst[base + 2] = pv.z; } }
+            else if (k === 'cAt') dst[base] = it.cat;
             else if (a) { for (let c = 0; c < s; c++) dst[base + c] = a.array[vi * a.itemSize + c]; }
           }
           w++;
@@ -508,3 +590,71 @@ export function bake(root, opts = {}) {
 }
 /* Anzahl der Zeichenaufrufe eines Baums (sichtbare Meshes, Sprites, Punkte, Linien) */
 export function drawCount(root) { let n = 0; root.traverse(o => { if ((o.isMesh || o.isSprite || o.isPoints || o.isLine) && o.visible) n++; }); return n; }
+
+/* ------------------------------------------------------------ Fernmodell (LOD)
+   Für kleine Zoomstufen: das ganze (ungebackene) Modell als EIN Mesh mit Vertexfarben – je Teil die mittlere
+   Farbe seines Materials (Grundfarbe × Mittelwert der Textur) und sein Leuchten (emissive × Intensität, bei
+   Leuchtmaterialien die Farbe selbst) im Attribut ecol. Teile kleiner als minR Einheiten (Nieten, Lichter,
+   Antennen), Sprites, Punkte, Flammen und sehr durchsichtige Teile fallen weg. Ein Draw-Call je Modell, deutlich
+   weniger Dreiecke; aus zwei Metern Abstand nicht vom Vollmodell zu unterscheiden. */
+const FAR = { avg: new Map(), mat: new Map(), col: new WeakMap() };
+function texAvg(t) {
+  const k = t.source ? t.source.uuid : t.uuid; let c = FAR.avg.get(k); if (c) return c;
+  c = new THREE.Color(1, 1, 1);
+  try { const img = t.image; if (img && img.width) { const cv = document.createElement('canvas'); cv.width = cv.height = 1; const x = cv.getContext('2d'); x.imageSmoothingEnabled = true; x.drawImage(img, 0, 0, 1, 1); const d = x.getImageData(0, 0, 1, 1).data; c.setRGB(d[0] / 255, d[1] / 255, d[2] / 255, t.colorSpace === THREE.SRGBColorSpace ? THREE.SRGBColorSpace : THREE.LinearSRGBColorSpace); } } catch (e) { /* ohne Bild: weiß */ }
+  FAR.avg.set(k, c); return c;
+}
+function matColor(m) {
+  let r = FAR.col.get(m); if (r) return r;
+  const col = new THREE.Color(0, 0, 0), ecol = new THREE.Color(0, 0, 0);
+  if (m.isMeshBasicMaterial) { ecol.copy(m.color); if (m.map) ecol.multiply(texAvg(m.map)); }
+  else { col.copy(m.color || new THREE.Color(1, 1, 1)); if (m.map) col.multiply(texAvg(m.map)); if (m.emissive && m.emissiveIntensity > 0) { ecol.copy(m.emissive).multiplyScalar(m.emissiveIntensity); if (m.emissiveMap) ecol.multiply(texAvg(m.emissiveMap)); } }
+  r = { col, ecol, vc: !!m.vertexColors }; FAR.col.set(m, r); return r;
+}
+export function farMaterial(kind = 'normal') {
+  let m = FAR.mat.get(kind); if (m) return m;
+  m = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.45, roughness: 0.5, flatShading: false }); m.name = 'far|' + kind; m.userData.uEmis = { value: kind === 'wreck' ? 0.08 : 1 };
+  if (kind === 'wreck') { m.color.setScalar(0.4); m.roughness = 0.8; }
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uEmis = m.userData.uEmis;
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 ecol; varying vec3 vEcol;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvEcol = ecol;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uEmis; varying vec3 vEcol;').replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vEcol * uEmis;');
+  };
+  m.customProgramCacheKey = () => 'far';
+  FAR.mat.set(kind, m); return m;
+}
+export function farGeometry(model, minR = 1.5) {
+  model.updateMatrixWorld(true);
+  const list = [], v = new THREE.Vector3(), sc = new THREE.Vector3();
+  model.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || !o.visible) return;
+    for (let p = o.parent; p && p !== model; p = p.parent) if (!p.visible && p.userData.chargeAt === undefined) return;
+    if (o.userData.flame || (o.material.transparent && o.material.opacity < 0.5) || (o.material.map && o.material.transparent && o.material.depthWrite === false)) return;
+    const g = o.geometry; if (!g || !g.attributes.position) return;
+    if (!g.boundingSphere) g.computeBoundingSphere();
+    sc.setFromMatrixScale(o.matrixWorld); const R = g.boundingSphere.radius * Math.max(sc.x, sc.y, sc.z);
+    if (R < minR) return;
+    list.push(o);
+  });
+  let total = 0; for (const o of list) { const g = o.geometry; total += g.index ? g.index.count : g.attributes.position.count; }
+  const P = new Float32Array(total * 3), N = new Float32Array(total * 3), C = new Float32Array(total * 3), E = new Float32Array(total * 3);
+  const n3 = new THREE.Matrix3(); let w = 0;
+  for (const o of list) {
+    const g = o.geometry, mc = matColor(o.material), m4 = o.matrixWorld; n3.getNormalMatrix(m4);
+    if (!g.attributes.normal) g.computeVertexNormals();
+    const pos = g.attributes.position, nor = g.attributes.normal, vc = mc.vc ? g.attributes.color : null, idx = g.index, cnt = idx ? idx.count : pos.count, flip = m4.determinant() < 0;
+    for (let i = 0; i < cnt; i += 3) for (let j = 0; j < 3; j++) {
+      const vi = idx ? idx.getX(i + (flip ? [0, 2, 1][j] : j)) : i + (flip ? [0, 2, 1][j] : j);
+      v.fromBufferAttribute(pos, vi).applyMatrix4(m4); P[w * 3] = v.x; P[w * 3 + 1] = v.y; P[w * 3 + 2] = v.z;
+      v.fromBufferAttribute(nor, vi).applyMatrix3(n3).normalize(); N[w * 3] = v.x; N[w * 3 + 1] = v.y; N[w * 3 + 2] = v.z;
+      let cr = mc.col.r, cg = mc.col.g, cb = mc.col.b, er = mc.ecol.r, eg = mc.ecol.g, eb = mc.ecol.b;
+      if (vc) { const r = vc.getX(vi), gg = vc.getY(vi), b = vc.getZ(vi); if (o.material.isMeshBasicMaterial) { er *= r; eg *= gg; eb *= b; } else { cr *= r; cg *= gg; cb *= b; } }
+      C[w * 3] = cr; C[w * 3 + 1] = cg; C[w * 3 + 2] = cb; E[w * 3] = er; E[w * 3 + 1] = eg; E[w * 3 + 2] = eb;
+      w++;
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3)); geo.setAttribute('color', new THREE.BufferAttribute(C, 3)); geo.setAttribute('ecol', new THREE.BufferAttribute(E, 3));
+  geo.computeBoundingSphere();
+  return geo;
+}

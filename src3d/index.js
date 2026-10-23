@@ -18,17 +18,17 @@ import { mats, BUILD, BUILDB, BUILDW, bake, drawCount } from './models/kit.js';
 import { S, supported, initScene, resize, setDetail, render, disposeScene } from './scene.js';
 import { CAM, setCam, updateCamera, project, unproject, shake } from './camera.js';
 import { buildWorld, updateWorld, disposeWorld } from './world.js';
-import { initEntities, updateEntities, clearEntities, disposeEntities, ghost, setEffects, entityStats } from './entities.js';
+import { initEntities, updateEntities, clearEntities, disposeEntities, ghost, hideGhost, setEffects, entityStats, _E } from './entities.js';
 import { initOverlay, ring, line, disc, flushOverlay } from './overlay.js';
 import { initFog, updateFog, disposeFog } from './fog.js';
 import * as effects from './effects/index.js';
 
-const FX = { ok: false };
+const FX = { ok: false, err: 0 };
 const RA3D = {
   supported,
-  init(canvas) {
+  init(canvas, opts) {
     if (!supported()) return false;
-    if (!initScene(canvas)) return false;
+    if (!initScene(canvas, opts || {})) return false;
     initOverlay(); initEntities();
     FX.ok = typeof effects.frame === 'function';
     if (FX.ok && typeof effects.init === 'function') { try { effects.init(S.scene, THREE, mats, S.detail); } catch (e) { console.warn('RA3D: effects.init', e); FX.ok = false; } }
@@ -36,7 +36,12 @@ const RA3D = {
     return true;
   },
   resize(cssW, cssH, dpr) { resize(cssW, cssH, dpr); },
-  setDetail(d) { setDetail(d); if (FX.ok && typeof effects.setDetail === 'function') effects.setDetail(S.detail); },
+  setDetail(d) {
+    const before = S.detail; setDetail(d);
+    if (FX.ok && typeof effects.setDetail === 'function') effects.setDetail(S.detail);
+    /* Vorlagen und Karte hängen an der Detailstufe (Kennzeichen, die lebendig bleiben) → neu aufbauen */
+    if (S.ok && S.detail !== before && S.g) { clearEntities(); buildWorld(S.g); }
+  },
   setGame(g, vp) {
     if (!S.ok) return;
     S.g = g; S.vp = vp === undefined ? -1 : vp; S.time = 0;
@@ -62,15 +67,16 @@ const RA3D = {
     updateCamera(dt);
     updateWorld(g, dt, time, view);
     updateEntities(g, dt, time, view);
-    if (FX.ok) { try { effects.frame(g, dt, time, view, S.camera); } catch (err) { console.warn('RA3D: effects.frame', err); FX.ok = false; } }
+    if (FX.ok) { try { effects.frame(g, dt, time, view, S.camera); FX.err = 0; } catch (err) { console.warn('RA3D: effects.frame', err); if (++FX.err > 3) FX.ok = false; } }
     flushOverlay();
     updateFog(view);
     render();
+    hideGhost();
   },
   dispose() { disposeFog(); disposeWorld(); disposeEntities(); if (FX.ok && typeof effects.clear === 'function') effects.clear(); disposeScene(); },
   /* Messwerte und Zugriff für Tests (nicht Teil der Spec) */
   stats() { return Object.assign({ calls: S.info.calls, tris: S.info.tris, detail: S.detail, dist: CAM.dist }, entityStats()); },
-  _: { S, CAM, THREE, BUILD, BUILDB, BUILDW, mats, bake, drawCount, effects }
+  _: { S, CAM, THREE, BUILD, BUILDB, BUILDW, mats, bake, drawCount, effects, E: _E }
 };
 window.RA3D = RA3D;
 export default RA3D;

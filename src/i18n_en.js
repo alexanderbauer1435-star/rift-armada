@@ -2061,5 +2061,7 @@ const EN = {
   "Du": "You",
   "KI": "AI",
   "Größe": "Size",
-  "Spieler": "Players"
+  "Spieler": "Players",
+  "3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.": "3D is not available on this device – staying in 2D.",
+  "Grafik": "Graphics"
 };

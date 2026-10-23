@@ -14,7 +14,7 @@
      aus overlay.js.
    ===================================================================== */
 import * as THREE from 'three';
-import { BUILDW, mats, animate, bake, setCharge, rng } from './models/kit.js';
+import { BUILDW, mats, animate, bake, applyCharge, rng, keepFor } from './models/kit.js';
 import { S, CAM_DIR } from './scene.js';
 import { CAM, inView } from './camera.js';
 import { ring } from './overlay.js';
@@ -22,34 +22,40 @@ import { ring } from './overlay.js';
 const EDGE = 110, TAU = Math.PI * 2;
 const W = { root: null, sky: null, anim: null, nodes: [], nebs: [], sites: new Map(), gates: new Map(), fieldsN: 0, map: null };
 
-/* ------------------------------------------------------------ Himmel */
+/* ------------------------------------------------------------ Himmel
+   Tiefe Ebene (Y = −2600) mit Nebelschwaden, darüber Sterne als Punkte in fester Pixelgröße (ohne Größen-
+   dämpfung) in zwei Tiefen: viele feine bei −2600, wenige helle mit weichem Hof bei −900. Punkte bleiben bei jedem
+   Zoom scharf, die Perspektive liefert die Parallaxe. Dazu ein Gasriese neben der Karte, weit hinten. */
 function canvas(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); return c; }
 function skyDeep() {
   return canvas(1024, 1024, (x, w, h) => {
     const r = rng(11);
-    const g = x.createLinearGradient(0, 0, w, h); g.addColorStop(0, '#060912'); g.addColorStop(0.5, '#090d1f'); g.addColorStop(1, '#070611'); x.fillStyle = g; x.fillRect(0, 0, w, h);
-    /* Nebelschwaden, an den Rändern gespiegelt wiederholt, damit die Kachel nahtlos bleibt */
+    x.fillStyle = '#070a16'; x.fillRect(0, 0, w, h);
+    /* Nebelschwaden, an den Rändern wiederholt, damit die Kachel nahtlos bleibt (kein Verlauf: der wäre eine Naht) */
     for (let i = 0; i < 46; i++) {
-      const cx = r() * w, cy = r() * h, rr = 90 + r() * 240, t = r(), col = t < 0.45 ? '110,70,200' : t < 0.8 ? '40,130,170' : '190,100,70', al = 0.04 + r() * 0.07;
+      const cx = r() * w, cy = r() * h, rr = 90 + r() * 240, t = r(), col = t < 0.45 ? '110,70,200' : t < 0.8 ? '40,130,170' : '190,100,70', al = 0.05 + r() * 0.08;
       for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) { const gr = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, rr); gr.addColorStop(0, `rgba(${col},${al})`); gr.addColorStop(1, `rgba(${col},0)`); x.fillStyle = gr; x.fillRect(cx + ox - rr, cy + oy - rr, rr * 2, rr * 2); }
     }
-    for (let i = 0; i < 2600; i++) { const a = 0.25 + r() * 0.75, t = r(); x.fillStyle = t < 0.1 ? `rgba(170,200,255,${a})` : t < 0.18 ? `rgba(255,220,180,${a})` : `rgba(225,232,255,${a})`; x.fillRect(r() * w, r() * h, r() < 0.04 ? 2 : 1, 1); }
   });
 }
-function skyNear() {
-  return canvas(1024, 1024, (x, w, h) => {
-    const r = rng(37); x.clearRect(0, 0, w, h);
-    for (let i = 0; i < 220; i++) {
-      const px = r() * w, py = r() * h, rr = 0.8 + r() * 1.6, t = r(), col = t < 0.12 ? '170,200,255' : t < 0.2 ? '255,220,180' : t < 0.25 ? '255,180,160' : '255,255,255';
-      if (rr > 1.8) { const gr = x.createRadialGradient(px, py, 0, px, py, rr * 5); gr.addColorStop(0, `rgba(${col},0.45)`); gr.addColorStop(1, `rgba(${col},0)`); x.fillStyle = gr; x.beginPath(); x.arc(px, py, rr * 5, 0, TAU); x.fill(); }
-      x.fillStyle = `rgba(${col},${0.6 + r() * 0.4})`; x.beginPath(); x.arc(px, py, rr, 0, TAU); x.fill();
-    }
-  });
+function dotCanvas() { return canvas(32, 32, (x) => { const g = x.createRadialGradient(16, 16, 0, 16, 16, 16); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.3, 'rgba(255,255,255,0.8)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 32, 32); }); }
+/* Sternpunkte: n Stück über ext × ext um (cx, cz) in Höhe y; Farben weiß/blau/warm mit Helligkeit */
+function stars(n, ext, cx, y, cz, seed, size, map, bright) {
+  const r = rng(seed), pos = new Float32Array(n * 3), col = new Float32Array(n * 3), c = new THREE.Color();
+  for (let i = 0; i < n; i++) {
+    pos[i * 3] = cx + (r() - 0.5) * ext; pos[i * 3 + 1] = y; pos[i * 3 + 2] = cz + (r() - 0.5) * ext;
+    const t = r(), b = bright * (0.35 + r() * 0.65);
+    c.set(t < 0.1 ? '#aac8ff' : t < 0.18 ? '#ffdcb4' : t < 0.22 ? '#ffb4a0' : '#e6ecff').multiplyScalar(b);
+    col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+  }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  const m = new THREE.PointsMaterial({ size, sizeAttenuation: false, vertexColors: true, map: map || null, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = -9; return p;
 }
-/* Gasriese: Bänder, Beleuchtung von links oben, Ring */
+/* Gasriese: Bänder, Beleuchtung von links oben, Ring (alles innerhalb der Leinwand) */
 function planetCanvas(seed) {
   return canvas(512, 512, (x, S, _h) => {
-    const r = rng(seed), cx = 256, cy = 256, pr = 150, cols = seed % 2 ? [[210, 150, 90], [150, 90, 60], [240, 200, 150]] : [[120, 150, 200], [70, 90, 150], [190, 210, 230]];
+    const r = rng(seed), cx = 256, cy = 256, pr = 108, cols = seed % 2 ? [[210, 150, 90], [150, 90, 60], [240, 200, 150]] : [[120, 150, 200], [70, 90, 150], [190, 210, 230]];
     const ringF = (front) => { x.save(); x.translate(cx, cy); x.scale(1, 0.28); x.beginPath(); x.arc(0, 0, pr * 2.1, front ? 0 : Math.PI, front ? Math.PI : TAU); x.arc(0, 0, pr * 1.35, front ? Math.PI : TAU, front ? 0 : Math.PI, true); x.closePath(); const g = x.createRadialGradient(0, 0, pr * 1.35, 0, 0, pr * 2.1); g.addColorStop(0, 'rgba(220,210,190,0.5)'); g.addColorStop(0.5, 'rgba(230,220,200,0.55)'); g.addColorStop(1, 'rgba(200,190,170,0)'); x.fillStyle = g; x.fill(); x.restore(); };
     ringF(false);
     x.save(); x.beginPath(); x.arc(cx, cy, pr, 0, TAU); x.clip();
@@ -63,14 +69,16 @@ function planetCanvas(seed) {
 function buildSky(map) {
   const g = new THREE.Group(); g.name = 'sky';
   const ext = Math.max(map.w, map.h) + 18000, cx = map.w / 2, cz = map.h / 2;
-  const t1 = new THREE.CanvasTexture(skyDeep()); t1.colorSpace = THREE.SRGBColorSpace; t1.wrapS = t1.wrapT = THREE.RepeatWrapping; t1.repeat.set(ext / 1700, ext / 1700); t1.anisotropy = 4;
+  const t1 = new THREE.CanvasTexture(skyDeep()); t1.colorSpace = THREE.SRGBColorSpace; t1.wrapS = t1.wrapT = THREE.RepeatWrapping; t1.repeat.set(ext / 2200, ext / 2200); t1.anisotropy = 4;
   const p1 = new THREE.Mesh(new THREE.PlaneGeometry(ext, ext).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: t1, depthWrite: false, fog: false })); p1.position.set(cx, -2600, cz); p1.renderOrder = -10; p1.frustumCulled = false; g.add(p1);
-  const t2 = new THREE.CanvasTexture(skyNear()); t2.colorSpace = THREE.SRGBColorSpace; t2.wrapS = t2.wrapT = THREE.RepeatWrapping; t2.repeat.set(ext / 1300, ext / 1300); t2.anisotropy = 4;
-  const p2 = new THREE.Mesh(new THREE.PlaneGeometry(ext, ext).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: t2, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); p2.position.set(cx, -900, cz); p2.renderOrder = -9; p2.frustumCulled = false; g.add(p2);
+  const dot = new THREE.CanvasTexture(dotCanvas());
+  g.add(stars(Math.round(ext * ext / 9000), ext, cx, -2590, cz, 23, 1.3, null, 0.9));
+  g.add(stars(Math.round(ext * ext / 120000), ext, cx, -2580, cz, 29, 2.2, null, 1.1));
+  g.add(stars(Math.round(ext * ext / 250000), ext, cx, -900, cz, 37, 5, dot, 1.0));
   /* Gasriese weit hinten, rechts oben neben der Karte */
   const t3 = new THREE.CanvasTexture(planetCanvas(map.id === 'ashfall' ? 3 : 2)); t3.colorSpace = THREE.SRGBColorSpace;
   const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t3, transparent: true, depthWrite: false, fog: false }));
-  pl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), CAM_DIR); pl.scale.setScalar(2200); pl.position.set(map.w * 0.95, -1800, map.h * 0.1); pl.renderOrder = -9; g.add(pl);
+  pl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), CAM_DIR); pl.scale.setScalar(1700); pl.position.set(map.w * 1.12, -2500, -map.h * 0.12); pl.renderOrder = -9; g.add(pl);
   return g;
 }
 
@@ -85,9 +93,10 @@ function shadows(g) { g.traverse(o => { if (o.isMesh && o.castShadow === undefin
 const NEB_MAT = {};
 function nebMat(kind) {
   if (NEB_MAT[kind]) return NEB_MAT[kind];
-  const c = canvas(128, 128, (x) => { const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.6, 'rgba(255,255,255,1)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); });
+  /* weiche Scheibe (quadratisch auslaufend), additiv: leuchtender Schleier statt grauem Deckel */
+  const c = canvas(128, 128, (x) => { const g = x.createRadialGradient(64, 64, 0, 64, 64, 64); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,0.7)'); g.addColorStop(0.7, 'rgba(255,255,255,0.25)'); g.addColorStop(1, 'rgba(255,255,255,0)'); x.fillStyle = g; x.fillRect(0, 0, 128, 128); });
   const t = new THREE.CanvasTexture(c);
-  return NEB_MAT[kind] = new THREE.MeshBasicMaterial({ map: t, color: kind === 'ash' ? '#8a3a28' : '#6a5ad0', transparent: true, opacity: 0.26, depthWrite: false, fog: false });
+  return NEB_MAT[kind] = new THREE.MeshBasicMaterial({ map: t, color: kind === 'ash' ? '#7a3020' : '#4a3fb8', transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
 }
 
 export function buildWorld(g) {
@@ -107,7 +116,7 @@ export function buildWorld(g) {
   /* Vorkommen */
   W.nodes = [];
   g.nodes.forEach((n, i) => {
-    const m = bake(buildW({ kind: n.kind, r: n.r, seed: n.seed || i * 131 + 7, big: n.r > 70 }, M), { face: 'cam', faceDir: CAM_DIR });
+    const m = bake(buildW({ kind: n.kind, r: n.r, seed: n.seed || i * 131 + 7, big: n.r > 70 }, M), { face: 'cam', faceDir: CAM_DIR, keep: keepFor('world', S.detail) });
     shadows(m); put(anim, m, n.x, n.y, -(n.ang || 0)); W.nodes.push({ n, m, dead: false });
   });
   /* Felder: alle zusammen verschmelzen (Staub je Material, Splitter je Feld, Stäubchen gesamt) */
@@ -133,11 +142,12 @@ export function buildWorld(g) {
 function siteKey(st) { return st.kind + '|' + (st.scanned ? 1 : 0) + '|' + (st.done ? 1 : 0); }
 function gateKey(gt, col) { return gt.state + '|' + gt.mode + '|' + col; }
 function siteModel(st, i) {
-  const m = bake(buildW({ kind: st.kind, r: st.r, seed: st.seed !== undefined ? st.seed : i * 31 + 3, scanned: st.scanned }, mats('guardian')), { face: 'cam', faceDir: CAM_DIR });
+  const m = bake(buildW({ kind: st.kind, r: st.r, seed: st.seed !== undefined ? st.seed : i * 31 + 3, scanned: st.scanned }, mats('guardian')), { face: 'cam', faceDir: CAM_DIR, keep: keepFor('world', S.detail) });
   return shadows(m);
 }
 function gateModel(gt, col) {
-  const m = bake(buildW({ kind: 'gate', r: gt.r, state: gt.state, mode: gt.mode || 'bridge', charge: gt.charge || 0 }, mats('guardian', col)), { face: 'cam', faceDir: CAM_DIR });
+  const m = bake(buildW({ kind: 'gate', r: gt.r, state: gt.state, mode: gt.mode || 'bridge', charge: gt.charge || 0 }, mats('guardian', col)), { face: 'cam', faceDir: CAM_DIR, keep: keepFor('world', S.detail), station: true });
+  applyCharge(m, gt.charge || 0);
   return shadows(m);
 }
 export function updateWorld(g, dt, t, view) {
@@ -169,7 +179,7 @@ export function updateWorld(g, dt, t, view) {
     if (!e || e.key !== key) { if (e) W.anim.remove(e.m); e = { m: gateModel(gt, col || undefined), key, charge: -1 }; put(W.anim, e.m, gt.x, gt.y, 0); W.gates.set(gt.id, e); }
     e.m.visible = seen(gt.x, gt.y) && inView(gt.x, gt.y, gt.r + 60, 20);
     if (!e.m.visible) continue;
-    if (gt.mode === 'lance' && gt.state === 'active' && Math.abs((gt.charge || 0) - e.charge) > 0.005) { e.charge = gt.charge || 0; setCharge(e.m, e.charge); }
+    if (Math.abs((gt.charge || 0) - e.charge) > 0.005) { e.charge = gt.charge || 0; applyCharge(e.m, e.charge); }
     if (gt.prog > 0) ring(gt.x, gt.y, gt.r + 14, pcol(gt.by), 3, { a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * gt.prog });
   }
   /* Animation (nur was im Bild ist) */
