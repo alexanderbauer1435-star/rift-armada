@@ -641,6 +641,8 @@ function hudSel() {
     const O = { idle: 'Wartet', hold: 'Hält Stellung', move: 'Fliegt', amove: 'Angriffsmarsch', attack: 'Greift an', harvest: 'Baut ab', return: 'Liefert', build: 'Baut', board: 'Entert' };
     if (d.cmdr) h += '<div class="cmdr">★ ' + esc(L(d.cmdr)) + '</div>';
     else if (u.hero) h += '<div class="cmdr">' + esc(qt(L(u.hero))) + '</div>';
+    if (u.ion) h += '<div class="sub" style="color:var(--acc2)">' + L('Im Ionennebel: Schilde aus, Sicht nur im Nahbereich – für Feinde erst aus der Nähe zu sehen.') + '</div>';
+    else if (inAsh(UI.g.map, u.x, u.y)) h += '<div class="sub" style="color:var(--bad)">' + L('Im Aschenebel: Schilde aus, die Hülle nimmt Schaden.') + '</div>';
     if (u.dormant) h += '<div class="sub" style="color:var(--acc2)">' + L('Ruht. Ein Restorer daneben erweckt das Schiff mit allem Rang.') + '</div>';
     if (u.derelict) h += '<div class="sub" style="color:var(--bad)">' + L('Wrack ohne Crew. Ein Bauschiff in der Nähe besetzt es neu.') + '</div>';
     else h += '<div class="sub">' + L(O[u.o.t] || u.o.t) + (u.o.t === 'attack' && u.o.sub ? ' → ' + L(SUB_NAMES[u.o.sub]) : '') + (d.wpn.length ? ' · ' + L(STANCES[u.stance | 0]) : '') + (u.kills ? ' · ' + u.kills + ' ' + L('Abschüsse') : '') + '</div>';
@@ -848,6 +850,10 @@ function setupRender() {
   if (MENU.mode === 'survival') setText('mapDesc', L('Allein gegen endlose Wellen der Brood. Nach jeder Welle eine von drei Belohnungen, alle fünf Wellen ein Leviathan. Rekord mit {0}: Welle {1}.', L(FACTIONS[MENU.faction].name), bestWave(MENU.faction)));
   else if (MENU.mode === 'quarantine') setText('mapDesc', L('Gemeinsam das Siegel in der Kartenmitte halten: 20 Wellen der Brood aus immer mehr Rissen, alle fünf ein Leviathan, zuletzt die Matriarch. Fällt das Siegel, haben alle verloren.'));
   else setText('mapDesc', L(MAPS[MENU.map].desc) + ' · ' + L('{0} Spieler', np) + ' · ' + MAPS[MENU.map].w + ' × ' + MAPS[MENU.map].h);
+  /* Kartenvorschau: Layout der gewählten Karte (Gefecht) bzw. der Wellenkarte */
+  const pm = MENU.mode === 'skirmish' ? generateMap(mapFor(MENU.map, np), np, 7) : MENU.mode === 'quarantine' ? generateMap('quarantine', MENU.allies + 1, 7) : null;
+  $('rowPrev').hidden = !pm; $('mapLegend').hidden = !pm;
+  if (pm) { const cv = $('mapPrev'), side = Math.round(360 * Math.min(1, pm.w / pm.h)), tall = Math.round(360 * Math.min(1, pm.h / pm.w)); cv.width = side; cv.height = tall; cv.style.aspectRatio = side + ' / ' + tall; mapLayout(cv, pm, { starts: [FACTIONS[MENU.faction].team] }); setText('mapLegend', mapLegend(pm)); }
 }
 function bestWave(f) { try { const d = JSON.parse(localStorage.getItem('ra.best') || '{}'); return d[f] || 0; } catch (e) { return 0; } }
 function setBestWave(f, n) { try { const d = JSON.parse(localStorage.getItem('ra.best') || '{}'); if (n > (d[f] || 0)) { d[f] = n; localStorage.setItem('ra.best', JSON.stringify(d)); return true; } } catch (e) { /* Speicher gesperrt */ } return false; }

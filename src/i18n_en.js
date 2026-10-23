@@ -2034,5 +2034,22 @@ const EN = {
   "freundlich": "friendly",
   "bereit": "ready",
   "entfernt": "away",
-  "Share": "Share"
+  "Share": "Share",
+  "Zwei Ecktaschen mit je zwei Zugängen, ein Eismond in der Mitte, eine Stätte und ein flackerndes Tor. Für den Einstieg.": "Two corner pockets with two entrances each, an ice moon in the middle, a site and a flickering gate. For beginners.",
+  "Jede Basis in einer Tasche mit einem Zugang, dazwischen Nebelwände. Zwei Tore verbinden die Hinterhöfe.": "Each base in a pocket with a single entrance, nebula walls in between. Two gates link the backyards.",
+  "Langer Korridor, Engstellen aus Asteroiden mit einer Aschewolke in der Lücke, eine Stätte in der Mitte.": "A long corridor, asteroid chokepoints with an ash cloud in the gap, a site in the middle.",
+  "Ein zerbrochener Mond als Trümmerring um die große Stätte, Ecktaschen für die Basen, Ionennebel in den Trümmern.": "A shattered moon as a debris ring around the great site, corner pockets for the bases, ion nebulae in the rubble.",
+  "Ein Kranz aus Ionennebel um die Mitte, vier offene Pforten. Die Basen sitzen in Ecktaschen mit zwei Zugängen.": "A crown of ion nebula around the centre with four open gateways. The bases sit in corner pockets with two entrances.",
+  "Drei Bahnen zwischen den Basen: kurz durch Aschewolken, mittig durch die Engstelle mit der Stätte, lang und still über den Süden.": "Three lanes between the bases: short through ash clouds, central through the chokepoint with the site, long and quiet across the south.",
+  "Blau: Eis": "Blue: ice",
+  "Braun: Erz": "Brown: ore",
+  "Grau: Asteroidengürtel": "Grey: asteroid belts",
+  "Grün: Stätten und Tore": "Green: sites and gates",
+  "Violett: Ionennebel (Schilde aus, nur Nahsicht)": "Violet: ion nebula (shields down, short sight only)",
+  "Rot: Aschewolke (Hüllenschaden)": "Red: ash cloud (hull damage)",
+  "Nicht im Nebel": "Not inside a nebula",
+  "Im Ionennebel: Schilde aus, Sicht nur im Nahbereich – für Feinde erst aus der Nähe zu sehen.": "Inside an ion nebula: shields down, short sight only – enemies spot you only up close.",
+  "Im Aschenebel: Schilde aus, die Hülle nimmt Schaden.": "Inside the ash nebula: shields down, the hull takes damage.",
+  "Nebula Crown": "Nebula Crown",
+  "The Narrows": "The Narrows"
 };

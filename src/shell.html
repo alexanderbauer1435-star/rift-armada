@@ -388,7 +388,7 @@ button { font: inherit; color: inherit; }
   </div>
   <div id="menu">
     <div class="page" id="pHome">
-      <h1 id="title">Rift Armada<small>Runde 9 · Vorabfassung</small></h1>
+      <h1 id="title">Rift Armada<small>Runde 10 · Vorabfassung</small></h1>
       <div class="menuBtns">
         <button class="key big arm" id="mCamp" data-l="Kampagne">Kampagne</button>
         <button class="key big" id="mConq" data-l="Conquest">Conquest</button>
@@ -408,11 +408,13 @@ button { font: inherit; color: inherit; }
       <div class="row"><span class="lbl">Modus</span><div class="seg" id="modeSeg"></div></div>
       <div class="row"><span class="lbl">Fraktion</span><div class="cards" id="facCards"></div></div>
       <div class="row" id="rowMap"><span class="lbl">Karte</span><div class="seg" id="mapSeg"></div></div>
+      <div class="row" id="rowPrev"><canvas id="mapPrev" width="360" height="360" style="width:min(360px,80vw);height:auto;max-height:46vh;aspect-ratio:1;border-radius:8px;background:#070b18"></canvas></div>
       <div class="row" id="rowOpp"><span class="lbl">Gegner</span><div class="seg" id="oppSeg"></div><span class="lbl" style="min-width:0">Stärke</span><div class="seg" id="lvlSeg"></div></div>
       <div class="row" id="rowOppF"><span class="lbl">Gegnerfraktion</span><div class="seg" id="oppFSeg"></div></div>
       <div class="row" id="rowAllies" hidden><span class="lbl">Verbündete (KI)</span><div class="seg" id="alliesSeg"></div><span class="lbl" style="min-width:0">Stärke</span><div class="seg" id="allyLvlSeg"></div></div>
       <div class="row"><span class="lbl">Startmittel</span><div class="seg" id="resSeg"></div></div>
       <p class="fine" id="mapDesc"></p>
+      <p class="fine" id="mapLegend" style="opacity:.75"></p>
       <div class="row"><button class="key" id="mBack">Zurück</button><button class="key big arm" id="mStart">Start</button></div>
     </div>
     <div class="page" id="pCamp" hidden>

@@ -52,7 +52,7 @@ const CAMP_ORDER = CAMPAIGN.filter(c => !c.free).reduce((a, c) => a.concat(c.ms)
 /* ------------------------------------------------------------------ Karte und Aufstellung */
 function misMap(id, seed, mis) {
   const def = MISSIONS[id], M = typeof def.map === 'function' ? def.map(mis || {}) : def.map, rng = makeRng((seed || 1) * 2654435761 + hashStr(id));
-  const map = { id: 'mission', name: def.name, w: M.w, h: M.h, np: M.starts.length, starts: M.starts.map(s => ({ x: s.x, y: s.y, ang: s.ang || 0 })), nodes: [], rocks: [], fields: [], sites: [], gates: [], seed };
+  const map = { id: 'mission', name: def.name, w: M.w, h: M.h, np: M.starts.length, starts: M.starts.map(s => ({ x: s.x, y: s.y, ang: s.ang || 0 })), nodes: [], rocks: [], fields: [], nebs: [], sites: [], gates: [], seed };
   M.build(map, rng);
   buildNav(map);
   return map;

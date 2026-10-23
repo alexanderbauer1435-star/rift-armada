@@ -66,7 +66,8 @@ function createGame(opts) {
     g.players.push({ id: i, faction: 'guardian', F: FACTIONS.guardian, human: false, ai: null, color: null, team: 99, ice: 0, ore: 0, eGen: 0, eUse: 0, lowPower: false, cpUse: 0, cpMax: 999, alive: true, lab: 0, start: { x: map.w / 2, y: map.h / 2, ang: 0 }, incAcc: 0, haulR: 0, shipCount: 0, queued: 0, lowT: -99, hurtT: -99, hurtX: 0, hurtY: 0, tech: {}, research: null, tfx: Object.assign({}, TFX0), doctrine: null, docAsk: false, relics: 0, heroIdx: 0, neutral: true, netT: 0, etech: null, vis: null, explored: new Uint8Array(g.vw * g.vh), stats: { built: 0, lost: 0, kills: 0, bLost: 0, razed: 0, earned: 0, spent: 0 } });
     g.neutral = i;
   }
-  for (const p of g.players) { if (!g.teamVis[p.team]) g.teamVis[p.team] = new Int32Array(g.vw * g.vh); p.vis = g.teamVis[p.team]; }
+  g.teamVisN = {};
+  for (const p of g.players) { if (!g.teamVis[p.team]) { g.teamVis[p.team] = new Int32Array(g.vw * g.vh); g.teamVisN[p.team] = new Int32Array(g.vw * g.vh); } p.vis = g.teamVis[p.team]; p.visN = g.teamVisN[p.team]; }
   /* Stätten und Tore als Objekte mit Kennung (antippbar) */
   for (const st of map.sites) { const o = { k: 4, id: g.nextId++, kind: st.kind, x: st.x, y: st.y, r: st.r, owner: -1, prog: 0, by: -1, done: false, scanned: false, used: [], guard: [], woke: false, holdT: 0, name: SITE_DEF[st.kind].name, ang: 0, seed: (st.x * 7 + st.y * 13) & 0xffff }; g.sites.push(o); g.byId.set(o.id, o); }
   for (let i = 0; i < map.gates.length; i++) { const gt = map.gates[i]; const o = { k: 5, id: g.nextId++, x: gt.x, y: gt.y, r: gt.r, state: gt.state, owner: -1, mode: 'bridge', prog: 0, by: -1, charge: 0, overload: 0, warnT: 0, pairIdx: gt.pair, pair: 0, name: 'Sprungtor', ang: 0 }; g.gates.push(o); g.byId.set(o.id, o); }
@@ -194,16 +195,17 @@ function markVis(vis, explored, vw, vh, stamp, x, y, r) {
 function updateVision(g) {
   g.visStamp++;
   const st = g.visStamp, vw = g.vw, vh = g.vh;
-  for (const u of g.ships) { if (u.dead) continue; const p = g.players[u.owner]; markVis(p.vis, p.explored, vw, vh, st, u.x, u.y, u.def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor)); }
+  /* Ionennebel: wer darin steht, sieht nur ION_SEE weit (u.ion) und wird selbst nur aus der Nähe gesehen (Nahsicht visN) */
+  for (const u of g.ships) { if (u.dead) continue; const p = g.players[u.owner]; u.ion = inIon(g.map, u.x, u.y); let r = u.def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor); if (u.ion) r = Math.min(r, ION_SEE); markVis(p.vis, p.explored, vw, vh, st, u.x, u.y, r); markVis(p.visN, p.explored, vw, vh, st, u.x, u.y, ION_SEE); }
   for (let i = g.reveals.length - 1; i >= 0; i--) { const r = g.reveals[i]; if (g.time > r.until) { g.reveals.splice(i, 1); continue; } const p = g.players[r.owner]; markVis(p.vis, p.explored, vw, vh, st, r.x, r.y, r.r); }
-  for (const b of g.bldgs) { if (b.dead) continue; const p = g.players[b.owner]; markVis(p.vis, p.explored, vw, vh, st, b.x, b.y, b.done ? (SENSOR_B[b.role] || 360) : 220); }
+  for (const b of g.bldgs) { if (b.dead) continue; const p = g.players[b.owner]; markVis(p.vis, p.explored, vw, vh, st, b.x, b.y, b.done ? (SENSOR_B[b.role] || 360) : 220); markVis(p.visN, p.explored, vw, vh, st, b.x, b.y, ION_SEE); }
   /* Verbündete teilen Sicht: dieselbe Tabelle je Team; erkundet nachziehen */
   for (const p of g.players) for (const q of g.players) if (q !== p && q.team === p.team) { const e = p.explored, f = q.explored; for (let i = 0; i < e.length; i++) if (f[i]) e[i] = 1; }
 }
 function canSee(g, pi, e) {
   if (pi < 0) return true;
   if (e.k !== 3 && e.owner >= 0 && g.tm[e.owner] === g.tm[pi]) return true;
-  const vis = g.players[pi].vis, cx = clamp((e.x / VIS) | 0, 0, g.vw - 1), cy = clamp((e.y / VIS) | 0, 0, g.vh - 1);
+  const p = g.players[pi], vis = e.k === 1 && e.ion ? p.visN : p.vis, cx = clamp((e.x / VIS) | 0, 0, g.vw - 1), cy = clamp((e.y / VIS) | 0, 0, g.vh - 1);
   return vis[cy * g.vw + cx] === g.visStamp;
 }
 function visAt(g, pi, x, y) { const vis = g.players[pi].vis, cx = clamp((x / VIS) | 0, 0, g.vw - 1), cy = clamp((y / VIS) | 0, 0, g.vh - 1); return vis[cy * g.vw + cx] === g.visStamp; }
@@ -247,6 +249,7 @@ function canPlace(g, pi, role, x, y) {
   if (x - r < EDGE || y - r < EDGE || x + r > m.w - EDGE || y + r > m.h - EDGE) return 'Zu nahe am Aschenebel';
   for (const o of m.rocks) if (hyp(o.x - x, o.y - y) < o.r + r + 6) return 'Hier ist ein Asteroid im Weg';
   for (const o of m.fields) if (hyp(o.x - x, o.y - y) < o.r + r * 0.5) return 'Nicht im Asteroidenfeld';
+  for (const o of m.nebs || []) if (hyp(o.x - x, o.y - y) < o.r + r * 0.5) return 'Nicht im Nebel';
   for (const o of g.nodes) if (hyp(o.x - x, o.y - y) < o.r + r + 30) return 'Zu nahe am Vorkommen';
   for (const b of g.bldgs) if (!b.dead && hyp(b.x - x, b.y - y) < b.def.r + r + 14) return 'Zu nahe an einer Station';
   for (const o of g.sites) if (hyp(o.x - x, o.y - y) < o.r + r + 20) return 'Zu nahe an einer Stätte';

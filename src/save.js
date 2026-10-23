@@ -22,7 +22,7 @@ function saveGame(g) {
     if (typeof v.id === 'string' && FACTIONS[v.id] === v) return { $f: v.id };
     for (const l in AI_LEVELS) if (AI_LEVELS[l] === v) return { $c: +l };
     const o = {};
-    for (const k in v) { if (k === 'path' || k === 'beams' || k === 'aimA' || k === 'vis' || k === 'explored' || k === 'rng') continue; const y = enc(v[k]); if (y !== undefined) o[k] = y; }
+    for (const k in v) { if (k === 'path' || k === 'beams' || k === 'aimA' || k === 'vis' || k === 'visN' || k === 'explored' || k === 'rng') continue; const y = enc(v[k]); if (y !== undefined) o[k] = y; }
     return o;
   };
   return {
@@ -54,7 +54,7 @@ function loadGame(d) {
   g.ships = d.ships.map(dec); g.bldgs = d.bldgs.map(dec);
   for (const u of g.ships) { if (!u.def) return null; u.path = null; u.beams = null; g.byId.set(u.id, u); }
   for (const b of g.bldgs) { if (!b.def) return null; b.beams = null; g.byId.set(b.id, b); navBlock(g.map, b.x, b.y, b.def.r, true); }
-  d.players.forEach((pd, i) => { const p = g.players[i], ex = pd.ex; delete pd.ex; const vis = p.vis, explored = p.explored; Object.assign(p, dec(pd)); p.vis = vis; p.explored = explored; explored.fill(0); rleDec(ex, explored, 1); p.F = FACTIONS[p.faction]; if (p.ai) p.ai.cfg = AI_LEVELS[p.ai.lvl] || AI_LEVELS[2]; });
+  d.players.forEach((pd, i) => { const p = g.players[i], ex = pd.ex; delete pd.ex; const vis = p.vis, visN = p.visN, explored = p.explored; Object.assign(p, dec(pd)); p.vis = vis; p.visN = visN; p.explored = explored; explored.fill(0); rleDec(ex, explored, 1); p.F = FACTIONS[p.faction]; if (p.ai) p.ai.cfg = AI_LEVELS[p.ai.lvl] || AI_LEVELS[2]; });
   d.nodes.forEach((n, i) => { g.nodes[i].amount = n[0]; g.nodes[i].miners = n[1]; });
   g.proj = dec(d.proj || []); g.wrecks = dec(d.wrecks || []); g.reveals = dec(d.reveals || []); g.strikes = dec(d.strikes || []); g.log = d.log || [];
   /* Stätten und Tore behalten ihre Kennungen aus createGame, nur der Zustand kommt aus dem Spielstand */

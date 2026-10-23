@@ -554,6 +554,17 @@ R.frame = function (alpha, dt) {
   const inV = (x, y, m) => x + m > x0 && x - m < x1 && y + m > y0 && y - m < y1;
   const m = g.map, vp = R.vp, lowZ = cam.z < 0.45;
   drawAsh(ctx);
+  /* Nebelzonen: Ionennebel violett-blau mit treibenden Schlieren, Aschewolken rot-braun glimmend */
+  for (const n of m.nebs || []) if (inV(n.x, n.y, n.r)) {
+    const ash = n.kind === 'ash', t = R.time * 0.15 + n.x * 0.01;
+    for (let k = 0; k < (lowZ ? 1 : 3); k++) {
+      const cx = n.x + Math.cos(t + k * 2.1) * n.r * 0.18, cy = n.y + Math.sin(t * 1.3 + k * 2.1) * n.r * 0.18, rr = n.r * (1 - k * 0.22);
+      const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+      if (ash) { gr.addColorStop(0, 'rgba(255,110,60,0.22)'); gr.addColorStop(0.6, 'rgba(120,40,25,0.22)'); gr.addColorStop(1, 'rgba(90,30,20,0)'); }
+      else { gr.addColorStop(0, 'rgba(150,130,255,0.2)'); gr.addColorStop(0.6, 'rgba(70,60,160,0.2)'); gr.addColorStop(1, 'rgba(50,40,120,0)'); }
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.fill();
+    }
+  }
   /* Felder: dichter Bereich als weiche Fläche, darin die Felsen */
   for (const f of m.fields) if (inV(f.x, f.y, f.r)) { const gr = ctx.createRadialGradient(f.x, f.y, f.r * 0.2, f.x, f.y, f.r); gr.addColorStop(0, 'rgba(90,80,70,0.22)'); gr.addColorStop(1, 'rgba(90,80,70,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill(); }
   for (const o of m.rocks) if (inV(o.x, o.y, o.r)) drawRock(ctx, o, 'rock');
@@ -757,6 +768,7 @@ R.drawMini = function () {
     x.fillStyle = '#05070f'; x.fillRect(0, 0, W, H);
     const gr = x.createLinearGradient(0, 0, W, H); gr.addColorStop(0, 'rgba(60,20,12,0.6)'); gr.addColorStop(0.5, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(60,20,12,0.6)');
     x.strokeStyle = 'rgba(120,40,20,0.8)'; x.lineWidth = Math.max(2, EDGE * sx); x.strokeRect(0, 0, W, H);
+    for (const n of m.nebs || []) { x.fillStyle = n.kind === 'ash' ? 'rgba(255,90,60,0.4)' : 'rgba(120,110,255,0.35)'; x.beginPath(); x.arc(n.x * sx, n.y * sy, n.r * sx, 0, TAU); x.fill(); }
     for (const f of m.fields) { x.fillStyle = 'rgba(110,100,90,0.35)'; x.beginPath(); x.arc(f.x * sx, f.y * sy, f.r * sx, 0, TAU); x.fill(); }
     for (const o of m.rocks) { x.fillStyle = '#5a554f'; x.beginPath(); x.arc(o.x * sx, o.y * sy, Math.max(1, o.r * sx), 0, TAU); x.fill(); }
     R.miniBase = b;

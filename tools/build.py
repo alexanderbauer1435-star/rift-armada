@@ -5,7 +5,7 @@ build/rift-armada.html (gleicher Inhalt, fester Name für die Android-App)."""
 import sys, os, re, hashlib
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'src')
-ORDER = ['core.js', 'data.js', 'i18n.js', 'i18n_en.js', 'map.js', 'sim.js', 'combat.js', 'ai.js', 'waves.js', 'mission.js', 'missions.js', 'conquest.js', 'ships.js', 'fx.js', 'render.js', 'audio.js', 'music.js', 'portrait.js', 'ui.js', 'campaign.js', 'cqui.js', 'save.js', 'app.js', 'qr.js', 'net.js', 'main.js']
+ORDER = ['core.js', 'data.js', 'i18n.js', 'i18n_en.js', 'map.js', 'mapview.js', 'sim.js', 'combat.js', 'ai.js', 'waves.js', 'mission.js', 'missions.js', 'conquest.js', 'ships.js', 'fx.js', 'render.js', 'audio.js', 'music.js', 'portrait.js', 'ui.js', 'campaign.js', 'cqui.js', 'save.js', 'app.js', 'qr.js', 'net.js', 'main.js']
 def build(version):
     shell = open(os.path.join(SRC, 'shell.html'), encoding='utf-8').read()
     font = open(os.path.join(SRC, 'font.css'), encoding='utf-8').read()

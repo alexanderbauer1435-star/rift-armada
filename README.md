@@ -47,6 +47,15 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 12 (Runde 10, Kartendesign): Geländebaukasten in map.js – Asteroidengürtel entlang Linien mit gezielten
+  Lücken (belt), Felswände (wall), Nebelzonen (nebula/cloud) und Taschen um Startplätze (pocket). Zwei Nebelarten:
+  Ionennebel (Schilde aus, Sensoren auf Nahsicht, Schiffe darin sieht der Feind erst aus 150 Einheiten – Nahsicht-Raster
+  visN je Team) und Aschewolken im Inneren (wie der Rand: Schilde aus, Hüllenschaden; Wegsuche meidet sie). Nicht im
+  Nebel bauen. Alle vier Karten umgebaut: jede Basis in einer Tasche mit ein bis zwei Zugängen, Engstellen mit Stätten
+  und Toren. Zwei neue Karten: Nebula Crown (2–4, Ionenkranz um die Mitte mit vier Pforten) und The Narrows (2, drei
+  Bahnen: kurz durch Asche, mittig durch die Engstelle, lang und still über den Süden). Kartenvorschau im Menü
+  (mapview.js: Layout mit Legende, auch für Quarantine Line), Nebel in Spielansicht und Minikarte, Hinweis am Schiff.
+  Test tests/maps.js: Erreichbarkeit aller Starts in allen Größenklassen, nichts in Fels/Feld/Nebel, Bauplatz um die Basis.
 - Fassung 11 (Runde 9): Englisch als zweite Sprache (Einstellungen → Sprache · Language, ohne Einstellung die Sprache
   des Geräts): rund 2 000 Texte – Oberfläche, Hilfe, alle Missionen mit Funk und Entscheidungen, Conquest mit Kapiteln,
   Berichten und Enden, Daten aller Fraktionen. Die Simulation bleibt sprachfrei: Meldungen aus Missionen und Feldzug

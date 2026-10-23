@@ -131,6 +131,7 @@ function updateShip(g, u, dt) {
   const def = u.def, p = g.players[u.owner], o = u.o, m = g.map;
   /* Aschenebel: Schild aus, Hülle brennt */
   if (inAsh(m, u.x, u.y)) { u.shield = 0; u.sT = 0; u.hull -= u.hullMax * ASH_DMG * dt; if (u.hull <= 0) { kill(g, u, null, -1); return; } }
+  else if (u.ion) { u.shield = 0; u.sT = 0; }
   else if (u.shieldMax && u.shield < u.shieldMax) { u.sT += dt; if (u.sT > p.tfx.sdelay) u.shield = Math.min(u.shieldMax, u.shield + def.sreg * p.tfx.sreg * (1 + 0.1 * u.rank) * dt); }
   if (u.beams) { let any = false; for (let i = 0; i < u.beams.length; i++) { const b = u.beams[i]; if (b) { b.t -= dt; if (b.t <= 0) u.beams[i] = null; else any = true; } } if (!any) u.beams = null; }
   if (u.hangar) updateHangar(g, u, dt);
