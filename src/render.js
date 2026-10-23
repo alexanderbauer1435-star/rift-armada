@@ -183,7 +183,7 @@ function planetSprite(seed) {
 function makeStars() {
   const id = R.g && R.g.map ? R.g.map.id : 'haven';
   R.nebula = nebulaTile(id); R.nebulaId = id;
-  R.stars = [[starTile(11, 260, 0.9), 0.1], [starTile(23, 120, 1.4), 0.26], [starTile(37, 30, 2.0, true), 0.5]];
+  R.stars = [[starTile(11, 90, 0.7), 0.1], [starTile(23, 30, 1.0), 0.26], [starTile(37, 8, 1.4, true), 0.5]];
   R.planet = planetSprite(id === 'ashfall' ? 3 : 2);
 }
 /* Vignette: dunkle Ecken – gibt dem Bild Tiefe und lenkt den Blick zur Mitte */
@@ -209,12 +209,12 @@ function drawBackground(ctx) {
     R.bgKey = key;
     if (!R.bgCv || R.bgCv.width !== R.W || R.bgCv.height !== R.H) { R.bgCv = document.createElement('canvas'); R.bgCv.width = R.W; R.bgCv.height = R.H; R.bgCtx = R.bgCv.getContext('2d', { alpha: false }); R.nebCv = document.createElement('canvas'); R.nebCv.width = Math.ceil(R.W / 2); R.nebCv.height = Math.ceil(R.H / 2); R.nebCtx = R.nebCv.getContext('2d'); }
     const x = R.bgCtx, gr = x.createLinearGradient(0, 0, R.W, R.H);
-    gr.addColorStop(0, '#060912'); gr.addColorStop(0.5, '#04060d'); gr.addColorStop(1, '#090710');
+    gr.addColorStop(0, '#030409'); gr.addColorStop(0.5, '#020308'); gr.addColorStop(1, '#040308');
     x.fillStyle = gr; x.fillRect(0, 0, R.W, R.H);
     /* Nebel in halber Auflösung: zwei Lagen derselben Kachel, verschieden schnell und gespiegelt → wirkt tiefer */
     const nx = R.nebCtx, hw = R.nebCv.width, hh = R.nebCv.height;
     nx.clearRect(0, 0, hw, hh);
-    for (const [f, al, flip] of (R.detail > 1 ? [[0.05, 0.75, false], [0.09, 0.55, true]] : [[0.06, 0.9, false]])) {
+    for (const [f, al, flip] of (R.detail > 1 ? [[0.05, 0.3, false], [0.09, 0.2, true]] : [[0.06, 0.35, false]])) {
       const T = 384, ox = ((-cam.x * f * z * s / 2) % T + T) % T, oy = ((-cam.y * f * z * s / 2) % T + T) % T;
       nx.save(); nx.globalAlpha = al; if (flip) { nx.translate(hw, 0); nx.scale(-1, 1); } nx.translate(ox - T, oy - T); nx.scale(0.5, 0.5); nx.fillStyle = nx.createPattern(R.nebula, 'repeat'); nx.fillRect(0, 0, (hw + T) * 2, (hh + T) * 2); nx.restore();
     }
@@ -227,8 +227,8 @@ function drawBackground(ctx) {
     }
   }
   ctx.drawImage(R.bgCv, 0, 0);
-  /* Funkeln der hellen Sterne (jede Runde, additiv) */
-  if (R.detail > 1) {
+  /* Funkeln der hellen Sterne – abgeschaltet: der Raum soll ruhig und dunkel sein wie in Armada 2 */
+  if (false) {
     const [tile, f] = R.stars[2], ox = ((-cam.x * f * z * s) % 512 + 512) % 512, oy = ((-cam.y * f * z * s) % 512 + 512) % 512;
     ctx.globalCompositeOperation = 'lighter';
     for (const st of tile._list) {

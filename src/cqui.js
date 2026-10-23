@@ -35,7 +35,7 @@ function cqShowSetup() {
   const fc = $('cqFacs'); fc.textContent = '';
   for (const f of CQ_FACS) {
     const F = FACTIONS[f], b = document.createElement('button');
-    b.className = 'card' + (CQS.fac === f ? ' on' : '');
+    b.className = 'card' + (CQS.fac === f ? ' on' : ''); b.style.setProperty('--fc', F.team);
     b.innerHTML = '<h4 style="color:' + F.team + '">' + esc(F.name) + '</h4><p>' + esc(L(CQ_CAPS[f].name)) + ' · ' + esc(L(CHARS[CQ_ADV[f][0]].name)) + ' ' + L('gegen') + ' ' + esc(L(CHARS[CQ_ADV[f][1]].name)) + '</p>';
     b.addEventListener('click', () => { CQS.fac = f; SND.play('click'); cqShowSetup(); });
     fc.appendChild(b);

@@ -38,7 +38,7 @@ export function initScene(canvas, opts = {}) {
     S.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false, powerPreference: 'high-performance', preserveDrawingBuffer: !!opts.preserve });
   } catch (e) { console.warn('RA3D: WebGL nicht verfügbar', e); return false; }
   const r = S.renderer;
-  r.setPixelRatio(1); r.setClearColor('#04060d', 1);
+  r.setPixelRatio(1); r.setClearColor('#020308', 1);
   r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.0;
   r.shadowMap.enabled = false; r.shadowMap.type = THREE.PCFSoftShadowMap;
   r.autoClear = true;

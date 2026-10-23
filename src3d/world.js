@@ -30,10 +30,11 @@ function canvas(w, h, draw) { const c = document.createElement('canvas'); c.widt
 function skyDeep() {
   return canvas(1024, 1024, (x, w, h) => {
     const r = rng(11);
-    x.fillStyle = '#070a16'; x.fillRect(0, 0, w, h);
+    /* Wie in Armada 2: fast schwarzer Raum, nur hier und da eine schwache Nebelschwade */
+    x.fillStyle = '#020308'; x.fillRect(0, 0, w, h);
     /* Nebelschwaden, an den Rändern wiederholt, damit die Kachel nahtlos bleibt (kein Verlauf: der wäre eine Naht) */
-    for (let i = 0; i < 46; i++) {
-      const cx = r() * w, cy = r() * h, rr = 90 + r() * 240, t = r(), col = t < 0.45 ? '110,70,200' : t < 0.8 ? '40,130,170' : '190,100,70', al = 0.05 + r() * 0.08;
+    for (let i = 0; i < 9; i++) {
+      const cx = r() * w, cy = r() * h, rr = 160 + r() * 300, t = r(), col = t < 0.45 ? '70,50,120' : t < 0.8 ? '30,70,100' : '110,60,45', al = 0.03 + r() * 0.04;
       for (const ox of [-w, 0, w]) for (const oy of [-h, 0, h]) { const gr = x.createRadialGradient(cx + ox, cy + oy, 0, cx + ox, cy + oy, rr); gr.addColorStop(0, `rgba(${col},${al})`); gr.addColorStop(1, `rgba(${col},0)`); x.fillStyle = gr; x.fillRect(cx + ox - rr, cy + oy - rr, rr * 2, rr * 2); }
     }
   });
@@ -49,7 +50,7 @@ function stars(n, ext, cx, y, cz, seed, size, map, bright) {
     col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-  const m = new THREE.PointsMaterial({ size, sizeAttenuation: false, vertexColors: true, map: map || null, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  const m = new THREE.PointsMaterial({ size, sizeAttenuation: false, vertexColors: true, map: map || null, transparent: true, depthWrite: false, blending: THREE.NormalBlending, fog: false });
   const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = -9; return p;
 }
 /* Gasriese: Bänder, Beleuchtung von links oben, Ring (alles innerhalb der Leinwand) */
@@ -72,9 +73,10 @@ function buildSky(map) {
   const t1 = new THREE.CanvasTexture(skyDeep()); t1.colorSpace = THREE.SRGBColorSpace; t1.wrapS = t1.wrapT = THREE.RepeatWrapping; t1.repeat.set(ext / 2200, ext / 2200); t1.anisotropy = 4;
   const p1 = new THREE.Mesh(new THREE.PlaneGeometry(ext, ext).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ map: t1, depthWrite: false, fog: false })); p1.position.set(cx, -2600, cz); p1.renderOrder = -10; p1.frustumCulled = false; g.add(p1);
   const dot = new THREE.CanvasTexture(dotCanvas());
-  g.add(stars(Math.round(ext * ext / 9000), ext, cx, -2590, cz, 23, 1.3, null, 0.9));
-  g.add(stars(Math.round(ext * ext / 120000), ext, cx, -2580, cz, 29, 2.2, null, 1.1));
-  g.add(stars(Math.round(ext * ext / 250000), ext, cx, -900, cz, 37, 5, dot, 1.0));
+  /* wenige, kleine, gedämpfte Sterne – kein Glitzern, keine helle Nahschicht */
+  g.add(stars(Math.round(ext * ext / 90000), ext, cx, -2590, cz, 23, 1.0, null, 0.45));
+  g.add(stars(Math.round(ext * ext / 900000), ext, cx, -2580, cz, 29, 1.6, null, 0.6));
+  void dot;
   /* Gasriese weit hinten, rechts oben neben der Karte */
   const t3 = new THREE.CanvasTexture(planetCanvas(map.id === 'ashfall' ? 3 : 2)); t3.colorSpace = THREE.SRGBColorSpace;
   const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t3, transparent: true, depthWrite: false, fog: false }));

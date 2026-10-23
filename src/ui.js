@@ -846,7 +846,7 @@ function setupRender() {
   segInit('alliesSeg', [[0, '0'], [1, '1'], [2, '2'], [3, '3']], () => MENU.allies, v => { MENU.allies = v; savePrefs(); setupRender(); });
   segInit('allyLvlSeg', [[1, 'Leicht'], [2, 'Mittel'], [3, 'Schwer']], () => MENU.allyLvl, v => { MENU.allyLvl = v; savePrefs(); });
   const fc = $('facCards'); fc.textContent = '';
-  for (const f of PLAYABLE) { const F = FACTIONS[f], c = document.createElement('button'); c.className = 'card' + (MENU.faction === f ? ' on' : ''); c.innerHTML = '<h4 style="color:' + F.team + '">' + esc(F.name) + '</h4><p>' + esc(L(F.desc)) + '</p>'; c.addEventListener('click', () => { MENU.faction = f; savePrefs(); SND.play('click'); setupRender(); }); fc.appendChild(c); }
+  for (const f of PLAYABLE) { const F = FACTIONS[f], c = document.createElement('button'); c.className = 'card' + (MENU.faction === f ? ' on' : ''); c.style.setProperty('--fc', F.team); c.innerHTML = '<h4 style="color:' + F.team + '">' + esc(F.name) + '</h4><p>' + esc(L(F.desc)) + '</p>'; c.addEventListener('click', () => { MENU.faction = f; savePrefs(); SND.play('click'); setupRender(); }); fc.appendChild(c); }
   slotsFix();
   const np = slotPlayers().length, mapId = mapFor(MENU.map, np);
   $('rowSize').hidden = wv; $('rowSlots').hidden = wv; $('slotNote').hidden = wv;
