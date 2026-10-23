@@ -560,8 +560,8 @@ R.frame = function (alpha, dt) {
     for (let k = 0; k < (lowZ ? 1 : 3); k++) {
       const cx = n.x + Math.cos(t + k * 2.1) * n.r * 0.18, cy = n.y + Math.sin(t * 1.3 + k * 2.1) * n.r * 0.18, rr = n.r * (1 - k * 0.22);
       const gr = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
-      if (ash) { gr.addColorStop(0, 'rgba(255,110,60,0.22)'); gr.addColorStop(0.6, 'rgba(120,40,25,0.22)'); gr.addColorStop(1, 'rgba(90,30,20,0)'); }
-      else { gr.addColorStop(0, 'rgba(150,130,255,0.2)'); gr.addColorStop(0.6, 'rgba(70,60,160,0.2)'); gr.addColorStop(1, 'rgba(50,40,120,0)'); }
+      if (ash) { gr.addColorStop(0, 'rgba(255,110,60,0.3)'); gr.addColorStop(0.6, 'rgba(130,45,28,0.3)'); gr.addColorStop(1, 'rgba(90,30,20,0)'); }
+      else { gr.addColorStop(0, 'rgba(150,130,255,0.3)'); gr.addColorStop(0.6, 'rgba(80,70,180,0.3)'); gr.addColorStop(1, 'rgba(50,40,120,0)'); }
       ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.fill();
     }
   }
