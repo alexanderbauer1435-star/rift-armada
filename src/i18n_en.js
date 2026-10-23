@@ -2051,5 +2051,15 @@ const EN = {
   "Im Ionennebel: Schilde aus, Sicht nur im Nahbereich – für Feinde erst aus der Nähe zu sehen.": "Inside an ion nebula: shields down, short sight only – enemies spot you only up close.",
   "Im Aschenebel: Schilde aus, die Hülle nimmt Schaden.": "Inside the ash nebula: shields down, the hull takes damage.",
   "Nebula Crown": "Nebula Crown",
-  "The Narrows": "The Narrows"
+  "The Narrows": "The Narrows",
+  "Rift Arena": "Rift Arena",
+  "Bis zu acht Basen im Ring, jede in einer Tasche mit zwei Zugängen; Nebel zwischen den Nachbarn, Felder und die Stätte in der Mitte.": "Up to eight bases in a ring, each in a pocket with two entrances; nebulae between neighbours, fields and the site in the middle.",
+  "{0} ist für {1} Spieler nicht ausgelegt – es wird {2} gespielt.": "{0} is not laid out for {1} players – {2} will be played.",
+  "Tippen wechselt Fraktion, Stärke und Team. Gleiches Team = Verbündete; »–« spielt für sich.": "Tap to cycle faction, strength and team. Same team = allies; “–” plays alone.",
+  "Aus": "Off",
+  "Team": "Team",
+  "Du": "You",
+  "KI": "AI",
+  "Größe": "Size",
+  "Spieler": "Players"
 };

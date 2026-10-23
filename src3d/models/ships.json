@@ -1,0 +1,1048 @@
+{
+ "ships": [
+  {
+   "id": "pathfinder",
+   "f": "alliance",
+   "name": "Pathfinder",
+   "role": "builder",
+   "cls": "s",
+   "len": 34,
+   "r": 13,
+   "desc": "Bauschiff. Errichtet Stationen und repariert sie langsam.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "hauler",
+   "f": "alliance",
+   "name": "Hauler",
+   "role": "tanker",
+   "cls": "s",
+   "len": 30,
+   "r": 12,
+   "desc": "Frachter. Baut Eis und Erz ab und bringt es zur Raffinerie.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "wren",
+   "f": "alliance",
+   "name": "Wren",
+   "role": "war",
+   "cls": "s",
+   "len": 26,
+   "r": 10,
+   "desc": "Korvette. Schnell, mit großer Sensorreichweite. Gut zum Aufklären und gegen Frachter.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "beamS"
+   ]
+  },
+  {
+   "id": "lancer",
+   "f": "alliance",
+   "name": "Lancer",
+   "role": "war",
+   "cls": "s",
+   "len": 38,
+   "r": 14,
+   "desc": "Fregatte. Allrounder mit Bugstrahl und Strahlturm. Rückgrat der Flotte.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "beamM",
+    "beamT"
+   ]
+  },
+  {
+   "id": "bulwark",
+   "f": "alliance",
+   "name": "Bulwark",
+   "role": "war",
+   "cls": "m",
+   "len": 56,
+   "r": 20,
+   "desc": "Kreuzer mit Schildverbund: Nachbarschiffe im Umkreis teilen ihren Schaden mit ihm. Breitseiten-Strahlen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "beamH",
+    "beamHL",
+    "beamT"
+   ]
+  },
+  {
+   "id": "haven",
+   "f": "alliance",
+   "name": "Haven",
+   "role": "carrier",
+   "cls": "l",
+   "len": 80,
+   "r": 28,
+   "desc": "Träger. Startet sechs Jäger und ersetzt verlorene. Hält sich aus dem Gefecht heraus.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "beamT"
+   ]
+  },
+  {
+   "id": "fighter",
+   "f": "alliance",
+   "name": "Jäger",
+   "role": "fighter",
+   "cls": "f",
+   "len": 12,
+   "r": 5,
+   "desc": "Jäger des Trägers Haven.",
+   "doc": "",
+   "hidden": true,
+   "wpn": [
+    "fighter"
+   ]
+  },
+  {
+   "id": "prospector",
+   "f": "mars",
+   "name": "Prospector",
+   "role": "builder",
+   "cls": "s",
+   "len": 36,
+   "r": 14,
+   "desc": "Bauschiff. Höhlt Asteroiden aus und errichtet Stationen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "icehauler",
+   "f": "mars",
+   "name": "Ice Hauler",
+   "role": "tanker",
+   "cls": "s",
+   "len": 32,
+   "r": 13,
+   "desc": "Gepanzerter Frachter. Hält mehr aus als jeder andere Frachter.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "needle",
+   "f": "mars",
+   "name": "Needle",
+   "role": "war",
+   "cls": "s",
+   "len": 30,
+   "r": 9,
+   "desc": "Korvette mit Fackelantrieb. Sehr schnell, zwei Torpedos und eine leichte Autokanone.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "torpS",
+    "autoS"
+   ]
+  },
+  {
+   "id": "hedgehog",
+   "f": "mars",
+   "name": "Hedgehog",
+   "role": "war",
+   "cls": "s",
+   "len": 36,
+   "r": 14,
+   "desc": "Abwehrfregatte. Zwei Autokanonen, dazu Punktverteidigung gegen Torpedos und Jäger.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "pd",
+    "autoM",
+    "autoM"
+   ]
+  },
+  {
+   "id": "spear",
+   "f": "mars",
+   "name": "Spear",
+   "role": "war",
+   "cls": "m",
+   "len": 70,
+   "r": 18,
+   "desc": "Railgun-Kreuzer. Durchschlägt bis zu drei Ziele in einer Linie, braucht Abstand und lädt lange nach.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "rail",
+    "autoS"
+   ]
+  },
+  {
+   "id": "hammer",
+   "f": "mars",
+   "name": "Hammer",
+   "role": "war",
+   "cls": "l",
+   "len": 82,
+   "r": 27,
+   "desc": "Schlachtschiff. Breitseiten aus Autokanonen, schwerste Panzerung. Dreht die Flanke zum Feind.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "autoB",
+    "autoB",
+    "autoBL",
+    "autoBL",
+    "pd",
+    "pd"
+   ]
+  },
+  {
+   "id": "boarder",
+   "f": "mars",
+   "name": "Boarder",
+   "role": "war",
+   "cls": "s",
+   "len": 34,
+   "r": 13,
+   "desc": "Enterschiff mit 40 Marines. Setzt sie auf ein Schiff über, dessen Crew geschwächt ist, und übernimmt es.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "autoS"
+   ]
+  },
+  {
+   "id": "archipelago",
+   "f": "alliance",
+   "name": "Archipelago",
+   "role": "war",
+   "cls": "l",
+   "len": 86,
+   "r": 30,
+   "desc": "Flaggschiff der Alliance. Werft im Feld, Schildverbund wie ein Bulwark und Waffenstillstand im Umkreis.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "beamF",
+    "beamFL",
+    "beamT",
+    "pdH"
+   ]
+  },
+  {
+   "id": "olympus",
+   "f": "mars",
+   "name": "Olympus",
+   "role": "war",
+   "cls": "l",
+   "len": 88,
+   "r": 29,
+   "desc": "Flaggschiff der Republik. Railgun-Breitseite, G-Rausch für die Flotte und Zielmarkierung.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "railF",
+    "railFL",
+    "autoB",
+    "autoBL",
+    "pdH",
+    "pdH"
+   ]
+  },
+  {
+   "id": "aegis",
+   "f": "alliance",
+   "name": "Aegis",
+   "role": "war",
+   "cls": "m",
+   "len": 52,
+   "r": 19,
+   "desc": "Charter Guard. Spannt eine Schildkuppel auf: Verbündete im Umkreis nehmen 6 Sekunden lang nur halben Schaden.",
+   "doc": "charter",
+   "hidden": false,
+   "wpn": [
+    "beamT",
+    "beamT"
+   ]
+  },
+  {
+   "id": "beacon",
+   "f": "alliance",
+   "name": "Beacon",
+   "role": "war",
+   "cls": "s",
+   "len": 30,
+   "r": 12,
+   "desc": "Explorer Corps. Mobile Sensorstation mit riesiger Reichweite, unbewaffnet.",
+   "doc": "explorer",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "reckoning",
+   "f": "alliance",
+   "name": "Reckoning",
+   "role": "war",
+   "cls": "m",
+   "len": 58,
+   "r": 20,
+   "desc": "Hardliners. Kreuzer mit Erbauer-Lanze: ein schwerer Strahl mit großer Reichweite.",
+   "doc": "hardline",
+   "hidden": false,
+   "wpn": [
+    "lanceX",
+    "beamT"
+   ]
+  },
+  {
+   "id": "longshot",
+   "f": "mars",
+   "name": "Longshot",
+   "role": "war",
+   "cls": "s",
+   "len": 40,
+   "r": 13,
+   "desc": "Navy Doctrine. Kleine Railgun-Fregatte, die auf Abstand bleibt.",
+   "doc": "navy",
+   "hidden": false,
+   "wpn": [
+    "railS"
+   ]
+  },
+  {
+   "id": "dropship",
+   "f": "mars",
+   "name": "Dropship",
+   "role": "war",
+   "cls": "m",
+   "len": 46,
+   "r": 17,
+   "desc": "Marines. 90 Marines an Bord, entert Schiffe und sogar Stationen.",
+   "doc": "marines",
+   "hidden": false,
+   "wpn": [
+    "autoS",
+    "pd"
+   ]
+  },
+  {
+   "id": "wasp",
+   "f": "mars",
+   "name": "Wasp",
+   "role": "war",
+   "cls": "s",
+   "len": 30,
+   "r": 10,
+   "desc": "Torch Raiders. Torpedo-Korvette mit Nachbrenner, zwei Rohre.",
+   "doc": "torch",
+   "hidden": false,
+   "wpn": [
+    "torpW",
+    "torpW"
+   ]
+  },
+  {
+   "id": "restorer",
+   "f": "legion",
+   "name": "Restorer",
+   "role": "builder",
+   "cls": "s",
+   "len": 34,
+   "r": 13,
+   "desc": "Bauschiff. Errichtet Stationen und erweckt gefallene Heldenschiffe wieder (Wrack anfliegen).",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "gleaner",
+   "f": "legion",
+   "name": "Gleaner",
+   "role": "tanker",
+   "cls": "s",
+   "len": 30,
+   "r": 12,
+   "desc": "Sammler. Baut Eis und Erz ab; findet in Ruinen doppelt so viele Relikte.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "cherub",
+   "f": "legion",
+   "name": "Cherub",
+   "role": "fighter",
+   "cls": "f",
+   "len": 12,
+   "r": 5,
+   "desc": "Begleitdrohne eines Heldenschiffs.",
+   "doc": "",
+   "hidden": true,
+   "wpn": [
+    "cherub"
+   ]
+  },
+  {
+   "id": "herald",
+   "f": "legion",
+   "name": "Herald",
+   "role": "war",
+   "cls": "s",
+   "len": 30,
+   "r": 11,
+   "desc": "Leichtes Heldenschiff. Springt ein Stück nach vorn, klärt auf, zwei Begleitdrohnen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "lanceS"
+   ]
+  },
+  {
+   "id": "paladin",
+   "f": "legion",
+   "name": "Paladin",
+   "role": "war",
+   "cls": "s",
+   "len": 40,
+   "r": 15,
+   "desc": "Heldenfregatte mit Lichtlanze: ein Drittel des Schadens geht durch Schilde. Zwei Begleitdrohnen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "lanceM",
+    "lanceT"
+   ]
+  },
+  {
+   "id": "bastion",
+   "f": "legion",
+   "name": "Bastion",
+   "role": "war",
+   "cls": "m",
+   "len": 56,
+   "r": 21,
+   "desc": "Schildfestung. Schildverbund für Nachbarn und Drohnen, spannt eine Schildkuppel auf. Drei Begleitdrohnen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "lanceSide",
+    "lanceSideL",
+    "lanceT"
+   ]
+  },
+  {
+   "id": "inquisitor",
+   "f": "legion",
+   "name": "Inquisitor",
+   "role": "war",
+   "cls": "m",
+   "len": 58,
+   "r": 19,
+   "desc": "Verhörstrahl: je länger er auf demselben Ziel bleibt, desto mehr Schaden, bis zum Dreifachen. Zwei Begleitdrohnen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "inqBeam",
+    "lanceT"
+   ]
+  },
+  {
+   "id": "reliquary",
+   "f": "legion",
+   "name": "Reliquary",
+   "role": "war",
+   "cls": "m",
+   "len": 50,
+   "r": 18,
+   "desc": "Trägt die Relikte: Verbündete im Umkreis +12 % Schaden, Stätten und Ruinen doppelt so schnell. Notreparatur.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "pd"
+   ]
+  },
+  {
+   "id": "basilica",
+   "f": "legion",
+   "name": "Basilica",
+   "role": "war",
+   "cls": "l",
+   "len": 88,
+   "r": 30,
+   "desc": "Kathedralenschiff. Langsam, enorm stark, vier Begleitdrohnen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "lanceH",
+    "lanceH",
+    "lanceSide",
+    "lanceSideL",
+    "lanceT",
+    "pdH"
+   ]
+  },
+  {
+   "id": "sovereign",
+   "f": "legion",
+   "name": "Last Sovereign",
+   "role": "war",
+   "cls": "l",
+   "len": 90,
+   "r": 30,
+   "desc": "Flaggschiff der Legion. Das Schiff selbst ist der Kommandant. Sprung mit der Flotte, Lichtlanze, einmal pro Partie Wiederauferstehung.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "lanceH",
+    "lanceSide",
+    "lanceSideL",
+    "lanceT",
+    "pdH"
+   ]
+  },
+  {
+   "id": "sanctum",
+   "f": "legion",
+   "name": "Sanctum",
+   "role": "war",
+   "cls": "m",
+   "len": 54,
+   "r": 20,
+   "desc": "Restoration. Mobile Reparatur-Kathedrale: Feldwerft für die Flotte.",
+   "doc": "restoration",
+   "hidden": false,
+   "wpn": [
+    "lanceT",
+    "pd"
+   ]
+  },
+  {
+   "id": "zealot",
+   "f": "legion",
+   "name": "Zealot",
+   "role": "war",
+   "cls": "s",
+   "len": 36,
+   "r": 12,
+   "desc": "Crusade. Rammschiff mit Lanzenbug: fliegt heran und brennt sich durch Schilde.",
+   "doc": "crusade",
+   "hidden": false,
+   "wpn": [
+    "ramBow",
+    "lanceT"
+   ]
+  },
+  {
+   "id": "oracle",
+   "f": "legion",
+   "name": "Oracle",
+   "role": "war",
+   "cls": "s",
+   "len": 32,
+   "r": 12,
+   "desc": "Ascension. Sieht weit, deckt Stätten auf, Weitblick über die ganze Karte.",
+   "doc": "ascension",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "seed",
+   "f": "nexus",
+   "name": "Seed",
+   "role": "builder",
+   "cls": "s",
+   "len": 32,
+   "r": 13,
+   "desc": "Bauschiff. Setzt Knoten und Stationen; alles muss am Netz hängen. Zählt selbst als Knoten.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "harvester",
+   "f": "nexus",
+   "name": "Harvester",
+   "role": "tanker",
+   "cls": "s",
+   "len": 30,
+   "r": 12,
+   "desc": "Löst Vorkommen auf und schickt das Material durchs Netz: liefert sofort, solange es in Reichweite eines Knotens steht.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "shard",
+   "f": "nexus",
+   "name": "Shard",
+   "role": "war",
+   "cls": "s",
+   "len": 24,
+   "r": 9,
+   "desc": "Billiger Kristallsplitter. Drei Shards verschmelzen zu einem Prism (Taste »Verschmelzen«).",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "shardBeam"
+   ]
+  },
+  {
+   "id": "prism",
+   "f": "nexus",
+   "name": "Prism",
+   "role": "war",
+   "cls": "m",
+   "len": 46,
+   "r": 17,
+   "desc": "Bricht seinen Strahl auf bis zu drei Ziele. Drei Prisms verschmelzen zu einem Monolith.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "prismBeam",
+    "crystalPd"
+   ]
+  },
+  {
+   "id": "monolith",
+   "f": "nexus",
+   "name": "Monolith",
+   "role": "war",
+   "cls": "l",
+   "len": 80,
+   "r": 27,
+   "desc": "Langsam, enorme Feuerkraft. Mit der Doktrin Singularity verschmelzen drei zu einem Colossus.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "monoBeam",
+    "monoBeam",
+    "monoSide",
+    "crystalPd",
+    "crystalPd"
+   ]
+  },
+  {
+   "id": "binder",
+   "f": "nexus",
+   "name": "Binder",
+   "role": "war",
+   "cls": "m",
+   "len": 42,
+   "r": 16,
+   "desc": "Übernimmt ein feindliches Schiff mit weniger als 25 % Hülle (Taste »Übernahme«, dann Ziel).",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "shardBeam",
+    "shardBeam"
+   ]
+  },
+  {
+   "id": "lattice",
+   "f": "nexus",
+   "name": "Lattice",
+   "role": "war",
+   "cls": "s",
+   "len": 30,
+   "r": 12,
+   "desc": "Mobiler Netzknoten, unbewaffnet. Harvester liefern in seiner Nähe, Stationen bleiben verbunden.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "mirror",
+   "f": "nexus",
+   "name": "Mirror",
+   "role": "war",
+   "cls": "m",
+   "len": 48,
+   "r": 18,
+   "desc": "Wirft 30 % des Strahlschadens zurück. Passt sich an: gegen jede Waffenart, die es trifft, bis zu 50 % weniger Schaden.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "shardBeam",
+    "crystalPd"
+   ]
+  },
+  {
+   "id": "facet",
+   "f": "nexus",
+   "name": "Prime Facet",
+   "role": "war",
+   "cls": "l",
+   "len": 86,
+   "r": 29,
+   "desc": "Flaggschiff des Nexus. Übernahme im Bereich, Splittersturm, Gravitationssog. Mobiler Netzknoten.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "facetBeam",
+    "monoBeam",
+    "crystalPd",
+    "crystalPd"
+   ]
+  },
+  {
+   "id": "conduit",
+   "f": "nexus",
+   "name": "Conduit",
+   "role": "war",
+   "cls": "m",
+   "len": 44,
+   "r": 17,
+   "desc": "Unity. Übernimmt Schiffe und sogar Stationen unter 35 % Hülle.",
+   "doc": "unity",
+   "hidden": false,
+   "wpn": [
+    "shardBeam",
+    "shardBeam"
+   ]
+  },
+  {
+   "id": "spire",
+   "f": "nexus",
+   "name": "Spire",
+   "role": "war",
+   "cls": "m",
+   "len": 46,
+   "r": 18,
+   "desc": "Lattice Growth. Bewaffneter mobiler Netzknoten.",
+   "doc": "lattice",
+   "hidden": false,
+   "wpn": [
+    "spireBeam",
+    "spireBeam",
+    "crystalPd"
+   ]
+  },
+  {
+   "id": "colossus",
+   "f": "nexus",
+   "name": "Colossus",
+   "role": "war",
+   "cls": "l",
+   "len": 110,
+   "r": 36,
+   "desc": "Singularity. Drei Monolithe, zu einem verschmolzen. Nur durch Verschmelzen.",
+   "doc": "singularity",
+   "hidden": true,
+   "wpn": [
+    "monoBeam",
+    "monoBeam",
+    "monoBeam",
+    "facetBeam",
+    "monoSide",
+    "crystalPd",
+    "crystalPd",
+    "crystalPd"
+   ]
+  },
+  {
+   "id": "seeder",
+   "f": "brood",
+   "name": "Seeder",
+   "role": "builder",
+   "cls": "s",
+   "len": 36,
+   "r": 14,
+   "desc": "Lässt Nester wachsen: errichtet alle Bauten der Brood und heilt sie langsam.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "grazer",
+   "f": "brood",
+   "name": "Grazer",
+   "role": "tanker",
+   "cls": "s",
+   "len": 32,
+   "r": 13,
+   "desc": "Frisst Eis, Erz und Wracks – alles wird Biomasse. Wrack antippen, um es zu verschlingen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": []
+  },
+  {
+   "id": "larva",
+   "f": "brood",
+   "name": "Larva",
+   "role": "war",
+   "cls": "s",
+   "len": 20,
+   "r": 8,
+   "desc": "Grundform. Billig und schnell gezüchtet, mutiert in jede andere Form (Tasten). Beißt ein bisschen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "bite"
+   ]
+  },
+  {
+   "id": "swarm",
+   "f": "brood",
+   "name": "Swarmling-Schwarm",
+   "role": "war",
+   "cls": "s",
+   "len": 26,
+   "r": 13,
+   "desc": "Sechs Winzlinge als ein Schwarm. Billig, schnell, Masse. Punktverteidigung frisst sie.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "bite",
+    "bite",
+    "bite"
+   ]
+  },
+  {
+   "id": "spitter",
+   "f": "brood",
+   "name": "Spitter",
+   "role": "war",
+   "cls": "s",
+   "len": 30,
+   "r": 11,
+   "desc": "Spuckt Säure: Schaden über Zeit, Panzerung hilft nicht. Mutiert zum Acid Maw.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "acidSpit"
+   ]
+  },
+  {
+   "id": "ravager",
+   "f": "brood",
+   "name": "Ravager",
+   "role": "war",
+   "cls": "s",
+   "len": 38,
+   "r": 13,
+   "desc": "Rammt und beißt. Bisse gehen durch Panzerung. Sprintet aufs Ziel zu.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "maw"
+   ]
+  },
+  {
+   "id": "leech",
+   "f": "brood",
+   "name": "Leech",
+   "role": "war",
+   "cls": "s",
+   "len": 32,
+   "r": 11,
+   "desc": "Heftet Parasiten an Schiffe. Nach 12 Sekunden schlüpft daraus ein Schwarm, und das Opfer blutet.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "parasite"
+   ]
+  },
+  {
+   "id": "sporer",
+   "f": "brood",
+   "name": "Sporer",
+   "role": "war",
+   "cls": "m",
+   "len": 40,
+   "r": 16,
+   "desc": "Legt einen Sporenteppich: die Brood heilt darin, Feinde nehmen Schaden.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "acidSpit"
+   ]
+  },
+  {
+   "id": "acidmaw",
+   "f": "brood",
+   "name": "Acid Maw",
+   "role": "war",
+   "cls": "m",
+   "len": 48,
+   "r": 17,
+   "desc": "Schwerer Säurespucker, aus dem Spitter mutiert oder gezüchtet.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "acidHeavy",
+    "acidSpit"
+   ]
+  },
+  {
+   "id": "leviathan",
+   "f": "brood",
+   "name": "Leviathan",
+   "role": "war",
+   "cls": "l",
+   "len": 92,
+   "r": 30,
+   "desc": "Verschlingt kleine und mittlere Schiffe im Ganzen und heilt sich damit.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "mawH",
+    "mawH",
+    "acidHeavy",
+    "acidHeavy"
+   ]
+  },
+  {
+   "id": "matriarch",
+   "f": "brood",
+   "name": "Brood Matriarch",
+   "role": "war",
+   "cls": "l",
+   "len": 98,
+   "r": 32,
+   "desc": "Flaggschiff der Brood. Das älteste Wesen im Kessel: wächst mit jedem Abschuss, ruft den Schwarm, verschlingt Schiffe, legt Sporen.",
+   "doc": "",
+   "hidden": false,
+   "wpn": [
+    "acidHeavy",
+    "acidHeavy",
+    "acidSpit",
+    "acidSpit",
+    "mawH"
+   ]
+  },
+  {
+   "id": "broodmother",
+   "f": "brood",
+   "name": "Broodmother",
+   "role": "war",
+   "cls": "m",
+   "len": 50,
+   "r": 18,
+   "desc": "Hive Mind. Gebiert alle 45 Sekunden einen Schwarm an Ort und Stelle.",
+   "doc": "hive",
+   "hidden": false,
+   "wpn": [
+    "acidSpit",
+    "acidSpit"
+   ]
+  },
+  {
+   "id": "plaguebearer",
+   "f": "brood",
+   "name": "Plaguebearer",
+   "role": "war",
+   "cls": "m",
+   "len": 46,
+   "r": 17,
+   "desc": "Plague. Zwei Parasitenwerfer; platzt beim Tod in eine Säurewolke.",
+   "doc": "plague",
+   "hidden": false,
+   "wpn": [
+    "parasite",
+    "parasite",
+    "acidSpit"
+   ]
+  },
+  {
+   "id": "behemoth",
+   "f": "brood",
+   "name": "Behemoth",
+   "role": "war",
+   "cls": "l",
+   "len": 88,
+   "r": 30,
+   "desc": "Titan. Gepanzerter Rammkoloss mit drei Mäulern, sprintet aufs Ziel zu.",
+   "doc": "titan",
+   "hidden": false,
+   "wpn": [
+    "mawH",
+    "mawH",
+    "mawH",
+    "acidTw"
+   ]
+  },
+  {
+   "id": "drone",
+   "f": "guardian",
+   "name": "Wächterdrohne",
+   "role": "war",
+   "cls": "s",
+   "len": 26,
+   "r": 10,
+   "desc": "Wächterdrohne der Erbauer.",
+   "doc": "",
+   "hidden": true,
+   "wpn": [
+    "droneGun",
+    "wardBeam"
+   ]
+  },
+  {
+   "id": "warden",
+   "f": "guardian",
+   "name": "Der Wächter",
+   "role": "war",
+   "cls": "l",
+   "len": 120,
+   "r": 44,
+   "desc": "Schlafende Riesenmaschine der Erbauer. Wer sie weckt, hat sie am Hals – wer sie zerstört, bekommt Relikte.",
+   "doc": "",
+   "hidden": true,
+   "wpn": [
+    "wardLance",
+    "wardBeam",
+    "wardBeam",
+    "wardBeam",
+    "pdH",
+    "pdH"
+   ]
+  },
+  {
+   "id": "sentinel",
+   "f": "guardian",
+   "name": "Erbauer-Sentinel",
+   "role": "war",
+   "cls": "l",
+   "len": 76,
+   "r": 26,
+   "desc": "Einzigartiges Erbauer-Schiff aus der Zitadelle. Springt, Lanze durch Schilde.",
+   "doc": "",
+   "hidden": true,
+   "wpn": [
+    "wardLance",
+    "wardBeam",
+    "wardBeam",
+    "pdH"
+   ]
+  }
+ ],
+ "fac": {
+  "alliance": {
+   "name": "The Alliance",
+   "team": "#5fb8ff"
+  },
+  "mars": {
+   "name": "Martian Republic",
+   "team": "#ff7a4a"
+  },
+  "legion": {
+   "name": "Golden Legion",
+   "team": "#f2c14e"
+  },
+  "nexus": {
+   "name": "The Nexus",
+   "team": "#c9a0ff"
+  },
+  "brood": {
+   "name": "The Brood",
+   "team": "#8be04a"
+  },
+  "guardian": {
+   "name": "Erbauer-Wächter",
+   "team": "#9ff0c0"
+  }
+ }
+}

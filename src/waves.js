@@ -156,8 +156,8 @@ function waveSetup(g, opts) {
   g.tm.push(98);
   g.players.push({ id: i, faction: 'brood', F: FACTIONS.brood, human: false, ai: null, color: '#8be04a', team: 98, ice: 0, ore: 0, eGen: 0, eUse: 0, lowPower: false, cpUse: 0, cpMax: 9999, alive: true, lab: 0, start: { x: g.map.w / 2, y: EDGE + 100, ang: Math.PI / 2 }, incAcc: 0, haulR: 0, shipCount: 0, queued: 0, lowT: -99, hurtT: -99, hurtX: 0, hurtY: 0, tech: {}, research: null, tfx: Object.assign({}, TFX0), doctrine: null, docAsk: false, relics: 0, heroIdx: 0, neutral: false, threat: true, netT: 0, etech: null, vis: null, explored: new Uint8Array(g.vw * g.vh), stats: { built: 0, lost: 0, kills: 0, bLost: 0, razed: 0, earned: 0, spent: 0 } });
   g.threat = i;
-  if (!g.teamVis[98]) g.teamVis[98] = new Int32Array(g.vw * g.vh);
-  g.players[i].vis = g.teamVis[98];
+  if (!g.teamVis[98]) { g.teamVis[98] = new Int32Array(g.vw * g.vh); g.teamVisN[98] = new Int32Array(g.vw * g.vh); }
+  g.players[i].vis = g.teamVis[98]; g.players[i].visN = g.teamVisN[98];
   g.wave = { n: 0, phase: 'build', next: WAVE_FIRST, t0: 0, ids: [], alive: 0, spawned: 0, cleared: 0, adapt: { kin: 0, beam: 0 }, armor: 0, warned: 0, matriarch: 0 };
   if (opts.mode === 'quarantine') {
     const h = g.players.find(p => p.human) || g.players[0];

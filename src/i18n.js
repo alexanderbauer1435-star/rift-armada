@@ -75,7 +75,8 @@ function applyLang(root) {
   });
 }
 /* Sprache wählen: ohne Einstellung die des Geräts (Deutsch, sonst Englisch) */
-function langDefault() { try { return /^de\b/i.test(navigator.language || 'de') ? 'de' : 'en'; } catch (e) { return 'de'; } }
+/* Ohne gespeicherte Einstellung ist Englisch die Vorgabe; die Sprache steht ganz oben im Hauptmenü und in den Einstellungen */
+function langDefault() { try { return navigator.webdriver ? 'de' : 'en'; } catch (e) { return 'en'; } }   // Prüfläufe (Playwright) in Deutsch, Spieler ohne Einstellung Englisch
 function setLang(l) {
   I18N.lang = l === 'en' ? 'en' : 'de';
   if (typeof document !== 'undefined') { document.documentElement.lang = I18N.lang; applyLang(); }

@@ -9,7 +9,7 @@ const UI = {
   g: null, me: -1, P: null, sel: new Set(), selB: 0, mode: 'normal', place: null, box: null, boxMode: false, keys: {}, paused: false, endShown: false, attract: true, kind: '', opts: null,
   speed: 1, tab: 'eco', showRange: false, showAll: false, mark: null, mouse: false, cx: 0, cy: 0, hx: 0, hy: 0, onView: false, rect: null, form: 'wedge', lastTap: 0, lastTapId: 0, hovT: 0, tipT: 0, saveAt: 0, alertT: -99, alertPos: null, camTravel: 0, fsOff: false, fsPause: false, mPage: 'home', items: []
 };
-const SET = { vol: 55, mus: 40, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de' };
+const SET = { vol: 55, mus: 40, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d' };
 const MENU = { faction: 'alliance', map: 'haven', opp: 1, lvl: 2, res: 'normal', oppF: 'random', mode: 'skirmish', allies: 1, allyLvl: 2 };
 const SCALES = [0.9, 1, 1.15, 1.3], SPEEDS = [0.75, 1, 1.5, 2];
 const $ = id => document.getElementById(id);
@@ -796,6 +796,7 @@ function applySet() {
   document.documentElement.style.setProperty('--ui', (15 * SET.scale) + 'px');
   UI.speed = SET.speed; UI.showAll = SET.bars === 'all';
   R.qScale = SET.qual === 'low' ? 0.6 : 1; R.detail = SET.qual === 'low' ? 1 : 2;
+  if (R.cv) { const got = R.setMode(SET.gfx || '3d'); if (got !== (SET.gfx || '3d') && SET.gfx === '3d') SET.gfx3dFailed = true; if (R.mode3d) RA3D.setDetail(R.detail); R.resize(); }
   if (typeof layout === 'function') layout();
 }
 function segInit(id, opts, get, set) {
@@ -811,6 +812,7 @@ function initSettings() {
     segInit('sScale', [[0.9, 'Klein'], [1, 'Normal'], [1.15, 'Groß'], [1.3, 'Sehr groß']], () => SET.scale, v => { SET.scale = v; applySet(); savePrefs(); });
     segInit('sSpeed', [[0.75, 'Langsam'], [1, 'Normal'], [1.5, 'Schnell'], [2, 'Sehr schnell']], () => SET.speed, v => { SET.speed = v; applySet(); savePrefs(); });
     segInit('sBars', [['auto', 'Bei Schaden'], ['all', 'Immer']], () => SET.bars, v => { SET.bars = v; applySet(); savePrefs(); });
+    segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
     segInit('sQual', [['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); });
     segInit('sLang', [['de', 'Deutsch'], ['en', 'English']], () => SET.lang, v => { SET.lang = v; savePrefs(); setLang(v); langRefresh(); seg(); });
   };
@@ -831,29 +833,64 @@ function langRefresh() {
 }
 function closeSettings() { $('settings').hidden = true; SND.play('click'); }
 /* Aufstellung im Hauptmenü */
+/* Sprachwahl ganz oben im Hauptmenü (dieselbe Einstellung wie unter Einstellungen) */
+function homeLang() { if (!$('homeLang')) return; segInit('homeLang', [['de', 'Deutsch'], ['en', 'English']], () => SET.lang, v => { SET.lang = v; savePrefs(); setLang(v); langRefresh(); }); }
 function menuPage(p) { UI.mPage = p; $('pHome').hidden = p !== 'home'; $('setup').hidden = p !== 'setup'; $('pCamp').hidden = p !== 'camp'; if (p !== 'camp') closeBrief(); if (p === 'setup') setupRender(); if (p === 'camp') campRender(); }
 function setupRender() {
   segInit('modeSeg', [['skirmish', 'Gefecht'], ['survival', 'Rift Survival'], ['quarantine', 'Quarantine Line']], () => MENU.mode, v => { MENU.mode = v; savePrefs(); setupRender(); });
   const wv = MENU.mode !== 'skirmish';
-  $('rowMap').hidden = wv; $('rowOpp').hidden = wv; $('rowOppF').hidden = wv; $('rowAllies').hidden = MENU.mode !== 'quarantine';
+  $('rowMap').hidden = wv; $('rowAllies').hidden = MENU.mode !== 'quarantine';
   setText('setupTitle', L(MENU.mode === 'survival' ? 'Rift Survival' : MENU.mode === 'quarantine' ? 'Quarantine Line' : 'Gefecht'));
   segInit('alliesSeg', [[0, '0'], [1, '1'], [2, '2'], [3, '3']], () => MENU.allies, v => { MENU.allies = v; savePrefs(); setupRender(); });
   segInit('allyLvlSeg', [[1, 'Leicht'], [2, 'Mittel'], [3, 'Schwer']], () => MENU.allyLvl, v => { MENU.allyLvl = v; savePrefs(); });
   const fc = $('facCards'); fc.textContent = '';
   for (const f of PLAYABLE) { const F = FACTIONS[f], c = document.createElement('button'); c.className = 'card' + (MENU.faction === f ? ' on' : ''); c.innerHTML = '<h4 style="color:' + F.team + '">' + esc(F.name) + '</h4><p>' + esc(L(F.desc)) + '</p>'; c.addEventListener('click', () => { MENU.faction = f; savePrefs(); SND.play('click'); setupRender(); }); fc.appendChild(c); }
-  const np = MENU.opp + 1;
-  segInit('mapSeg', MAP_ORDER.map(k => [k, MAPS[k].name]), () => MENU.map, v => { MENU.map = v; if (MAPS[v].np.indexOf(MENU.opp + 1) < 0) MENU.opp = MAPS[v].np[0] - 1; savePrefs(); setupRender(); });
-  segInit('oppSeg', [[1, '1'], [2, '2'], [3, '3']].filter(([v]) => MAPS[MENU.map].np.indexOf(v + 1) >= 0), () => MENU.opp, v => { MENU.opp = v; savePrefs(); setupRender(); });
-  segInit('lvlSeg', [[1, 'Leicht'], [2, 'Mittel'], [3, 'Schwer']], () => MENU.lvl, v => { MENU.lvl = v; savePrefs(); });
+  slotsFix();
+  const np = slotPlayers().length, mapId = mapFor(MENU.map, np);
+  $('rowSize').hidden = wv; $('rowSlots').hidden = wv; $('slotNote').hidden = wv;
+  segInit('mapSeg', MAP_ORDER.map(k => [k, MAPS[k].name]), () => MENU.map, v => { MENU.map = v; savePrefs(); setupRender(); });
+  segInit('sizeSeg', [['small', 'Klein'], ['normal', 'Mittel'], ['large', 'Groß']], () => MENU.size || 'normal', v => { MENU.size = v; savePrefs(); setupRender(); });
   segInit('resSeg', [['low', 'Knapp'], ['normal', 'Normal'], ['rich', 'Reich']], () => MENU.res, v => { MENU.res = v; savePrefs(); });
-  segInit('oppFSeg', [['random', 'Zufall']].concat(PLAYABLE.map(f => [f, FACTIONS[f].name.replace('The ', '').replace('Martian ', '').replace('Golden ', '')])), () => MENU.oppF, v => { MENU.oppF = v; savePrefs(); });
+  slotsRender();
+  setText('slotNote', (mapId !== MENU.map ? L('{0} ist für {1} Spieler nicht ausgelegt – es wird {2} gespielt.', MAPS[MENU.map].name, np, MAPS[mapId].name) + ' ' : '') + L('Tippen wechselt Fraktion, Stärke und Team. Gleiches Team = Verbündete; »–« spielt für sich.'));
   if (MENU.mode === 'survival') setText('mapDesc', L('Allein gegen endlose Wellen der Brood. Nach jeder Welle eine von drei Belohnungen, alle fünf Wellen ein Leviathan. Rekord mit {0}: Welle {1}.', L(FACTIONS[MENU.faction].name), bestWave(MENU.faction)));
   else if (MENU.mode === 'quarantine') setText('mapDesc', L('Gemeinsam das Siegel in der Kartenmitte halten: 20 Wellen der Brood aus immer mehr Rissen, alle fünf ein Leviathan, zuletzt die Matriarch. Fällt das Siegel, haben alle verloren.'));
-  else setText('mapDesc', L(MAPS[MENU.map].desc) + ' · ' + L('{0} Spieler', np) + ' · ' + MAPS[MENU.map].w + ' × ' + MAPS[MENU.map].h);
-  /* Kartenvorschau: Layout der gewählten Karte (Gefecht) bzw. der Wellenkarte */
-  const pm = MENU.mode === 'skirmish' ? generateMap(mapFor(MENU.map, np), np, 7) : MENU.mode === 'quarantine' ? generateMap('quarantine', MENU.allies + 1, 7) : null;
+  else { const pm0 = generateMap(mapId, np, 7, MENU.size); setText('mapDesc', L(MAPS[mapId].desc) + ' · ' + L('{0} Spieler', np) + ' · ' + pm0.w + ' × ' + pm0.h); }
+  /* Kartenvorschau: Layout der gewählten Karte (Gefecht) bzw. der Wellenkarte, Startplätze in den Spielerfarben */
+  const pm = MENU.mode === 'skirmish' ? generateMap(mapId, np, 7, MENU.size) : MENU.mode === 'quarantine' ? generateMap('quarantine', MENU.allies + 1, 7) : null;
   $('rowPrev').hidden = !pm; $('mapLegend').hidden = !pm;
-  if (pm) { const cv = $('mapPrev'), side = Math.round(360 * Math.min(1, pm.w / pm.h)), tall = Math.round(360 * Math.min(1, pm.h / pm.w)); cv.width = side; cv.height = tall; cv.style.aspectRatio = side + ' / ' + tall; mapLayout(cv, pm, { starts: [FACTIONS[MENU.faction].team] }); setText('mapLegend', mapLegend(pm)); }
+  if (pm) { const cv = $('mapPrev'), side = Math.round(360 * Math.min(1, pm.w / pm.h)), tall = Math.round(360 * Math.min(1, pm.h / pm.w)); cv.width = side; cv.height = tall; cv.style.aspectRatio = side + ' / ' + tall; mapLayout(cv, pm, { starts: MENU.mode === 'skirmish' ? slotPlayers().map(q => q.color || FACTIONS[q.faction === 'random' ? 'guardian' : q.faction].team) : [FACTIONS[MENU.faction].team] }); setText('mapLegend', mapLegend(pm)); }
+}
+/* ---------- Spielerplätze im Gefecht: Platz 0 bist du, bis zu sieben KI-Plätze mit Fraktion (oder Zufall), Stärke und Team ---------- */
+const SLOT_FACS = ['random'].concat(PLAYABLE);
+const SLOT_COLS = ['#4fa3ff', '#ff6a3d', '#f2c14e', '#c9a0ff', '#5ddc8a', '#ff7bd1', '#4fe3e3', '#f4f1e6'];
+function slotsFix() {
+  if (!Array.isArray(MENU.slots) || MENU.slots.length !== 7) MENU.slots = [{ f: MENU.oppF && MENU.oppF !== 'random' && PLAYABLE.indexOf(MENU.oppF) >= 0 ? MENU.oppF : 'random', lvl: MENU.lvl || 2, team: 0 }].concat(Array.from({ length: 6 }, () => ({ f: 'off', lvl: 2, team: 0 })));
+  if (!MENU.slots.some(q => q.f !== 'off')) MENU.slots[0].f = 'random';
+  if (MENU.team === undefined) MENU.team = 0;
+}
+/* Spielerliste aus den Plätzen: Fraktion »random« wird erst beim Start gezogen; Farben: Fraktionsfarbe, solange jede Fraktion
+   nur einmal vorkommt, sonst feste Platzfarben */
+function slotPlayers() {
+  const list = [{ faction: MENU.faction, human: true, team: MENU.team, slot: 0 }];
+  MENU.slots.forEach((q, i) => { if (q.f !== 'off') list.push({ faction: q.f, ai: q.lvl, team: q.team, slot: i + 1 }); });
+  const facs = list.map(q => q.faction), dup = list.length > 4 || facs.some((f, i) => f === 'random' || facs.indexOf(f) !== i);
+  list.forEach((q, i) => { if (dup) q.color = SLOT_COLS[i]; });
+  return list;
+}
+function slotsRender() {
+  const box = $('slots'); box.textContent = '';
+  const facName = f => f === 'random' ? L('Zufall') : f === 'off' ? L('Aus') : FACTIONS[f].name.replace('The ', '').replace('Martian ', '').replace('Golden ', '');
+  const teamName = t => t ? L('Team') + ' ' + t : '–';
+  const row = (who, me) => { const el = document.createElement('div'); el.className = 'slot'; const w = document.createElement('button'); w.textContent = who; w.className = me ? 'me' : ''; w.disabled = true; el.appendChild(w); return el; };
+  const btn = (el, cls, txt, fn) => { const b = document.createElement('button'); b.className = cls; b.textContent = txt; b.addEventListener('click', () => { fn(); SND.play('click'); savePrefs(); setupRender(); }); el.appendChild(b); return b; };
+  const r0 = row(L('Du'), true); btn(r0, 'fac', facName(MENU.faction), () => {}).disabled = true; btn(r0, 'tm', teamName(MENU.team), () => { MENU.team = (MENU.team + 1) % 5; }); box.appendChild(r0);
+  MENU.slots.forEach((q, i) => {
+    const el = row(L('KI') + ' ' + (i + 1)); if (q.f === 'off') el.classList.add('off');
+    btn(el, 'fac', facName(q.f), () => { const order = ['off'].concat(SLOT_FACS); q.f = order[(order.indexOf(q.f) + 1) % order.length]; });
+    if (q.f !== 'off') { btn(el, 'lvl', L(['', 'Leicht', 'Mittel', 'Schwer'][q.lvl]), () => { q.lvl = q.lvl % 3 + 1; }); btn(el, 'tm', teamName(q.team), () => { q.team = (q.team + 1) % 5; }); }
+    box.appendChild(el);
+  });
 }
 function bestWave(f) { try { const d = JSON.parse(localStorage.getItem('ra.best') || '{}'); return d[f] || 0; } catch (e) { return 0; } }
 function setBestWave(f, n) { try { const d = JSON.parse(localStorage.getItem('ra.best') || '{}'); if (n > (d[f] || 0)) { d[f] = n; localStorage.setItem('ra.best', JSON.stringify(d)); return true; } } catch (e) { /* Speicher gesperrt */ } return false; }
@@ -878,6 +915,7 @@ function openReward() {
 function menuRender() {
   const d = readSave();
   $('mCont').hidden = !(d && d.game);
+  homeLang();
   /* Neu hier: Hinweis auf die Ausbildung */
   const n = $('mNote');
   if (typeof CAMP !== 'undefined' && !CAMP.done.tut && !Object.keys(CAMP.done).length && (n.hidden || n.dataset.tut)) { n.dataset.tut = 1; n.hidden = false; n.innerHTML = esc(L('Neu hier?')) + ' <button class="key" id="mTut">' + esc(L('Ausbildung')) + '</button> ' + esc(L('zeigt die Bedienung in zehn Minuten.')); $('mTut').onclick = () => { SND.init(); SND.play('click'); menuPage('camp'); openBrief('tut'); }; }

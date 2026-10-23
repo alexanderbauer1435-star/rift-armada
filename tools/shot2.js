@@ -19,7 +19,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   await page.waitForTimeout(600);
   await shot('20-menu');
   /* Übungsplatz starten (Alliance) */
-  await page.evaluate(() => { RA.MENU.faction = 'alliance'; RA.MENU.oppF = 'mars'; });
+  await page.evaluate(() => { RA.MENU.faction = 'alliance'; RA.MENU.oppF = 'mars'; RA.MENU.slots = null; });
   await page.click('#mSandbox'); await page.waitForTimeout(1200);
   await page.evaluate(() => { RA.UI.speed = 0.001; });
   check('sandbox started', await page.evaluate(() => RA.UI.kind === 'sandbox' && RA.UI.g.opts.sandbox === true));
@@ -67,7 +67,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   check('attack order carries subsystem, drive damaged ' + JSON.stringify(subInfo), subInfo.o === 'attack' && subInfo.sub === 'drive' && subInfo.drive < 1);
   await shot('25-subsystem-attack');
   /* Mars-Seite: Entern und Massetreiber im Übungsplatz */
-  await page.evaluate(() => { toMenu(); RA.MENU.faction = 'mars'; RA.MENU.oppF = 'alliance'; });
+  await page.evaluate(() => { toMenu(); RA.MENU.faction = 'mars'; RA.MENU.oppF = 'alliance'; RA.MENU.slots = null; });
   await page.waitForTimeout(300);
   await page.click('#mSandbox'); await page.waitForTimeout(1200);
   await page.evaluate(() => { RA.UI.speed = 0.001; });
@@ -108,7 +108,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   check('strike kills dummies (kills ' + before + ' → ' + after + ')', after > before);
   await shot('30-strike-impact');
   /* Alliance Exodus-Tor */
-  await page.evaluate(() => { toMenu(); RA.MENU.faction = 'alliance'; RA.MENU.oppF = 'mars'; });
+  await page.evaluate(() => { toMenu(); RA.MENU.faction = 'alliance'; RA.MENU.oppF = 'mars'; RA.MENU.slots = null; });
   await page.waitForTimeout(300);
   await page.click('#mSandbox'); await page.waitForTimeout(1200);
   await page.evaluate(() => { RA.UI.speed = 0.001; });

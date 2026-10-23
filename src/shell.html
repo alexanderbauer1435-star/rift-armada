@@ -15,7 +15,10 @@
 :root { --ui: 15px; --bg: #05070f; --panel: rgba(10,16,30,0.86); --panel2: rgba(16,24,44,0.92); --line: rgba(143,227,255,0.28); --acc: #8fe3ff; --acc2: #ffb86b; --txt: #e6eef6; --dim: #9fb0c3; --good: #7ddc6b; --bad: #ff5b47; --warn: #ffc23e; }
 html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: "Barlow Condensed", "DIN Alternate", Bahnschrift, "Roboto Condensed", "Arial Narrow", sans-serif; overflow: hidden; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; touch-action: none; }
 #app { position: fixed; inset: 0; overflow: hidden; }
-#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#view, #view3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+#view3d { background: #04060d; }
+#view { background: transparent; }
+#view3d[hidden] { display: none; }
 button { font: inherit; color: inherit; }
 .key { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0.45em 0.8em; min-height: 2.6em; cursor: pointer; font-size: var(--ui); font-weight: 600; letter-spacing: 0.03em; display: inline-flex; align-items: center; justify-content: center; gap: 0.4em; text-transform: uppercase; box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
 .key:active, .key.on { background: rgba(143,227,255,0.22); border-color: var(--acc); }
@@ -142,6 +145,16 @@ button { font: inherit; color: inherit; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .seg button { background: transparent; border: 0; padding: 0.35em 0.8em; min-height: 2.2em; font-weight: 600; cursor: pointer; }
 .seg button.on { background: rgba(143,227,255,0.22); color: #fff; }
+.seg.wrap { flex-wrap: wrap; justify-content: center; max-width: 100%; }
+.seg.wrap button { border-bottom: 1px solid var(--line); margin-bottom: -1px; }
+.slots { display: flex; flex-direction: column; gap: 0.3em; align-items: flex-start; }
+.slot { display: inline-flex; align-items: stretch; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.slot button { background: transparent; border: 0; border-left: 1px solid var(--line); padding: 0.3em 0.7em; min-height: 2.2em; font-weight: 600; cursor: pointer; color: var(--txt); }
+.slot button:first-child { border-left: 0; min-width: 3.2em; color: var(--acc); }
+.slot button.fac { min-width: 6.4em; }
+.slot button.tm { min-width: 4.6em; }
+.slot.off { opacity: 0.55; }
+.slot button.me { color: #fff; }
 #setup .row { justify-content: center; }
 #setup { max-height: 100vh; overflow-y: auto; padding: 0.5em 0; }
 #setup .card p { font-size: 0.74em; }
@@ -355,6 +368,7 @@ button { font: inherit; color: inherit; }
 </head>
 <body>
 <div id="app">
+  <canvas id="view3d" hidden></canvas>
   <canvas id="view"></canvas>
   <div id="hud" hidden>
     <div id="top">
@@ -388,7 +402,8 @@ button { font: inherit; color: inherit; }
   </div>
   <div id="menu">
     <div class="page" id="pHome">
-      <h1 id="title">Rift Armada<small>Runde 10 · Vorabfassung</small></h1>
+      <h1 id="title">Rift Armada<small>Runde 11 · Vorabfassung</small></h1>
+      <div class="seg" id="homeLang" style="margin:0.4em auto 0;display:inline-flex" data-nol></div>
       <div class="menuBtns">
         <button class="key big arm" id="mCamp" data-l="Kampagne">Kampagne</button>
         <button class="key big" id="mConq" data-l="Conquest">Conquest</button>
@@ -407,10 +422,11 @@ button { font: inherit; color: inherit; }
       <h2 style="margin:0;color:var(--acc)" id="setupTitle">Gefecht</h2>
       <div class="row"><span class="lbl">Modus</span><div class="seg" id="modeSeg"></div></div>
       <div class="row"><span class="lbl">Fraktion</span><div class="cards" id="facCards"></div></div>
-      <div class="row" id="rowMap"><span class="lbl">Karte</span><div class="seg" id="mapSeg"></div></div>
+      <div class="row" id="rowMap"><span class="lbl">Karte</span><div class="seg wrap" id="mapSeg"></div></div>
       <div class="row" id="rowPrev"><canvas id="mapPrev" width="360" height="360" style="width:min(360px,80vw);height:auto;max-height:46vh;aspect-ratio:1;border-radius:8px;background:#070b18"></canvas></div>
-      <div class="row" id="rowOpp"><span class="lbl">Gegner</span><div class="seg" id="oppSeg"></div><span class="lbl" style="min-width:0">Stärke</span><div class="seg" id="lvlSeg"></div></div>
-      <div class="row" id="rowOppF"><span class="lbl">Gegnerfraktion</span><div class="seg" id="oppFSeg"></div></div>
+      <div class="row" id="rowSize"><span class="lbl">Größe</span><div class="seg" id="sizeSeg"></div></div>
+      <div class="row" id="rowSlots"><span class="lbl">Spieler</span><div class="slots" id="slots"></div></div>
+      <p class="fine" id="slotNote"></p>
       <div class="row" id="rowAllies" hidden><span class="lbl">Verbündete (KI)</span><div class="seg" id="alliesSeg"></div><span class="lbl" style="min-width:0">Stärke</span><div class="seg" id="allyLvlSeg"></div></div>
       <div class="row"><span class="lbl">Startmittel</span><div class="seg" id="resSeg"></div></div>
       <p class="fine" id="mapDesc"></p>
@@ -587,6 +603,7 @@ button { font: inherit; color: inherit; }
     <div class="row"><span class="lbl">Tasten</span><div class="seg" id="sScale"></div></div>
     <div class="row"><span class="lbl">Tempo</span><div class="seg" id="sSpeed"></div></div>
     <div class="row"><span class="lbl">Balken</span><div class="seg" id="sBars"></div></div>
+    <div class="row"><span class="lbl">Grafik</span><div class="seg" id="sGfx"></div></div>
     <div class="row"><span class="lbl">Qualität</span><div class="seg" id="sQual"></div></div>
     <div class="row"><span class="lbl">Sprache · Language</span><div class="seg" id="sLang"></div></div>
     <div class="row"><button class="key arm" id="sClose">Schließen</button></div>

@@ -1,0 +1,1792 @@
+{
+ "bldgs": [
+  {
+   "id": "base",
+   "f": "alliance",
+   "name": "Kommandobasis",
+   "r": 64,
+   "tab": "eco",
+   "unique": true,
+   "hidden": false,
+   "desc": "Herz der Basis. Ab Stufe 2 bewaffnet, Stufe 3 mit Abwehr gegen Torpedos und Jäger. Schaltet Technikstufen frei.",
+   "lv": [
+    {
+     "hull": 2600,
+     "shield": 500,
+     "armor": 0,
+     "energy": 22,
+     "wpn": [],
+     "cp": 6
+    },
+    {
+     "hull": 3400,
+     "shield": 700,
+     "armor": 0,
+     "energy": 32,
+     "wpn": [
+      "beamTw",
+      "beamTw"
+     ],
+     "cp": 10
+    },
+    {
+     "hull": 4400,
+     "shield": 950,
+     "armor": 0,
+     "energy": 44,
+     "wpn": [
+      "beamTw",
+      "beamTw",
+      "beamTw",
+      "beamTw",
+      "beamTw3",
+      "pdH"
+     ],
+     "cp": 14
+    }
+   ]
+  },
+  {
+   "id": "yard",
+   "f": "alliance",
+   "name": "Werft",
+   "r": 50,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Baut Schiffe. Stufe 2 für Kreuzer, Stufe 3 für Träger und Schlachtschiffe. Repariert angedockte Schiffe.",
+   "lv": [
+    {
+     "hull": 1500,
+     "shield": 250,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "rate": 1
+    },
+    {
+     "hull": 2000,
+     "shield": 350,
+     "armor": 0,
+     "energy": -15,
+     "wpn": [],
+     "rate": 1.2
+    },
+    {
+     "hull": 2600,
+     "shield": 450,
+     "armor": 0,
+     "energy": -20,
+     "wpn": [],
+     "rate": 1.4
+    }
+   ]
+  },
+  {
+   "id": "refinery",
+   "f": "alliance",
+   "name": "Raffinerie",
+   "r": 40,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Nimmt Eis und Erz an. Mehr Andockplätze je Stufe, Stufe 3 verarbeitet mit Aufschlag.",
+   "lv": [
+    {
+     "hull": 1200,
+     "shield": 200,
+     "armor": 0,
+     "energy": -5,
+     "wpn": [],
+     "docks": 1,
+     "bonus": 1
+    },
+    {
+     "hull": 1600,
+     "shield": 280,
+     "armor": 0,
+     "energy": -7,
+     "wpn": [],
+     "docks": 2,
+     "bonus": 1.1
+    },
+    {
+     "hull": 2000,
+     "shield": 360,
+     "armor": 0,
+     "energy": -9,
+     "wpn": [],
+     "docks": 3,
+     "bonus": 1.2
+    }
+   ]
+  },
+  {
+   "id": "reactor",
+   "f": "alliance",
+   "name": "Reaktor",
+   "r": 30,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Erzeugt Energie. Bei Energiemangel laden Schilde langsamer und Werften bauen langsamer.",
+   "lv": [
+    {
+     "hull": 900,
+     "shield": 150,
+     "armor": 0,
+     "energy": 26,
+     "wpn": []
+    },
+    {
+     "hull": 1200,
+     "shield": 220,
+     "armor": 0,
+     "energy": 42,
+     "wpn": []
+    },
+    {
+     "hull": 1500,
+     "shield": 300,
+     "armor": 0,
+     "energy": 64,
+     "wpn": []
+    }
+   ]
+  },
+  {
+   "id": "lab",
+   "f": "alliance",
+   "name": "Labor",
+   "r": 34,
+   "tab": "mil",
+   "unique": true,
+   "hidden": false,
+   "desc": "Schaltet Technikstufen frei: Stufe 1 für Kreuzer, Stufe 2 für Großschiffe.",
+   "lv": [
+    {
+     "hull": 1000,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": []
+    },
+    {
+     "hull": 1300,
+     "shield": 280,
+     "armor": 0,
+     "energy": -12,
+     "wpn": []
+    },
+    {
+     "hull": 1600,
+     "shield": 360,
+     "armor": 0,
+     "energy": -16,
+     "wpn": []
+    }
+   ]
+  },
+  {
+   "id": "turret",
+   "f": "alliance",
+   "name": "Lanzenturm",
+   "r": 20,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Geschützturm mit Strahlwaffen. Stark gegen Schilde.",
+   "lv": [
+    {
+     "hull": 700,
+     "shield": 220,
+     "armor": 0,
+     "energy": -4,
+     "wpn": [
+      "beamTw"
+     ]
+    },
+    {
+     "hull": 950,
+     "shield": 300,
+     "armor": 0,
+     "energy": -6,
+     "wpn": [
+      "beamTw",
+      "beamTw"
+     ]
+    },
+    {
+     "hull": 1250,
+     "shield": 400,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [
+      "beamTw3",
+      "beamTw3"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "shield",
+   "f": "alliance",
+   "name": "Schildgenerator",
+   "r": 26,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Gibt allen eigenen Stationen im Umkreis einen zusätzlichen Schild.",
+   "lv": [
+    {
+     "hull": 800,
+     "shield": 300,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "aura": 230
+    },
+    {
+     "hull": 1000,
+     "shield": 400,
+     "armor": 0,
+     "energy": -14,
+     "wpn": [],
+     "aura": 290
+    },
+    {
+     "hull": 1200,
+     "shield": 500,
+     "armor": 0,
+     "energy": -18,
+     "wpn": [],
+     "aura": 350
+    }
+   ]
+  },
+  {
+   "id": "relay",
+   "f": "alliance",
+   "name": "Kommandorelais",
+   "r": 20,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Mehr Kommandopunkte, also mehr Schiffe zugleich.",
+   "lv": [
+    {
+     "hull": 600,
+     "shield": 120,
+     "armor": 0,
+     "energy": -3,
+     "wpn": [],
+     "cp": 8
+    },
+    {
+     "hull": 800,
+     "shield": 160,
+     "armor": 0,
+     "energy": -4,
+     "wpn": [],
+     "cp": 12
+    },
+    {
+     "hull": 1000,
+     "shield": 220,
+     "armor": 0,
+     "energy": -5,
+     "wpn": [],
+     "cp": 18
+    }
+   ]
+  },
+  {
+   "id": "super",
+   "f": "alliance",
+   "name": "Exodus-Tor",
+   "r": 54,
+   "tab": "spec",
+   "unique": true,
+   "hidden": false,
+   "desc": "Superwaffe. Versetzt alle eigenen Schiffe im Umkreis des Tors an einen beliebigen Punkt der Karte. Lädt lange nach.",
+   "lv": [
+    {
+     "hull": 2200,
+     "shield": 500,
+     "armor": 0,
+     "energy": -30,
+     "wpn": [],
+     "charge": 240,
+     "sr": 260
+    },
+    {
+     "hull": 2600,
+     "shield": 600,
+     "armor": 0,
+     "energy": -36,
+     "wpn": [],
+     "charge": 190,
+     "sr": 320
+    },
+    {
+     "hull": 3000,
+     "shield": 700,
+     "armor": 0,
+     "energy": -42,
+     "wpn": [],
+     "charge": 150,
+     "sr": 380
+    }
+   ]
+  },
+  {
+   "id": "seal",
+   "f": "guardian",
+   "name": "Das Siegel",
+   "r": 80,
+   "tab": "none",
+   "unique": true,
+   "hidden": true,
+   "desc": "Das Siegel der Erbauer. Fällt es, strömt die Brood ungehindert in den Kessel – alle haben verloren. Lässt sich ausbauen und wehrt sich dann.",
+   "lv": [
+    {
+     "hull": 14000,
+     "shield": 1500,
+     "armor": 0,
+     "energy": 0,
+     "wpn": [],
+     "cp": 0
+    },
+    {
+     "hull": 16000,
+     "shield": 1800,
+     "armor": 0,
+     "energy": 0,
+     "wpn": [
+      "wardBeam",
+      "wardBeam"
+     ],
+     "cp": 0
+    },
+    {
+     "hull": 18000,
+     "shield": 2200,
+     "armor": 0,
+     "energy": 0,
+     "wpn": [
+      "wardBeam",
+      "wardBeam",
+      "wardLance",
+      "pdH",
+      "pdH"
+     ],
+     "cp": 0
+    }
+   ]
+  },
+  {
+   "id": "base",
+   "f": "mars",
+   "name": "Kommandobasis",
+   "r": 64,
+   "tab": "eco",
+   "unique": true,
+   "hidden": false,
+   "desc": "Herz der Basis, in einen Asteroiden gebaut. Ab Stufe 2 bewaffnet, Stufe 3 mit Railgun und Abwehr.",
+   "lv": [
+    {
+     "hull": 3600,
+     "shield": 0,
+     "armor": 3,
+     "energy": 22,
+     "wpn": [],
+     "cp": 6
+    },
+    {
+     "hull": 4600,
+     "shield": 0,
+     "armor": 4,
+     "energy": 32,
+     "wpn": [
+      "autoTw",
+      "autoTw"
+     ],
+     "cp": 10
+    },
+    {
+     "hull": 5800,
+     "shield": 0,
+     "armor": 5,
+     "energy": 44,
+     "wpn": [
+      "autoTw",
+      "autoTw",
+      "autoTw",
+      "autoTw",
+      "railTw",
+      "pdH"
+     ],
+     "cp": 14
+    }
+   ]
+  },
+  {
+   "id": "yard",
+   "f": "mars",
+   "name": "Werft",
+   "r": 50,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Baut Schiffe. Stufe 2 für Kreuzer, Stufe 3 für Schlachtschiffe. Repariert angedockte Schiffe.",
+   "lv": [
+    {
+     "hull": 2000,
+     "shield": 0,
+     "armor": 2,
+     "energy": -10,
+     "wpn": [],
+     "rate": 1
+    },
+    {
+     "hull": 2600,
+     "shield": 0,
+     "armor": 3,
+     "energy": -15,
+     "wpn": [],
+     "rate": 1.2
+    },
+    {
+     "hull": 3300,
+     "shield": 0,
+     "armor": 3,
+     "energy": -20,
+     "wpn": [],
+     "rate": 1.4
+    }
+   ]
+  },
+  {
+   "id": "refinery",
+   "f": "mars",
+   "name": "Raffinerie",
+   "r": 40,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Nimmt Eis und Erz an. Mehr Andockplätze je Stufe, Stufe 3 verarbeitet mit Aufschlag.",
+   "lv": [
+    {
+     "hull": 1600,
+     "shield": 0,
+     "armor": 2,
+     "energy": -5,
+     "wpn": [],
+     "docks": 1,
+     "bonus": 1
+    },
+    {
+     "hull": 2100,
+     "shield": 0,
+     "armor": 2,
+     "energy": -7,
+     "wpn": [],
+     "docks": 2,
+     "bonus": 1.1
+    },
+    {
+     "hull": 2600,
+     "shield": 0,
+     "armor": 3,
+     "energy": -9,
+     "wpn": [],
+     "docks": 3,
+     "bonus": 1.2
+    }
+   ]
+  },
+  {
+   "id": "reactor",
+   "f": "mars",
+   "name": "Reaktor",
+   "r": 30,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Erzeugt Energie. Bei Energiemangel schießt die Abwehr langsamer und Werften bauen langsamer.",
+   "lv": [
+    {
+     "hull": 1200,
+     "shield": 0,
+     "armor": 2,
+     "energy": 26,
+     "wpn": []
+    },
+    {
+     "hull": 1600,
+     "shield": 0,
+     "armor": 2,
+     "energy": 42,
+     "wpn": []
+    },
+    {
+     "hull": 2000,
+     "shield": 0,
+     "armor": 3,
+     "energy": 64,
+     "wpn": []
+    }
+   ]
+  },
+  {
+   "id": "lab",
+   "f": "mars",
+   "name": "Labor",
+   "r": 34,
+   "tab": "mil",
+   "unique": true,
+   "hidden": false,
+   "desc": "Schaltet Technikstufen frei: Stufe 1 für Kreuzer, Stufe 2 für Großschiffe.",
+   "lv": [
+    {
+     "hull": 1300,
+     "shield": 0,
+     "armor": 2,
+     "energy": -8,
+     "wpn": []
+    },
+    {
+     "hull": 1700,
+     "shield": 0,
+     "armor": 2,
+     "energy": -12,
+     "wpn": []
+    },
+    {
+     "hull": 2100,
+     "shield": 0,
+     "armor": 3,
+     "energy": -16,
+     "wpn": []
+    }
+   ]
+  },
+  {
+   "id": "turret",
+   "f": "mars",
+   "name": "Geschützplattform",
+   "r": 20,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Geschützplattform mit Autokanonen, auf Stufe 3 mit Railgun. Stark gegen Panzerung.",
+   "lv": [
+    {
+     "hull": 950,
+     "shield": 0,
+     "armor": 2,
+     "energy": -4,
+     "wpn": [
+      "autoTw"
+     ]
+    },
+    {
+     "hull": 1250,
+     "shield": 0,
+     "armor": 3,
+     "energy": -6,
+     "wpn": [
+      "autoTw",
+      "autoTw"
+     ]
+    },
+    {
+     "hull": 1600,
+     "shield": 0,
+     "armor": 4,
+     "energy": -8,
+     "wpn": [
+      "autoTw",
+      "autoTw",
+      "railTw"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "flak",
+   "f": "mars",
+   "name": "Flakplattform",
+   "r": 24,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Punktverteidigung gegen Torpedos und Jäger, dazu leichte Kanonen gegen Korvetten.",
+   "lv": [
+    {
+     "hull": 900,
+     "shield": 0,
+     "armor": 2,
+     "energy": -6,
+     "wpn": [
+      "pdH",
+      "pdH"
+     ]
+    },
+    {
+     "hull": 1150,
+     "shield": 0,
+     "armor": 3,
+     "energy": -8,
+     "wpn": [
+      "pdH",
+      "pdH",
+      "pdH",
+      "autoS"
+     ]
+    },
+    {
+     "hull": 1450,
+     "shield": 0,
+     "armor": 3,
+     "energy": -10,
+     "wpn": [
+      "pdH",
+      "pdH",
+      "pdH",
+      "pdH",
+      "autoM"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "relay",
+   "f": "mars",
+   "name": "Kommandorelais",
+   "r": 20,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Mehr Kommandopunkte, also mehr Schiffe zugleich.",
+   "lv": [
+    {
+     "hull": 800,
+     "shield": 0,
+     "armor": 2,
+     "energy": -3,
+     "wpn": [],
+     "cp": 8
+    },
+    {
+     "hull": 1000,
+     "shield": 0,
+     "armor": 2,
+     "energy": -4,
+     "wpn": [],
+     "cp": 12
+    },
+    {
+     "hull": 1200,
+     "shield": 0,
+     "armor": 3,
+     "energy": -5,
+     "wpn": [],
+     "cp": 18
+    }
+   ]
+  },
+  {
+   "id": "super",
+   "f": "mars",
+   "name": "Massetreiber",
+   "r": 54,
+   "tab": "spec",
+   "unique": true,
+   "hidden": false,
+   "desc": "Superwaffe. Schießt eine Masse quer über die Karte: schwerer Schaden im Zielkreis nach wenigen Sekunden Flug. Lädt lange nach.",
+   "lv": [
+    {
+     "hull": 2800,
+     "shield": 0,
+     "armor": 4,
+     "energy": -30,
+     "wpn": [],
+     "charge": 240,
+     "sr": 150
+    },
+    {
+     "hull": 3300,
+     "shield": 0,
+     "armor": 4,
+     "energy": -36,
+     "wpn": [],
+     "charge": 190,
+     "sr": 170
+    },
+    {
+     "hull": 3800,
+     "shield": 0,
+     "armor": 5,
+     "energy": -42,
+     "wpn": [],
+     "charge": 150,
+     "sr": 190
+    }
+   ]
+  },
+  {
+   "id": "base",
+   "f": "legion",
+   "name": "Thronhalle",
+   "r": 64,
+   "tab": "eco",
+   "unique": true,
+   "hidden": false,
+   "desc": "Herz der Basis, eine wiederhergestellte Erbauer-Festung. Ab Stufe 2 mit Lichtlanzen bewaffnet.",
+   "lv": [
+    {
+     "hull": 2600,
+     "shield": 600,
+     "armor": 0,
+     "energy": 22,
+     "wpn": [],
+     "cp": 6
+    },
+    {
+     "hull": 3400,
+     "shield": 820,
+     "armor": 0,
+     "energy": 32,
+     "wpn": [
+      "lanceM",
+      "lanceM"
+     ],
+     "cp": 10
+    },
+    {
+     "hull": 4400,
+     "shield": 1100,
+     "armor": 0,
+     "energy": 44,
+     "wpn": [
+      "lanceM",
+      "lanceM",
+      "lanceM",
+      "lanceM",
+      "lanceH",
+      "pdH"
+     ],
+     "cp": 14
+    }
+   ]
+  },
+  {
+   "id": "yard",
+   "f": "legion",
+   "name": "Reliquienwerft",
+   "r": 50,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Baut Heldenschiffe. Stufe 2 für Kreuzer, Stufe 3 für die Basilica. Repariert angedockte Schiffe.",
+   "lv": [
+    {
+     "hull": 1500,
+     "shield": 250,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "rate": 1
+    },
+    {
+     "hull": 2000,
+     "shield": 350,
+     "armor": 0,
+     "energy": -15,
+     "wpn": [],
+     "rate": 1.2
+    },
+    {
+     "hull": 2600,
+     "shield": 450,
+     "armor": 0,
+     "energy": -20,
+     "wpn": [],
+     "rate": 1.4
+    }
+   ]
+  },
+  {
+   "id": "refinery",
+   "f": "legion",
+   "name": "Schatzkammer",
+   "r": 40,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Nimmt Eis und Erz an. Mehr Andockplätze je Stufe, Stufe 3 verarbeitet mit Aufschlag.",
+   "lv": [
+    {
+     "hull": 1200,
+     "shield": 200,
+     "armor": 0,
+     "energy": -5,
+     "wpn": [],
+     "docks": 1,
+     "bonus": 1
+    },
+    {
+     "hull": 1600,
+     "shield": 280,
+     "armor": 0,
+     "energy": -7,
+     "wpn": [],
+     "docks": 2,
+     "bonus": 1.1
+    },
+    {
+     "hull": 2000,
+     "shield": 360,
+     "armor": 0,
+     "energy": -9,
+     "wpn": [],
+     "docks": 3,
+     "bonus": 1.2
+    }
+   ]
+  },
+  {
+   "id": "reactor",
+   "f": "legion",
+   "name": "Sonnenkern",
+   "r": 30,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Erzeugt Energie. Bei Energiemangel laden Schilde langsamer und Werften bauen langsamer.",
+   "lv": [
+    {
+     "hull": 900,
+     "shield": 150,
+     "armor": 0,
+     "energy": 26,
+     "wpn": []
+    },
+    {
+     "hull": 1200,
+     "shield": 220,
+     "armor": 0,
+     "energy": 42,
+     "wpn": []
+    },
+    {
+     "hull": 1500,
+     "shield": 300,
+     "armor": 0,
+     "energy": 64,
+     "wpn": []
+    }
+   ]
+  },
+  {
+   "id": "lab",
+   "f": "legion",
+   "name": "Archivturm",
+   "r": 34,
+   "tab": "mil",
+   "unique": true,
+   "hidden": false,
+   "desc": "Schaltet Technikstufen frei: Stufe 1 für Kreuzer, Stufe 2 für Großschiffe.",
+   "lv": [
+    {
+     "hull": 1000,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": []
+    },
+    {
+     "hull": 1300,
+     "shield": 280,
+     "armor": 0,
+     "energy": -12,
+     "wpn": []
+    },
+    {
+     "hull": 1600,
+     "shield": 360,
+     "armor": 0,
+     "energy": -16,
+     "wpn": []
+    }
+   ]
+  },
+  {
+   "id": "turret",
+   "f": "legion",
+   "name": "Lanzenbastion",
+   "r": 20,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Geschützturm mit Lichtlanzen: ein Teil des Schadens geht durch Schilde.",
+   "lv": [
+    {
+     "hull": 700,
+     "shield": 220,
+     "armor": 0,
+     "energy": -4,
+     "wpn": [
+      "lanceM"
+     ]
+    },
+    {
+     "hull": 950,
+     "shield": 300,
+     "armor": 0,
+     "energy": -6,
+     "wpn": [
+      "lanceM",
+      "lanceM"
+     ]
+    },
+    {
+     "hull": 1250,
+     "shield": 400,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [
+      "lanceH",
+      "lanceM"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "shield",
+   "f": "legion",
+   "name": "Ägis-Schrein",
+   "r": 26,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Gibt allen eigenen Stationen im Umkreis einen zusätzlichen Schild.",
+   "lv": [
+    {
+     "hull": 800,
+     "shield": 300,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "aura": 230
+    },
+    {
+     "hull": 1000,
+     "shield": 400,
+     "armor": 0,
+     "energy": -14,
+     "wpn": [],
+     "aura": 290
+    },
+    {
+     "hull": 1200,
+     "shield": 500,
+     "armor": 0,
+     "energy": -18,
+     "wpn": [],
+     "aura": 350
+    }
+   ]
+  },
+  {
+   "id": "relay",
+   "f": "legion",
+   "name": "Bannerturm",
+   "r": 20,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Mehr Kommandopunkte, also mehr Schiffe zugleich.",
+   "lv": [
+    {
+     "hull": 600,
+     "shield": 120,
+     "armor": 0,
+     "energy": -3,
+     "wpn": [],
+     "cp": 8
+    },
+    {
+     "hull": 800,
+     "shield": 160,
+     "armor": 0,
+     "energy": -4,
+     "wpn": [],
+     "cp": 12
+    },
+    {
+     "hull": 1000,
+     "shield": 220,
+     "armor": 0,
+     "energy": -5,
+     "wpn": [],
+     "cp": 18
+    }
+   ]
+  },
+  {
+   "id": "super",
+   "f": "legion",
+   "name": "Sunbreaker",
+   "r": 54,
+   "tab": "spec",
+   "unique": true,
+   "hidden": false,
+   "desc": "Superwaffe. Entfacht eine Sterneneruption in einem Kartenbereich: acht Sekunden lang schwerer Schaden an allem darin, auch an eigenen Schiffen.",
+   "lv": [
+    {
+     "hull": 2200,
+     "shield": 500,
+     "armor": 0,
+     "energy": -30,
+     "wpn": [],
+     "charge": 240,
+     "sr": 230
+    },
+    {
+     "hull": 2600,
+     "shield": 600,
+     "armor": 0,
+     "energy": -36,
+     "wpn": [],
+     "charge": 190,
+     "sr": 260
+    },
+    {
+     "hull": 3000,
+     "shield": 700,
+     "armor": 0,
+     "energy": -42,
+     "wpn": [],
+     "charge": 150,
+     "sr": 290
+    }
+   ]
+  },
+  {
+   "id": "base",
+   "f": "nexus",
+   "name": "Kernknoten",
+   "r": 64,
+   "tab": "eco",
+   "unique": true,
+   "hidden": false,
+   "desc": "Herz des Netzes. Alle Stationen müssen über Knoten mit ihm verbunden sein. Ab Stufe 2 mit gebrochenem Kristallstrahl bewaffnet.",
+   "lv": [
+    {
+     "hull": 2600,
+     "shield": 560,
+     "armor": 0,
+     "energy": 22,
+     "wpn": [],
+     "cp": 6
+    },
+    {
+     "hull": 3400,
+     "shield": 760,
+     "armor": 0,
+     "energy": 32,
+     "wpn": [
+      "prismBeam",
+      "prismBeam"
+     ],
+     "cp": 10
+    },
+    {
+     "hull": 4400,
+     "shield": 1000,
+     "armor": 0,
+     "energy": 44,
+     "wpn": [
+      "prismBeam",
+      "prismBeam",
+      "prismBeam",
+      "facetBeam",
+      "crystalPd",
+      "crystalPd"
+     ],
+     "cp": 14
+    }
+   ]
+  },
+  {
+   "id": "yard",
+   "f": "nexus",
+   "name": "Wachskammer",
+   "r": 50,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Züchtet Kristallschiffe. Stufe 2 für Prism, Stufe 3 für Monolith und Prime Facet.",
+   "lv": [
+    {
+     "hull": 1500,
+     "shield": 250,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "rate": 1
+    },
+    {
+     "hull": 2000,
+     "shield": 350,
+     "armor": 0,
+     "energy": -15,
+     "wpn": [],
+     "rate": 1.2
+    },
+    {
+     "hull": 2600,
+     "shield": 450,
+     "armor": 0,
+     "energy": -20,
+     "wpn": [],
+     "rate": 1.4
+    }
+   ]
+  },
+  {
+   "id": "refinery",
+   "f": "nexus",
+   "name": "Verdichter",
+   "r": 40,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Harvester liefern ins Netz, nicht hierher. Der Verdichter veredelt: +10 % je Stufe auf alles, was ankommt.",
+   "lv": [
+    {
+     "hull": 1200,
+     "shield": 200,
+     "armor": 0,
+     "energy": -5,
+     "wpn": [],
+     "docks": 1,
+     "bonus": 1.05
+    },
+    {
+     "hull": 1600,
+     "shield": 280,
+     "armor": 0,
+     "energy": -7,
+     "wpn": [],
+     "docks": 2,
+     "bonus": 1.1
+    },
+    {
+     "hull": 2000,
+     "shield": 360,
+     "armor": 0,
+     "energy": -9,
+     "wpn": [],
+     "docks": 3,
+     "bonus": 1.2
+    }
+   ]
+  },
+  {
+   "id": "reactor",
+   "f": "nexus",
+   "name": "Resonator",
+   "r": 30,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Erzeugt Energie. Bei Energiemangel laden Schilde langsamer und Werften bauen langsamer.",
+   "lv": [
+    {
+     "hull": 900,
+     "shield": 150,
+     "armor": 0,
+     "energy": 26,
+     "wpn": []
+    },
+    {
+     "hull": 1200,
+     "shield": 220,
+     "armor": 0,
+     "energy": 42,
+     "wpn": []
+    },
+    {
+     "hull": 1500,
+     "shield": 300,
+     "armor": 0,
+     "energy": 64,
+     "wpn": []
+    }
+   ]
+  },
+  {
+   "id": "lab",
+   "f": "nexus",
+   "name": "Facettenkammer",
+   "r": 34,
+   "tab": "mil",
+   "unique": true,
+   "hidden": false,
+   "desc": "Schaltet Technikstufen frei: Stufe 1 für Kreuzer, Stufe 2 für Großschiffe.",
+   "lv": [
+    {
+     "hull": 1000,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": []
+    },
+    {
+     "hull": 1300,
+     "shield": 280,
+     "armor": 0,
+     "energy": -12,
+     "wpn": []
+    },
+    {
+     "hull": 1600,
+     "shield": 360,
+     "armor": 0,
+     "energy": -16,
+     "wpn": []
+    }
+   ]
+  },
+  {
+   "id": "turret",
+   "f": "nexus",
+   "name": "Kristallwacht",
+   "r": 20,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Geschützturm mit Kristallstrahlen, die sich auf mehrere Ziele brechen.",
+   "lv": [
+    {
+     "hull": 700,
+     "shield": 220,
+     "armor": 0,
+     "energy": -4,
+     "wpn": [
+      "spireBeam"
+     ]
+    },
+    {
+     "hull": 950,
+     "shield": 300,
+     "armor": 0,
+     "energy": -6,
+     "wpn": [
+      "spireBeam",
+      "spireBeam"
+     ]
+    },
+    {
+     "hull": 1250,
+     "shield": 400,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [
+      "prismBeam",
+      "spireBeam",
+      "crystalPd"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "shield",
+   "f": "nexus",
+   "name": "Hüllenprisma",
+   "r": 26,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Gibt allen eigenen Stationen im Umkreis einen zusätzlichen Schild.",
+   "lv": [
+    {
+     "hull": 800,
+     "shield": 300,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "aura": 230
+    },
+    {
+     "hull": 1000,
+     "shield": 400,
+     "armor": 0,
+     "energy": -14,
+     "wpn": [],
+     "aura": 290
+    },
+    {
+     "hull": 1200,
+     "shield": 500,
+     "armor": 0,
+     "energy": -18,
+     "wpn": [],
+     "aura": 350
+    }
+   ]
+  },
+  {
+   "id": "relay",
+   "f": "nexus",
+   "name": "Netzknoten",
+   "r": 20,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Knoten des Netzes: verbindet Stationen in seinem Umkreis, gibt Kommandopunkte, Harvester liefern in seiner Nähe.",
+   "lv": [
+    {
+     "hull": 600,
+     "shield": 120,
+     "armor": 0,
+     "energy": -3,
+     "wpn": [],
+     "cp": 6,
+     "net": 1
+    },
+    {
+     "hull": 800,
+     "shield": 160,
+     "armor": 0,
+     "energy": -4,
+     "wpn": [],
+     "cp": 10,
+     "net": 1.15
+    },
+    {
+     "hull": 1000,
+     "shield": 220,
+     "armor": 0,
+     "energy": -5,
+     "wpn": [],
+     "cp": 16,
+     "net": 1.3
+    }
+   ]
+  },
+  {
+   "id": "super",
+   "f": "nexus",
+   "name": "Resonanz",
+   "r": 54,
+   "tab": "spec",
+   "unique": true,
+   "hidden": false,
+   "desc": "Superwaffe. Übernimmt alle kleinen feindlichen Schiffe im Zielbereich – sie gehören danach dir.",
+   "lv": [
+    {
+     "hull": 2200,
+     "shield": 500,
+     "armor": 0,
+     "energy": -30,
+     "wpn": [],
+     "charge": 240,
+     "sr": 260
+    },
+    {
+     "hull": 2600,
+     "shield": 600,
+     "armor": 0,
+     "energy": -36,
+     "wpn": [],
+     "charge": 190,
+     "sr": 300
+    },
+    {
+     "hull": 3000,
+     "shield": 700,
+     "armor": 0,
+     "energy": -42,
+     "wpn": [],
+     "charge": 150,
+     "sr": 340
+    }
+   ]
+  },
+  {
+   "id": "base",
+   "f": "brood",
+   "name": "Schwarmherz",
+   "r": 64,
+   "tab": "eco",
+   "unique": true,
+   "hidden": false,
+   "desc": "Herz des Nests, ein lebender Koloss. Ab Stufe 2 mit Säurespuckern bewaffnet. Heilt sich selbst.",
+   "lv": [
+    {
+     "hull": 3600,
+     "shield": 0,
+     "armor": 2,
+     "energy": 22,
+     "wpn": [],
+     "cp": 6,
+     "regen": 0.004
+    },
+    {
+     "hull": 4600,
+     "shield": 0,
+     "armor": 3,
+     "energy": 32,
+     "wpn": [
+      "acidTw",
+      "acidTw"
+     ],
+     "cp": 10,
+     "regen": 0.005
+    },
+    {
+     "hull": 5800,
+     "shield": 0,
+     "armor": 4,
+     "energy": 44,
+     "wpn": [
+      "acidTw",
+      "acidTw",
+      "acidTw",
+      "acidTw",
+      "acidHeavy",
+      "acidHeavy"
+     ],
+     "cp": 14,
+     "regen": 0.006
+    }
+   ]
+  },
+  {
+   "id": "yard",
+   "f": "brood",
+   "name": "Brutgrube",
+   "r": 50,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Züchtet Larven und alle Formen. Stufe 2 für Sporer und Acid Maw, Stufe 3 für Leviathan und Matriarch.",
+   "lv": [
+    {
+     "hull": 2000,
+     "shield": 0,
+     "armor": 2,
+     "energy": -10,
+     "wpn": [],
+     "rate": 1,
+     "regen": 0.004
+    },
+    {
+     "hull": 2600,
+     "shield": 0,
+     "armor": 3,
+     "energy": -15,
+     "wpn": [],
+     "rate": 1.2,
+     "regen": 0.005
+    },
+    {
+     "hull": 3300,
+     "shield": 0,
+     "armor": 3,
+     "energy": -20,
+     "wpn": [],
+     "rate": 1.4,
+     "regen": 0.006
+    }
+   ]
+  },
+  {
+   "id": "refinery",
+   "f": "brood",
+   "name": "Verdauungskammer",
+   "r": 40,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Grazer liefern hierher. Eis und Erz werden zu Biomasse.",
+   "lv": [
+    {
+     "hull": 1600,
+     "shield": 0,
+     "armor": 2,
+     "energy": -5,
+     "wpn": [],
+     "docks": 1,
+     "bonus": 1,
+     "regen": 0.004
+    },
+    {
+     "hull": 2100,
+     "shield": 0,
+     "armor": 2,
+     "energy": -7,
+     "wpn": [],
+     "docks": 2,
+     "bonus": 1.1,
+     "regen": 0.005
+    },
+    {
+     "hull": 2600,
+     "shield": 0,
+     "armor": 3,
+     "energy": -9,
+     "wpn": [],
+     "docks": 3,
+     "bonus": 1.2,
+     "regen": 0.006
+    }
+   ]
+  },
+  {
+   "id": "reactor",
+   "f": "brood",
+   "name": "Brutkammer",
+   "r": 30,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Erzeugt Nährsaft (Energie). Bei Mangel heilen Nester langsamer und Brutgruben züchten langsamer.",
+   "lv": [
+    {
+     "hull": 1200,
+     "shield": 0,
+     "armor": 2,
+     "energy": 26,
+     "wpn": [],
+     "regen": 0.004
+    },
+    {
+     "hull": 1600,
+     "shield": 0,
+     "armor": 2,
+     "energy": 42,
+     "wpn": [],
+     "regen": 0.005
+    },
+    {
+     "hull": 2000,
+     "shield": 0,
+     "armor": 3,
+     "energy": 64,
+     "wpn": [],
+     "regen": 0.006
+    }
+   ]
+  },
+  {
+   "id": "lab",
+   "f": "brood",
+   "name": "Cortex",
+   "r": 34,
+   "tab": "mil",
+   "unique": true,
+   "hidden": false,
+   "desc": "Das Gehirn: schaltet Mutationsstufen frei.",
+   "lv": [
+    {
+     "hull": 1300,
+     "shield": 0,
+     "armor": 2,
+     "energy": -8,
+     "wpn": [],
+     "regen": 0.004
+    },
+    {
+     "hull": 1700,
+     "shield": 0,
+     "armor": 2,
+     "energy": -12,
+     "wpn": [],
+     "regen": 0.005
+    },
+    {
+     "hull": 2100,
+     "shield": 0,
+     "armor": 3,
+     "energy": -16,
+     "wpn": [],
+     "regen": 0.006
+    }
+   ]
+  },
+  {
+   "id": "turret",
+   "f": "brood",
+   "name": "Säurekrater",
+   "r": 20,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Spuckt Säure auf alles in der Nähe.",
+   "lv": [
+    {
+     "hull": 950,
+     "shield": 0,
+     "armor": 2,
+     "energy": -4,
+     "wpn": [
+      "acidTw"
+     ],
+     "regen": 0.005
+    },
+    {
+     "hull": 1250,
+     "shield": 0,
+     "armor": 3,
+     "energy": -6,
+     "wpn": [
+      "acidTw",
+      "acidTw"
+     ],
+     "regen": 0.006
+    },
+    {
+     "hull": 1600,
+     "shield": 0,
+     "armor": 4,
+     "energy": -8,
+     "wpn": [
+      "acidTw",
+      "acidTw",
+      "acidHeavy"
+     ],
+     "regen": 0.007
+    }
+   ]
+  },
+  {
+   "id": "relay",
+   "f": "brood",
+   "name": "Pheromonknoten",
+   "r": 20,
+   "tab": "eco",
+   "unique": false,
+   "hidden": false,
+   "desc": "Mehr Kommandopunkte, also mehr Brut zugleich.",
+   "lv": [
+    {
+     "hull": 800,
+     "shield": 0,
+     "armor": 2,
+     "energy": -3,
+     "wpn": [],
+     "cp": 8,
+     "regen": 0.005
+    },
+    {
+     "hull": 1000,
+     "shield": 0,
+     "armor": 2,
+     "energy": -4,
+     "wpn": [],
+     "cp": 12,
+     "regen": 0.006
+    },
+    {
+     "hull": 1200,
+     "shield": 0,
+     "armor": 3,
+     "energy": -5,
+     "wpn": [],
+     "cp": 18,
+     "regen": 0.007
+    }
+   ]
+  },
+  {
+   "id": "super",
+   "f": "brood",
+   "name": "Brutsturm",
+   "r": 54,
+   "tab": "spec",
+   "unique": true,
+   "hidden": false,
+   "desc": "Superwaffe. Lässt irgendwo auf der Karte einen Sturm aus Schwärmen und Ravagern schlüpfen, der 60 Sekunden lebt.",
+   "lv": [
+    {
+     "hull": 2800,
+     "shield": 0,
+     "armor": 4,
+     "energy": -30,
+     "wpn": [],
+     "charge": 240,
+     "sr": 200,
+     "packs": 8,
+     "regen": 0.004
+    },
+    {
+     "hull": 3300,
+     "shield": 0,
+     "armor": 4,
+     "energy": -36,
+     "wpn": [],
+     "charge": 190,
+     "sr": 230,
+     "packs": 11,
+     "regen": 0.005
+    },
+    {
+     "hull": 3800,
+     "shield": 0,
+     "armor": 5,
+     "energy": -42,
+     "wpn": [],
+     "charge": 150,
+     "sr": 260,
+     "packs": 14,
+     "regen": 0.006
+    }
+   ]
+  },
+  {
+   "id": "spore",
+   "f": "brood",
+   "name": "Sporennest",
+   "r": 26,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Sporenwolke: Brood-Schiffe heilen im Umkreis 2 % je Sekunde, Feinde verlieren 1 % je Sekunde.",
+   "lv": [
+    {
+     "hull": 900,
+     "shield": 0,
+     "armor": 1,
+     "energy": -6,
+     "wpn": [],
+     "aura": 220,
+     "regen": 0.006
+    },
+    {
+     "hull": 1150,
+     "shield": 0,
+     "armor": 2,
+     "energy": -8,
+     "wpn": [],
+     "aura": 280,
+     "regen": 0.007
+    },
+    {
+     "hull": 1450,
+     "shield": 0,
+     "armor": 2,
+     "energy": -10,
+     "wpn": [],
+     "aura": 340,
+     "regen": 0.008
+    }
+   ]
+  }
+ ],
+ "fac": {}
+}

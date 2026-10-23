@@ -61,16 +61,22 @@ function startWaves() {
 }
 function startSkirmish() {
   if (MENU.mode === 'survival' || MENU.mode === 'quarantine') return startWaves();
-  const np = MENU.opp + 1, map = mapFor(MENU.map, np), players = [{ faction: MENU.faction, human: true }];
-  const others = PLAYABLE.filter(f => f !== MENU.faction);
-  for (let i = 1; i < np; i++) players.push({ faction: MENU.oppF !== 'random' && PLAYABLE.indexOf(MENU.oppF) >= 0 ? MENU.oppF : others[(Math.random() * others.length) | 0], ai: MENU.lvl });
+  slotsFix();
+  const list = slotPlayers(), np = list.length, map = mapFor(MENU.map, np);
+  /* Zufallsfraktionen ziehen (bevorzugt solche, die noch niemand hat); Teams: 0 = für sich allein (eigene Teamnummer) */
+  const players = list.map((q, i) => {
+    let f = q.faction;
+    if (f === 'random') { const used = list.map(x => x.faction), free = PLAYABLE.filter(x => used.indexOf(x) < 0); f = (free.length ? free : PLAYABLE)[(Math.random() * (free.length ? free : PLAYABLE).length) | 0]; q.faction = f; }
+    return { faction: f, human: !!q.human, ai: q.ai || 0, team: q.team ? q.team : 10 + i, color: q.color || null };
+  });
   const res = MENU.res === 'low' ? { ice: 700, ore: 300 } : MENU.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
-  beginGame({ map, seed: 1 + ((Math.random() * 1e6) | 0), players, res }, 'skirmish');
+  beginGame({ map, size: MENU.size || 'normal', seed: 1 + ((Math.random() * 1e6) | 0), players, res }, 'skirmish');
 }
 /* Übungsplatz: Testkarte, alles freigeschaltet, reiche Mittel, Zielscheiben des Gegners ohne eigene KI */
 function startSandbox() {
   const others = PLAYABLE.filter(f => f !== MENU.faction);
-  const players = [{ faction: MENU.faction, human: true }, { faction: MENU.oppF !== 'random' && MENU.oppF !== MENU.faction ? MENU.oppF : others[(Math.random() * others.length) | 0], ai: 0 }];
+  slotsFix();
+  const sf = MENU.slots[0].f, players = [{ faction: MENU.faction, human: true }, { faction: sf !== 'random' && sf !== 'off' && sf !== MENU.faction ? sf : others[(Math.random() * others.length) | 0], ai: 0 }];
   beginGame({ map: 'test', seed: 1 + ((Math.random() * 1e6) | 0), players, res: { ice: 30000, ore: 20000 }, sandbox: true }, 'sandbox');
   toast(L('Übungsplatz: alles erforscht, Werft III, Zielscheiben in der Mitte. Doktrin über die Kommandobasis.'), 'good', 6000);
 }
@@ -169,12 +175,12 @@ function frame(t) {
     if (run) { _fAcc += dt; _fN++; }
     if (_fN >= 90 || (_fN >= 12 && _fAcc > 1.5)) {
       const avg = _fAcc / _fN; _fAcc = 0; _fN = 0;
-      if (!window.__RA_TEST && SET.qual === 'auto' && avg > 0.026) { if (R.detail > 1) R.detail = 1; else if (R.qScale > 0.55) { R.qScale = Math.max(0.5, R.qScale - 0.17); R.resize(); } }
+      if (!window.__RA_TEST && SET.qual === 'auto' && avg > 0.026) { if (R.detail > 1) { R.detail = 1; if (R.mode3d) RA3D.setDetail(1); } else if (R.qScale > 0.55) { R.qScale = Math.max(0.5, R.qScale - 0.17); R.resize(); } }
     }
   }
 }
 (function boot() {
-  R.init($('view'), $('mini'));
+  R.init($('view'), $('mini'), $('view3d'));
   loadPrefs();
   setLang(SET.lang);
   initInput();

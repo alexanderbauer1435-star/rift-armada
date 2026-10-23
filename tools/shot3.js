@@ -18,11 +18,11 @@ const OUT = path.resolve(__dirname, 'shots');
   await page.evaluate(() => { window.__RA_TEST = 1; });
   await page.waitForTimeout(600);
   await page.click('#mSkirm'); await page.waitForTimeout(300);
-  check('setup shows all factions and opponent choice', await page.evaluate(() => document.querySelectorAll('#facCards .card').length === PLAYABLE.length && document.querySelectorAll('#oppFSeg button').length === PLAYABLE.length + 1));
+  check('setup shows all factions and opponent choice', await page.evaluate(() => document.querySelectorAll('#facCards .card').length === PLAYABLE.length && document.querySelectorAll('#slots .slot').length === 8));
   await shot('90-setup');
   await page.click('#mBack'); await page.waitForTimeout(200);
   /* Legion im Übungsplatz */
-  await page.evaluate(() => { RA.MENU.faction = 'legion'; RA.MENU.oppF = 'nexus'; });
+  await page.evaluate(() => { RA.MENU.faction = 'legion'; RA.MENU.oppF = 'nexus'; RA.MENU.slots = null; });
   await page.click('#mSandbox'); await page.waitForTimeout(1200);
   await page.evaluate(() => { RA.UI.speed = 0.001; });
   check('legion sandbox started vs nexus', await page.evaluate(() => RA.UI.P.faction === 'legion' && RA.UI.g.players[1].faction === 'nexus'));
@@ -66,7 +66,7 @@ const OUT = path.resolve(__dirname, 'shots');
   await page.click('#docConfirm'); await page.waitForTimeout(300);
   check('erbauer tech chosen', await page.evaluate(() => !!RA.UI.P.etech && document.getElementById('doctrine').hidden));
   /* Nexus im Übungsplatz */
-  await page.evaluate(() => { toMenu(); RA.MENU.faction = 'nexus'; RA.MENU.oppF = 'legion'; });
+  await page.evaluate(() => { toMenu(); RA.MENU.faction = 'nexus'; RA.MENU.oppF = 'legion'; RA.MENU.slots = null; });
   await page.waitForTimeout(300);
   await page.click('#mSandbox'); await page.waitForTimeout(1200);
   await page.evaluate(() => { RA.UI.speed = 0.001; const g = RA.UI.g, me = RA.UI.me, b = g.bldgs.find(x => x.owner === me && x.role === 'base'); R.cam.z = 0.9; R.center(b.x, b.y); const s = g.ships.find(u => u.owner === me && u.def.build); setSel([s]); });

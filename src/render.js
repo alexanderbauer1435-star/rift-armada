@@ -10,7 +10,19 @@ const R = {
   time: 0, dt: 0, frameN: 0, padB: 0, padT: 0, qScale: 1, detail: 2, shake: 0, pings: [], hover: 0, stars: null, bg: null, bgKey: '',
   fogCv: null, fogCtx: null, fogImg: null, fogT: 0, miniBase: null, lastAct: null, sprites: new Map(), hot: []
 };
-R.init = function (cv, mini) { R.cv = cv; R.ctx = cv.getContext('2d', { alpha: false }); R.mini = mini; R.mctx = mini.getContext('2d'); };
+R.init = function (cv, mini, cv3) { R.cv = cv; R.ctx = cv.getContext('2d', { alpha: true }); R.mini = mini; R.mctx = mini.getContext('2d'); R.cv3 = cv3 || null; R.mode3d = false; };
+/* Darstellung umschalten: '3d' nutzt den 3D-Renderer (render3d.js, window.RA3D) für die Welt, die 2D-Leinwand zeichnet nur noch
+   Überlagerungen; '2d' ist die klassische Zeichnung. Liefert den tatsächlich aktiven Modus. */
+R.setMode = function (m) {
+  const want = m === '3d' && R.cv3 && typeof RA3D !== 'undefined' && RA3D.supported();
+  if (want && !R.ok3d) { try { R.ok3d = !!RA3D.init(R.cv3); } catch (e) { R.ok3d = false; } }
+  R.mode3d = !!(want && R.ok3d);
+  if (R.cv3) R.cv3.hidden = !R.mode3d;
+  FX.mute = R.mode3d;
+  if (R.mode3d && R.g) { RA3D.setGame(R.g, R.vp); RA3D.setDetail(R.detail); }
+  R.bg = null; R.bgKey = '';
+  return R.mode3d ? '3d' : '2d';
+};
 function pcol(o) { const p = R.g && R.g.players[o]; return p ? (p.color || p.F.team) : '#d8d0bd'; }
 function isFoeV(o) { const g = R.g; return R.vp >= 0 && o >= 0 && g.tm[o] !== g.tm[R.vp]; }
 R.setGame = function (g, vp) {
@@ -19,6 +31,7 @@ R.setGame = function (g, vp) {
   R.fogImg = R.fogCtx.createImageData(g.vw, g.vh); R.fogT = -1;
   R.miniBase = null; R.sprites.clear();
   R.clampCam();
+  if (R.mode3d) { RA3D.setGame(g, vp); RA3D.setDetail(R.detail); }
 };
 R.resize = function () {
   const cv = R.cv, r = cv.getBoundingClientRect();
@@ -29,6 +42,7 @@ R.resize = function () {
   const mr = R.mini.getBoundingClientRect(), md = Math.min(window.devicePixelRatio || 1, 2);
   if (mr.width > 0) { R.mini.width = Math.round(mr.width * md); R.mini.height = Math.round(mr.height * md); }
   R.bg = null; R.bgKey = '';
+  if (R.mode3d) RA3D.resize(R.cssW, R.cssH, R.dpr);
   R.clampCam();
 };
 R.clampCam = function () {
@@ -41,12 +55,14 @@ R.clampCam = function () {
   cam.y = vh >= eh + pad * 2 + pb + pt ? (eh - vh) / 2 : clamp(cam.y, -pad - pt, eh - vh + pad + pb);
 };
 R.center = function (x, y) { R.cam.x = x - R.cssW / R.cam.z / 2; R.cam.y = y - (R.cssH - R.padB * 0.5 + R.padT * 0.5) / R.cam.z / 2; R.clampCam(); };
-R.s2w = function (sx, sy) { return { x: R.cam.x + sx / R.cam.z, y: R.cam.y + sy / R.cam.z }; };
-R.w2s = function (x, y) { return { x: (x - R.cam.x) * R.cam.z, y: (y - R.cam.y) * R.cam.z }; };
+R.s2w = function (sx, sy) { if (R.mode3d) { R.cam3(); const w = RA3D.unproject(sx, sy); if (w) return w; } return { x: R.cam.x + sx / R.cam.z, y: R.cam.y + sy / R.cam.z }; };
+R.w2s = function (x, y) { if (R.mode3d) { R.cam3(); const q = RA3D.project(x, y); if (q) return q; } return { x: (x - R.cam.x) * R.cam.z, y: (y - R.cam.y) * R.cam.z, s: R.cam.z }; };
+/* 3D-Kamera aus der 2D-Kamera ableiten: Weltpunkt in der Bildschirmmitte und Zoom */
+R.cam3 = function () { const cam = R.cam; RA3D.setCam(cam.x + R.cssW / cam.z / 2, cam.y + (R.cssH - R.padB * 0.5 + R.padT * 0.5) / cam.z / 2, cam.z, R.cssW, R.cssH, R.dpr); };
 R.zoomAt = function (sx, sy, f) { const cam = R.cam, X = cam.x + sx / cam.z, Y = cam.y + sy / cam.z; cam.z = clamp(cam.z * f, 0.2, 2.4); cam.x = X - sx / cam.z; cam.y = Y - sy / cam.z; R.clampCam(); };
 R.seen = function (x, y) { const g = R.g; if (R.vp < 0) return true; const p = g.players[R.vp]; return !!p.explored[clamp((y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((x / VIS) | 0, 0, g.vw - 1)]; };
 R.visible = function (e) { return R.vp < 0 || canSee(R.g, R.vp, e); };
-R.inView = function (x, y, m) { const cam = R.cam; m = m || 0; return x + m >= cam.x && x - m <= cam.x + R.cssW / cam.z && y + m >= cam.y && y - m <= cam.y + R.cssH / cam.z; };
+R.inView = function (x, y, m) { m = m || 0; if (R.mode3d && R.vb) { const b = R.vb; return x + m >= b.x0 && x - m <= b.x1 && y + m >= b.y0 && y - m <= b.y1; } const cam = R.cam; return x + m >= cam.x && x - m <= cam.x + R.cssW / cam.z && y + m >= cam.y && y - m <= cam.y + R.cssH / cam.z; };
 R.ping = function (x, y, col) { if (R.pings.length < 12) R.pings.push({ x, y, t: 0, col: col || '#ff5b47' }); };
 
 /* ------------------------------------------------------------------ Hintergrund
@@ -325,6 +341,7 @@ function fogUpdate() {
 R.consume = function (evs) {
   const g = R.g;
   for (const e of evs) {
+    if (R.mode3d && e.x !== undefined && (R.vp < 0 || visAt(g, R.vp, e.x, e.y) || e.t === 'bdie' || e.t === 'strike' || e.t === 'superfire' || e.t === 'gateLance' || e.t === 'gateStorm' || e.t === 'wake' || e.t === 'breach' || e.t === 'gateDark' || e.t === 'gateOn')) { try { RA3D.event(e, g); } catch (err) { /* Effekt fehlt */ } }
     if (e.x !== undefined && R.vp >= 0 && !visAt(g, R.vp, e.x, e.y) && e.t !== 'bdie' && e.t !== 'attack' && e.t !== 'strike' && e.t !== 'superfire' && e.t !== 'supercharged' && !(e.t === 'captured' && (e.from === R.vp || e.to === R.vp)) && e.t !== 'gateLance' && e.t !== 'gateStorm' && e.t !== 'wake' && e.t !== 'siteWon' && e.t !== 'gateOn' && e.t !== 'breach' && e.t !== 'gateDark') continue;
     switch (e.t) {
       case 'die': if (!e.quiet) { fxExplode(e.x, e.y, e.r, e.big, pcol(e.owner)); if (e.big && R.detail > 0 && SHIPS[e.type] && !SHIPS[e.type].swarm) { const s = sprScale(), sc = shipSprite(e.type, SHIPS[e.type].f, 'wreck', s); fxHulk(e.x, e.y, e.ang || 0, sc, sc.width / s, e.vx, e.vy); } if (e.big && R.inView(e.x, e.y, 300)) R.shake = Math.max(R.shake, 6); } R.lastAct = { x: e.x, y: e.y, t: R.time }; break;
@@ -539,7 +556,7 @@ function drawChevrons(ctx, x, y, n, col) {
   for (let i = 0; i < n; i++) { const yy = y - i * 5 / R.cam.z, s = 4 / R.cam.z; ctx.beginPath(); ctx.moveTo(x - s, yy + s * 0.6); ctx.lineTo(x, yy - s * 0.4); ctx.lineTo(x + s, yy + s * 0.6); ctx.stroke(); }
 }
 function wpnCol(owner) { return FACTIONS[R.g.players[owner].faction].wpn; }
-R.frame = function (alpha, dt) {
+function frame2D(alpha, dt) {
   const g = R.g, ctx = R.ctx, cam = R.cam;
   R.time += dt; R.dt = dt; R.frameN++;
   if (!g) return;
@@ -680,6 +697,19 @@ R.frame = function (alpha, dt) {
     const far = 2000;
     ctx.fillRect(-far, -far, m.w + far * 2, far); ctx.fillRect(-far, m.h, m.w + far * 2, far); ctx.fillRect(-far, 0, far, m.h); ctx.fillRect(m.w, 0, far, m.h);
   }
+  drawOverlay2D(ctx, g, inV, lowZ, vp, dt);
+  const U = typeof UI !== 'undefined' ? UI : null;
+  /* Bildschirmkoordinaten: Auswahlrahmen, Minikarten-Pings */
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  if (g.flareOn) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,170,80,' + (0.08 + 0.05 * Math.sin(R.time * 9)) + ')'; ctx.fillRect(0, 0, R.W, R.H); ctx.globalCompositeOperation = 'source-over'; }
+  drawVignette(ctx);
+  ctx.setTransform(R.dpr, 0, 0, R.dpr, 0, 0);
+  if (U && U.box) { const b = U.box; ctx.strokeStyle = 'rgba(140,255,170,0.9)'; ctx.fillStyle = 'rgba(140,255,170,0.12)'; ctx.lineWidth = 1; const x = Math.min(b.x0, b.x1), y = Math.min(b.y0, b.y1), w = Math.abs(b.x1 - b.x0), h = Math.abs(b.y1 - b.y0); ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); }
+  for (let i = R.pings.length - 1; i >= 0; i--) { const p = R.pings[i]; p.t += dt; if (p.t > 2.4) R.pings.splice(i, 1); }
+};
+/* Überlagerungen in Weltkoordinaten (2D-Modus): Warnkreise, Aufdeckungen, Missionsmarken, Auswahl, Balken, Vorschau */
+function drawOverlay2D(ctx, g, inV, lowZ, vp, dt) {
+  const cam = R.cam, m = g.map;
   /* Massetreiber: Warnkreis am Ziel (für alle sichtbar), Masse im Flug */
   for (const st of g.strikes) {
     const k = 1 - st.t / 3.5;
@@ -747,14 +777,122 @@ R.frame = function (alpha, dt) {
     /* Zielmarke eines Befehls */
     if (U.mark && R.time - U.mark.t < 0.6) { const k = (R.time - U.mark.t) / 0.6; ctx.strokeStyle = U.mark.col; ctx.globalAlpha = 1 - k; ctx.lineWidth = 2 / cam.z; ctx.beginPath(); ctx.arc(U.mark.x, U.mark.y, (6 + 18 * (1 - k)) / cam.z, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1; }
   }
-  /* Bildschirmkoordinaten: Auswahlrahmen, Minikarten-Pings */
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+}
+
+/* ------------------------------------------------------------------ 3D-Darstellung
+   Die Welt zeichnet RA3D (render3d.js); hier bleiben: Kamera ableiten, Nebel des Krieges berechnen, Linien und Kreise am Boden
+   als Sofort-Primitive an RA3D geben, danach auf der durchsichtigen 2D-Leinwand die Bildschirm-Überlagerungen (Balken,
+   Rangabzeichen, Texte, Auswahlrahmen). */
+R.frame = function (alpha, dt) {
+  if (!R.mode3d) return frame2D(alpha, dt);
+  const g = R.g, ctx = R.ctx, cam = R.cam, vp = R.vp;
+  R.time += dt; R.dt = dt; R.frameN++;
+  if (!g) return;
+  fxStep(dt);
+  if (R.shake > 0) R.shake = Math.max(0, R.shake - dt * 14);
+  R.cam3();
+  /* sichtbarer Weltausschnitt aus den vier Ecken (für inView) */
+  const c0 = RA3D.unproject(0, 0), c1 = RA3D.unproject(R.cssW, 0), c2 = RA3D.unproject(0, R.cssH), c3 = RA3D.unproject(R.cssW, R.cssH);
+  if (c0 && c1 && c2 && c3) R.vb = { x0: Math.min(c0.x, c1.x, c2.x, c3.x) - 60, x1: Math.max(c0.x, c1.x, c2.x, c3.x) + 60, y0: Math.min(c0.y, c1.y, c2.y, c3.y) - 60, y1: Math.max(c0.y, c1.y, c2.y, c3.y) + 60 };
+  if (vp >= 0 && R.time - R.fogT > 0.15) { R.fogT = R.time; fogUpdate(); }
+  const inV = (x, y, m) => R.inView(x, y, m), lowZ = cam.z < 0.45;
+  R.hud = [];
+  drawOverlay3D(g, inV, lowZ, vp);
+  RA3D.frame(g, dt, R.time, { vp, seen: R.seen, visible: R.visible, pcol, fog: vp >= 0 ? R.fogCv : null, detail: R.detail, shake: R.shake });
+  /* 2D-Leinwand: nur Bildschirm-Überlagerungen */
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, R.W, R.H);
   if (g.flareOn) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,170,80,' + (0.08 + 0.05 * Math.sin(R.time * 9)) + ')'; ctx.fillRect(0, 0, R.W, R.H); ctx.globalCompositeOperation = 'source-over'; }
   drawVignette(ctx);
   ctx.setTransform(R.dpr, 0, 0, R.dpr, 0, 0);
+  for (const h of R.hud) {
+    const q = RA3D.project(h.x, h.y); if (!q) continue;
+    if (h.k === 'bars') bars3D(ctx, h.e, q, h.w);
+    else if (h.k === 'chev') { const sc = Math.min(1.4, Math.max(0.7, q.s)); ctx.strokeStyle = h.col; ctx.lineWidth = 2; ctx.lineCap = 'round'; for (let i = 0; i < h.n; i++) { const yy = q.y + h.dy * sc - i * 5 * sc, sz = 4 * sc; ctx.beginPath(); ctx.moveTo(q.x + h.dx * sc - sz, yy + sz * 0.6); ctx.lineTo(q.x + h.dx * sc, yy - sz * 0.4); ctx.lineTo(q.x + h.dx * sc + sz, yy + sz * 0.6); ctx.stroke(); } }
+    else if (h.k === 'text') { ctx.fillStyle = h.col; ctx.font = (h.bold ? '600 ' : '') + (h.size || 13) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(h.txt, q.x, q.y + (h.dy || 0) * Math.min(1.4, Math.max(0.7, q.s))); }
+  }
+  /* Texte der Effekte (Treffer, Ränge, Lieferungen) */
+  for (const o of FX.list) if (o.k === 'text') { const q = RA3D.project(o.x, o.y); if (!q) continue; const k = o.t / o.life; ctx.globalAlpha = 1 - k * k; ctx.fillStyle = o.col; ctx.font = '600 14px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(o.txt, q.x, q.y - 14 - k * 26); }
+  ctx.globalAlpha = 1;
+  const U = typeof UI !== 'undefined' ? UI : null;
   if (U && U.box) { const b = U.box; ctx.strokeStyle = 'rgba(140,255,170,0.9)'; ctx.fillStyle = 'rgba(140,255,170,0.12)'; ctx.lineWidth = 1; const x = Math.min(b.x0, b.x1), y = Math.min(b.y0, b.y1), w = Math.abs(b.x1 - b.x0), h = Math.abs(b.y1 - b.y0); ctx.fillRect(x, y, w, h); ctx.strokeRect(x, y, w, h); }
   for (let i = R.pings.length - 1; i >= 0; i--) { const p = R.pings[i]; p.t += dt; if (p.t > 2.4) R.pings.splice(i, 1); }
 };
+/* Lebens- und Schildbalken am Bildschirm (3D): Breite nach Objektgröße und Abstand, mindestens 18 px */
+function bars3D(ctx, e, q, w) {
+  const sc = Math.min(2, Math.max(0.6, q.s)), W = Math.max(18, Math.min(90, w * sc)), h = 3, x = q.x - W / 2, y = q.y - e.def.r * sc - 12;
+  const hull = e.hull / e.hullMax, foe = isFoeV(e.owner), two = e.shieldMax || e.give;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)'; ctx.fillRect(x - 1, y - 1, W + 2, h + 2 + (two ? h + 1 : 0));
+  ctx.fillStyle = foe ? '#ff5b47' : hull > 0.5 ? '#7ddc6b' : hull > 0.25 ? '#ffc23e' : '#ff5b47';
+  ctx.fillRect(x, y + (two ? h + 1 : 0), W * clamp(hull, 0, 1), h);
+  if (two) { const sm = (e.shieldMax || 0) + (e.givep || 0), sv = (e.shield || 0) + (e.give || 0); ctx.fillStyle = '#8fe3ff'; ctx.fillRect(x, y, W * clamp(sm ? sv / sm : 0, 0, 1), h); }
+}
+/* Überlagerungen am Boden (3D): dieselben Inhalte wie drawOverlay2D, als Kreise/Linien für RA3D und HUD-Einträge */
+function drawOverlay3D(g, inV, lowZ, vp) {
+  const ring = (x, y, r, col, w, o) => RA3D.ring(x, y, r, col, w || 1, o), line = (x0, y0, x1, y1, col, w, o) => RA3D.line(x0, y0, x1, y1, col, w || 1, o), disc = (x, y, r, col, a) => RA3D.disc(x, y, r, col, a);
+  const hud = R.hud, GREEN = '#8cffaa', m = g.map;
+  /* Bauschiff am Werk, Frachter beim Abbau, Sporen-Auren, Zusatzschild */
+  for (const u of g.ships) if (!u.dead && R.visible(u) && inV(u.x, u.y, 120)) {
+    if (u.o.t === 'build') { const b = g.byId.get(u.o.bid); if (b && !b.done && hyp(u.x - b.x, u.y - b.y) < b.def.r + u.def.r + 70) line(u.x, u.y, b.x, b.y, '#b4ffdc', 1.5, { alpha: 0.55 }); }
+    if (u.o.t === 'harvest' && u.mine) { const n = g.byId.get(u.mine); if (n && hyp(u.x - n.x, u.y - n.y) < n.r + u.def.r + 40) line(u.x, u.y, n.x, n.y, n.kind === 'ice' ? '#8fe3ff' : '#ffb86b', 1.2, { alpha: 0.5 }); }
+  }
+  for (const b of g.bldgs) if (!b.dead && b.done && inV(b.x, b.y, 400) && R.visible(b)) {
+    if (b.role === 'spore') { disc(b.x, b.y, lvOf(b).aura, '#b4ff3c', 0.1); ring(b.x, b.y, lvOf(b).aura, '#b4ff3c', 1, { dash: 1, alpha: 0.3 }); }
+    if (b.give > 0) ring(b.x, b.y, b.def.r * 1.15, '#8fe3ff', 2, { alpha: 0.2 });
+    if (b.role === 'super') ring(b.x, b.y, b.def.r + 4, '#ffb86b', 3, { a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * Math.min(1, b.charge), alpha: b.charge >= 1 ? 0.6 + 0.3 * Math.sin(R.time * 5) : 0.55 });
+    if (b.off && !lowZ && (R.frameN % 60) < 40) hud.push({ k: 'text', x: b.x, y: b.y, txt: L('Kein Netz'), col: '#ff5b47', dy: b.def.r * 0.6 + 14 });
+  }
+  for (const sp of g.spores) if (inV(sp.x, sp.y, sp.r + 40)) disc(sp.x, sp.y, sp.r, '#b4ff3c', 0.16 * Math.min(1, sp.t / 5));
+  /* Massetreiber: Warnkreis am Ziel, Masse im Flug */
+  for (const st of g.strikes) {
+    const k = 1 - st.t / 3.5;
+    ring(st.x, st.y, st.r, '#ff5b47', 2.5, { dash: 1, alpha: 0.5 + 0.4 * Math.sin(R.time * 12) }); ring(st.x, st.y, st.r * k, '#ff5b47', 3, { alpha: 0.8 });
+    hud.push({ k: 'text', x: st.x, y: st.y, txt: Math.ceil(st.t) + '', col: '#ff5b47', size: 14, dy: 5 });
+    const px = st.sx + (st.x - st.sx) * k, py = st.sy + (st.y - st.sy) * k; disc(px, py, 7, '#ffd27a', 0.9);
+  }
+  if (vp >= 0) for (const rv of g.reveals) if (g.tm[rv.owner] === g.tm[vp] && rv.r < 3000 && inV(rv.x, rv.y, rv.r)) ring(rv.x, rv.y, rv.r, '#8fe3ff', 1.5, { dash: 1, alpha: 0.25 });
+  if (g.mis && g.mis.marks && vp >= 0) for (const mk of g.mis.marks) {
+    if (!inV(mk.x, mk.y, mk.r + 60)) continue;
+    const col = mk.done ? '#7ddc6b' : '#ffb86b', pulse = 0.55 + 0.3 * Math.sin(R.time * 3);
+    ring(mk.x, mk.y, mk.r, col, 2, { dash: 1, alpha: mk.done ? 0.5 : pulse }); disc(mk.x, mk.y, mk.r, col, 0.06);
+    if (mk.t && !lowZ) hud.push({ k: 'text', x: mk.x, y: mk.y, txt: (mk.done ? '✓ ' : '') + T(mk.t), col, bold: true, size: 14, dy: -mk.r * 0.5 - 10 });
+  }
+  const U = typeof UI !== 'undefined' ? UI : null;
+  if (!U || U.attract) return;
+  for (const u of g.ships) {
+    if (u.dead || !inV(u.x, u.y, 60) || !R.visible(u)) continue;
+    const sel = U.sel.has(u.id);
+    if (sel) { ring(u.x, u.y, u.def.r + 6, GREEN, 1.5, { dash: 1, alpha: 0.9 }); if (u.o.x !== undefined && (u.o.t === 'move' || u.o.t === 'amove' || u.o.t === 'attack')) line(u.x, u.y, u.o.x, u.o.y, u.o.t === 'move' ? GREEN : '#ff785a', 1, { alpha: 0.35 }); }
+    if (R.hover === u.id && !sel) ring(u.x, u.y, u.def.r + 6, '#ffffff', 1, { alpha: 0.5 });
+    if (!lowZ && u.def.role !== 'fighter' && (sel || u.hull < u.hullMax || u.shield < u.shieldMax || U.showAll)) hud.push({ k: 'bars', x: u.x, y: u.y, e: u, w: Math.max(18, u.def.r * 2.2) });
+    if (!lowZ && u.rank) hud.push({ k: 'chev', x: u.x, y: u.y, n: u.rank, col: '#ffd27a', dx: u.def.r + 6, dy: -u.def.r });
+  }
+  for (const b of g.bldgs) {
+    if (b.dead || !inV(b.x, b.y, 80) || !R.seen(b.x, b.y)) continue;
+    const sel = U.selB === b.id;
+    if (sel) { ring(b.x, b.y, b.def.r + 8, GREEN, 1.5, { dash: 1, alpha: 0.9 }); if (b.rally) { line(b.x, b.y, b.rally.x, b.rally.y, GREEN, 1, { alpha: 0.4 }); ring(b.rally.x, b.rally.y, 6, GREEN, 1, { alpha: 0.6 }); } if (b.role === 'shield' && b.done) ring(b.x, b.y, lvOf(b).aura, '#8fe3ff', 1, { alpha: 0.35 }); }
+    if (!lowZ && b.done && (sel || b.hull < b.hullMax || U.showAll || isFoeV(b.owner) && R.visible(b))) hud.push({ k: 'bars', x: b.x, y: b.y, e: b, w: Math.max(30, b.def.r * 1.6) });
+    if (!lowZ && b.done) hud.push({ k: 'chev', x: b.x, y: b.y, n: b.lv, col: pcol(b.owner), dx: 0, dy: -b.def.r - 4 });
+    if (!b.done && !b.bld && b.owner === vp && (R.frameN % 60) < 30) hud.push({ k: 'text', x: b.x, y: b.y, txt: L('Bauschiff fehlt'), col: '#ffc23e', dy: -b.def.r - 8 });
+  }
+  if (U.selS) { const o = g.byId.get(U.selS); if (o) { ring(o.x, o.y, o.r + 10, GREEN, 1.5, { dash: 1, alpha: 0.9 }); ring(o.x, o.y, o.r + (o.k === 5 ? 180 : o.kind === 'ruin' ? 110 : 200), '#9ff0c0', 1, { alpha: 0.25 }); if (o.k === 5 && o.pair) { const q = g.byId.get(o.pair); if (q) line(o.x, o.y, q.x, q.y, '#9ff0c0', 1, { dash: 1, alpha: 0.3 }); } } }
+  if (vp >= 0 && g.players[vp].faction === 'nexus' && (U.place || U.selB || [...U.sel].some(id => { const u = g.byId.get(id); return u && (u.def.node || u.def.build); }))) {
+    const P = g.players[vp];
+    for (const b of g.bldgs) if (!b.dead && b.owner === vp && b.done && !b.off && inV(b.x, b.y, 700)) { const rr = netRange(g, P, b); disc(b.x, b.y, rr, '#c9a0ff', 0.05); ring(b.x, b.y, rr, '#c9a0ff', 1, { alpha: 0.22 }); }
+    for (const u of g.ships) if (!u.dead && u.owner === vp && u.def.node && !u.derelict && inV(u.x, u.y, 500)) { const rr = netRange(g, P, u); disc(u.x, u.y, rr, '#c9a0ff', 0.05); ring(u.x, u.y, rr, '#c9a0ff', 1, { alpha: 0.22 }); }
+  }
+  if (U.showRange) for (const id of U.sel) { const u = g.byId.get(id); if (!u || u.dead) continue; const r = maxRange(u.def); if (r) { ring(u.x, u.y, r, '#ffffff', 1, { alpha: 0.22 }); for (const w of u.def.wpn) if (w.kind !== 'pd' && w.arc < Math.PI) ring(u.x, u.y, w.range, '#ffc878', 1, { alpha: 0.3, a0: u.ang + w.mount - w.arc, a1: u.ang + w.mount + w.arc }); } }
+  if (U.place) {
+    const pl = U.place, f = g.players[vp].faction, def = BLDG[f][pl.role];
+    for (const b of g.bldgs) if (!b.dead && b.owner === vp && b.done && inV(b.x, b.y, 800)) ring(b.x, b.y, b.role === 'base' ? BUILD_RANGE_BASE : BUILD_RANGE, GREEN, 1, { alpha: 0.12 });
+    RA3D.ghost(f, pl.role, 1, pl.x, pl.y, !!pl.ok);
+    ring(pl.x, pl.y, def.r + 4, pl.ok ? GREEN : '#ff5b47', 2, { alpha: 0.9 });
+    if (pl.role === 'shield') ring(pl.x, pl.y, def.lv[0].aura, '#8fe3ff', 1, { alpha: 0.3 });
+    if (def.lv[0].wpn.length) ring(pl.x, pl.y, Math.max(...def.lv[0].wpn.map(w => w.range)), '#ffc878', 1, { alpha: 0.3 });
+  }
+  if (U.mode === 'super') { const sb = g.byId.get(U.selB); if (sb && sb.role === 'super') { const lv = lvOf(sb); if (g.players[vp].faction === 'alliance') ring(sb.x, sb.y, lv.sr, '#8fe3ff', 1.5, { dash: 1, alpha: 0.45 }); if (U.superTgt) { const t = U.superTgt, rr = g.players[vp].faction === 'alliance' ? 60 : lv.sr; ring(t.x, t.y, rr, '#ffb86b', 2, { alpha: 0.9 }); line(t.x - 12, t.y, t.x + 12, t.y, '#ffb86b', 2); line(t.x, t.y - 12, t.x, t.y + 12, '#ffb86b', 2); } } }
+  if (U.mode === 'board') for (const id of U.sel) { const u = g.byId.get(id); if (u && !u.dead && u.def.marines) ring(u.x, u.y, ABIL.board.r + u.def.r, '#ffb86b', 1, { alpha: 0.4 }); }
+  if (U.mark && R.time - U.mark.t < 0.6) { const k = (R.time - U.mark.t) / 0.6; ring(U.mark.x, U.mark.y, (6 + 18 * (1 - k)) / Math.max(0.5, R.cam.z), U.mark.col, 2, { alpha: 1 - k }); }
+}
 
 /* ------------------------------------------------------------------ Minikarte */
 R.miniToWorld = function (fx, fy) { const m = R.g.map; return { x: fx * m.w, y: fy * m.h }; };

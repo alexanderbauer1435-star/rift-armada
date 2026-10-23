@@ -19,9 +19,10 @@ const MAPS = {
   shattered: { name: 'Shattered Moon', np: [2, 4], w: 4400, h: 4400, desc: 'Ein zerbrochener Mond als Trümmerring um die große Stätte, Ecktaschen für die Basen, Ionennebel in den Trümmern.' },
   crown: { name: 'Nebula Crown', np: [2, 3, 4], w: 4000, h: 4000, desc: 'Ein Kranz aus Ionennebel um die Mitte, vier offene Pforten. Die Basen sitzen in Ecktaschen mit zwei Zugängen.' },
   narrows: { name: 'The Narrows', np: [2], w: 4600, h: 2400, desc: 'Drei Bahnen zwischen den Basen: kurz durch Aschewolken, mittig durch die Engstelle mit der Stätte, lang und still über den Süden.' },
+  arena: { name: 'Rift Arena', np: [2, 3, 4, 5, 6, 7, 8], w: 5200, h: 5200, desc: 'Bis zu acht Basen im Ring, jede in einer Tasche mit zwei Zugängen; Nebel zwischen den Nachbarn, Felder und die Stätte in der Mitte.' },
   quarantine: { name: 'Quarantine Line', np: [1, 2, 3, 4], w: 3800, h: 3800, desc: 'Das Siegel in der Mitte, die Basen im Ring darum, Risse am Rand. Nur für Wellen.', waves: true }
 };
-const MAP_ORDER = ['haven', 'twingates', 'ashfall', 'shattered', 'crown', 'narrows'];
+const MAP_ORDER = ['haven', 'twingates', 'ashfall', 'shattered', 'crown', 'narrows', 'arena'];
 /* Große Stätten: je Karte werden 1–2 aus dem Pool gezogen */
 const SITE_POOL = ['citadel', 'archive', 'warden', 'forge'];
 const SITE_DEF = {
@@ -44,9 +45,12 @@ function mirror(map, p) { return { x: map.w - p.x, y: map.h - p.y }; }
 function farFrom(list, x, y, d) { for (const o of list) if (hyp(o.x - x, o.y - y) < d + (o.r || 0)) return false; return true; }
 
 /* ---------- Generator ---------- */
-function generateMap(id, np, seed) {
+/* Kartengröße: klein, normal, groß – die Karte wird nach dem Aufbau gestreckt (Lagen, Gürtel- und Nebelradien), Felsen,
+   Vorkommen, Stätten und Tore behalten ihre Größe. So bleiben Taschen und Korridore erhalten, nur die Wege werden länger. */
+const MAP_SIZES = { small: 0.85, normal: 1, large: 1.3 };
+function generateMap(id, np, seed, size) {
   const def = MAPS[id] || MAPS.haven, rng = makeRng((seed || 1) * 2654435761 + hashStr(id));
-  const map = { id, name: def.name, w: def.w, h: def.h, np, starts: [], nodes: [], rocks: [], fields: [], nebs: [], sites: [], gates: [], seed };
+  const map = { id, name: def.name, w: def.w, h: def.h, np, starts: [], nodes: [], rocks: [], fields: [], nebs: [], sites: [], gates: [], seed, size: size || 'normal' };
   if (id === 'ashfall') genAshfall(map, np, rng);
   else if (id === 'crown') genCrown(map, np, rng);
   else if (id === 'narrows') genNarrows(map, rng);
@@ -54,7 +58,13 @@ function generateMap(id, np, seed) {
   else if (id === 'shattered') genShattered(map, np, rng);
   else if (id === 'quarantine') genQuarantine(map, np, rng);
   else if (id === 'test') { map.starts = [{ x: 400, y: 2800, ang: -Math.PI / 4 }, { x: 2800, y: 400, ang: Math.PI * 0.75 }]; iceMoon(map, 700, 2800, rng); iceMoon(map, 2500, 400, rng); site(map, 'ruin', 1200, 1200); site(map, 'ruin', 2000, 2000); site(map, 'archive', 1000, 2200); site(map, 'citadel', 2200, 1300); gatePair(map, 900, 600, 2600, 2600, 'dead'); }
+  else if (id === 'arena') genArena(map, np, rng);
   else genHaven(map, rng);
+  const k = MAP_SIZES[size] || 1;
+  if (k !== 1 && id !== 'test') {
+    map.w = Math.round(def.w * k); map.h = Math.round(def.h * k);
+    for (const key of ['starts', 'nodes', 'rocks', 'fields', 'nebs', 'sites', 'gates', 'rifts']) for (const o of map[key] || []) { o.x *= k; o.y *= k; if (key === 'fields' || key === 'nebs') o.r *= k; else if (key === 'rocks') o.r *= Math.sqrt(k); }
+  }
   buildNav(map);
   return map;
 }
@@ -358,6 +368,41 @@ function genNarrows(map, rng) {
   oreCluster(map, w / 2, h - EDGE - 330, rng, 3);
   gatePair(map, w / 2 - 1000, h - EDGE - 620, w / 2 + 1000, EDGE + 620, 'dead');
   scatter(map, 24, rng, map.starts.concat(map.nodes, map.fields, map.sites, map.gates, map.nebs));
+}
+
+/* Rift Arena: 2–8 Startplätze im Ring. Jede Basis in einer Tasche (Bogen zur Mitte, offen in Richtung Mitte und zu einer
+   Seite), die Rückseite schließen zwei Felswände bis zum Kartenrand. Zwischen den Nachbarn Ionennebel, vor der Mitte
+   Felder, die Lanen bilden; in der Mitte die große Stätte, Eismonde und Erz. */
+function genArena(map, np, rng) {
+  const w = map.w, h = map.h, cx = w / 2, cy = h / 2, R0 = Math.min(w, h) / 2 - 760, chord = 2 * R0 * Math.sin(Math.PI / Math.max(2, np));
+  const Rp = Math.min(820, chord * 0.42);
+  map.starts = [];
+  for (let i = 0; i < np; i++) { const a = -Math.PI / 2 + i / np * TAU; map.starts.push({ x: cx + Math.cos(a) * R0, y: cy + Math.sin(a) * R0, ang: a + Math.PI }); }
+  map.starts.forEach((s, i) => {
+    const base = datan2(cy - s.y, cx - s.x), side = i % 2 ? 1 : -1, rot = (d, ang) => ({ x: s.x + Math.cos(ang) * d, y: s.y + Math.sin(ang) * d });
+    /* Vorkommen in der Tasche */
+    let p = rot(Rp * 0.42, base + 1.25); iceMoon(map, p.x, p.y, rng);
+    p = rot(Rp * 0.42, base - 1.25); oreCluster(map, p.x, p.y, rng, 3);
+    /* Tasche mit zwei Zugängen, Rückseite mit Felswänden bis zum Rand geschlossen */
+    pocket(map, s, Rp, base + 2.0, base - 2.0, rng, [[base, 280], [base + 0.9 * side, 210]], 140);
+    for (const e of [base + 2.0, base - 2.0]) { const q = rot(Rp, e), dir = datan2(q.y - cy, q.x - cx); wall(map, [[q.x, q.y], [cx + Math.cos(dir) * (Math.min(w, h) / 2 + 200), cy + Math.sin(dir) * (Math.min(w, h) / 2 + 200)]], rng); }
+    /* Ausbau vor der Tasche */
+    const tight = np >= 6;
+    p = rot(Rp + 300, base + (tight ? 0.12 : 0.35) * side); iceMoon(map, p.x, p.y, rng);
+    p = rot(Rp + 260, base - (tight ? 0.4 : 0.75) * side); oreCluster(map, p.x, p.y, rng, 2);
+    p = rot(Rp + 560, base - (tight ? 0.22 : 0.1) * side); site(map, 'ruin', p.x, p.y);
+    /* Ionennebel zwischen diesem Start und dem nächsten */
+    const mid = -Math.PI / 2 + (i + 0.5) / np * TAU; nebula(map, cx + Math.cos(mid) * R0 * 0.92, cy + Math.sin(mid) * R0 * 0.92, np >= 5 ? 150 : 210, 'ion');
+    /* Feld vor der Mitte, zwischen den Zugängen der Nachbarn (bei vielen Spielern wird es zu eng) */
+    if (np <= 4) field(map, cx + Math.cos(mid) * R0 * 0.42, cy + Math.sin(mid) * R0 * 0.42, 180, rng, 1.0);
+  });
+  /* Mitte */
+  bigSites(map, [{ x: cx, y: cy }], rng, 1);
+  for (let k = 0; k < (np <= 4 ? 2 : 4); k++) { const a = Math.PI / 4 + k / (np <= 4 ? 2 : 4) * TAU; iceMoon(map, cx + Math.cos(a) * 520, cy + Math.sin(a) * 520, rng, true); }
+  for (let k = 0; k < 2; k++) { const a = -Math.PI / 4 + k * Math.PI; oreCluster(map, cx + Math.cos(a) * 420, cy + Math.sin(a) * 420, rng, 3); }
+  /* zwei flackernde Tore zwischen den Nebeln, gegenüber */
+  const ga = -Math.PI / 2 + 0.5 / np * TAU; gatePair(map, cx + Math.cos(ga) * R0 * 0.62, cy + Math.sin(ga) * R0 * 0.62, cx - Math.cos(ga) * R0 * 0.62, cy - Math.sin(ga) * R0 * 0.62, 'flicker');
+  scatter(map, 30, rng, map.starts.concat(map.nodes, map.fields, map.sites, map.gates, map.nebs));
 }
 
 /* ---------- Navigationsraster ----------

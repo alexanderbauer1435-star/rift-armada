@@ -7,6 +7,8 @@
 const FX = { list: [], pool: [], max: 600, time: 0 };
 function fxGet() { return FX.pool.pop() || {}; }
 function fxAdd(o) {
+  /* 3D-Darstellung: Partikel zeichnet der 3D-Renderer, hier bleiben nur Texte */
+  if (FX.mute && o.k !== 'text') { FX.pool.push(o); return o; }
   if (FX.list.length >= FX.max) { const d = FX.list.shift(); FX.pool.push(d); }
   o.t = 0; FX.list.push(o); return o;
 }

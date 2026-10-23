@@ -47,6 +47,15 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 13 (Runde 11, Aufstellung): Sprachwahl Deutsch/Englisch ganz oben im Hauptmenü, ohne gespeicherte
+  Einstellung ist Englisch die Vorgabe. Kartengröße Klein/Mittel/Groß (MAP_SIZES: die Karte wird nach dem Aufbau
+  gestreckt, Gürtel- und Nebelradien mit, Felsen leicht; Taschen und Korridore bleiben erhalten). Bis zu acht Spieler im
+  Gefecht: Platz 0 bist du, sieben KI-Plätze mit Fraktion oder Zufall, Stärke und Team (gleiches Team = Verbündete, »–«
+  spielt für sich; Sieg zählt je Team). Bei doppelten Fraktionen oder mehr als vier Spielern feste Platzfarben
+  (SLOT_COLS). Neue Karte Rift Arena für 2–8 Startplätze im Ring (Tasche je Basis, Felswände bis zum Rand, Ionennebel
+  zwischen den Nachbarn, Stätte in der Mitte); passt die gewählte Karte nicht zur Spielerzahl, wird Rift Arena gespielt
+  (Hinweis im Menü). Kartenvorschau zeigt die Startplätze in den Spielerfarben. tests/maps.js prüft alle Karten auch in
+  Klein und Groß.
 - Fassung 12 (Runde 10, Kartendesign): Geländebaukasten in map.js – Asteroidengürtel entlang Linien mit gezielten
   Lücken (belt), Felswände (wall), Nebelzonen (nebula/cloud) und Taschen um Startplätze (pocket). Zwei Nebelarten:
   Ionennebel (Schilde aus, Sensoren auf Nahsicht, Schiffe darin sieht der Feind erst aus 150 Einheiten – Nahsicht-Raster

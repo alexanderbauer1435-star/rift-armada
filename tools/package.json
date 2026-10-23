@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "playwright": "^1.59.0-alpha-1771104257000"
+    "esbuild": "^0.24.0",
+    "playwright": "^1.59.0-alpha-1771104257000",
+    "three": "^0.170.0"
   }
 }
