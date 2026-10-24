@@ -818,7 +818,7 @@ function applySet() {
 }
 function segInit(id, opts, get, set) {
   const el = $(id); el.textContent = '';
-  for (const [v, txt] of opts) { const b = document.createElement('button'); b.textContent = L(txt); b.className = get() === v ? 'on' : ''; b.addEventListener('click', () => { set(v); SND.play('click'); segInit(id, opts, get, set); }); el.appendChild(b); }
+  for (const [v, txt, sub, cls] of opts) { const b = document.createElement('button'); b.textContent = L(txt); if (sub) { const sm = document.createElement('small'); sm.textContent = sub; b.appendChild(sm); } b.className = (get() === v ? 'on' : '') + (cls ? ' ' + cls : ''); b.addEventListener('click', () => { set(v); SND.play('click'); segInit(id, opts, get, set); }); el.appendChild(b); }
 }
 function initSettings() {
   const vol = $('sVol'), mus = $('sMus');
@@ -865,7 +865,9 @@ function setupRender() {
   slotsFix();
   const np = slotPlayers().length, mapId = mapFor(MENU.map, np);
   $('rowSize').hidden = wv; $('rowSlots').hidden = wv; $('slotNote').hidden = wv;
-  segInit('mapSeg', MAP_ORDER.map(k => [k, MAPS[k].name]), () => MENU.map, v => { MENU.map = v; savePrefs(); setupRender(); });
+  /* Karten mit Spielerzahl; Karten, die für die aktuelle Zahl nicht ausgelegt sind, erscheinen gedimmt */
+  const npTxt = a => a.every((v, i) => !i || v === a[i - 1] + 1) && a.length > 1 ? a[0] + '–' + a[a.length - 1] : a.join('/');
+  segInit('mapSeg', MAP_ORDER.map(k => [k, MAPS[k].name, npTxt(MAPS[k].np), MAPS[k].np.indexOf(np) < 0 ? 'na' : '']), () => MENU.map, v => { MENU.map = v; savePrefs(); setupRender(); });
   segInit('sizeSeg', [['small', 'Klein'], ['normal', 'Mittel'], ['large', 'Groß']], () => MENU.size || 'normal', v => { MENU.size = v; savePrefs(); setupRender(); });
   segInit('resSeg', [['low', 'Knapp'], ['normal', 'Normal'], ['rich', 'Reich']], () => MENU.res, v => { MENU.res = v; savePrefs(); });
   slotsRender();

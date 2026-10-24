@@ -47,6 +47,14 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 16 (Runde 14, Karten nach Spielerzahl): Drei neue Ringkarten für 2–8 Spieler, die mit der Spielerzahl wachsen
+  (RING_DIM, genRing in map.js – Inhalt je Sektor in Polarkoordinaten, für jeden Spieler gedreht): Open Expanse (offen,
+  keine Taschen, Vorkommen verstreut), Iron Bastions (jede Basis hinter einem undurchdringlichen Ring aus Gürtel und
+  Felswand mit einem schmalen Zugang, Felswände mit Lücke zwischen den Sektoren, Felsring mit engen Pforten um die
+  Mitte) und Maelstrom (durchgehende Felswände trennen die Sektoren, jeder Weg führt durch die reiche Mitte mit der
+  Sternenschmiede). Kartenwahl zeigt je Karte die Spielerzahl, Karten, die zur gewählten Zahl nicht passen, sind
+  gedimmt (vorher wurde still eine Ersatzkarte gezeigt – darum blieb die Vorschau gleich). nearestFree wählt keine
+  eingeschlossene Einzelzelle mehr. Werkzeuge: tools/ringshots.js (Kartenbogen 2–8 Spieler), tools/mapshot3d.js.
 - Fassung 15 (Runde 13, Leistung und Komfort): 3D-Leistung neu: scene.js regelt die
   Auflösung selbst (0,5 bis Geräte-DPR, höchstens 2 und ~2,2 MP; Start scharf, Handy z. B. 1,74), schaltet Bloom nur
   ganz oben zu, sperrt zu langsame Stufen eine Weile und nimmt wirkungslose Absenkungen zurück; keine Schatten mehr
