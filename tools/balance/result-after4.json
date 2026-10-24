@@ -1,0 +1,60 @@
+{
+ "tag": "after4",
+ "maps": [
+  "expanse",
+  "bastions"
+ ],
+ "seeds": 2,
+ "games": 80,
+ "draws": 18,
+ "avgMin": 13.3,
+ "winrate": {
+  "alliance": 0.25,
+  "mars": 0.53,
+  "legion": 0.53,
+  "nexus": 0.28,
+  "brood": 0.34
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 2,
+   "mars": 4
+  },
+  "alliance-legion": {
+   "alliance": 0,
+   "legion": 3
+  },
+  "alliance-nexus": {
+   "alliance": 4,
+   "nexus": 2
+  },
+  "alliance-brood": {
+   "alliance": 2,
+   "brood": 1
+  },
+  "mars-legion": {
+   "mars": 2,
+   "legion": 5
+  },
+  "mars-nexus": {
+   "mars": 6,
+   "nexus": 2
+  },
+  "mars-brood": {
+   "mars": 5,
+   "brood": 2
+  },
+  "legion-nexus": {
+   "legion": 3,
+   "nexus": 4
+  },
+  "legion-brood": {
+   "legion": 6,
+   "brood": 1
+  },
+  "nexus-brood": {
+   "nexus": 1,
+   "brood": 7
+  }
+ }
+}

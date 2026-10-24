@@ -200,20 +200,22 @@ function markVis(vis, explored, vw, vh, stamp, x, y, r) {
   const cx = x / VIS, cy = y / VIS, rr = r / VIS, x0 = Math.max(0, (cx - rr) | 0), x1 = Math.min(vw - 1, (cx + rr) | 0), y0 = Math.max(0, (cy - rr) | 0), y1 = Math.min(vh - 1, (cy + rr) | 0), r2 = rr * rr;
   for (let gy = y0; gy <= y1; gy++) { const dy = gy + 0.5 - cy; for (let gx = x0; gx <= x1; gx++) { const dx = gx + 0.5 - cx; if (dx * dx + dy * dy <= r2) { const i = gy * vw + gx; vis[i] = stamp; explored[i] = 1; } } }
 }
+/* Geschütze, Flak und Kommandobasen entdecken getarnte Schiffe (und Schiffe im Ionennebel) in ihrer Waffenreichweite */
+const DETECT_B = { turret: 1, flak: 1, base: 1 };
 function updateVision(g) {
   g.visStamp++;
   const st = g.visStamp, vw = g.vw, vh = g.vh;
   /* Ionennebel: wer darin steht, sieht nur ION_SEE weit (u.ion) und wird selbst nur aus der Nähe gesehen (Nahsicht visN) */
   for (const u of g.ships) { if (u.dead) continue; const p = g.players[u.owner]; u.ion = inIon(g.map, u.x, u.y); let r = u.def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor); if (u.ion) r = Math.min(r, ION_SEE); markVis(p.vis, p.explored, vw, vh, st, u.x, u.y, r); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, u.x, u.y, ION_SEE); }
-  for (let i = g.reveals.length - 1; i >= 0; i--) { const r = g.reveals[i]; if (g.time > r.until) { g.reveals.splice(i, 1); continue; } const p = g.players[r.owner]; markVis(p.vis, p.explored, vw, vh, st, r.x, r.y, r.r); }
-  for (const b of g.bldgs) { if (b.dead) continue; const p = g.players[b.owner]; markVis(p.vis, p.explored, vw, vh, st, b.x, b.y, b.done ? (SENSOR_B[b.role] || 360) : 220); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, b.x, b.y, ION_SEE); }
+  for (let i = g.reveals.length - 1; i >= 0; i--) { const r = g.reveals[i]; if (g.time > r.until) { g.reveals.splice(i, 1); continue; } const p = g.players[r.owner]; markVis(p.vis, p.explored, vw, vh, st, r.x, r.y, r.r); if (p.visN && r.r < 3000) markVis(p.visN, p.explored, vw, vh, st, r.x, r.y, r.r); }
+  for (const b of g.bldgs) { if (b.dead) continue; const p = g.players[b.owner]; markVis(p.vis, p.explored, vw, vh, st, b.x, b.y, b.done ? (SENSOR_B[b.role] || 360) : 220); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, b.x, b.y, b.done && DETECT_B[b.role] ? Math.max(ION_SEE, maxRange(lvOf(b))) : ION_SEE); }
   /* Verbündete teilen Sicht: dieselbe Tabelle je Team; erkundet nachziehen */
   for (const p of g.players) for (const q of g.players) if (q !== p && q.team === p.team) { const e = p.explored, f = q.explored; for (let i = 0; i < e.length; i++) if (f[i]) e[i] = 1; }
 }
 function canSee(g, pi, e) {
   if (pi < 0) return true;
   if (e.k !== 3 && e.owner >= 0 && g.tm[e.owner] === g.tm[pi]) return true;
-  const p = g.players[pi], vis = e.k === 1 && e.ion ? p.visN : p.vis, cx = clamp((e.x / VIS) | 0, 0, g.vw - 1), cy = clamp((e.y / VIS) | 0, 0, g.vh - 1);
+  const p = g.players[pi], vis = e.k === 1 && (e.ion || e.abT.cloak > 0) ? p.visN : p.vis, cx = clamp((e.x / VIS) | 0, 0, g.vw - 1), cy = clamp((e.y / VIS) | 0, 0, g.vh - 1);
   return vis[cy * g.vw + cx] === g.visStamp;
 }
 function visAt(g, pi, x, y) { const vis = g.players[pi].vis, cx = clamp((x / VIS) | 0, 0, g.vw - 1), cy = clamp((y / VIS) | 0, 0, g.vh - 1); return vis[cy * g.vw + cx] === g.visStamp; }
@@ -502,6 +504,7 @@ function execCmd(g, c) {
     case 'auto': { for (const u of shipsOf(g, pi, c.u)) u.auto = !!c.on; return null; }
     case 'reward': return cmdReward(g, c.p, c.id);
     case 'choice': return misChoose(g, c.p, c.id, c.v);
+    case 'salvage': { const us = shipsOf(g, c.p, c.u).filter(u => u.def.cargo), w = g.wrecks.find(q => q.id === c.w); if (!us.length || !w || !(w.sal > 0)) return 'Nichts zu bergen'; for (const u of us) { if (u.mine) { const n = g.byId.get(u.mine); if (n) n.miners = Math.max(0, n.miners - 1); u.mine = 0; } u.o = { t: 'salvage', wid: w.id }; u.path = null; } return null; }
     case 'eat': { const us = shipsOf(g, c.p, c.u).filter(u => u.def.eat), t = g.byId.get(c.id); if (!us.length || !t || t.k !== 1 || t.dead || !t.derelict) return 'Nicht möglich'; for (const u of us) { if (u.mine) { const n = g.byId.get(u.mine); if (n) n.miners = Math.max(0, n.miners - 1); u.mine = 0; } u.o = { t: 'eat', tid: t.id, x: t.x, y: t.y }; u.path = null; } return null; }
     case 'merge': return cmdMerge(g, pi, c.u);
     case 'gate': return cmdGate(g, pi, c.id, c.mode);
@@ -550,6 +553,8 @@ function spawnFrom(g, b, id) {
   const ang = b.rally ? datan2(b.rally.y - b.y, b.rally.x - b.x) : (g.rng() - 0.5) * 2 * Math.PI;
   const u = addShip(g, id, b.owner, b.x + dcos(ang) * r, b.y + dsin(ang) * r, ang);
   p.queued = Math.max(0, p.queued - def.cp);
+  /* KI: Schlachtschiffe ziehen sich zur Reparatur zurück (Haltung Vorsichtig) */
+  if (p.ai && def.role === 'war' && def.cls === 'l') u.stance = 3;
   if (def.cargo) { const n = pickNode(g, b.owner, b.x, b.y, 1400) || nearestNode(g, b.x, b.y, null, 1800); if (n) { cmdHarvest(g, [u], n); u.o.auto = 1; } }
   else if (b.rally) cmdMove(g, [u], b.rally.x, b.rally.y, def.wpn.length > 0);
   ev(g, 'ready', { owner: b.owner, id: u.id, x: u.x, y: u.y, type: id });
@@ -709,7 +714,7 @@ function kill(g, t, src, owner) {
     if (t.def.burst) { nearShips(g, t.x, t.y, 130, e => { if (!e.dead && foes(g, t.owner, e.owner)) { damage(g, e, 120, 'acid', null, t.owner, t.x, t.y); acidOn(g, e, 90, t.owner); } return false; }); ev(g, 'burst', { x: t.x, y: t.y, r: 130, owner: t.owner }); }
     /* Matriarch wächst mit jedem Abschuss */
     if (src && !src.dead && src.k === 1 && src.def.grow && t.def.role !== 'fighter' && owner !== t.owner) { const cap = src.def.hull * g.players[src.owner].tfx.hull * 2; if (src.hullMax < cap) { const add = src.def.hull * 0.05; src.hullMax = Math.min(cap, src.hullMax + add); src.hull = Math.min(src.hullMax, src.hull + add); src.hmul = src.hullMax / (src.def.hull * g.players[src.owner].tfx.hull * (1 + 0.1 * src.rank)); } }
-    if (t.def.role !== 'fighter') { p.stats.lost++; g.wrecks.push({ x: t.x, y: t.y, ang: t.ang, type: t.type, owner: t.owner, until: g.time + 70, id: t.id }); if (g.wrecks.length > 60) g.wrecks.shift(); }
+    if (t.def.role !== 'fighter') { p.stats.lost++; g.wrecks.push({ x: t.x, y: t.y, ang: t.ang, type: t.type, owner: t.owner, until: g.time + 120, id: t.id, sal: Math.round(SALVAGE * (((t.def.cost || {}).ice || 0) + ((t.def.cost || {}).ore || 0))) }); if (g.wrecks.length > 60) g.wrecks.shift(); }
     ev(g, 'die', { x: t.x, y: t.y, r: t.def.r, owner: t.owner, big: t.def.cls === 'l' || t.def.cls === 'm', type: t.type, id: t.id, ang: t.ang, vx: t.vx || 0, vy: t.vy || 0 });
     if (owner >= 0 && owner !== t.owner && t.def.role !== 'fighter') {
       g.players[owner].stats.kills++;
@@ -834,6 +839,7 @@ function stepGame(g) {
 function shipAbils(g, u) {
   const list = [];
   if (u.def.ab) list.push(u.def.ab);
+  if (u.def.ab2) for (const a of u.def.ab2) list.push(a);
   if (u.def.abs) { for (const a of u.def.abs) list.push(a); const p = g.players[u.owner]; if (p.doctrine) { const d = doctrineDef(p.faction, p.doctrine); if (d && d.flagAb && list.indexOf(d.flagAb) < 0) list.push(d.flagAb); } if (p.etech && ETECH[p.etech].flagAb && list.indexOf(ETECH[p.etech].flagAb) < 0) list.push(ETECH[p.etech].flagAb); }
   return list;
 }

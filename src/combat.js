@@ -126,6 +126,30 @@ function engage(g, u, t, dt) {
 }
 
 /* ------------------------------------------------------------------ Schiffe je Runde */
+/* Haltung »Vorsichtig«: kämpft wie »Offensiv«, fliegt unter 30 % Hülle zur nächsten Werft, wartet dort auf die
+   Reparatur (95 %) und kehrt dann an den Ort zurück, an dem es den Rückzug angetreten hat. Ein neuer Befehl bricht ab. */
+const RETREAT_AT = 0.3, RETURN_AT = 0.95;
+function cautious(g, u) {
+  if (!armed(u) || u.derelict) return;
+  if (u.retreat) {
+    if (!u.o.ret) { u.retreat = 0; return; }
+    const y = g.byId.get(u.ryd);
+    if (u.o.t === 'idle' || (u.o.t === 'move' && y && !y.dead && hyp(u.x - y.x, u.y - y.y) < y.def.r + u.def.r + 55)) { u.o = { t: 'hold', ret: 1 }; u.hold = true; u.path = null; }
+    if (u.hull >= u.hullMax * RETURN_AT) { u.retreat = 0; u.hold = false; u.o = { t: 'amove', x: u.rx, y: u.ry }; u.path = null; }
+    return;
+  }
+  if (u.hull >= u.hullMax * RETREAT_AT) return;
+  let best = null, bd = 1e9;
+  for (const b of g.bldgs) if (!b.dead && b.done && b.owner === u.owner && b.role === 'yard') { const d = hyp(b.x - u.x, b.y - u.y); if (d < bd) { bd = d; best = b; } }
+  if (!best) return;
+  u.retreat = 1; u.ryd = best.id; u.rx = u.x; u.ry = u.y; u.tgt = 0; u.hold = false;
+  const a = datan2(u.y - best.y, u.x - best.x) + ((u.id % 5) - 2) * 0.35, rr = best.def.r + u.def.r + 30;
+  u.o = { t: 'move', x: best.x + dcos(a) * rr, y: best.y + dsin(a) * rr, ret: 1 }; u.path = null;
+  ev(g, 'retreat', { x: u.x, y: u.y, owner: u.owner, id: u.id });
+}
+/* Bergung: Frachter zerlegen Wracks zerstörter Schiffe; Ertrag Erz (die Brood: Biomasse) */
+function wreckById(g, id) { for (const w of g.wrecks) if (w.id === id) return w; return null; }
+function nearWreck(g, x, y, r) { let best = null, bd = r; for (const w of g.wrecks) { if (!(w.sal > 0)) continue; const d = hyp(w.x - x, w.y - y); if (d < bd) { bd = d; best = w; } } return best; }
 function updateShip(g, u, dt) {
   CUR_G = g;
   const def = u.def, p = g.players[u.owner], o = u.o, m = g.map;
@@ -140,9 +164,24 @@ function updateShip(g, u, dt) {
   if (u.derelict) { derelictStep(g, u, dt); return; }
   shipUpkeep(g, u, dt);
   if (u.cocoon) { brake(u, dt); u.lx = u.x; u.ly = u.y; return; }
-  if ((g.tick + u.id) % 15 === 0 && (def.ab || def.abs)) abilityAuto(g, u);
+  if ((g.tick + u.id) % 15 === 0 && (def.ab || def.abs || def.ab2)) abilityAuto(g, u);
+  if (u.stance === 3) cautious(g, u);
   const warship = armed(u);
   switch (o.t) {
+    case 'salvage': {
+      const w = wreckById(g, o.wid);
+      if (!w || !(w.sal > 0) || !def.cargo) { if (u.cargo > 0) { u.o = { t: 'return', nid: 0, auto: 1, sw: 1 }; u.path = null; } else setIdle(u); break; }
+      const d = hyp(w.x - u.x, w.y - u.y);
+      if (d > def.r + 70) { const a = datan2(u.y - w.y, u.x - w.x) + ((u.id % 5) - 2) * 0.35; goTo(g, u, w.x + dcos(a) * (def.r + 30), w.y + dsin(a) * (def.r + 30), dt, 20); break; }
+      brake(u, dt); face(u, datan2(w.y - u.y, w.x - u.x), dt);
+      const cap = def.cargo * p.tfx.cargo, take = Math.min(cap * dt / 4, w.sal, cap - u.cargo);
+      u.cargo += take; w.sal -= take; u.ckind = p.faction === 'brood' ? 'ice' : 'ore';
+      w.until = Math.max(w.until, g.time + 20);
+      if ((g.tick + u.id) % 12 === 0) ev(g, 'salvage', { x: w.x, y: w.y, owner: u.owner });
+      if (w.sal <= 0.5) { w.sal = 0; w.until = Math.min(w.until, g.time + 3); }
+      if (u.cargo >= cap - 0.01 || w.sal <= 0) { u.o = { t: 'return', nid: 0, auto: 1, sw: 1 }; u.path = null; }
+      break;
+    }
     case 'eat': {
       /* Grazer frisst ein Wrack: Hülle wird zu Biomasse */
       const t = g.byId.get(o.tid);
@@ -241,6 +280,8 @@ function updateShip(g, u, dt) {
         earn(p, u.ckind, amt); p.haulR += amt / 45;
         u.cargo = 0; ref.docks--; u.dk = 0;
         ev(g, 'deliver', { owner: u.owner, x: ref.x, y: ref.y, kind: u.ckind, amt });
+        /* Bergung: weiter am nächsten Wrack, solange eines in der Nähe liegt */
+        if (o.sw) { const w = nearWreck(g, ref.x, ref.y, 1400); if (w) { u.o = { t: 'salvage', wid: w.id }; u.path = null; break; } }
         let n = g.byId.get(o.nid);
         /* selbst gewählte Frachter wählen nach jeder Lieferung neu nach Bedarf, befohlene bleiben bei ihrem Vorkommen */
         if (o.auto || !n || n.amount <= 0) n = pickNode(g, u.owner, ref.x, ref.y, 900) || nearestNode(g, u.x, u.y, null, 1800);
@@ -287,7 +328,7 @@ function updateHangar(g, u, dt) {
   h.ids = h.ids.filter(id => { const f = g.byId.get(id); return f && !f.dead; });
   h.n = h.ids.length;
   const want = hangarMax(g, u);
-  if (h.n < want) { h.t += dt; if (h.t >= 6) { h.t = 0; const a = u.ang + Math.PI; const f = addShip(g, u.def.drone || 'fighter', u.owner, u.x + dcos(a) * (u.def.r + 8), u.y + dsin(a) * (u.def.r + 8), u.ang); f.par = u.id; f.slot = h.ids.length; h.ids.push(f.id); } }
+  if (h.n < want) { h.t += dt; if (h.t >= (u.def.drone === 'cherub' ? 14 : 6)) { h.t = 0; const a = u.ang + Math.PI; const f = addShip(g, u.def.drone || 'fighter', u.owner, u.x + dcos(a) * (u.def.r + 8), u.y + dsin(a) * (u.def.r + 8), u.ang); f.par = u.id; f.slot = h.ids.length; h.ids.push(f.id); } }
 }
 function fighterStep(g, u, dt) {
   const par = g.byId.get(u.par), def = u.def, m = g.map;
@@ -366,6 +407,8 @@ function FX_TIME(s) { return CUR_G ? CUR_G.time : 0; }
 let CUR_G = null;
 function techMul(g, s, w) { const tf = g.players[s.owner].tfx; return w.kind === 'beam' ? tf.beam : w.kind === 'kin' ? tf.kin * (w.acid ? tf.acid : 1) : w.kind === 'rail' ? tf.kin * tf.rail : w.kind === 'torp' ? tf.torp : 1; }
 function fireAll(g, s, dt) {
+  /* getarnt: nur auf ausdrücklichen Angriffsbefehl feuern (das hebt die Tarnung auf) */
+  if (s.k === 1 && s.abT.cloak > 0 && !(s.o.t === 'attack' && !s.o.guard)) return;
   const wpns = s.k === 2 ? lvOf(s).wpn : s.def.wpn, p = g.players[s.owner], slow = (s.k === 2 && p.lowPower ? 1.35 : 1) * (s.k === 2 && p.base2 ? 0.5 : 1);
   for (let i = 0; i < wpns.length; i++) {
     const w = wpns[i];
@@ -388,6 +431,7 @@ function fireAll(g, s, dt) {
   }
 }
 function fireWeapon(g, s, i, w, t) {
+  if (s.k === 1 && s.abT.cloak > 0) { s.abT.cloak = 0; ev(g, 'decloak', { x: s.x, y: s.y, owner: s.owner, id: s.id }); }
   const mul = dmgMul(s) * techMul(g, s, w) * (s.k === 1 && s.abT.overload > 0 && w.kind === 'beam' ? 1.4 : 1);
   if (w.kind === 'beam') {
     if (!s.beams) s.beams = [];
@@ -505,6 +549,14 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   t.sT = 0;
   if (t.k === 1) { if (t.abT.invuln > 0) { shieldHit(g, t, sx, sy); return; } if (t.dome > 0) amt *= 0.5; }
   if (t.marked > g.time && owner >= 0 && g.tm[owner] === t.markT) amt *= 1.3;
+  /* Konter nach Größenklasse; Flanke und Heck (nur Schiffe, nur gerichtete Treffer) */
+  /* nur Waffenfeuer (Schütze oder Geschoss); Flächenwirkungen wie Eruptionen und Säure übergeben src = null */
+  const ck = COUNTER[kind]; if (ck && !bypass && src !== null) amt *= t.k === 1 ? (ck[t.def.cls] || 1) : t.k === 2 ? ck.b : 1;
+  if (t.k === 1 && !bypass && src !== null && sx !== undefined && t.def.role !== 'fighter' && (sx !== t.x || sy !== t.y)) {
+    const rel = Math.abs(angDiff(datan2(sy - t.y, sx - t.x), t.ang));
+    if (rel > 2.1) { amt *= FLANK_REAR; if (owner >= 0 && g.time - (t.flankT || -9) > 2.5) { t.flankT = g.time; ev(g, 'flank', { x: t.x, y: t.y, owner, rear: 1 }); } }
+    else if (rel > 1.05) amt *= FLANK_SIDE;
+  }
   /* Phasenpanzerung (Archiv): jeder fünfte Treffer geht durch das Schiff hindurch */
   if (t.k === 1 && p.tfx.phase) { t.phaseN = (t.phaseN | 0) + 1; if (t.phaseN % 5 === 0) { ev(g, 'phase', { x: t.x, y: t.y, r: t.def.r }); return; } }
   /* Spiegel: wirft Strahlschaden zurück; Anpassung: je Waffenart bis zu 50 % weniger */
@@ -613,7 +665,10 @@ function abilityUse(g, u, id, t) {
   const A = ABIL[id], p = g.players[u.owner];
   if (!A || u.abcd[id] > 0 || u.derelict) return false;
   let ok = true;
+  /* jede andere Fähigkeit hebt die Tarnung auf */
+  if (id !== 'cloak' && u.abT.cloak > 0) { u.abT.cloak = 0; ev(g, 'decloak', { x: u.x, y: u.y, owner: u.owner, id: u.id }); }
   switch (id) {
+    case 'cloak': u.abT.cloak = A.dur; u.tgt = 0; ev(g, 'cloak', { x: u.x, y: u.y, owner: u.owner, id: u.id }); break;
     case 'pulse': g.reveals.push({ x: u.x, y: u.y, r: A.r, owner: u.owner, until: g.time + A.dur }); break;
     case 'reveal': g.reveals.push({ x: g.map.w / 2, y: g.map.h / 2, r: Math.max(g.map.w, g.map.h), owner: u.owner, until: g.time + A.dur }); break;
     case 'overload': u.abT.overload = A.dur; break;
@@ -691,9 +746,12 @@ function abilityAuto(g, u) {
   const o = u.o, t = o.t === 'attack' ? g.byId.get(o.tid) : null, near = t && !t.dead ? tdist(u, t) : 1e9, fighting = near < maxRange(u.def) + 40;
   for (const id of shipAbils(g, u)) {
     if (u.abcd[id] > 0 || u.abT[id] > 0) continue;
+    /* getarnt: keine anderen Fähigkeiten von selbst auslösen (das würde enttarnen) */
+    if (u.abT.cloak > 0 && id !== 'cloak') continue;
     let go = false;
     switch (id) {
       case 'pulse': go = o.t === 'idle' || o.t === 'amove' || fighting; break;
+      case 'cloak': go = o.t === 'explore' || ((o.t === 'attack' || o.t === 'board') && near > maxRange(u.def) + 160 && near < 1600) || (hurtFrac(u) < 0.4 && nearFoes(g, u, 500).length > 0); break;
       case 'reveal': go = g.time > 240; break;
       case 'overload': case 'pierce': case 'lance': case 'barrage': case 'mark': go = fighting; break;
       case 'broadside': go = fighting && near < 300; break;

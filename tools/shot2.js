@@ -61,7 +61,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, fs = g.byId.get([...RA.UI.sel][0]); const t = addShip(g, 'olympus', 1 - me, fs.x + 330, fs.y, Math.PI); t.stance = 2; t.hold = true; window.__tgt = t.id; RA.step(2); });
   await page.evaluate(() => { cycleSub(); });
   check('sub aim cycles to drive', await page.evaluate(() => RA.UI.subAim === 'drive'));
-  await page.evaluate(() => { const g = RA.UI.g, t = g.byId.get(window.__tgt); order(selShips(), t, t.x, t.y); RA.step(30 * 4); });
+  await page.evaluate(() => { const g = RA.UI.g, t = g.byId.get(window.__tgt); order(selShips(), t, t.x, t.y); RA.step(30 * 9); });
   await page.waitForTimeout(300);
   const subInfo = await page.evaluate(() => { const t = RA.UI.g.byId.get(window.__tgt); const u = RA.UI.g.byId.get([...RA.UI.sel][0]); if (!t || !u) return { o: 'gone' }; return { o: u.o.t, sub: u.o.sub, drive: +t.sub.drive.toFixed(2), wpn: +t.sub.wpn.toFixed(2), hull: Math.round(t.hull) }; });
   check('attack order carries subsystem, drive damaged ' + JSON.stringify(subInfo), subInfo.o === 'attack' && subInfo.sub === 'drive' && subInfo.drive < 1);

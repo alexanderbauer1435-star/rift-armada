@@ -276,7 +276,7 @@ export function updateEntities(g, dt, t, view) {
     if (u.ion) { const f = 0.75 + 0.25 * Math.sin(t * 23 + u.id); COL.multiply(TINT.ion.setRGB(0.8 * f + 0.2, 0.7 * f + 0.2, 1.1)); }
     if (u.acid) COL.multiply(TINT.acid);
     if (u.dormant) COL.multiply(TINT.gold);
-    if (u.cloak) COL.multiplyScalar(0.35);
+    if (u.cloak || (u.abT && u.abT.cloak > 0)) { const f = 0.3 + 0.12 * Math.sin(t * 7 + u.id); COL.multiply(TINT.ion.setRGB(f * 0.8, f * 1.1, f * 1.6)); }
     push(set, k, COL);
     if (def.role === 'fighter') continue;
     /* Schaden: Funken ab 30 %, Rauch ab 60 % */

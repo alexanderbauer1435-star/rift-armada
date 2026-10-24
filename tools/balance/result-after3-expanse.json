@@ -1,0 +1,59 @@
+{
+ "tag": "after3-expanse",
+ "maps": [
+  "expanse"
+ ],
+ "seeds": 2,
+ "games": 40,
+ "draws": 6,
+ "avgMin": 11.2,
+ "winrate": {
+  "alliance": 0.5,
+  "mars": 0.31,
+  "legion": 0.75,
+  "nexus": 0.44,
+  "brood": 0.13
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 3,
+   "mars": 0
+  },
+  "alliance-legion": {
+   "alliance": 0,
+   "legion": 3
+  },
+  "alliance-nexus": {
+   "alliance": 3,
+   "nexus": 1
+  },
+  "alliance-brood": {
+   "alliance": 2,
+   "brood": 0
+  },
+  "mars-legion": {
+   "mars": 0,
+   "legion": 4
+  },
+  "mars-nexus": {
+   "mars": 2,
+   "nexus": 2
+  },
+  "mars-brood": {
+   "mars": 3,
+   "brood": 0
+  },
+  "legion-nexus": {
+   "legion": 2,
+   "nexus": 2
+  },
+  "legion-brood": {
+   "legion": 3,
+   "brood": 0
+  },
+  "nexus-brood": {
+   "nexus": 2,
+   "brood": 2
+  }
+ }
+}

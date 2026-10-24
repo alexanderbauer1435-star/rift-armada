@@ -47,6 +47,21 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 18 (Runde 16, Balance und fünf neue Mechaniken): Balance-Block am Ende der Gebäudedaten (BAL in data.js):
+  Kampfschiffe langsamer (klein ×0,88, mittel ×0,78, groß ×0,66; Beschleunigung und Wendigkeit mit), Frachter und
+  Bauschiffe unverändert. Geschütze: Hülle und Schild ×1,5, Reichweite ×1,1, Schaden je Fraktion so, dass Stufe I überall
+  etwa 85–105/s macht (vorher 38–83); Flak ×1,5, Kommandobasen Hülle ×1,3, Schaden ×1,4. Balance-Matrix
+  (tools/balance/matrix.js: jede Fraktion gegen jede, KI Schwer, beide Seiten, offene und geschützte Karte) zeigte Legion
+  bei 91 % Siegen und Brood bei 20 %: Paladin schwächer und teurer, Begleitdrohnen nur eine je Paladin/Herald und alle
+  14 s statt 6 s, Brood-Kampfschiffe Hülle ×1,3 und Kosten ×0,85, Alliance-Schilde +15 % und Lancer billiger.
+  Mechaniken: (1) Konter nach Größenklasse (COUNTER: Torpedos gegen groß ×1,5, Strahlen/Autokanonen gegen klein, Railguns
+  gegen mittel; langes Drücken auf ein Schiff und der Bau-Hinweis zeigen »stark/schwach gegen«). (2) Flanke ×1,1 und Heck ×1,25 (»Heck!«).
+  (3) Bergung: Wracks tragen ein Viertel der Baukosten (sal), Frachter wählen + Wrack antippen, Bergung läuft weiter, bis
+  kein Wrack mehr in der Nähe ist; die KI birgt Wracks nahe der Basis. (4) Haltung »Vorsichtig« (stance 3): unter 30 %
+  zur Werft, bei 95 % zurück; KI-Schlachtschiffe nutzen sie. (5) Tarnung (ab2 'cloak') für Wren, Boarder, Herald,
+  Shard, Leech: unsichtbar wie im Ionennebel (Nahsicht), Geschütze, Flak und Basen entdecken in Waffenreichweite,
+  Sensorimpulse im Umkreis; feuert nur auf Angriffsbefehl, jeder Schuss und jede andere Fähigkeit enttarnt.
+  Test: tests/mechanics.js.
 - Fassung 17 (Runde 15, mehr Karten und die Piratenfestung): Vier weitere Ringkarten für 2–8 Spieler (genRing-Stile):
   Corsair's Keep (Piratenfestung in der Mitte hinter einem Felsring mit engen Pforten), Pinwheel (gekrümmte Felswände wie
   ein Windrad, je eine Lücke), Archipelago (viele Gürtel-Inseln mit drei Durchfahrten, darin Vorkommen und Ruinen) und

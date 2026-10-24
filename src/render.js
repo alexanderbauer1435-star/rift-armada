@@ -348,6 +348,7 @@ function fogUpdate() {
   R.fogCtx.putImageData(img, 0, 0);
 }
 /* ------------------------------------------------------------------ Ereignisse der Simulation → Effekte */
+R.wantSalvage = function () { if (typeof UI === 'undefined' || !UI.sel || !UI.g) return false; for (const id of UI.sel) { const u = UI.g.byId.get(id); if (u && !u.dead && u.def.cargo) return true; } return false; };
 R.consume = function (evs) {
   const g = R.g;
   for (const e of evs) {
@@ -394,6 +395,10 @@ R.consume = function (evs) {
       case 'resurrect': fxRing(e.x, e.y, 120, 1.2, '#f2c14e', 4); fxFlash(e.x, e.y, 90, 0.5, '#fff6dc'); fxSpark(e.x, e.y, 30, 160, '#f2c14e', 0.9); fxText(e.x, e.y - 40, L('Wiederauferstehung'), '#f2c14e'); break;
       case 'recrew': fxRing(e.x, e.y, 30, 0.6, '#7ddc6b', 2); if (e.hero) fxText(e.x, e.y - 26, L('{0} kehrt zurück', L(e.hero)), '#f2c14e'); break;
       case 'ruin': fxRing(e.x, e.y, 60, 1, e.result === 'trap' ? '#ff5b47' : '#9ff0c0', 2); fxText(e.x, e.y - 40, L(e.result === 'relics' ? 'Relikte' : e.result === 'tech' ? 'Technikfragment' : e.result === 'map' ? 'Karte aufgedeckt' : 'Falle!'), e.result === 'trap' ? '#ff5b47' : '#9ff0c0'); break;
+      case 'flank': if (R.vp < 0 || g.tm[e.owner] === g.tm[R.vp]) fxText(e.x, e.y - 34, L('Heck!'), '#ffd36b'); break;
+      case 'cloak': fxRing(e.x, e.y, 46, 0.7, '#8fe3ff', 2); break;
+      case 'decloak': fxRing(e.x, e.y, 52, 0.6, '#c9e8ff', 2.5); break;
+      case 'salvage': fxRing(e.x, e.y, 24, 0.5, '#ffd36b', 1.5); break;
       case 'fortFall': fxRing(e.x, e.y, 260, 1.6, '#ffd36b', 4); fxText(e.x, e.y - 90, L('Piratenschatz'), '#ffd36b'); break;
       case 'siteWon': fxRing(e.x, e.y, 120, 1.3, '#9ff0c0', 3); fxText(e.x, e.y - 60, L(e.reward), '#9ff0c0'); break;
       case 'relics': if (e.x !== undefined) fxText(e.x, e.y - 30, L('+{0} Relikte', e.n), '#c9a0ff'); break;
@@ -650,7 +655,7 @@ function frame2D(alpha, dt) {
   for (const u of g.ships) {
     if (u.dead || !inV(u.x, u.y, 60) || !R.visible(u)) continue;
     if (u.o.t === 'harvest' && u.mine && R.detail > 1 && Math.random() < 0.3) { const n = g.byId.get(u.mine); if (n) { ctx.strokeStyle = n.kind === 'ice' ? 'rgba(143,227,255,0.5)' : 'rgba(255,184,107,0.5)'; ctx.lineWidth = 1.2 / cam.z; ctx.beginPath(); ctx.moveTo(u.x, u.y); const a = Math.atan2(u.y - n.y, u.x - n.x) + (Math.random() - 0.5) * 0.3; ctx.lineTo(n.x + Math.cos(a) * n.r * 0.95, n.y + Math.sin(a) * n.r * 0.95); ctx.stroke(); } }
-    drawShip(ctx, u);
+    if (u.abT && u.abT.cloak > 0) { const ga = ctx.globalAlpha; ctx.globalAlpha = ga * (0.3 + 0.1 * Math.sin(R.time * 7 + u.id)); drawShip(ctx, u); ctx.globalAlpha = ga; } else drawShip(ctx, u);
     if (R.detail > 1 && !u.derelict && u.v > u.def.speed * 0.45 && (R.frameN + u.id) % 3 === 0 && FX.list.length < FX.max - 80) { const eng = ENGINES[u.type]; if (eng && eng.length) { const e = eng[0], ex = e[0] * SHIP_VIS, ey = e[1] * SHIP_VIS, ca = Math.cos(u.ang), sa = Math.sin(u.ang); fxTrail(u.x + ex * ca - ey * sa, u.y + ex * sa + ey * ca, FACTIONS[u.def.f].glow, u.def.r * 0.28); } }
     if (u.fr && g.time - u.fr < 0.3 && R.detail > 1) fxSpark(u.x + (Math.random() - 0.5) * u.def.r, u.y + (Math.random() - 0.5) * u.def.r, 1, 20, '#9fffcf', 0.3);
     if (u.def.role === 'fighter') continue;
@@ -732,6 +737,9 @@ function drawOverlay2D(ctx, g, inV, lowZ, vp, dt) {
   }
   /* Aufdeckungen des eigenen Teams */
   if (vp >= 0) for (const rv of g.reveals) if (g.tm[rv.owner] === g.tm[vp] && rv.r < 3000 && inV(rv.x, rv.y, rv.r)) { ctx.strokeStyle = 'rgba(143,227,255,0.25)'; ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([6 / cam.z, 8 / cam.z]); ctx.lineDashOffset = R.time * 20; ctx.beginPath(); ctx.arc(rv.x, rv.y, rv.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+  /* Bergung und Tarnung (wie in 3D) */
+  if (R.wantSalvage()) for (const w of g.wrecks) if (w.sal > 0 && inV(w.x, w.y, 60) && R.seen(w.x, w.y)) { ctx.strokeStyle = 'rgba(255,211,107,0.6)'; ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([6 / cam.z, 5 / cam.z]); ctx.beginPath(); ctx.arc(w.x, w.y, 34, 0, TAU); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = '#ffd36b'; ctx.font = (12 / cam.z) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(Math.round(w.sal) + '', w.x, w.y - 40); }
+  if (vp >= 0) for (const u of g.ships) if (!u.dead && u.abT.cloak > 0 && g.tm[u.owner] === g.tm[vp] && inV(u.x, u.y, 80)) { ctx.strokeStyle = 'rgba(143,227,255,0.45)'; ctx.lineWidth = 1.2 / cam.z; ctx.setLineDash([5 / cam.z, 5 / cam.z]); ctx.beginPath(); ctx.arc(u.x, u.y, u.def.r + 12, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
   /* Missionsmarken: Zielorte mit Namen, erfüllte grün */
   if (g.mis && g.mis.marks && vp >= 0) for (const mk of g.mis.marks) {
     if (!inV(mk.x, mk.y, mk.r + 60)) continue;
@@ -854,6 +862,9 @@ function drawOverlay3D(g, inV, lowZ, vp) {
     if (b.off && !lowZ && (R.frameN % 60) < 40) hud.push({ k: 'text', x: b.x, y: b.y, txt: L('Kein Netz'), col: '#ff5b47', dy: b.def.r * 0.6 + 14 });
   }
   for (const sp of g.spores) if (inV(sp.x, sp.y, sp.r + 40)) disc(sp.x, sp.y, sp.r, '#b4ff3c', 0.16 * Math.min(1, sp.t / 5));
+  /* Bergung: lohnende Wracks markieren, solange Frachter gewählt sind; getarnte eigene Schiffe */
+  if (R.wantSalvage()) for (const w of g.wrecks) if (w.sal > 0 && inV(w.x, w.y, 60) && R.seen(w.x, w.y)) { ring(w.x, w.y, 34, '#ffd36b', 1.5, { dash: 1, alpha: 0.6 }); if (!lowZ) hud.push({ k: 'text', x: w.x, y: w.y, txt: Math.round(w.sal) + '', col: '#ffd36b', size: 12, dy: -30 }); }
+  if (vp >= 0) for (const u of g.ships) if (!u.dead && u.abT.cloak > 0 && g.tm[u.owner] === g.tm[vp] && inV(u.x, u.y, 80)) ring(u.x, u.y, u.def.r + 12, '#8fe3ff', 1.2, { dash: 1, alpha: 0.45 });
   /* Massetreiber: Warnkreis am Ziel, Masse im Flug */
   for (const st of g.strikes) {
     const k = 1 - st.t / 3.5;

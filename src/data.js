@@ -14,6 +14,18 @@ const CARGO_TIME = 6;                        // Sekunden, um den Frachtraum zu f
 const SHIELD_DELAY = 3;                      // Sekunden ohne Treffer, bis der Schild wieder lädt
 const DMG_VS_SHIELD = { beam: 1.4, kin: 0.6, torp: 1.0, pd: 1.0, rail: 0.7, acid: 0.8, bite: 0.9 };
 const DMG_VS_HULL = { beam: 0.78, kin: 1.25, torp: 1.0, pd: 0.5, rail: 1.3, acid: 1.0, bite: 1.2 };
+/* Konter nach Größenklasse des Ziels (f Jäger, s klein, m mittel, l groß): Torpedos gegen Große, Strahlen und Autokanonen
+   gegen Kleine, Railguns gegen Mittlere. Stationen nehmen Torpedos und Railguns etwas stärker (BLD). */
+const COUNTER = {
+  torp: { f: 0.5, s: 0.75, m: 1.1, l: 1.5, b: 1.15 }, rail: { f: 0.5, s: 0.8, m: 1.35, l: 1.1, b: 1.15 },
+  beam: { f: 1.15, s: 1.25, m: 1.0, l: 0.85, b: 0.9 }, kin: { f: 1.2, s: 1.2, m: 1.0, l: 0.85, b: 1.0 },
+  acid: { f: 1, s: 0.9, m: 1.1, l: 1.2, b: 1.0 }, bite: { f: 1, s: 1.15, m: 1.0, l: 0.9, b: 0.9 }
+};
+const CLS_NAME = { s: 'kleine Schiffe', m: 'mittlere Schiffe', l: 'große Schiffe', b: 'Stationen' };
+/* Flanke und Heck: Treffer von der Seite +10 %, von hinten +25 % */
+const FLANK_SIDE = 1.1, FLANK_REAR = 1.25;
+/* Bergung: Anteil der Baukosten, den ein Wrack als Rohstoff hergibt */
+const SALVAGE = 0.25;
 const RELIC_GATE = 3;                        // Relikte, um ein Tor zu aktivieren
 const NET_R = 440;                           // Reichweite des Nexus-Netzes von Knoten zu Knoten
 
@@ -267,10 +279,13 @@ const SUB_HIT = 0.7;                         // Anteil des Hüllenschadens, der 
 const SUB_REPAIR = 0.012;                    // Selbstreparatur je Sekunde (Anteil), an der Werft das Fünffache
 /* Gewicht in der KI-Flottenwahl (1 = normal): Unterstützer seltener */
 const AI_W = { leech: 0.45, sporer: 0.5, plaguebearer: 0.6, binder: 0.5, conduit: 0.5, lattice: 0.15, spire: 0.4, mirror: 0.6, beacon: 0.15, oracle: 0.15, reliquary: 0.5, boarder: 0.5, dropship: 0.5, aegis: 0.7, sanctum: 0.4 };
+/* Tarnung: je Fraktion ein Schiff für Hinterhalte und Aufklärung */
+for (const id of ['wren', 'boarder', 'herald', 'shard', 'leech']) SHIPS[id].ab2 = ['cloak'];
 for (const id in SHIPS) { const s = SHIPS[id]; s.id = id; s.aiW = AI_W[id] || 1; s.wpn = (s.wpn || []).map(w => W[w]); s.armor = s.armor || 0; s.shield = s.shield || 0; if (s.crew === undefined) s.crew = s.role === 'tanker' ? 12 : s.role === 'builder' ? 24 : CREW_CLS[s.cls] || 0; if (s.wpn.some(w => w.kind !== 'pd' && Math.abs(w.mount) > 1)) s.side = true; }
 /* ------------------------------------------------------------------ Spezialfähigkeiten
    cd Abklingzeit, dur Dauer, r Umkreis. Wirkung in combat.js (abilityUse/abilityTick). */
 const ABIL = {
+  cloak: { name: 'Tarnung', short: 'Tarnung', cd: 35, dur: 25, icon: '◌', desc: 'Unsichtbar für den Feind, bis das Schiff angreift oder 25 Sekunden um sind. Geschütze und Stationen entdecken getarnte Schiffe in ihrer Waffenreichweite, Schiffe erst aus nächster Nähe, Sensorimpulse im ganzen Umkreis.' },
   pulse: { name: 'Sensorimpuls', short: 'Impuls', cd: 40, dur: 8, r: 900, icon: '◎', desc: 'Deckt 8 Sekunden lang alles im Umkreis von 900 auf.' },
   overload: { name: 'Lanzenüberladung', short: 'Überladung', cd: 40, dur: 5, icon: '✶', desc: 'Strahlwaffen 5 Sekunden lang +40 % Schaden, danach 3 Sekunden Waffen aus.' },
   surge: { name: 'Schildstoß', short: 'Schildstoß', cd: 45, dur: 0, r: 160, icon: '◯', desc: 'Lädt die Schilde aller Verbündeten im Umkreis sofort um 25 % nach.' },
@@ -534,6 +549,35 @@ for (const f in BLDG) BLDG[f].seal = { role: 'seal', name: 'Das Siegel', r: 80, 
   { hull: 18000, shield: 2200, sreg: 48, energy: 0, cp: 0, cost: { ice: 3000, ore: 1800 }, time: 120, wpn: ['wardBeam', 'wardBeam', 'wardLance', 'pdH', 'pdH'] }),
   desc: 'Das Siegel der Erbauer. Fällt es, strömt die Brood ungehindert in den Kessel – alle haben verloren. Lässt sich ausbauen und wehrt sich dann.' };
 for (const f in BLDG) for (const role in BLDG[f]) { const b = BLDG[f][role]; b.f = f; b.id = role; for (const l of b.lv) { l.wpn = (l.wpn || []).map(w => W[w]); l.armor = l.armor || 0; l.shield = l.shield || 0; l.sreg = l.sreg || 0; } }
+/* ------------------------------------------------------------------ Balance (Runde 16)
+   Verteidigung zählt wie bei Armada 2: Geschütze sind kosteneffizient gegen gleich teure Schiffe, große Schiffe sind
+   träge. Die Faktoren wirken auf die Grunddaten oben; Waffen der Stationen werden dafür kopiert (Schiffe teilen manche).
+   Geschütz-Schaden je Fraktion so, dass Stufe I überall etwa 85–105 Schaden/s macht (vorher 38–83). */
+const BAL = {
+  speed: { f: 1, s: 0.88, m: 0.78, l: 0.66 }, accel: { f: 1, s: 0.9, m: 0.8, l: 0.7 }, turn: { f: 1, s: 0.92, m: 0.85, l: 0.78 },
+  tower: { roles: { turret: 1, flak: 1 }, hull: 1.5, shield: 1.5, range: 1.1, dps: { alliance: 1.8, mars: 2.2, legion: 1.25, nexus: 1.45, brood: 2.2, guardian: 1.6 }, flak: 1.5 },
+  base: { hull: 1.3, shield: 1.3, dps: 1.4, range: 1.1 }
+};
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.role !== 'war') continue; s.speed = Math.round(s.speed * (s.f === 'brood' && s.cls === 's' ? 0.95 : BAL.speed[s.cls])); s.accel = Math.round(s.accel * BAL.accel[s.cls]); s.turn = +(s.turn * BAL.turn[s.cls]).toFixed(2); }
+/* Fraktionsausgleich nach der Balance-Matrix (Legion gewann 91 %, Brood 20 %): Paladin-Lanze schwächer und teurer,
+   Begleitdrohnen langsamer nachgebaut (combat.js), Brood-Kampfschiffe zäher und billiger */
+SHIPS.paladin.wpn = SHIPS.paladin.wpn.map((w, i) => Object.assign({}, w, { dmg: i === 0 ? 8 : 4 })); SHIPS.paladin.cost = { ice: 560, ore: 240 }; SHIPS.paladin.hull = 340;
+SHIPS.paladin.hangar = 1; SHIPS.herald.hangar = 1;
+SHIPS.paladin.shield = 320;
+/* Mars: Rümpfe +8 %, Hedgehog billiger (Autokanonen tun sich gegen Schilde schwer) */
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'mars' && s.role === 'war') s.hull = Math.round(s.hull * 1.08); }
+SHIPS.hedgehog.cost = { ice: 340, ore: 150 };
+/* Brood: fast nur kleine Schiffe, die Konter gegen Kleine treffen sie voll – dafür zäher und billiger */
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.f !== 'brood' || s.role !== 'war') continue; s.hull = Math.round(s.hull * 1.3); for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.85); }
+/* Alliance: Schilde der Kampfschiffe +15 %, Lancer etwas billiger */
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'alliance' && s.role === 'war' && s.shield) s.shield = Math.round(s.shield * 1.15); }
+SHIPS.lancer.cost = { ice: 350, ore: 140 };
+for (const f in BLDG) for (const role in BLDG[f]) {
+  const tw = BAL.tower.roles[role], bs = role === 'base';
+  if (!tw && !bs) continue;
+  const k = bs ? BAL.base : BAL.tower, dk = bs ? BAL.base.dps : role === 'flak' ? BAL.tower.flak : (BAL.tower.dps[f] || 1.5);
+  for (const l of BLDG[f][role].lv) { l.hull = Math.round(l.hull * k.hull); l.shield = Math.round(l.shield * k.shield); l.wpn = l.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * dk).toFixed(2), range: Math.round(w.range * k.range) })); }
+}
 const BLDG_TABS = [['eco', 'Wirtschaft'], ['mil', 'Militär'], ['def', 'Verteidigung'], ['spec', 'Spezial']];
 /* Bauschiff und Frachter je Fraktion */
 const BUILDER = { alliance: 'pathfinder', mars: 'prospector', legion: 'restorer', nexus: 'seed', brood: 'seeder' };

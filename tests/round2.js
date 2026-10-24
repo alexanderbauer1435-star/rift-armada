@@ -17,7 +17,7 @@ const ship = (g, type, pi, x, y, ang) => X.addShip(g, type, pi, x, y, ang || 0);
   t.stance = 2; t.o = { t: 'hold' };
   X.execCmd(g, { p: 0, t: 'attack', u: [a.id], e: t.id, sub: 'drive' });
   run(g, 10);
-  ok(t.sub.drive < 0.85 && t.sub.drive < Math.min(t.sub.wpn, t.sub.sensor, t.sub.life), 'Subsystem-Ziel Antrieb beschädigt: drive=' + t.sub.drive.toFixed(2) + ' wpn=' + t.sub.wpn.toFixed(2));
+  ok(t.sub.drive < 0.9 && t.sub.drive < Math.min(t.sub.wpn, t.sub.sensor, t.sub.life), 'Subsystem-Ziel Antrieb beschädigt: drive=' + t.sub.drive.toFixed(2) + ' wpn=' + t.sub.wpn.toFixed(2));
   ok(t.hull > 0 && t.hull < t.hullMax, 'Hülle nimmt weiterhin Schaden');
   /* Selbstreparatur */
   X.removeShip(g, a); X.removeShip(g, b);

@@ -145,6 +145,12 @@ function aiThink(g, pi) {
   if (f === 'brood') for (const u of tankers) if (u.o.t === 'idle' || (u.o.t === 'harvest' && u.cargo < 10)) { let best = null, bd = 900; for (const w of g.ships) { if (w.dead || !w.derelict || w.def.hero && w.owner === pi) continue; const d = hyp(w.x - u.x, w.y - u.y); if (d < bd && !g.ships.some(e => !e.dead && foes(g, pi, e.owner) && e.def.wpn.length && hyp(e.x - w.x, e.y - w.y) < 400)) { bd = d; best = w; } } if (best) { execCmd(g, { t: 'eat', p: pi, u: [u.id], id: best.id }); } }
   /* Frachter ohne Arbeit: zum nächsten Vorkommen */
   for (const u of tankers) if (u.o.t === 'idle') { const n = pickNode(g, pi, u.x, u.y, 1600) || nearestNode(g, u.x, u.y, null, 2000); if (n) { cmdHarvest(g, [u], n); u.o.auto = 1; } }
+  /* ---- Bergung: ein Frachter zerlegt ein lohnendes Wrack in der Nähe, wenn dort kein Feind ist ---- */
+  if (anchor && (g.tick + pi * 13) % 150 === 0 && !tankers.some(u => u.o.t === 'salvage')) {
+    const w = g.wrecks.find(q => q.sal >= 120 && hyp(q.x - anchor.x, q.y - anchor.y) < 1500 && !g.ships.some(e => !e.dead && foes(g, pi, e.owner) && e.def.wpn.length && hyp(e.x - q.x, e.y - q.y) < 600));
+    const tk = w && tankers.find(u => u.o.t === 'harvest' && u.cargo < 10 && !u.def.net);
+    if (tk) execCmd(g, { t: 'salvage', p: pi, u: [tk.id], w: w.id });
+  }
   /* ---- Flotte bauen ---- */
   if (yards.length && (tankers.length >= Math.min(2, wantT) || t > 200)) {
     const labL = labLevel(g, pi), yardL = Math.max(...yards.map(b => b.lv));
