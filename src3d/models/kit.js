@@ -77,8 +77,16 @@ export const PAL = {
   guardian: { hull: '#8fa39b', hull2: '#4a5c55', dark: '#1f2a26', trim: '#9ff0c0', glow: '#9ff0c0', plume: '#b8ffd8', win: ['#b8ffd8', '#ffffff'], light: '#9ff0c0' }
 };
 export function mats(f, team) {
-  return cached('m|' + f + '|' + (team || ''), () => {
-    const P = PAL[f], trim = team || P.trim, style = f === 'brood' ? 'organic' : f === 'nexus' ? 'crystal' : 'plate';
+  /* Spielerfarbe: nur »trim« hängt an ihr – alle übrigen Materialien (und ihre teuren Texturen) teilt der Satz mit
+     dem Grundsatz der Fraktion; so kostet eine neue Spielerfarbe kein Neuerzeugen der Plattentexturen. */
+  if (team && PAL[f] && team !== PAL[f].trim) return cached('m|' + f + '|' + team, () => {
+    /* abgeleitete Zwischenspeicher der Modelle (M._halo, M._ast … – teils mit der Teamfarbe) nicht übernehmen */
+    const B = mats(f), M = {}; for (const k in B) if (k[0] !== '_' || k.startsWith('_win')) M[k] = B[k];
+    M.trim = new THREE.MeshStandardMaterial({ color: team, metalness: 0.4, roughness: 0.3, emissive: team, emissiveIntensity: 0.35 });
+    return M;
+  });
+  return cached('m|' + f + '|', () => {
+    const P = PAL[f], trim = P.trim, style = f === 'brood' ? 'organic' : f === 'nexus' ? 'crystal' : 'plate';
     const pc = panelCanvas(f.length * 77 + 5, f === 'mars' ? 1.3 : 1, style);
     const bump = tex(pc, false, 1);
     const std = (color, o) => new THREE.MeshStandardMaterial(Object.assign({ map: tex(tint(pc, color, f === 'mars' ? 1.25 : 1), true), bumpMap: bump, bumpScale: 0.6, roughnessMap: bump, metalness: 0.55, roughness: 0.45 }, o));
@@ -366,8 +374,10 @@ export function isLive(o, keep = LIVE) { const u = o.userData; for (const k of k
    zu EINEM Mesh je Modell verschmolzen (opts.flames) und im Shader gestreckt; aim/charge/berth/dock braucht das Spiel. */
 export function keepFor(kind, detail) {
   const d = Math.max(0, Math.min(2, detail | 0));
-  if (kind === 'ship') return d < 2 ? [] : ['spin', 'orbit', 'bob', 'sway', 'pulse'];
-  if (kind === 'station') return d === 0 ? ['aim', 'charge', 'chargeAt', 'berth', 'dock'] : d === 1 ? ['aim', 'charge', 'chargeAt', 'berth', 'dock', 'spin'] : ['aim', 'charge', 'chargeAt', 'berth', 'dock', 'spin', 'orbit', 'sway', 'bob', 'pulse', 'blink'];
+  /* Schiffe: alles eingebacken (Instanzen teilen eine Vorlage; Wiegen/Drehen kleiner Teile sieht man von oben nicht,
+     kostete bei Detail 2 aber je Teil einen Draw-Call). Stationen: nur Drehteile ab Detail 1, Umlauf ab Detail 2. */
+  if (kind === 'ship') return [];
+  if (kind === 'station') return d === 0 ? ['aim', 'charge', 'chargeAt', 'berth', 'dock'] : d === 1 ? ['aim', 'charge', 'chargeAt', 'berth', 'dock', 'spin'] : ['aim', 'charge', 'chargeAt', 'berth', 'dock', 'spin', 'orbit'];
   return d === 0 ? ['charge', 'chargeAt', 'berth', 'spin'] : d === 1 ? ['charge', 'chargeAt', 'berth', 'spin', 'orbit', 'sway', 'pulse'] : ['charge', 'chargeAt', 'berth', 'spin', 'orbit', 'sway', 'pulse', 'bob', 'blink'];
 }
 const BAKE = { glow: new Map(), quad: new Map(), fold: new Map(), quadGeo: null, flame: new Map() };
@@ -378,7 +388,7 @@ function flameMat(plume) {
   let m = BAKE.flame.get(plume); if (m) return m;
   m = plume.clone(); m.name = 'bakedFlame'; m.userData.isFlame = true;
   m.onBeforeCompile = (sh) => {
-    sh.uniforms.uT = { value: 0 }; m.userData.shader = sh;
+    sh.uniforms.uT = FLAME_T;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute vec3 fdir; attribute float fphase; uniform float uT;\n#ifdef USE_INSTANCING\nattribute float iFlame;\n#endif')
       .replace('#include <begin_vertex>', '#include <begin_vertex>\n{ float fk = 1.0;\n#ifdef USE_INSTANCING\nfk = iFlame;\n#endif\nfloat fs = fk * (0.8 + sin(uT * 37.0 + fphase) * 0.12 + sin(uT * 13.0 + fphase * 3.0) * 0.08); transformed += fdir * (fs - 1.0); }');
@@ -387,7 +397,16 @@ function flameMat(plume) {
   BAKE.flame.set(plume, m); return m;
 }
 /* Zeit aller Flammen-Shader setzen */
-export function flameTime(t) { for (const m of BAKE.flame.values()) if (m.userData.shader) m.userData.shader.uniforms.uT.value = t; }
+const FLAME_T = { value: 0 };   /* gemeinsame Zeit aller Flammen-Shader (auch geklonter Materialien) */
+export function flameTime(t) { FLAME_T.value = t; }
+/* Material klonen MIT Shader-Patch: Material.clone() übernimmt onBeforeCompile/customProgramCacheKey nicht (der Klon
+   wäre ein ungepatchtes Standardmaterial) und kopiert userData per JSON – hier flach. */
+export function cloneMat(m) {
+  const ud = m.userData; m.userData = {};
+  const c = m.clone(); m.userData = ud; c.userData = Object.assign({}, ud);
+  if (m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile) { c.onBeforeCompile = m.onBeforeCompile; c.customProgramCacheKey = m.customProgramCacheKey; }
+  return c;
+}
 /* Stations-Variante eines Materials (ein Klon je Station und Material, opts.station): Geschützköpfe (userData.aim)
    und Ladesegmente (userData.chargeAt) werden mit eingebacken; der Vertex-Shader dreht jede Ecke um den Drehpunkt
    ihres Kopfes (Attribute aimIdx, aimPivot; uniform uAim[16], Index 15 = kein Kopf) und der Fragment-Shader lässt
@@ -396,8 +415,10 @@ const AIM_N = 16;
 function stationMat(m, u, ctx) {
   let c = ctx.get(m); if (c) return c;
   c = m.clone(); c.name = (m.name || '') + '+station'; c.userData.isStation = true; c.userData.u = u;
-  c.onBeforeCompile = (sh) => {
-    sh.uniforms.uAim = u.uAim; sh.uniforms.uCharge = u.uCharge;
+  /* Uniforms aus dem Material selbst (this.userData.u): ein Klon (cloneMat) mit eigenem u gehört zu einer anderen Station */
+  c.onBeforeCompile = function (sh) {
+    const uu = this.userData.u || u;
+    sh.uniforms.uAim = uu.uAim; sh.uniforms.uCharge = uu.uCharge;
     sh.vertexShader = sh.vertexShader
       .replace('#include <common>', '#include <common>\nattribute float aimIdx; attribute vec3 aimPivot; attribute float cAt; uniform float uAim[' + AIM_N + ']; varying float vCAt;')
       .replace('#include <beginnormal_vertex>', '#include <beginnormal_vertex>\n{ float nA = uAim[int(aimIdx + 0.5)]; float nC = cos(nA), nS = sin(nA); objectNormal = vec3(nC * objectNormal.x + nS * objectNormal.z, objectNormal.y, -nS * objectNormal.x + nC * objectNormal.z); }')
@@ -409,6 +430,21 @@ function stationMat(m, u, ctx) {
   const base = m.customProgramCacheKey && m.onBeforeCompile !== THREE.Material.prototype.onBeforeCompile ? m.customProgramCacheKey() : '';
   c.customProgramCacheKey = () => 'station|' + base;
   ctx.set(m, c); return c;
+}
+/* Gebackene Station (Vorlage, bake mit station: true) für eine weitere Station klonen: Geometrien geteilt, eigene
+   Uniforms (Zielwinkel, Ladung) und dazu je Material ein Klon, der sie benutzt. */
+export function cloneStation(T) {
+  const u = T.userData.u, heads = T.userData.heads; T.userData.u = undefined; T.userData.heads = undefined;
+  const g = T.clone(true); T.userData.u = u; T.userData.heads = heads;
+  if (!u) return g;
+  /* ohne Geschützköpfe und Ladesegmente braucht die Station keine eigenen Uniforms: Materialien der Vorlage teilen
+     (gleiches Material hintereinander → three.js spart das Neusetzen aller Uniforms je Draw-Call) */
+  if (T.userData.cAt === undefined) { let c = false; T.traverse(o => { if (o.geometry && o.geometry.attributes.cAt && o.geometry.attributes.cAt.array.some(v => v >= 0)) c = true; }); T.userData.cAt = c; }
+  if (!heads.length && !T.userData.cAt) { g.userData.u = u; g.userData.heads = heads; return g; }
+  const U = { uAim: { value: new Float32Array(AIM_N) }, uCharge: { value: 1 } }, map = new Map();
+  g.traverse(o => { if (o.material && o.material.userData.isStation) { let c = map.get(o.material); if (!c) { c = cloneMat(o.material); c.userData.u = U; map.set(o.material, c); } o.material = c; } });
+  g.userData.u = U; g.userData.heads = heads;
+  return g;
 }
 /* Ladung 0…1 einer gebackenen Station/eines Tores: Shader-Segmente und lebendige charge-Knoten */
 export function applyCharge(root, k) { if (root.userData.u) root.userData.u.uCharge.value = k; setCharge(root, k); }

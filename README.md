@@ -47,6 +47,23 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 15 (Runde 13, Leistung und Komfort): 3D-Leistung neu: scene.js regelt die
+  Auflösung selbst (0,5 bis Geräte-DPR, höchstens 2 und ~2,2 MP; Start scharf, Handy z. B. 1,74), schaltet Bloom nur
+  ganz oben zu, sperrt zu langsame Stufen eine Weile und nimmt wirkungslose Absenkungen zurück; keine Schatten mehr
+  (doppelte Draw-Calls, kaum sichtbar), MSAA nur unter DPR 1,5. Shader und Modellvorlagen der beteiligten Fraktionen
+  werden nach setGame im Leerlauf vorgebaut (kein Ruckler beim ersten Gefecht), Stationen aus einem Vorlagenspeicher,
+  geteilte Texturen je Fraktion, Instanz-Meshes mit eigenen Materialien. Die alte Auto-Qualitätsregel in main.js gilt
+  nur noch für 2D. Messung (tools/perf3d.js, 1080p, 85 Schiffe im Kampf): JS je Bild 35,7 → 14,2 ms, Draw-Calls
+  1337 → 509, GPU-Last um ein Vielfaches geringer.
+  Erkunden: Knopf »Erkunden« (Taste X) für Kampf- und Späherschiffe, Befehl 'explore' im Lockstep – das Schiff sucht die
+  nächste unerkundete Zelle (bevorzugt geradeaus, mehrere Erkunder verteilen sich), meidet bekannte feindliche Geschütze
+  und Stätten, kehrt unter 45 % Hülle zur Basis zurück. Drei Speicherplätze (Pausenmenü speichern, Hauptmenü »Laden«,
+  Gefecht/Sandkasten/Wellen; Platz mit Fraktion, Karte, Spielzeit). Langes Drücken auf Gebäude, Vorkommen, Stätten und
+  Tore zeigt einen Hinweis. KI im Team: Ziele, die ein Verbündeter schon angreift, werden bevorzugt (Fokusfeuer), und
+  ein in den letzten 15 s getroffener Verbündeter in der Nähe bekommt zwei Drittel der freien Flotte als Hilfe.
+  3D-Feinschliff: Schildkuppeln und Feuerfarben korrigiert, Nebelzonen als eigene 3D-Objekte (Ionen- und Aschenebel).
+  Tests: tests/explore.js, tests/maps.js gehören jetzt zu tools/regress.sh. Store-Bilder in 3D (1080×1920, DE/EN):
+  node tools/storeshots.js → store/graphics/shot-1…4-<de|en>.png; Leistung messen: node tools/perf3d.js.
 - Fassung 14 (Runde 12, 3D): Die Spielwelt wird in 3D gezeichnet (Three.js r170, alles prozedural, keine Modelldateien):
   src3d/ enthält den Renderer (index.js setzt window.RA3D; scene/camera/world/entities/overlay/fog) und die Effekte
   (src3d/effects: Strahlen, Geschosse, Explosionen, Schilde, Superwaffen in neun instanzierten Puffern), die Modelle liegen

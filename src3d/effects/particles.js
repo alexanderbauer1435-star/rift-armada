@@ -31,17 +31,18 @@ export const KP = { x: 0, h: 1, z: 2, rx: 3, rz: 4, rot: 5, mode: 6, t: 7, life:
 export const CM = { fixed: 0, fire: 1, flash: 2, smoke: 3, ember: 4 };
 
 /* Feuerfarbe nach Alter k (0 → 1): weiß → gelb → orange → dunkelrot (linear, additiv gezeichnet) */
+/* Stützstellen: weiß-gelber Kern → sattes Orange → Orangerot → tiefes Rot → Dunkelbraun. Werte bewusst ≤ 1,4, damit
+   ACES die Farbe nicht zu Pastell auswäscht; das Feuer liegt im vormultiplizierten Puffer und deckt beim Abkühlen. */
+const FIRE = [[0, 1.4, 1.2, 0.75], [0.07, 1.25, 0.62, 0.14], [0.22, 1.05, 0.3, 0.04], [0.42, 0.6, 0.1, 0.015], [0.65, 0.22, 0.045, 0.012], [1, 0.07, 0.03, 0.02]];
 function fireCol(k, out) {
-  let r, g, b;
-  if (k < 0.06) { const u = k / 0.06; r = 1.5 - 0.1 * u; g = 1.35 - 0.45 * u; b = 1.1 - 0.9 * u; }
-  else if (k < 0.3) { const u = (k - 0.06) / 0.24; r = 1.4 - 0.1 * u; g = 0.9 - 0.6 * u; b = 0.2 - 0.17 * u; }
-  else { const u = (k - 0.3) / 0.7; r = 1.3 - 1.1 * u; g = 0.3 - 0.28 * u; b = 0.03 - 0.03 * u; }
-  out[0] = r; out[1] = g; out[2] = b;
+  let i = 1; while (i < FIRE.length - 1 && k > FIRE[i][0]) i++;
+  const A = FIRE[i - 1], B_ = FIRE[i], u = Math.max(0, Math.min(1, (k - A[0]) / (B_[0] - A[0])));
+  out[0] = A[1] + (B_[1] - A[1]) * u; out[1] = A[2] + (B_[2] - A[2]) * u; out[2] = A[3] + (B_[3] - A[3]) * u;
 }
 const TMP = [0, 0, 0];
 
 /* Sprites (additiv und Rauch teilen den Aufbau) */
-export function stepSprites(P, dt, buf) {
+export function stepSprites(P, dt, buf, fireBuf) {
   const d = P.d, F = SP.F, on = P.on;
   for (let i = 0; i < P.cap; i++) {
     if (!on[i]) continue;
@@ -54,7 +55,13 @@ export function stepSprites(P, dt, buf) {
     const rot = d[o + SP.rot] += d[o + SP.rotv] * dt;
     const s0 = d[o + SP.s0], s1 = d[o + SP.s1], cm = d[o + SP.cmode], a0 = d[o + SP.a0];
     let s, a, r = d[o + SP.r], g = d[o + SP.g], b = d[o + SP.b];
-    if (cm === CM.fire) { const e = 1 - (1 - k) * (1 - k), kc = Math.min(1, k + d[o + SP.fade]); s = s0 + (s1 - s0) * Math.sqrt(e); a = a0 * Math.pow(1 - k, 1.3); fireCol(kc, TMP); r = TMP[0]; g = TMP[1]; b = TMP[2]; }
+    if (cm === CM.fire) {
+      /* Feuer: wächst schnell, kühlt ab und wird dabei deckend (dunkle Lappen geben dem Ball Form) */
+      const e = 1 - (1 - k) * (1 - k), kc = Math.min(1, k + d[o + SP.fade]); s = s0 + (s1 - s0) * Math.sqrt(e); a = a0 * Math.pow(1 - k, 0.9); fireCol(kc, TMP);
+      const occ = Math.min(0.85, Math.max(0, (kc - 0.12) * 1.5));
+      (fireBuf || buf).write(x, h, z, s, rot, d[o + SP.tile], TMP[0], TMP[1], TMP[2], a, occ);
+      continue;
+    }
     else if (cm === CM.flash) { s = s0 + (s1 - s0) * k; a = a0 * (1 - k) * (1 - k); }
     else if (cm === CM.smoke) { s = s0 + (s1 - s0) * Math.sqrt(k); a = a0 * Math.min(1, k * 5) * Math.pow(1 - k, 1.4); const dk = 1 - 0.35 * k; r *= dk; g *= dk; b *= dk; }
     else if (cm === CM.ember) { s = s0 + (s1 - s0) * k; a = a0 * Math.pow(1 - k, d[o + SP.fade] || 1); const dk = 1 - 0.5 * k; g *= dk; b *= dk * dk; }

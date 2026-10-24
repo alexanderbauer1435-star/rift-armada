@@ -76,9 +76,19 @@ function saveNow() {
   if (!g || UI.attract || g.over || (UI.kind !== 'skirmish' && UI.kind !== 'sandbox' && UI.kind !== 'waves' && UI.kind !== 'mis' && UI.kind !== 'cq')) return false;
   try {
     const c = R.s2w(R.cssW / 2, R.cssH / 2);
-    localStorage.setItem(SAVE_KEY, JSON.stringify({ game: saveGame(g), ui: { cam: [c.x, c.y, R.cam.z], kind: UI.kind, t: Date.now() } }));
+    localStorage.setItem(SAVE_KEY, JSON.stringify({ game: saveGame(g), ui: { cam: [c.x, c.y, R.cam.z], kind: UI.kind, t: Date.now() }, meta: slotMeta(g) }));
     return true;
   } catch (e) { return false; }
 }
+/* Speicherplätze 1–3 (zusätzlich zur automatischen Sicherung »Fortsetzen«): gleicher Inhalt plus Kurzinfo für die Liste */
+const SLOT_KEY = 'ra.slot';
+function slotMeta(g) { const P = g.players[g.human >= 0 ? g.human : 0]; return { map: g.map.name, fac: P.faction, t: Math.round(g.time), date: Date.now(), np: g.players.filter(q => !q.neutral && q.team !== 98).length, kind: UI.kind }; }
+function saveSlot(n) {
+  const g = UI.g;
+  if (!g || UI.attract || g.over || (UI.kind !== 'skirmish' && UI.kind !== 'sandbox' && UI.kind !== 'waves')) return false;
+  try { const c = R.s2w(R.cssW / 2, R.cssH / 2); localStorage.setItem(SLOT_KEY + n, JSON.stringify({ game: saveGame(g), ui: { cam: [c.x, c.y, R.cam.z], kind: UI.kind, t: Date.now() }, meta: slotMeta(g) })); return true; } catch (e) { return false; }
+}
+function readSlot(n) { try { const d = JSON.parse(localStorage.getItem(SLOT_KEY + n) || 'null'); return d && d.game ? d : null; } catch (e) { return null; } }
+function clearSlot(n) { try { localStorage.removeItem(SLOT_KEY + n); } catch (e) { /* egal */ } }
 function clearSave() { try { localStorage.removeItem(SAVE_KEY); } catch (e) { /* egal */ } }
 function readSave() { try { const d = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return d && d.game ? d : null; } catch (e) { return null; } }

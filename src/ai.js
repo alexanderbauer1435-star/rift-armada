@@ -39,7 +39,9 @@ function aiEnemyStart(g, pi) {
 /* Nächstes bekanntes feindliches Ziel: sichtbare Station, sonst der Startplatz des nächsten Gegners */
 function aiTarget(g, pi, x, y) {
   let best = null, bd = 1e9;
-  for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || !g.players[pi].explored[clamp((b.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((b.x / VIS) | 0, 0, g.vw - 1)]) continue; const d = hyp(b.x - x, b.y - y) + (b.role === 'base' ? 300 : 0) + (b.role === 'turret' || b.role === 'flak' ? 200 : 0); if (d < bd) { bd = d; best = { x: b.x, y: b.y, id: b.id }; } }
+  /* Teamspiel: Ziele, die ein Verbündeter gerade angreift, sind deutlich attraktiver (gemeinsamer Angriff) */
+  const p = g.players[pi], focus = new Set(); for (const q of g.players) if (q !== p && q.alive && !q.neutral && q.team === p.team && q.ai && q.ai.atk && q.ai.atk.tid) focus.add(q.ai.atk.tid);
+  for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || !g.players[pi].explored[clamp((b.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((b.x / VIS) | 0, 0, g.vw - 1)]) continue; const d = hyp(b.x - x, b.y - y) + (b.role === 'base' ? 300 : 0) + (b.role === 'turret' || b.role === 'flak' ? 200 : 0) - (focus.has(b.id) ? 900 : 0); if (d < bd) { bd = d; best = { x: b.x, y: b.y, id: b.id }; } }
   if (best) return best;
   const s = aiEnemyStart(g, pi);
   return s ? { x: s.x, y: s.y } : null;
@@ -185,6 +187,10 @@ function aiThink(g, pi) {
     /* Verteidigung: alle, die nicht gerade weit weg angreifen */
     const def = fleet.filter(u => !A.atk || hyp(u.x - p.hurtX, u.y - p.hurtY) < 1500 || u.o.t === 'idle');
     if (def.length && (t - A.defT > 8 || !A.defT)) { A.defT = t; cmdMove(g, def, p.hurtX, p.hurtY, true, 'wedge'); }
+  } else if (!A.atk && fleet.length >= 3 && (() => { for (const q of g.players) if (q !== p && q.alive && !q.neutral && q.team === p.team && t - q.hurtT < 15 && hyp(q.hurtX - anchor.x, q.hurtY - anchor.y) < 2600) { A.help = q; return true; } return false; })()) {
+    /* Verbündeter wird angegriffen: zwei Drittel der freien Flotte helfen, der Rest bleibt zu Hause */
+    const q = A.help, free = fleet.filter(u => u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am));
+    if (free.length && (t - (A.helpT || -99) > 10)) { A.helpT = t; cmdMove(g, free.slice(0, Math.ceil(free.length * 2 / 3)), q.hurtX, q.hurtY, true, 'wedge'); }
   } else if (A.atk) {
     /* laufender Angriff: Ziel prüfen, Rückzug bei schweren Verlusten, nachrücken */
     const alive = fleet.filter(u => A.atk.ids.indexOf(u.id) >= 0), cp = alive.reduce((s, u) => s + u.def.cp, 0);
@@ -192,13 +198,13 @@ function aiThink(g, pi) {
     else if (t - A.atk.t0 > 14) {
       const tg = aiTarget(g, pi, alive[0].x, alive[0].y);
       if (!tg) { A.atk = null; }
-      else { const idle = alive.filter(u => u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am)); if (idle.length) cmdMove(g, idle, tg.x, tg.y, true, 'wedge'); A.atk.t0 = t; }
+      else { const idle = alive.filter(u => u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am)); if (idle.length) cmdMove(g, idle, tg.x, tg.y, true, 'wedge'); A.atk.t0 = t; A.atk.tid = tg.id || 0; }
     }
   } else {
     const ready = t > cfg.first && cpF >= cfg.army + Math.min(16, Math.floor(t / 150) * 2) && t - A.atkT > 30;
     if (ready) {
       const tg = aiTarget(g, pi, anchor.x, anchor.y);
-      if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'wedge'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t }; ev(g, 'aiattack', { owner: pi }); }
+      if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'wedge'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; ev(g, 'aiattack', { owner: pi }); }
     } else {
       /* sammeln vor der Basis; Verwundete zur Werft */
       const rp = { x: anchor.x + dcos(dirA) * 300, y: anchor.y + dsin(dirA) * 300 };

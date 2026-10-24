@@ -18,8 +18,11 @@ R.setMode = function (m) {
   if (want && !R.ok3d) { try { R.ok3d = !!RA3D.init(R.cv3); } catch (e) { R.ok3d = false; } }
   R.mode3d = !!(want && R.ok3d);
   if (R.cv3) R.cv3.hidden = !R.mode3d;
+  /* Vignette im 3D-Modus als CSS-Hintergrund der durchsichtigen 2D-Leinwand (kostet keine Zeichenarbeit je Bild) */
+  R.cv.style.background = R.mode3d ? 'radial-gradient(ellipse farthest-corner at 50% 50%, rgba(0,2,10,0) 45%, rgba(0,2,10,0.42) 100%)' : '';
+  R.vbKey = ''; R.c3x = NaN;
   FX.mute = R.mode3d;
-  if (R.mode3d && R.g) { RA3D.setGame(R.g, R.vp); RA3D.setDetail(R.detail); }
+  if (R.mode3d && R.g) { RA3D.setDetail(R.detail); RA3D.setGame(R.g, R.vp); }
   R.bg = null; R.bgKey = '';
   return R.mode3d ? '3d' : '2d';
 };
@@ -31,18 +34,20 @@ R.setGame = function (g, vp) {
   R.fogImg = R.fogCtx.createImageData(g.vw, g.vh); R.fogT = -1;
   R.miniBase = null; R.sprites.clear();
   R.clampCam();
-  if (R.mode3d) { RA3D.setGame(g, vp); RA3D.setDetail(R.detail); }
+  if (R.mode3d) { RA3D.setDetail(R.detail); RA3D.setGame(g, vp); }
 };
 R.resize = function () {
   const cv = R.cv, r = cv.getBoundingClientRect();
   const dp = Math.min(window.devicePixelRatio || 1, 2);
-  R.dpr = (typeof UI !== 'undefined' && UI.attract ? Math.min(dp, 1) : dp) * R.qScale;
+  /* 2D: Auflösung nach Qualität; 3D: die 2D-Leinwand trägt nur Texte und Balken (volle Schärfe, höchstens DPR 2), die
+     WebGL-Auflösung regelt der 3D-Renderer selbst nach der Bildzeit (ohne R.qScale) */
+  R.dpr = R.mode3d ? dp : (typeof UI !== 'undefined' && UI.attract ? Math.min(dp, 1) : dp) * R.qScale;
   R.cssW = Math.max(50, r.width); R.cssH = Math.max(50, r.height);
   R.W = cv.width = Math.round(R.cssW * R.dpr); R.H = cv.height = Math.round(R.cssH * R.dpr);
   const mr = R.mini.getBoundingClientRect(), md = Math.min(window.devicePixelRatio || 1, 2);
   if (mr.width > 0) { R.mini.width = Math.round(mr.width * md); R.mini.height = Math.round(mr.height * md); }
   R.bg = null; R.bgKey = '';
-  if (R.mode3d) RA3D.resize(R.cssW, R.cssH, R.dpr);
+  if (R.mode3d) { RA3D.resize(R.cssW, R.cssH, window.devicePixelRatio || 1); R.vbKey = ''; }
   R.clampCam();
 };
 R.clampCam = function () {
@@ -58,7 +63,12 @@ R.center = function (x, y) { R.cam.x = x - R.cssW / R.cam.z / 2; R.cam.y = y - (
 R.s2w = function (sx, sy) { if (R.mode3d) { R.cam3(); const w = RA3D.unproject(sx, sy); if (w) return w; } return { x: R.cam.x + sx / R.cam.z, y: R.cam.y + sy / R.cam.z }; };
 R.w2s = function (x, y) { if (R.mode3d) { R.cam3(); const q = RA3D.project(x, y); if (q) return q; } return { x: (x - R.cam.x) * R.cam.z, y: (y - R.cam.y) * R.cam.z, s: R.cam.z }; };
 /* 3D-Kamera aus der 2D-Kamera ableiten: Weltpunkt in der Bildschirmmitte und Zoom */
-R.cam3 = function () { const cam = R.cam; RA3D.setCam(cam.x + R.cssW / cam.z / 2, cam.y + (R.cssH - R.padB * 0.5 + R.padT * 0.5) / cam.z / 2, cam.z, R.cssW, R.cssH, R.dpr); };
+R.cam3 = function () {
+  const cam = R.cam, cx = cam.x + R.cssW / cam.z / 2, cy = cam.y + (R.cssH - R.padB * 0.5 + R.padT * 0.5) / cam.z / 2;
+  if (cx === R.c3x && cy === R.c3y && cam.z === R.c3z && R.cssW === R.c3w && R.cssH === R.c3h) return false;
+  R.c3x = cx; R.c3y = cy; R.c3z = cam.z; R.c3w = R.cssW; R.c3h = R.cssH;
+  RA3D.setCam(cx, cy, cam.z, R.cssW, R.cssH, R.dpr); return true;
+};
 R.zoomAt = function (sx, sy, f) { const cam = R.cam, X = cam.x + sx / cam.z, Y = cam.y + sy / cam.z; cam.z = clamp(cam.z * f, 0.2, 2.4); cam.x = X - sx / cam.z; cam.y = Y - sy / cam.z; R.clampCam(); };
 R.seen = function (x, y) { const g = R.g; if (R.vp < 0) return true; const p = g.players[R.vp]; return !!p.explored[clamp((y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((x / VIS) | 0, 0, g.vw - 1)]; };
 R.visible = function (e) { return R.vp < 0 || canSee(R.g, R.vp, e); };
@@ -790,10 +800,12 @@ R.frame = function (alpha, dt) {
   if (!g) return;
   fxStep(dt);
   if (R.shake > 0) R.shake = Math.max(0, R.shake - dt * 14);
-  R.cam3();
-  /* sichtbarer Weltausschnitt aus den vier Ecken (für inView) */
-  const c0 = RA3D.unproject(0, 0), c1 = RA3D.unproject(R.cssW, 0), c2 = RA3D.unproject(0, R.cssH), c3 = RA3D.unproject(R.cssW, R.cssH);
-  if (c0 && c1 && c2 && c3) R.vb = { x0: Math.min(c0.x, c1.x, c2.x, c3.x) - 60, x1: Math.max(c0.x, c1.x, c2.x, c3.x) + 60, y0: Math.min(c0.y, c1.y, c2.y, c3.y) - 60, y1: Math.max(c0.y, c1.y, c2.y, c3.y) + 60 };
+  /* Kamera und sichtbarer Weltausschnitt aus den vier Ecken (für inView) – nur bei Kamerawechsel neu */
+  if (R.cam3() || !R.vb || R.vbKey !== R.c3w + 'x' + R.c3h) {
+    R.vbKey = R.c3w + 'x' + R.c3h;
+    const c0 = RA3D.unproject(0, 0), c1 = RA3D.unproject(R.cssW, 0), c2 = RA3D.unproject(0, R.cssH), c3 = RA3D.unproject(R.cssW, R.cssH);
+    if (c0 && c1 && c2 && c3) R.vb = { x0: Math.min(c0.x, c1.x, c2.x, c3.x) - 60, x1: Math.max(c0.x, c1.x, c2.x, c3.x) + 60, y0: Math.min(c0.y, c1.y, c2.y, c3.y) - 60, y1: Math.max(c0.y, c1.y, c2.y, c3.y) + 60 };
+  }
   if (vp >= 0 && R.time - R.fogT > 0.15) { R.fogT = R.time; fogUpdate(); }
   const inV = (x, y, m) => R.inView(x, y, m), lowZ = cam.z < 0.45;
   R.hud = [];
@@ -802,7 +814,6 @@ R.frame = function (alpha, dt) {
   /* 2D-Leinwand: nur Bildschirm-Überlagerungen */
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, R.W, R.H);
   if (g.flareOn) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,170,80,' + (0.08 + 0.05 * Math.sin(R.time * 9)) + ')'; ctx.fillRect(0, 0, R.W, R.H); ctx.globalCompositeOperation = 'source-over'; }
-  drawVignette(ctx);
   ctx.setTransform(R.dpr, 0, 0, R.dpr, 0, 0);
   for (const h of R.hud) {
     const q = RA3D.project(h.x, h.y); if (!q) continue;

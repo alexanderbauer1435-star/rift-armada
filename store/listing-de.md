@@ -22,7 +22,7 @@ Jede Fraktion hat eigene Stationen in drei sichtbaren Ausbaustufen, Forschung, D
 VIEL ZU TUN
 • Kampagne »Quarantine«: Ausbildung, Prolog, fünf Akte und eine Bonusmission mit Besprechungen, Funksprüchen und Entscheidungen, die bis ins Finale reichen
 • Conquest of the Caldera: Feldzug auf einer Karte mit zwanzig Systemen – Kapitel je Fraktion, zwei Berater, ein Erzfeind, Logbücher der Erbauer und drei Enden
-• Gefecht gegen die KI auf mehreren Karten in drei Stärken
+• Gefecht mit bis zu acht Spielern und frei wählbaren Teams auf sieben Karten in drei Größen – Basen in geschützten Taschen, Korridore, Asteroidengürtel und Nebelzonen; Vorschau des Kartenlayouts im Menü
 • Rift Survival und Quarantine Line: endlose Wellen der Brood, allein oder gemeinsam mit KI-Verbündeten
 • Übungsplatz mit allem freigeschaltet
 
@@ -34,6 +34,8 @@ IM GEFECHT
 
 MEHR
 • Mehrspieler direkt von Gerät zu Gerät – ohne Server, ohne Konto (1 gegen 1, gemeinsam gegen die KI, 2 gegen 2, Quarantine)
+• Vollständig in 3D mit prozeduralen Modellen, passt die Auflösung selbst an das Gerät an (umschaltbar auf 2D)
+• Automatisches Erkunden, drei Speicherplätze
 • Deutsch und Englisch
 
 Ein frei erfundenes Universum mit erfundenen Fraktionen. Die App erhebt keine Daten.

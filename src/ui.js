@@ -226,7 +226,7 @@ function initInput() {
         gest = { k: 'pend', moved: false };
         /* Finger still halten: Angriffsmarsch dorthin (mit bewaffneter Auswahl), sonst Zielinfo */
         const gq = gest;
-        gq.tm = setTimeout(() => { if (gest !== gq || gq.moved || PT.size !== 1) return; gq.held = true; const us = selShips().filter(u => armed(u)); const w = R.s2w(x, y); if (us.length && UI.mode === 'normal') { const hit = pickAt(w.x, w.y); if (!hit || hit.k === 3) { orderMove(us, w.x, w.y, true); buzz(18); } } }, 480);
+        gq.tm = setTimeout(() => { if (gest !== gq || gq.moved || PT.size !== 1) return; gq.held = true; const us = selShips().filter(u => armed(u)); const w = R.s2w(x, y); const hit = pickAt(w.x, w.y); if (us.length && UI.mode === 'normal' && (!hit || hit.k === 3)) { orderMove(us, w.x, w.y, true); buzz(18); } else if (hit && UI.mode === 'normal') { gq.tip = true; tipShow(objTip(hit)); buzz(10); setTimeout(tipHide, 3800); } }, 480);
       }
     } else if (PT.size === 2) {
       const [a, b] = [...PT.values()];
@@ -334,6 +334,7 @@ function initInput() {
     else if (k === 'a') startAmove();
     else if (k === 'b') { const u = selShips().find(x => x.def.build); if (u) setSel([u]); }
     else if (k === 'r') toggleRange();
+    else if (k === 'x') doExplore();
   });
   window.addEventListener('keyup', e => { UI.keys[e.code] = false; });
   window.addEventListener('blur', () => { UI.keys = {}; });
@@ -341,6 +342,8 @@ function initInput() {
 function jumpAlert() { const g = UI.g; if (UI.alertPos && g.time - UI.alertT < 30) { R.center(UI.alertPos.x, UI.alertPos.y); return; } const b = anyBldg(g, UI.me); if (b) R.center(b.x, b.y); }
 
 /* ------------------------------------------------------------------ Befehlstasten */
+function canExplore(u) { return u.def.role !== 'builder' && u.def.role !== 'tanker' && !u.def.node && u.def.role !== 'fighter'; }
+function doExplore() { const us = selShips().filter(canExplore); if (us.length) { const r = issue({ t: 'explore', u: ids(us) }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { SND.play('order'); hudSel(); } } }
 function doStop() { const us = selShips(); if (us.length) { issue({ t: 'stop', u: ids(us) }); SND.play('order'); } }
 function toggleHold() { const us = selShips(); if (!us.length) return; const on = !us.every(u => u.hold); issue({ t: 'hold', u: ids(us), on }); toast(L(on ? 'Stellung halten: Die Auswahl bleibt stehen' : 'Stellung aufgehoben')); SND.play('order'); hudCmds(); }
 const STANCES = ['Offensiv', 'Defensiv', 'Feuer halten'], STANCE_HINT = ['Schießt auf jeden Feind in Sicht und verfolgt ihn', 'Schießt nur in Reichweite, verfolgt nicht', 'Schießt nicht'];
@@ -473,6 +476,7 @@ function hudCmds(force) {
     const war = us.some(u => armed(u));
     if (war) box.appendChild(cmdBtn('➶', 'Vorstoß', startAmove, 'Angriffsmarsch: fliegt zum Ziel und greift alles auf dem Weg an', UI.mode === 'amove' ? 'on' : ''));
     box.appendChild(cmdBtn('■', 'Halt', doStop, 'Anhalten und Befehl aufheben'));
+    if (us.some(canExplore)) box.appendChild(cmdBtn('◎', 'Erkunden', doExplore, 'Erkunden: fliegt selbständig unerkundete Gebiete ab, mehrere Erkunder teilen sich die Karte auf; bei schwerem Schaden zurück zur Basis', us.every(u => !canExplore(u) || u.o.t === 'explore') ? 'on' : ''));
     box.appendChild(cmdBtn('⌂', 'Stellung', toggleHold, 'Stellung halten: bleibt stehen, schießt nur in Reichweite', us.every(u => u.hold) ? 'on' : ''));
     if (war) box.appendChild(cmdBtn(['⚔', '🛡', '✋'][us[0].stance | 0], STANCES[us[0].stance | 0], cycleStance, 'Haltung wechseln: Angriff, Verteidigung, Feuer halten'));
     if (us.length > 1) box.appendChild(cmdBtn(UI.form === 'wedge' ? '⋀' : '≡', UI.form === 'wedge' ? 'Keil' : 'Linie', cycleForm, 'Formation für Bewegungsbefehle'));
@@ -533,6 +537,17 @@ function wpnTxt(def) {
 }
 function shipTip(def) {
   return '<h4>' + esc(L(def.name)) + '</h4><div class="cost">' + costTxt(shipCost(UI.P, def)) + ' · ' + def.time + ' s · ' + def.cp + ' ★</div><p>' + esc(L(def.desc)) + '</p><p class="fine">' + L('Hülle') + ' ' + def.hull + (def.shield ? ' · ' + L('Schild') + ' ' + def.shield : '') + (def.armor ? ' · ' + L('Panzerung') + ' ' + def.armor : '') + ' · ' + L('Tempo') + ' ' + def.speed + (def.wpn.length ? '<br>' + wpnTxt(def) : '') + '</p>' + (reqTxt(def) ? '<p class="req">' + L('Benötigt') + ' ' + reqTxt(def) + '</p>' : '');
+}
+/* Erklärung zu einem Objekt auf der Karte (langes Antippen): Name, Besitzer, Stufe, Funktion, Zustand */
+function objTip(o) {
+  const g = UI.g, who = o.owner >= 0 && g.players[o.owner] ? (o.owner === UI.me ? L('Du') : pname(o.owner) + (isFoe(o.owner) ? ' · ' + L('Feind') : ' · ' + L('Verbündet'))) : '';
+  const col = o.owner >= 0 && g.players[o.owner] ? pcolor(g.players[o.owner]) : '#9ff0c0', hp = e => L('Hülle') + ' ' + Math.round(e.hull) + ' / ' + Math.round(e.hullMax) + (e.shieldMax ? ' · ' + L('Schild') + ' ' + Math.round(e.shield) + ' / ' + Math.round(e.shieldMax) : '');
+  if (o.k === 2) { const lv = o.def.lv[o.lv - 1]; return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + ' · ' + L('Stufe {0}', ROMAN[o.lv]) + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + (o.done ? hp(o) : L('Im Bau') + ' ' + Math.round(o.prog * 100) + ' %') + (lv.energy ? ' · ' + L('Energie') + ' ' + (lv.energy > 0 ? '+' : '') + lv.energy : '') + (lv.wpn.length ? ' · ' + lv.wpn.length + ' ' + L(lv.wpn.length > 1 ? 'Waffen' : 'Waffe') : '') + '</p>'; }
+  if (o.k === 1) return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + hp(o) + '</p>';
+  if (o.k === 3) return '<h4>' + L(o.kind === 'ice' ? 'Eis' : 'Erz') + '</h4><p>' + L('Vorrat') + ' ' + Math.round(o.amount) + ' / ' + Math.round(o.max) + '</p>';
+  if (o.k === 5) return '<h4 style="color:#9ff0c0">' + L('Sprungtor') + '</h4><p>' + L({ dead: 'Erloschen – ein Bauschiff kann es mit Relikten wecken.', flicker: 'Flackert: öffnet sich alle 50 Sekunden kurz.', active: 'Aktiv' }[o.state] || '') + '</p>';
+  if (o.kind && SITE_DEF[o.kind]) return '<h4 style="color:#9ff0c0">' + esc(L(SITE_DEF[o.kind].name)) + '</h4><p>' + esc(L(SITE_DEF[o.kind].desc)) + '</p>';
+  return '';
 }
 function bldgTip(def) {
   const l = def.lv[0];
@@ -638,7 +653,7 @@ function hudSel() {
     h += '<div class="bar"><i style="width:' + Math.round(u.hull / u.hullMax * 100) + '%"></i></div><div class="sub">' + L('Hülle') + ' ' + Math.round(u.hull) + ' / ' + Math.round(u.hullMax) + (d.armor ? ' · ' + L('Panzerung') + ' ' + d.armor : '') + '</div>';
     if (u.shieldMax) h += '<div class="bar sh"><i style="width:' + Math.round(u.shield / u.shieldMax * 100) + '%"></i></div><div class="sub">' + L('Schild') + ' ' + Math.round(u.shield) + ' / ' + Math.round(u.shieldMax) + '</div>';
     if (d.cargo) { const cap = Math.round(d.cargo * UI.P.tfx.cargo); h += '<div class="bar prog"><i style="width:' + Math.round(u.cargo / cap * 100) + '%"></i></div><div class="sub">' + L('Fracht') + ' ' + Math.round(u.cargo) + ' / ' + cap + (u.ckind ? ' ' + (u.ckind === 'ore' ? L('Erz') : L('Eis')) : '') + '</div>'; }
-    const O = { idle: 'Wartet', hold: 'Hält Stellung', move: 'Fliegt', amove: 'Angriffsmarsch', attack: 'Greift an', harvest: 'Baut ab', return: 'Liefert', build: 'Baut', board: 'Entert' };
+    const O = { idle: 'Wartet', hold: 'Hält Stellung', move: 'Fliegt', amove: 'Angriffsmarsch', attack: 'Greift an', harvest: 'Baut ab', return: 'Liefert', build: 'Baut', board: 'Entert', explore: 'Erkundet' };
     if (d.cmdr) h += '<div class="cmdr">★ ' + esc(L(d.cmdr)) + '</div>';
     else if (u.hero) h += '<div class="cmdr">' + esc(qt(L(u.hero))) + '</div>';
     if (u.ion) h += '<div class="sub" style="color:var(--acc2)">' + L('Im Ionennebel: Schilde aus, Sicht nur im Nahbereich – für Feinde erst aus der Nähe zu sehen.') + '</div>';
@@ -781,7 +796,7 @@ function setPaused(p, remote) {
   if (!p) { $('settings').hidden = true; $('help').hidden = true; inputReset(); }
   else if (mp) { $('pNote').hidden = false; $('pNote').textContent = remote ? L('Dein Mitspieler hat pausiert. »Weiter« setzt auf beiden Geräten fort.') : L('Die Pause gilt auch für deinen Mitspieler.'); if (remote) SND.play('click'); }
   else { const ok = saveNow(); $('pNote').hidden = false; $('pNote').textContent = ok ? L('Gespeichert. Im Hauptmenü geht es mit »Fortsetzen« weiter.') : L('Speichern ist hier nicht möglich.'); }
-  if (p) misPauseLog();
+  if (p) { misPauseLog(); if (mp) $('pSaveRow').hidden = true; else pauseSlots(); }
   setText('pQuit', L(mp ? 'Gefecht verlassen' : UI.kind === 'mis' ? 'Kampagne' : UI.kind === 'cq' ? 'Rückzug' : 'Hauptmenü'));
 }
 /* Einstellungen */
@@ -913,6 +928,32 @@ function openReward() {
   }
   $('docLater').hidden = true;
   $('doctrine').hidden = false; UI.slow = UI.kind !== 'mp';
+}
+/* Lade-Fenster: automatische Sicherung und drei Plätze mit Karte, Fraktion, Spielzeit und Datum */
+function slotLine(d) {
+  if (!d) return { t: L('Leer'), s: '' };
+  const m = d.meta || {}, F = FACTIONS[m.fac], mins = Math.floor((m.t || 0) / 60), MIN = ' min' + ' · ', date = new Date(m.date || (d.ui && d.ui.t) || Date.now());
+  const kind = { skirmish: 'Gefecht', sandbox: 'Übungsplatz', waves: 'Wellen', mis: 'Kampagne', cq: 'Conquest' }[m.kind || (d.ui && d.ui.kind)] || 'Gefecht';
+  return { t: (m.map ? L(m.map) : L(kind)) + (F ? ' · ' + L(F.name) : ''), s: L(kind) + ' · ' + mins + MIN + date.toLocaleDateString(I18N.lang === 'en' ? 'en-GB' : 'de-AT') + ' ' + date.toLocaleTimeString(I18N.lang === 'en' ? 'en-GB' : 'de-AT', { hour: '2-digit', minute: '2-digit' }) };
+}
+function openLoad() {
+  const box = $('loadList'); box.textContent = '';
+  const add = (title, d, onLoad, onDel) => {
+    const row = document.createElement('div'); row.className = 'slotRow' + (d ? '' : ' empty'); const ln = slotLine(d);
+    row.innerHTML = '<div class="info"><b></b><small></small></div>'; row.querySelector('b').textContent = title + ' — ' + ln.t; row.querySelector('small').textContent = ln.s;
+    if (d) { const b = document.createElement('button'); b.className = 'key arm'; b.textContent = L('Laden'); b.addEventListener('click', () => { $('loadWin').hidden = true; launch(onLoad); }); row.appendChild(b); const x = document.createElement('button'); x.className = 'key'; x.textContent = '✕'; x.title = L('Löschen'); x.addEventListener('click', () => { onDel(); SND.play('click'); openLoad(); menuRender(); }); row.appendChild(x); }
+    box.appendChild(row);
+  };
+  add(L('Automatisch'), readSave(), () => continueGame(), clearSave);
+  for (const n of [1, 2, 3]) add(L('Platz {0}', n), readSlot(n), () => continueGame(n), () => clearSlot(n));
+  $('loadWin').hidden = false;
+}
+/* Pausenmenü: Speicherplätze beschriften (belegt mit Spielzeit), Zeile nur, wo Speichern geht */
+function pauseSlots() {
+  const okKind = UI.kind === 'skirmish' || UI.kind === 'sandbox' || UI.kind === 'waves';
+  $('pSaveRow').hidden = !okKind;
+  if (!okKind) return;
+  for (const n of [1, 2, 3]) { const d = readSlot(n); setText('pSave' + n, L('Platz {0}', n) + (d && d.meta ? ' · ' + Math.floor((d.meta.t || 0) / 60) + ' min' : ' · ' + L('leer'))); }
 }
 function menuRender() {
   const d = readSave();

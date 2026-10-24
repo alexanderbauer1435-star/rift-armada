@@ -35,6 +35,7 @@ scene.add(new THREE.HemisphereLight('#3a4a7a', '#120a18', 0.5));
 }
 const composer = new EffectComposer(renderer); composer.addPass(new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.4, 1.25); composer.addPass(bloom); composer.addPass(new OutputPass());
+const SCALE = +(new URLSearchParams(location.search).get('scale') || window.FXLAB_SCALE || 1); renderer.setPixelRatio(SCALE); composer.setPixelRatio(SCALE); FX.setPixelRatio(SCALE);
 function resize() { const w = view.clientWidth, h = view.clientHeight; renderer.setSize(w, h, false); composer.setSize(w, h); camera.aspect = w / h; camera.updateProjectionMatrix(); bloom.resolution.set(w / 2, h / 2); }
 window.addEventListener('resize', resize); resize();
 function setCam(cx, cy, dist) { const tilt = 0.95; camera.position.set(cx, Math.sin(tilt) * dist, cy + Math.cos(tilt) * dist); camera.lookAt(cx, 0, cy); }
@@ -63,8 +64,8 @@ function mkG() {
   const g = { time: 0, byId: new Map(), ships: [], bldgs: [], proj: [], strikes: [], flares: [], spores: [], wave: null, map: { w: 2000, h: 2000 }, players: [{ faction: 'alliance', color: '#5fb8ff' }, { faction: 'brood', color: '#8be04a' }, { faction: 'legion', color: '#f2c14e' }] };
   const add = o => { g.byId.set(o.id, o); (o.k === 2 ? g.bldgs : g.ships).push(o); return o; };
   add({ k: 1, id: 1, x: -170, y: 60, ang: -0.3, v: 0, owner: 0, def: { r: 14, len: 38, wpn: [W_BEAM, W_BEAM] }, beams: null, dead: false });
-  add({ k: 1, id: 2, x: 150, y: -40, ang: Math.PI + 0.4, v: 0, owner: 1, def: { r: 14, len: 36, wpn: [] }, dead: false });
-  add({ k: 1, id: 3, x: 60, y: 120, ang: 2.5, v: 0, owner: 1, def: { r: 10, len: 26, wpn: [] }, dead: false });
+  add({ k: 1, id: 2, x: 150, y: -40, ang: Math.PI + 0.4, v: 0, owner: 1, shield: 100, def: { r: 14, len: 36, wpn: [] }, dead: false });
+  add({ k: 1, id: 3, x: 60, y: 120, ang: 2.5, v: 0, owner: 1, shield: 0, derelict: true, def: { r: 10, len: 26, wpn: [] }, dead: false });
   add({ k: 1, id: 4, x: 220, y: 90, ang: 1.8, v: 0, owner: 1, def: { r: 10, len: 26, wpn: [] }, dead: false });
   add({ k: 2, id: 5, x: -200, y: -140, lv: 2, owner: 2, def: { r: 40, lv: [{ wpn: [W_LANCE] }, { wpn: [W_LANCE, W_PRISM] }] }, beams: null, dead: false });
   add({ k: 1, id: 6, x: -40, y: -60, ang: 0.6, v: 0, owner: 0, def: { r: 20, len: 56, wpn: [W_PRISM, W_WARD] }, beams: null, dead: false });
@@ -116,6 +117,12 @@ const SC = {
       { at: 0.5, ev: { t: 'bdie', x: 0, y: 0, r: 60, owner: 2 } }, { at: 0.8, ev: { t: 'strike', x: 150, y: 80, r: 150 } }],
     step: (g, dt) => { for (const q of g.proj) { q.x += Math.cos(q.ang) * q.sp * dt; q.y += Math.sin(q.ang) * q.sp * dt; } },
     times: [1.0, 2.0]
+  },
+  /* Dauerfeuer auf Schilde: Kuppel muss ruhig bleiben (Auffrischen statt Stapeln); das herrenlose Schiff (id 3) bekommt keine Kuppel */
+  shieldfire: {
+    ev: [{ at: 0, do: g => { g.byId.get(1).beams = [{ tid: 2, t: 1, extra: null }, { tid: 3, t: 1, extra: null }]; g.byId.get(6).beams = [{ tid: 2, t: 1, extra: null }, null]; } }],
+    step: (g, dt) => { const n = Math.round(g.time * 60); if (n % 2 === 0) { for (const id of [2, 3]) { const t = g.byId.get(id), a = id === 2 ? Math.PI - 0.6 + Math.sin(g.time * 5) * 0.4 : -2.4; FX.event({ t: 'shield', x: t.x, y: t.y, r: t.def.r * 1.25, ang: a, owner: t.owner }, g, VIEW); } } },
+    times: [0.5, 1.5]
   },
   damage: { ev: [], step: (g, dt) => { if (Math.random() < 10 * dt) FX.spawn.smoke(-170, 60, 10, 2); if (Math.random() < 6 * dt) FX.spawn.spark(150, -40, 3, 50, '#ffd27a'); }, times: [1.5, 3] }
 };

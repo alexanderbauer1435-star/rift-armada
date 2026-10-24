@@ -7,8 +7,10 @@
    und den Spielzuständen (s.beams, g.proj, g.strikes, g.flares, g.spores, g.wave.open) neu geschrieben. Partikelbudget
    je Detailstufe: 4 000 / 1 500 / 600; ist ein Vorrat voll, verdrängt Neues das Älteste.
    Ruhig und lesbar: Kerne hell (Bloom ab 1,25), Hüllen und Glühen unter 1, kein Dauerblinken.
+   setPixelRatio(k): Render-Skalierung des Kerns (optional). Größen sind Welteinheiten und skalieren von selbst; die
+   Shader lesen die Höhe des Render-Ziels selbst und klammern zu dünne Linien/Partikel (kein Flimmern bei 0,6).
    ===================================================================== */
-import { useThree, makeAtlas, SpriteBuf, QuadBuf, RingBuf, ChunkBuf, DomeBuf, DiscBuf, TILE, QMODE, DMODE } from './buffers.js';
+import { useThree, makeAtlas, SpriteBuf, QuadBuf, RingBuf, ChunkBuf, DomeBuf, DiscBuf, TILE, QMODE, DMODE, SCREEN } from './buffers.js';
 import { Pool, SP, QP, RP, CP, DP, KP, CM, stepSprites, stepQuads, stepRings, stepChunks, stepDomes, stepDiscs } from './particles.js';
 
 const TAU = Math.PI * 2;
@@ -36,14 +38,15 @@ export function init(scene, THREE, kitMats, d) {
   T = THREE; useThree(THREE);
   atlas = makeAtlas();
   root = new T.Group(); root.name = 'effects'; root.matrixAutoUpdate = false; scene.add(root);
-  B.smoke = new SpriteBuf(CAP[1] + 120, atlas, false, 8);
+  B.smoke = new SpriteBuf(CAP[1] + 120, atlas, 'normal', 8);
+  B.fire = new SpriteBuf(CAP[0], atlas, 'premul', 9);
   B.chunk = new ChunkBuf(CAP[3] + 60, 'debris', 0);
   B.rock = new ChunkBuf(40, 'rock', 0);
   B.caps = new ChunkBuf(160, 'capsule', 0);
   B.disc = new DiscBuf(CAP[6] + 80, 5);
   B.ring = new RingBuf(CAP[4] + 40, 6);
   B.quad = new QuadBuf(CAP[2] + 700, 10);
-  B.spr = new SpriteBuf(CAP[0] + 600, atlas, true, 11);
+  B.spr = new SpriteBuf(CAP[0] + 600, atlas, 'add', 11);
   B.dome = new DomeBuf(CAP[5] + 16, 12);
   for (const k in B) root.add(B[k].mesh);
   P.spr = new Pool(CAP[0], SP.F); P.smoke = new Pool(CAP[1], SP.F); P.quad = new Pool(CAP[2], QP.F); P.chunk = new Pool(CAP[3], CP.F);
@@ -55,9 +58,12 @@ export function setDetail(d) {
   if (!P.spr) return;   /* vor init: nur merken */
   const L = LIM[detail]; P.spr.lim = L[0]; P.smoke.lim = L[1]; P.quad.lim = L[2]; P.chunk.lim = L[3]; P.ring.lim = L[4]; P.dome.lim = L[5]; P.disc.lim = L[6];
 }
+/* Render-Skalierung des Kerns (0,5…2). Die Mindestbreite gilt in Pixeln des Render-Ziels; bei kleiner Skalierung
+   etwas breiter, damit dünne Strahlen und Funken nicht unter einen Pixel fallen und flimmern. */
+export function setPixelRatio(k) { k = Math.max(0.25, +k || 1); SCREEN.uMinPx.value = k < 0.9 ? 1.4 : 1.25; }
 export function clear() { for (const k in P) P[k].clear(); later = []; }
 /* Anzahl lebender Partikel und Draw-Calls (für das Labor und die Leistungsanzeige) */
-export function stats() { let n = 0; for (const k in P) n += P[k].count; let dc = 0; for (const k in B) if (B[k].mesh.visible) dc++; return { particles: n, drawCalls: dc, spr: B.spr.n, quad: B.quad.n, smoke: B.smoke.n, chunk: B.chunk.n, ring: B.ring.n, disc: B.disc.n, dome: B.dome.n }; }
+export function stats() { let n = 0; for (const k in P) n += P[k].count; let dc = 0; for (const k in B) if (B[k].mesh.visible) dc++; return { particles: n, drawCalls: dc, spr: B.spr.n, fire: B.fire.n, quad: B.quad.n, smoke: B.smoke.n, chunk: B.chunk.n, ring: B.ring.n, disc: B.disc.n, dome: B.dome.n }; }
 
 /* ------------------------------------------------------------ Partikel erzeugen (Spielkoordinaten x, y) */
 function spr(pool, x, h, z, vx, vh, vz, life, s0, s1, c, a0, tile, cmode, drag, mul = 1, rotv = 0, fade = 1) {
@@ -109,8 +115,8 @@ function fire(x, y, r, life, n, h = H.proj, spread = 0.7) {
 function smoke(x, y, r, n, life = 1.6, h = H.proj, vh = 9) {
   n = Math.round(n * K);
   for (let i = 0; i < n; i++) {
-    const a = Math.random() * TAU, dd = Math.random() * r * 0.6, v = rnd(8, 26), sh = rnd(0.09, 0.19);
-    spr(P.smoke, x + Math.cos(a) * dd, h + rnd(0, r * 0.3), y + Math.sin(a) * dd, Math.cos(a) * v, vh * rnd(0.6, 1.4), Math.sin(a) * v, life * rnd(0.6, 1.4), r * rnd(0.4, 0.7), r * rnd(1.3, 2.2), [sh * 1.05, sh * 0.95, sh * 0.9], rnd(0.5, 0.75), TILE.smoke, CM.smoke, 0.8, 1, rnd(-0.6, 0.6));
+    const a = Math.random() * TAU, dd = Math.random() * r * 0.6, v = rnd(8, 26), sh = rnd(0.035, 0.075);
+    spr(P.smoke, x + Math.cos(a) * dd, h + rnd(0, r * 0.3), y + Math.sin(a) * dd, Math.cos(a) * v, vh * rnd(0.6, 1.4), Math.sin(a) * v, life * rnd(0.6, 1.4), r * rnd(0.4, 0.7), r * rnd(1.3, 2.2), [sh * 1.2, sh * 0.95, sh * 0.75], rnd(0.5, 0.75), TILE.smoke, CM.smoke, 0.8, 1, rnd(-0.6, 0.6));
   }
 }
 function debris(x, y, n, speed, r, h = H.proj, glowK = 1) {
@@ -125,7 +131,14 @@ function debris(x, y, n, speed, r, h = H.proj, glowK = 1) {
     d[o + CP.t] = 0; d[o + CP.life] = rnd(1.4, 3.2); d[o + CP.s] = rnd(0.6, 1.6) * Math.max(0.6, Math.min(2.2, r / 14)); d[o + CP.glow] = glowK * rnd(0.5, 1); d[o + CP.shade] = rnd(0.07, 0.2);
   }
 }
+/* Schildkuppel: trifft ein weiterer Schuss dieselbe Kuppel, wird die vorhandene aufgefrischt statt eine zweite
+   darübergelegt (sonst addieren sich bei Dauerfeuer Dutzende Kuppeln zu Weiß) */
 function dome(x, y, r, ang, hex, life = 0.32) {
+  const D = P.dome.d, F = DP.F;
+  for (let i = 0; i < P.dome.cap; i++) {
+    if (!P.dome.on[i]) continue; const o = i * F;
+    if (Math.abs(D[o + DP.x] - x) < r * 0.3 && Math.abs(D[o + DP.z] - y) < r * 0.3) { D[o + DP.hx] = Math.cos(ang); D[o + DP.hz] = Math.sin(ang); D[o + DP.t] = Math.min(D[o + DP.t], D[o + DP.life] * 0.15); return; }
+  }
   const j = P.dome.alloc(); if (j < 0) return;
   const d = P.dome.d, o = j * DP.F, c = col(hex);
   d[o + DP.x] = x; d[o + DP.h] = H.dome; d[o + DP.z] = y; d[o + DP.r] = r; d[o + DP.hx] = Math.cos(ang); d[o + DP.hz] = Math.sin(ang);
@@ -162,6 +175,12 @@ export const spawn = {
 };
 
 /* ------------------------------------------------------------ Ereignisse */
+/* Entität am Ereignisort (Schildereignisse tragen nur die Position des Ziels) */
+function targetAt(g, x, y) {
+  if (g.ships) for (const u of g.ships) if (u.x === x && u.y === y) return u;
+  if (g.bldgs) for (const b of g.bldgs) if (b.x === x && b.y === y) return b;
+  return null;
+}
 const HIT = { beam: ['#bfe9ff', 90, 4], kin: ['#ffb070', 110, 6], rail: ['#dff4ff', 180, 10], torp: ['#ffb060', 120, 10], acid: ['#b4ff3c', 70, 6], bite: ['#ff6a8a', 80, 5], rock: ['#c9b9a0', 80, 5], pd: ['#ffe68c', 60, 3] };
 /* Sichtbarkeit wie R.consume: Ereignisse mit Ort nur, wenn der Ort sichtbar ist (Ausnahmen: weithin sichtbare) */
 const LOUD = new Set(['bdie', 'attack', 'strike', 'superfire', 'supercharged', 'gateLance', 'gateStorm', 'wake', 'siteWon', 'gateOn', 'breach', 'gateDark']);
@@ -189,7 +208,7 @@ export function event(e, g, view) {
       else { const d = HIT[k] || HIT.kin; spark(e.x, e.y, d[2], d[1], d[0], k === 'acid' ? 0.5 : 0.4, hh, 1.5, 1.4); flash(e.x, e.y, k === 'rail' ? 10 : k === 'beam' ? 6 : 7, d[0], k === 'rail' ? 0.2 : 0.14, hh, k === 'rail' ? TILE.star : TILE.glow, k === 'rail' ? 1.3 : 1.1); }
       break;
     }
-    case 'shield': dome(e.x, e.y, e.r || 16, e.ang || 0, pc(e.owner)); break;
+    case 'shield': { const t = g ? targetAt(g, e.x, e.y) : null; if (t && (t.derelict || t.dead || (t.k === 1 && !(t.shield > 0) && !(t.abT && t.abT.invuln > 0) && !(t.dome > 0)))) break; dome(e.x, e.y, e.r || 16, e.ang || 0, pc(e.owner)); break; }
     case 'shdown': ring(e.x, e.y, (e.r || 16) * 1.4, '#8fe3ff', 0.5, 2.5); break;
     case 'shot':
       if (e.kind === 'rail') { flash(e.x, e.y, 12, '#dff4ff', 0.15, H.proj, TILE.star, 1.4); glow(e.x, e.y, H.proj, 20, 36, '#9fd0ff', 0.25, 0.5); }
@@ -247,7 +266,7 @@ export function frame(g, dt, time, view, cam) {
   /* zeitversetzte Wirkungen */
   if (later.length) { let w = 0; for (let i = 0; i < later.length; i++) { const q = later[i]; if (time >= q.at) q.fn(); else later[w++] = q; } later.length = w; }
   for (const k in B) B[k].begin(time);
-  stepSprites(P.spr, dt, B.spr); stepSprites(P.smoke, dt, B.smoke); stepQuads(P.quad, dt, B.quad); stepRings(P.ring, dt, B.ring);
+  stepSprites(P.spr, dt, B.spr, B.fire); stepSprites(P.smoke, dt, B.smoke); stepQuads(P.quad, dt, B.quad); stepRings(P.ring, dt, B.ring);
   stepChunks(P.chunk, dt, B.chunk); stepDomes(P.dome, dt, B.dome); stepDiscs(P.disc, dt, B.disc);
   if (g) {
     beams(g, dt, time, view);

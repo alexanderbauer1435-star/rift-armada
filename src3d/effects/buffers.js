@@ -8,6 +8,10 @@
    - DomeBuf     Halbkugeln mit Fresnel und Trefferfleck (Schildtreffer)
    - DiscBuf     Bodenscheiben mit Mustern je Modus (Sporenteppich, Riss, Eruption, Wirbel, Brutsturm)
    Jeder Puffer wird je Frame neu gefüllt: begin() → write…() → flush(). Koordinaten sind Three-Welt (x, Höhe, z).
+   Bildschirmmaß: alle Größen sind Welteinheiten, gehen also mit Zoom und Render-Skalierung mit. Damit bei kleiner
+   Render-Auflösung (Skalierung 0,6) nichts flimmert, klammern die Shader Breiten/Größen unter einer Mindestpixelzahl
+   (SCREEN.uMinPx, in Pixeln des Render-Ziels) und senken dafür die Deckkraft (gleiche Lichtmenge, kein Unterpixel-Flackern).
+   Die Höhe des Render-Ziels liest onBeforeRender selbst (Composer-Ziel oder Zeichenpuffer).
    ===================================================================== */
 let T = null;
 export function useThree(three) { T = three; }
@@ -39,6 +43,17 @@ export function makeAtlas() {
 }
 
 /* ------------------------------------------------------------ gemeinsames */
+/* gemeinsame Bildschirm-Uniforms aller Effekt-Shader */
+export const SCREEN = { uViewH: { value: 720 }, uMinPx: { value: 1.25 } };
+let vsz = null;
+/* Höhe des aktuellen Render-Ziels in Pixeln (Composer-Puffer bzw. Zeichenpuffer) vor dem Zeichnen übernehmen */
+function trackViewport(obj) {
+  obj.onBeforeRender = (renderer) => {
+    const rt = renderer.getRenderTarget();
+    if (rt) SCREEN.uViewH.value = rt.height;
+    else { if (!vsz) vsz = new T.Vector2(); renderer.getDrawingBufferSize(vsz); SCREEN.uViewH.value = vsz.y; }
+  };
+}
 function dyn(arr, size) { const a = new T.InstancedBufferAttribute(arr, size); a.setUsage(T.DynamicDrawUsage); return a; }
 function upload(attr, n, size) { attr.clearUpdateRanges(); attr.addUpdateRange(0, n * size); attr.needsUpdate = true; }
 function planeGeo() {
@@ -46,47 +61,60 @@ function planeGeo() {
   g.setAttribute('position', p.attributes.position); g.setAttribute('uv', p.attributes.uv); g.setIndex(p.index);
   return g;
 }
-function mesh(geo, mat, order) { const m = new T.Mesh(geo, mat); m.frustumCulled = false; m.renderOrder = order; m.matrixAutoUpdate = false; return m; }
+function mesh(geo, mat, order) { const m = new T.Mesh(geo, mat); m.frustumCulled = false; m.renderOrder = order; m.matrixAutoUpdate = false; trackViewport(m); return m; }
 
 /* ------------------------------------------------------------ Sprites */
 const SPR_VERT = `
-attribute vec3 iPos; attribute vec4 iCol; attribute vec3 iPar;
-uniform float uTiles;
-varying vec2 vUv; varying vec4 vCol;
+attribute vec3 iPos; attribute vec4 iCol; attribute vec4 iPar;
+uniform float uTiles; uniform float uViewH; uniform float uMinPx;
+varying vec2 vUv; varying vec4 vCol; varying float vOcc;
 void main() {
   vec4 mv = modelViewMatrix * vec4(iPos, 1.0);
+  /* Pixel je Welteinheit an dieser Tiefe; der sichtbare Kern eines Sprites ist etwa die halbe Kachel */
+  float ppu = projectionMatrix[1][1] * 0.5 * uViewH / max(0.001, -mv.z);
+  float px = iPar.x * ppu * 0.5, k = clamp(px / (uMinPx * 1.6), 0.02, 1.0);
+  float size = iPar.x / k;
   float c = cos(iPar.y), s = sin(iPar.y);
-  mv.xy += vec2(c * position.x - s * position.y, s * position.x + c * position.y) * iPar.x;
+  mv.xy += vec2(c * position.x - s * position.y, s * position.x + c * position.y) * size;
   gl_Position = projectionMatrix * mv;
-  vUv = vec2((uv.x + iPar.z) / uTiles, uv.y); vCol = iCol;
+  vUv = vec2((uv.x + iPar.z) / uTiles, uv.y); vCol = vec4(iCol.rgb, iCol.a * k * k); vOcc = iPar.w;
 }`;
+/* mode: 'add' additiv (Glühen), 'normal' deckend (Rauch), 'premul' vormultipliert: occ 0 = additiv, 1 = deckend (Feuer, das abkühlt) */
 const SPR_FRAG = `
-uniform sampler2D uMap; varying vec2 vUv; varying vec4 vCol;
-void main() { vec4 t = texture2D(uMap, vUv); gl_FragColor = vec4(vCol.rgb * t.r, t.a * vCol.a); if (gl_FragColor.a < 0.003) discard; }`;
+uniform sampler2D uMap; uniform float uPremul; varying vec2 vUv; varying vec4 vCol; varying float vOcc;
+void main() {
+  vec4 t = texture2D(uMap, vUv); float a = t.a * vCol.a;
+  if (uPremul > 0.5) gl_FragColor = vec4(vCol.rgb * t.r * a, a * vOcc);
+  else gl_FragColor = vec4(vCol.rgb * t.r, a);
+  if (a < 0.003) discard;
+}`;
 export class SpriteBuf {
-  constructor(cap, atlas, additive, order) {
+  constructor(cap, atlas, mode, order) {
     this.cap = cap; this.n = 0;
-    this.pos = new Float32Array(cap * 3); this.col = new Float32Array(cap * 4); this.par = new Float32Array(cap * 3);
+    if (mode === true) mode = 'add'; else if (mode === false) mode = 'normal';
+    this.pos = new Float32Array(cap * 3); this.col = new Float32Array(cap * 4); this.par = new Float32Array(cap * 4);
     const g = planeGeo();
-    g.setAttribute('iPos', this.aPos = dyn(this.pos, 3)); g.setAttribute('iCol', this.aCol = dyn(this.col, 4)); g.setAttribute('iPar', this.aPar = dyn(this.par, 3));
-    const mat = new T.ShaderMaterial({ uniforms: { uMap: { value: atlas }, uTiles: { value: 8 } }, vertexShader: SPR_VERT, fragmentShader: SPR_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: additive ? T.AdditiveBlending : T.NormalBlending });
+    g.setAttribute('iPos', this.aPos = dyn(this.pos, 3)); g.setAttribute('iCol', this.aCol = dyn(this.col, 4)); g.setAttribute('iPar', this.aPar = dyn(this.par, 4));
+    const mat = new T.ShaderMaterial({ uniforms: { uMap: { value: atlas }, uTiles: { value: 8 }, uPremul: { value: mode === 'premul' ? 1 : 0 }, uViewH: SCREEN.uViewH, uMinPx: SCREEN.uMinPx }, vertexShader: SPR_VERT, fragmentShader: SPR_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: mode === 'add' ? T.AdditiveBlending : mode === 'premul' ? T.CustomBlending : T.NormalBlending });
+    if (mode === 'premul') { mat.blendEquation = T.AddEquation; mat.blendSrc = T.OneFactor; mat.blendDst = T.OneMinusSrcAlphaFactor; mat.blendSrcAlpha = T.OneFactor; mat.blendDstAlpha = T.OneMinusSrcAlphaFactor; }
     this.mesh = mesh(g, mat, order); this.geo = g;
   }
   begin() { this.n = 0; }
-  /* x, h, z Welt; size Kantenlänge; rot rad; tile Atlas-Kachel; r g b linear; a Deckkraft */
-  write(x, h, z, size, rot, tile, r, g, b, a) {
+  /* x, h, z Welt; size Kantenlänge; rot rad; tile Atlas-Kachel; r g b linear; a Deckkraft; occ Deckung (nur 'premul') */
+  write(x, h, z, size, rot, tile, r, g, b, a, occ = 0) {
     if (this.n >= this.cap || a <= 0.002 || size <= 0.01) return;
-    const i = this.n++, p = i * 3, c = i * 4;
+    const i = this.n++, p = i * 3, q = i * 4, c = i * 4;
     this.pos[p] = x; this.pos[p + 1] = h; this.pos[p + 2] = z;
-    this.par[p] = size; this.par[p + 1] = rot; this.par[p + 2] = tile;
+    this.par[q] = size; this.par[q + 1] = rot; this.par[q + 2] = tile; this.par[q + 3] = occ;
     this.col[c] = r; this.col[c + 1] = g; this.col[c + 2] = b; this.col[c + 3] = a;
   }
-  flush() { const n = this.n; this.geo.instanceCount = n; this.mesh.visible = n > 0; if (n) { upload(this.aPos, n, 3); upload(this.aCol, n, 4); upload(this.aPar, n, 3); } }
+  flush() { const n = this.n; this.geo.instanceCount = n; this.mesh.visible = n > 0; if (n) { upload(this.aPos, n, 3); upload(this.aCol, n, 4); upload(this.aPar, n, 4); } }
 }
 
 /* ------------------------------------------------------------ Quads zwischen zwei Punkten (Strahlen, Funken, Linien) */
 const QUAD_VERT = `
 attribute vec3 iA; attribute vec3 iB; attribute vec4 iCol; attribute vec2 iW;
+uniform float uViewH; uniform float uMinPx;
 varying vec2 vUv; varying vec4 vCol; varying float vMode;
 void main() {
   float k = position.x + 0.5;
@@ -94,9 +122,12 @@ void main() {
   vec3 d = iB - iA; float L = length(d); d = L > 0.0001 ? d / L : vec3(1.0, 0.0, 0.0);
   vec3 toCam = normalize(cameraPosition - p);
   vec3 side = cross(d, toCam); float sl = length(side); side = sl > 0.0001 ? side / sl : vec3(0.0, 1.0, 0.0);
-  p += side * position.y * iW.x;
+  vec4 cp = projectionMatrix * viewMatrix * vec4(p, 1.0);
+  float ppu = projectionMatrix[1][1] * 0.5 * uViewH / max(0.001, cp.w);
+  float kw = clamp(iW.x * ppu / uMinPx, 0.02, 1.0);
+  p += side * position.y * iW.x / kw;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
-  vUv = uv; vCol = iCol; vMode = iW.y;
+  vUv = uv; vCol = vec4(iCol.rgb, iCol.a * kw); vMode = iW.y;
 }`;
 const QUAD_FRAG = `
 varying vec2 vUv; varying vec4 vCol; varying float vMode;
@@ -117,7 +148,7 @@ export class QuadBuf {
     this.a = new Float32Array(cap * 3); this.b = new Float32Array(cap * 3); this.col = new Float32Array(cap * 4); this.w = new Float32Array(cap * 2);
     const g = planeGeo();
     g.setAttribute('iA', this.aA = dyn(this.a, 3)); g.setAttribute('iB', this.aB = dyn(this.b, 3)); g.setAttribute('iCol', this.aCol = dyn(this.col, 4)); g.setAttribute('iW', this.aW = dyn(this.w, 2));
-    const mat = new T.ShaderMaterial({ vertexShader: QUAD_VERT, fragmentShader: QUAD_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, side: T.DoubleSide });
+    const mat = new T.ShaderMaterial({ uniforms: { uViewH: SCREEN.uViewH, uMinPx: SCREEN.uMinPx }, vertexShader: QUAD_VERT, fragmentShader: QUAD_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, side: T.DoubleSide });
     this.mesh = mesh(g, mat, order); this.geo = g;
   }
   begin() { this.n = 0; }
@@ -133,12 +164,16 @@ export class QuadBuf {
 /* ------------------------------------------------------------ Ringe am Boden */
 const RING_VERT = `
 attribute vec2 ak; attribute vec3 iC; attribute vec2 iR; attribute vec4 iCol;
+uniform float uViewH; uniform float uMinPx;
 varying float vK; varying vec4 vCol;
 void main() {
-  float rr = iR.x + (ak.y - 0.5) * iR.y;
-  vec3 p = iC + vec3(cos(ak.x) * rr, 0.0, sin(ak.x) * rr);
-  gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
-  vK = ak.y; vCol = iCol;
+  vec3 dir = vec3(cos(ak.x), 0.0, sin(ak.x));
+  vec4 cm = projectionMatrix * viewMatrix * vec4(iC + dir * iR.x, 1.0);
+  float ppu = projectionMatrix[1][1] * 0.5 * uViewH / max(0.001, cm.w);
+  float k = clamp(iR.y * ppu / (uMinPx * 1.4), 0.02, 1.0);
+  float rr = iR.x + (ak.y - 0.5) * iR.y / k;
+  gl_Position = projectionMatrix * viewMatrix * vec4(iC + dir * rr, 1.0);
+  vK = ak.y; vCol = vec4(iCol.rgb, iCol.a * k);
 }`;
 const RING_FRAG = `
 varying float vK; varying vec4 vCol;
@@ -153,7 +188,7 @@ export class RingBuf {
     g.setAttribute('ak', new T.Float32BufferAttribute(ak, 2)); g.setIndex(idx);
     this.c = new Float32Array(cap * 3); this.r = new Float32Array(cap * 2); this.col = new Float32Array(cap * 4);
     g.setAttribute('iC', this.aC = dyn(this.c, 3)); g.setAttribute('iR', this.aR = dyn(this.r, 2)); g.setAttribute('iCol', this.aCol = dyn(this.col, 4));
-    const mat = new T.ShaderMaterial({ vertexShader: RING_VERT, fragmentShader: RING_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, side: T.DoubleSide });
+    const mat = new T.ShaderMaterial({ uniforms: { uViewH: SCREEN.uViewH, uMinPx: SCREEN.uMinPx }, vertexShader: RING_VERT, fragmentShader: RING_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, side: T.DoubleSide });
     this.mesh = mesh(g, mat, order); this.geo = g;
   }
   begin() { this.n = 0; }
@@ -197,7 +232,7 @@ export class ChunkBuf {
     this.glow = new Float32Array(cap); this.col = new Float32Array(cap * 3);
     geo.setAttribute('iGlow', this.aGlow = dyn(this.glow, 1)); geo.setAttribute('iCol', this.aCol = dyn(this.col, 3));
     const mat = new T.ShaderMaterial({ uniforms: { uLight: { value: new T.Vector3(0.5, 0.75, 0.4).normalize() } }, vertexShader: CHUNK_VERT, fragmentShader: CHUNK_FRAG });
-    this.mesh = new T.InstancedMesh(geo, mat, cap); this.mesh.frustumCulled = false; this.mesh.renderOrder = order; this.mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+    this.mesh = new T.InstancedMesh(geo, mat, cap); trackViewport(this.mesh); this.mesh.frustumCulled = false; this.mesh.renderOrder = order; this.mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
     this.M = new T.Matrix4(); this.P = new T.Vector3(); this.Q = new T.Quaternion(); this.E = new T.Euler(); this.S = new T.Vector3();
   }
   begin() { this.n = 0; }
@@ -228,8 +263,11 @@ void main() {
   float spot = pow(max(0.0, dot(n, vHit)), 16.0);
   float az = atan(n.z, n.x), el = asin(clamp(n.y, -1.0, 1.0));
   float grid = smoothstep(0.86, 1.0, max(abs(sin(az * 9.0)), abs(sin(el * 9.0)))) * 0.22 * (0.3 + spot);
-  float a = (fres * 0.45 + spot * 1.4 + grid + 0.04) * vCol.a;
-  gl_FragColor = vec4(vCol.rgb * (0.7 + 0.8 * spot + 0.3 * fres), a);
+  float a = (fres * 0.4 + spot * 0.9 + grid + 0.04) * vCol.a;
+  vec3 c = vCol.rgb * (0.75 + 0.35 * spot + 0.2 * fres);
+  /* Deckel: Beitrag je Kanal ≤ 0,55 (additiv über hellen Rümpfen/Wracks bleibt er unter der Bloom-Schwelle 1,25) */
+  float m = max(max(c.r, c.g), c.b) * a; if (m > 0.55) a *= 0.55 / m;
+  gl_FragColor = vec4(c, a);
   if (gl_FragColor.a < 0.003) discard;
 }`;
 export class DomeBuf {
@@ -239,7 +277,7 @@ export class DomeBuf {
     this.hit = new Float32Array(cap * 3); this.col = new Float32Array(cap * 4);
     geo.setAttribute('iHit', this.aHit = dyn(this.hit, 3)); geo.setAttribute('iCol', this.aCol = dyn(this.col, 4));
     const mat = new T.ShaderMaterial({ vertexShader: DOME_VERT, fragmentShader: DOME_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, side: T.FrontSide });
-    this.mesh = new T.InstancedMesh(geo, mat, cap); this.mesh.frustumCulled = false; this.mesh.renderOrder = order; this.mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+    this.mesh = new T.InstancedMesh(geo, mat, cap); trackViewport(this.mesh); this.mesh.frustumCulled = false; this.mesh.renderOrder = order; this.mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
     this.M = new T.Matrix4(); this.P = new T.Vector3(); this.Q = new T.Quaternion(); this.S = new T.Vector3();
   }
   begin() { this.n = 0; }
@@ -326,7 +364,7 @@ export class DiscBuf {
     this.mode = new Float32Array(cap); this.col = new Float32Array(cap * 4); this.par = new Float32Array(cap * 2);
     geo.setAttribute('iMode', this.aMode = dyn(this.mode, 1)); geo.setAttribute('iCol', this.aCol = dyn(this.col, 4)); geo.setAttribute('iPar', this.aPar = dyn(this.par, 2));
     this.mat = new T.ShaderMaterial({ uniforms: { uTime: { value: 0 } }, vertexShader: DISC_VERT, fragmentShader: DISC_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: T.NormalBlending, side: T.DoubleSide });
-    this.mesh = new T.InstancedMesh(geo, this.mat, cap); this.mesh.frustumCulled = false; this.mesh.renderOrder = order; this.mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
+    this.mesh = new T.InstancedMesh(geo, this.mat, cap); trackViewport(this.mesh); this.mesh.frustumCulled = false; this.mesh.renderOrder = order; this.mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
     this.M = new T.Matrix4(); this.P = new T.Vector3(); this.Q = new T.Quaternion(); this.E = new T.Euler(); this.S = new T.Vector3();
   }
   begin(time) { this.n = 0; this.mat.uniforms.uTime.value = time; }

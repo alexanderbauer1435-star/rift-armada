@@ -6,7 +6,7 @@
    (k = 1 in der Formel der Spec); in Welt-y erscheint der Boden um sin(TILT) gestaucht.
    project/unproject rechnen zwischen Welt (x, y) und CSS-Pixeln; unproject schneidet den Sehstrahl mit Y = 0 und
    klammert Strahlen über dem Horizont auf 60 Kameraabstände. shake(k) lässt die Kamera ~0,5 s zittern.
-   Außerdem: Sichtkegel (Frustum) für das Aussortieren und die Führung der Schattenkamera.
+   Außerdem: Sichtkegel (Frustum) für das Aussortieren; die Leuchten folgen dem Zielpunkt (ohne Schatten).
    ===================================================================== */
 import * as THREE from 'three';
 import { S, TILT, FOV, resize } from './scene.js';
@@ -16,7 +16,9 @@ const M = new THREE.Matrix4(), V = new THREE.Vector3(), V2 = new THREE.Vector3()
 const KEY_DIR = new THREE.Vector3(120, 160, 90).normalize(), RIM_DIR = new THREE.Vector3(-140, 60, -160).normalize(), FILL_DIR = new THREE.Vector3(-60, -40, 120).normalize();
 
 export function setCam(cx, cy, zoom, cssW, cssH, dpr) {
-  if (cssW && cssH && ((cssW | 0) !== S.cssW || (cssH | 0) !== S.cssH)) resize(cssW, cssH, dpr || S.dpr);
+  /* Größe geändert, ohne dass resize() kam: nachziehen (die Skalierung regelt scene.js, dpr wird hier nicht gebraucht) */
+  if (cssW && cssH && ((cssW | 0) !== S.cssW || (cssH | 0) !== S.cssH)) resize(cssW, cssH);
+  void dpr;
   CAM.cx = cx; CAM.cy = cy; CAM.zoom = Math.max(0.05, zoom);
   CAM.dist = cssH / (2 * CAM.tanHalf * CAM.zoom);
   place();
@@ -30,15 +32,11 @@ function place() {
   c.near = Math.max(1, d * 0.12); c.far = Math.max(12000, d * 6 + 30000);
   c.updateProjectionMatrix(); c.updateMatrixWorld(true);
   M.multiplyMatrices(c.projectionMatrix, c.matrixWorldInverse); CAM.frustum.setFromProjectionMatrix(M);
-  /* Leuchten folgen dem Zielpunkt (nur die Richtung zählt; die Schattenkarte deckt den sichtbaren Boden ab) */
+  /* Leuchten folgen dem Zielpunkt (nur die Richtung zählt) */
   const T = V2.set(CAM.cx, 0, ty), L = S.key;
   L.target.position.copy(T); L.position.copy(KEY_DIR).multiplyScalar(1600).add(T);
   S.rim.target.position.copy(T); S.rim.position.copy(RIM_DIR).multiplyScalar(1000).add(T);
   S.fill.target.position.copy(T); S.fill.position.copy(FILL_DIR).multiplyScalar(1000).add(T);
-  if (S.detail >= 2) {
-    const ext = Math.min(1400, Math.max(300, S.cssW / CAM.zoom * 0.62)), sc = L.shadow.camera;
-    if (Math.abs(sc.right - ext) > 1) { sc.left = sc.bottom = -ext; sc.right = sc.top = ext; sc.near = 100; sc.far = 3200; sc.updateProjectionMatrix(); }
-  }
 }
 /* je Bild: Wackeln abklingen lassen und neu aufstellen */
 export function updateCamera(dt) {

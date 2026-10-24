@@ -172,7 +172,14 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .tile > span { color: var(--dim); font-size: 0.86em; line-height: 1.2; margin-top: 0.15em; text-transform: none; letter-spacing: 0; }
 .tile.prime { --tc: #8fe3ff; } .tile:has(> #mConq) { --tc: #ffb86b; } .tile:has(> #mSkirm) { --tc: #4fa3ff; } .tile:has(> #mWaves) { --tc: #b4ff3c; }
 .tile:has(> #mCont) { --tc: #7ddc6b; order: -1; grid-column: 1 / -1; min-height: 4.2em; border-color: rgba(125,220,107,0.5); box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 0 24px rgba(125,220,107,0.22); }
-.mini { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.45em; }
+.slotList { display: flex; flex-direction: column; gap: 0.5em; min-width: min(30em, 86vw); }
+.slotRow { display: flex; align-items: center; gap: 0.6em; padding: 0.55em 0.7em; border: 1px solid var(--line); border-radius: 10px; background: rgba(10,18,36,0.6); }
+.slotRow .info { flex: 1; min-width: 0; }
+.slotRow .info b { display: block; letter-spacing: 0.06em; }
+.slotRow .info small { color: var(--dim); }
+.slotRow.empty { opacity: 0.55; }
+.mini { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.45em; }
+@media (max-width: 420px) { .mini { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .mini .key { flex-direction: column; gap: 0.2em; padding: 0.45em 0.3em; font-size: 0.82em; letter-spacing: 0.06em; min-height: 4.2em; background: linear-gradient(180deg, rgba(14,22,40,0.7), rgba(6,10,20,0.7)); line-height: 1.1; text-align: center; }
 .mini .key svg, .mini #mMp::before { width: 1.45em; height: 1.45em; color: var(--acc); opacity: 0.9; }
 .mini #mMp::before { content: ''; display: block; flex: none; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%238fe3ff' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='8' height='14' rx='1.5'/%3E%3Crect x='13' y='5' width='8' height='14' rx='1.5'/%3E%3Cpath d='M11 10h2M11 14h2'/%3E%3C/svg%3E") center / contain no-repeat; }
@@ -505,7 +512,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     <div class="page" id="pHome">
       <div class="homeTop"><div class="seg" id="homeLang" data-nol></div><button class="key" id="mFull" title="Vollbild"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5"/></svg><span>Vollbild</span></button></div>
       <div class="homeL">
-        <h1 id="title">Rift Armada<small>Runde 12 · Vorabfassung</small></h1>
+        <h1 id="title">Rift Armada<small>Runde 13</small></h1>
         <div class="titleLine"></div>
         <p class="fine" id="mNote" hidden></p>
       </div>
@@ -518,6 +525,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
           <div class="tile"><svg viewBox="0 0 24 24"><path d="M3 8c3-3 6-3 9 0s6 3 9 0M3 13c3-3 6-3 9 0s6 3 9 0M3 18c3-3 6-3 9 0s6 3 9 0"/></svg><button id="mWaves">Wellen</button><span>Rift Survival und Quarantine Line gegen die Brood</span></div>
         </div>
         <div class="mini">
+          <button class="key" id="mLoad"><svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg><span>Laden</span></button>
           <button class="key" id="mMp"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="14" rx="1.5"/><rect x="13" y="5" width="8" height="14" rx="1.5"/><path d="M11 10h2M11 14h2"/></svg><span>Mehrspieler</span></button>
           <button class="key" id="mSandbox"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><path d="M12 4V2M20 12h2"/></svg><span>Übungsplatz</span></button>
           <button class="key" id="mSettings"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="#04060b"/><circle cx="15" cy="12" r="2" fill="#04060b"/><circle cx="8" cy="17" r="2" fill="#04060b"/></svg><span>Einstellungen</span></button>
@@ -700,7 +708,13 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     <p class="fine" id="pNote" hidden></p>
     <div id="pLog" hidden><div class="bSec">Funkprotokoll</div><ul id="pLogList"></ul></div>
     <div class="row"><button class="key arm" id="pResume">Weiter</button><button class="key" id="pSettings">Einstellungen</button><button class="key" id="pHelp">Hilfe</button></div>
+    <div class="row" id="pSaveRow"><span class="lbl">Speichern</span><button class="key" id="pSave1">Platz 1</button><button class="key" id="pSave2">Platz 2</button><button class="key" id="pSave3">Platz 3</button></div>
     <div class="row"><button class="key" id="pRestart">Neustart</button><button class="key warn" id="pQuit">Hauptmenü</button><button class="key" id="pFull">Vollbild</button></div>
+  </div></div>
+  <div class="ovl" id="loadWin" hidden><div class="win">
+    <h2>Spielstand laden</h2>
+    <div id="loadList" class="slotList"></div>
+    <div class="row"><button class="key" id="loadClose">Zurück</button></div>
   </div></div>
   <div class="ovl" id="end" hidden><div class="win">
     <h2 id="endTitle">Sieg</h2>
@@ -744,7 +758,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     <p><b>Sonneneruption:</b> Wird 25 Sekunden vorher angekündigt. Wer dann im Freien steht, verliert Schilde und Hülle; im Schatten von Monden, Asteroiden, Stätten und Stationen ist man sicher.</p>
     <p><b>Mehrspieler:</b> Zwei Geräte mit derselben Datei, im selben WLAN oder Hotspot (oder »Über das Internet«). Ein Gerät eröffnet und zeigt einen Code, das andere scannt ihn oder fügt ihn ein und antwortet mit einem eigenen Code. In der Lobby wählt das eröffnende Gerät 1 gegen 1, Gemeinsam gegen zwei KI, 2 gegen 2 mit KI-Partnern oder Quarantine Line zu zweit. Beide Geräte rechnen dieselbe Partie; Befehle wirken einen Hauch später. Die Pause gilt für beide. Bricht die Verbindung ab, übernimmt auf Wunsch die KI die andere Seite.</p>
     <p><b>Superwaffe:</b> Mit Basis III und Labor II baubar (Reiter »Spezial«). Sie lädt lange. Exodus-Tor: versetzt alle Schiffe am Tor an einen Punkt der Karte. Massetreiber: schwerer Einschlag an einem Punkt, auch für eigene Schiffe gefährlich. Der Gegner wird gewarnt.</p>
-    <p><b>Tastatur:</b> WASD/Pfeile verschieben, Rad zoomt, Rechtsklick befiehlt, Strg+Rechtsklick Angriffsmarsch, H Halt, G Stellung, 1–5 Gruppen, Umschalt+Ziffer speichert, P Pause.</p>
+    <p><b>Tastatur:</b> WASD/Pfeile verschieben, Rad zoomt, Rechtsklick befiehlt, Strg+Rechtsklick Angriffsmarsch, H Halt, G Stellung, X Erkunden, 1–5 Gruppen, Umschalt+Ziffer speichert, P Pause.</p>
     <div class="row"><button class="key arm" id="helpClose">Schließen</button></div>
   </div></div>
   <div class="ovl" id="loading" hidden><div class="win"><h2>Lädt …</h2><p class="fine">Die Karte wird aufgebaut.</p></div></div>

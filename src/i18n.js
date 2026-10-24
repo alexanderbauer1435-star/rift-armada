@@ -42,6 +42,7 @@ const EN_PAT = [
   [/^Benötigt (.+)$/, m => 'Requires ' + L(m[1])],
   [/^Rift Armada · Fassung (\d+)$/, m => 'Rift Armada · Build ' + m[1]],
   [/^Runde (\d+) · Vorabfassung$/, m => 'Round ' + m[1] + ' · Preview'],
+  [/^Runde (\d+)$/, m => 'Round ' + m[1]],
   [/^Ausbau ([IVX]+)$/, m => 'Upgrade ' + m[1]],
   [/^Akt (\d+): (.+)$/, m => 'Act ' + m[1] + ': ' + L(m[2])],
   [/^Akt (\d+)$/, m => 'Act ' + m[1]],

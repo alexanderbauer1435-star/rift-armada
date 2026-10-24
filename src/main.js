@@ -80,11 +80,11 @@ function startSandbox() {
   beginGame({ map: 'test', seed: 1 + ((Math.random() * 1e6) | 0), players, res: { ice: 30000, ore: 20000 }, sandbox: true }, 'sandbox');
   toast(L('Übungsplatz: alles erforscht, Werft III, Zielscheiben in der Mitte. Doktrin über die Kommandobasis.'), 'good', 6000);
 }
-function continueGame() {
-  const d = readSave();
+function continueGame(slot) {
+  const d = slot ? readSlot(slot) : readSave();
   let g = null;
   try { g = d && d.game ? loadGame(d.game) : null; } catch (e) { g = null; }
-  if (!g || g.human < 0 || !g.players[g.human].alive) { clearSave(); menuRender(); const n = $('mNote'); n.textContent = L('Der Spielstand passt nicht mehr zu dieser Fassung und wurde entfernt.'); n.hidden = false; return; }
+  if (!g || g.human < 0 || !g.players[g.human].alive) { if (slot) clearSlot(slot); else clearSave(); $('loadWin').hidden = true; menuRender(); const n = $('mNote'); n.textContent = L('Der Spielstand passt nicht mehr zu dieser Fassung und wurde entfernt.'); n.hidden = false; return; }
   beginGame(d.game.opts, d.ui && (d.ui.kind === 'sandbox' || d.ui.kind === 'waves' || d.ui.kind === 'mis' || d.ui.kind === 'cq') ? d.ui.kind : 'skirmish', { g, ui: d.ui });
 }
 function startAttract() {
@@ -171,11 +171,11 @@ function frame(t) {
     if (t - _miniT > 150) { _miniT = t; R.drawMini(); }
     if (t - _hudT > 130) { _hudT = t; hudUpdate(); }
     if (run && t - UI.saveAt > AUTOSAVE_MS) { UI.saveAt = t; saveNow(); }
-    /* Bildzeiten: läuft das Spiel zu langsam, Zierrat sparen, dann die Auflösung senken */
+    /* Bildzeiten: läuft das Spiel zu langsam, Zierrat sparen, dann die Auflösung senken (nur 2D; der 3D-Renderer regelt selbst) */
     if (run) { _fAcc += dt; _fN++; }
     if (_fN >= 90 || (_fN >= 12 && _fAcc > 1.5)) {
       const avg = _fAcc / _fN; _fAcc = 0; _fN = 0;
-      if (!window.__RA_TEST && SET.qual === 'auto' && avg > 0.026) { if (R.detail > 1) { R.detail = 1; if (R.mode3d) RA3D.setDetail(1); } else if (R.qScale > 0.55) { R.qScale = Math.max(0.5, R.qScale - 0.17); R.resize(); } }
+      if (!window.__RA_TEST && SET.qual === 'auto' && !R.mode3d && avg > 0.026) { if (R.detail > 1) { R.detail = 1; if (R.mode3d) RA3D.setDetail(1); } else if (R.qScale > 0.55) { R.qScale = Math.max(0.5, R.qScale - 0.17); R.resize(); } }
     }
   }
 }
@@ -195,7 +195,10 @@ function frame(t) {
   $('mWaves').addEventListener('click', () => { SND.init(); SND.play('click'); if (MENU.mode === 'skirmish') MENU.mode = 'quarantine'; menuPage('setup'); });
   $('mBack').addEventListener('click', () => { SND.play('click'); menuPage('home'); });
   $('mStart').addEventListener('click', () => { SND.init(); launch(startSkirmish); });
-  $('mCont').addEventListener('click', () => { SND.init(); launch(continueGame); });
+  $('mCont').addEventListener('click', () => { SND.init(); launch(() => continueGame()); });
+  $('mLoad').addEventListener('click', () => { SND.init(); SND.play('click'); openLoad(); });
+  $('loadClose').addEventListener('click', () => { $('loadWin').hidden = true; SND.play('click'); });
+  for (const n of [1, 2, 3]) $('pSave' + n).addEventListener('click', () => { const ok = saveSlot(n); toast(ok ? L('Gespeichert in Platz {0}.', n) : L('Hier kann nicht gespeichert werden.'), ok ? 'good' : 'warn', 2500); SND.play(ok ? 'click' : 'err'); pauseSlots(); });
   $('mSandbox').addEventListener('click', () => { SND.init(); launch(startSandbox); });
   $('pRestart').addEventListener('click', () => launch(() => beginGame(UI.opts, UI.kind)));
   $('pQuit').addEventListener('click', () => { if (UI.kind === 'mp' && NET.live) mpLeave(); if (UI.kind === 'mis') { toCampaign(); return; } if (UI.kind === 'cq') { cqRetreat(); return; } toMenu(); });

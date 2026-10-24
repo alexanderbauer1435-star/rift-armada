@@ -477,6 +477,7 @@ function execCmd(g, c) {
     case 'attack': { const t = g.byId.get(c.e); if (!t || t.dead || t.k === 3) return 'Nicht möglich'; const us = shipsOf(g, pi, c.u); if (!us.length) return 'Nicht möglich'; cmdAttack(g, us, t, c.sub); return null; }
     case 'harvest': { const n = g.byId.get(c.e); if (!n || n.k !== 3) return 'Nicht möglich'; const us = shipsOf(g, pi, c.u).filter(u => u.def.cargo); if (!us.length) return 'Kein Frachter'; cmdHarvest(g, us, n); return null; }
     case 'stop': cmdStop(g, shipsOf(g, pi, c.u)); return null;
+    case 'explore': { const us = shipsOf(g, pi, c.u).filter(u => u.def.role !== 'builder' && u.def.role !== 'tanker' && !u.def.node); if (!us.length) return 'Nicht möglich'; for (const u of us) { u.hold = false; u.o = { t: 'explore' }; u.path = null; u.tgt = 0; } return null; }
     case 'hold': cmdHold(g, shipsOf(g, pi, c.u), c.on); return null;
     case 'stance': cmdStance(g, shipsOf(g, pi, c.u), c.v); return null;
     case 'group': cmdGroup(g, shipsOf(g, pi, c.u), c.n); return null;

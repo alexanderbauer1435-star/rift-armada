@@ -22,7 +22,7 @@ Each faction has its own stations with three visible upgrade levels, research, d
 PLENTY TO DO
 • Campaign "Quarantine": training, prologue, five acts and a bonus mission with briefings, radio messages and decisions that carry through to the finale
 • Conquest of the Caldera: a campaign on a map of twenty systems – chapters for each faction, two advisors, a nemesis, Builder logs and three endings
-• Skirmish against the AI on several maps at three difficulty levels
+• Skirmish with up to eight players and free teams on seven maps in three sizes – bases in sheltered pockets, corridors, asteroid belts and nebula zones; map layout preview in the menu
 • Rift Survival and Quarantine Line: endless Brood waves, alone or together with AI allies
 • Training range with everything unlocked
 
@@ -34,6 +34,8 @@ IN BATTLE
 
 MORE
 • Multiplayer directly from device to device – no server, no account (1 vs 1, co-op against the AI, 2 vs 2, Quarantine)
+• Fully 3D with procedural models, resolution adapts to your device (switchable to 2D)
+• Auto-explore, three save slots
 • English and German
 
 An invented universe with fictional factions. The app collects no data.

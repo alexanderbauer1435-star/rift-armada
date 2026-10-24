@@ -170,6 +170,14 @@ function updateShip(g, u, dt) {
       if (!warship && u.def.cargo && g.tick % 30 === 0) { const n = pickNode(g, u.owner, u.x, u.y, 1200) || nearestNode(g, u.x, u.y, null, 1800); if (n) u.o = { t: 'harvest', nid: n.id, auto: 1 }; }
       break;
     }
+    case 'explore': {
+      /* Erkunden: nächste unerkundete Stelle anfliegen, angekommen oder schon erkundet → nächste; nicht anhalten zum
+         Kämpfen (Aufklärer sollen sehen, nicht sterben). Bei unter 45 % Hülle zurück zur Basis und warten. Bekannte feindliche Geschütze und Wächter-Stätten werden umflogen. */
+      if (u.hull < u.hullMax * 0.45) { const b = g.bldgs.find(x => !x.dead && x.owner === u.owner && x.role === 'base') || g.bldgs.find(x => !x.dead && x.owner === u.owner); if (b) { u.o = { t: 'move', x: b.x + (u.id % 7 - 3) * 30, y: b.y + b.def.r + 60 }; u.path = null; } else setIdle(u); break; }
+      if (o.x === undefined || (g.tick + u.id) % 15 === 0 && exploredAt(g, u.owner, o.x, o.y)) { const q = exploreTarget(g, u); if (!q) { setIdle(u); break; } o.x = q.x; o.y = q.y; u.path = null; }
+      if (goTo(g, u, o.x, o.y, dt, 40)) { o.x = undefined; }
+      break;
+    }
     case 'move': case 'amove': {
       if (o.t === 'amove' && warship && u.stance !== 2 && (g.tick + u.id) % 5 === 0) {
         const t = acquire(g, u, def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor));
@@ -755,4 +763,32 @@ function nearestNetNode(g, pi, x, y) {
   for (const b of g.bldgs) { if (b.dead || b.owner !== pi || !b.done || b.off) continue; const d = hyp(b.x - x, b.y - y); if (d < bd) { bd = d; best = b; } }
   for (const u of g.ships) { if (u.dead || u.owner !== pi || !u.def.node || u.derelict) continue; const d = hyp(u.x - x, u.y - y); if (d < bd) { bd = d; best = u; } }
   return best;
+}
+
+/* ------------------------------------------------------------------ Erkunden
+   Ziel = unerkundete Sichtzelle mit der kleinsten Bewertung: Entfernung, Abzug in Flugrichtung (weniger Zickzack),
+   Aufschlag nahe den Zielen anderer eigener Erkunder (sie verteilen sich), Aschenebel und Rand gemieden. Alles erkundet:
+   eine zufällige weit entfernte Stelle (Patrouille). Deterministisch (g.rng), damit es im Mehrspieler gleich läuft. */
+function exploredAt(g, pi, x, y) { const p = g.players[pi], cx = clamp((x / VIS) | 0, 0, g.vw - 1), cy = clamp((y / VIS) | 0, 0, g.vh - 1); return !!p.explored[cy * g.vw + cx]; }
+function exploreTarget(g, u) {
+  const p = g.players[u.owner], ex = p.explored, vw = g.vw, vh = g.vh, m = g.map, hx = dcos(u.ang), hy = dsin(u.ang);
+  const others = []; for (const s of g.ships) if (s !== u && !s.dead && s.owner === u.owner && s.o.t === 'explore' && s.o.x !== undefined) others.push(s.o);
+  /* Gefahren meiden: bekannte feindliche Geschützstationen (auf erkundetem Grund) und große Stätten mit Wächtern */
+  const danger = [];
+  for (const b of g.bldgs) if (!b.dead && foes(g, u.owner, b.owner) && exploredAt(g, u.owner, b.x, b.y)) { const w = lvOf(b).wpn; if (w.length) danger.push([b.x, b.y, b.def.r + Math.max(...w.map(q => q.range)) + 220]); }
+  for (const st of g.sites) if (st.kind !== 'ruin') danger.push([st.x, st.y, st.r + 380]);
+  let best = null, bs = 1e18;
+  for (let cy = 0; cy < vh; cy += 2) for (let cx = 0; cx < vw; cx += 2) {
+    if (ex[cy * vw + cx]) continue;
+    const x = (cx + 0.5) * VIS, y = (cy + 0.5) * VIS;
+    if (inAsh(m, x, y)) continue;
+    let bad = false; for (const d of danger) if (hyp(d[0] - x, d[1] - y) < d[2]) { bad = true; break; } if (bad) continue;
+    const dx = x - u.x, dy = y - u.y, d = Math.sqrt(dx * dx + dy * dy);
+    let sc = d - (dx * hx + dy * hy) * 0.35;
+    for (const o of others) { const e = hyp(o.x - x, o.y - y); if (e < 700) sc += (700 - e) * 1.5; }
+    if (sc < bs) { bs = sc; best = { x, y }; }
+  }
+  if (best) return best;
+  for (let k = 0; k < 8; k++) { const x = EDGE + 150 + g.rng() * (m.w - 2 * EDGE - 300), y = EDGE + 150 + g.rng() * (m.h - 2 * EDGE - 300); if (hyp(x - u.x, y - u.y) > 900 && !inAsh(m, x, y)) return { x, y }; }
+  return null;
 }

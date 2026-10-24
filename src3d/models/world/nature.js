@@ -385,3 +385,106 @@ registerW('ash', (M, o) => {
   const fl = new THREE.Points(fg, MAT.flake()); fl.userData.bob = { amp: 3, speed: 0.25, y0: 0 }; g.add(fl);
   return g;
 });
+
+/* ------------------------------------------------------------ Nebelzone (neb)
+   Runde Zone mit Radius o.r, Art o.neb = 'ion' (violett-blauer Ionennebel) oder 'ash' (rotbraune Aschewolke).
+   Gedämpfter Schleier statt leuchtender Wolke, passend zum fast schwarzen Hintergrund; Schiffe darin bleiben sichtbar.
+   Alle Flächen liegen flach unter der Spielebene (y −8 … −5) und mischen mit MAX statt additiv: wo mehrere Zonen
+   sich zu Bändern überlappen, gewinnt je Pixel nur die hellste – keine aufaddierten hellen Stellen, die Kette wirkt
+   wie eine Fläche. Aufbau: Grundschleier (Rauschen, zum Rand hin etwas dichter, dann steil auf null – kein
+   eigener Saum, sonst zeichnen Bänder jeden Kreis nach), zwei Schlierenlagen, die gegenläufig langsam drehen; ion dazu wenige Funkenpunkte und ein,
+   zwei feine Blitze, die selten und langsam auf- und abschwellen (kein Blinken); ash dazu glimmende Glutflecken
+   (atmen langsam) und Ascheflocken (treiben auf und ab). Etwa 160–250 Dreiecke je Zone. */
+/* Grundschleier: rgb weiß, Alpha = Helligkeit (vormultipliziert) */
+function veilCanvas(seed, S = 256) {
+  return cnv(S, S, (x) => {
+    const d = x.createImageData(S, S), p = d.data, c = S / 2;
+    for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
+      const u = (i - c) / c, v = (j - c) / c, t = Math.hypot(u, v), k = (j * S + i) * 4;
+      if (t >= 1) { p[k + 3] = 0; continue; }
+      /* innen leicht gewölkt, zum Rand hin etwas dichter (Rand bleibt erkennbar), ab 0,9 r steil auf null:
+         kein eigener Saum, damit in Bändern die inneren Kreisbögen unter der Nachbarzone verschwinden */
+      const n = fbm(u * 2.2, v * 2.2, 0.5, seed, 4), body = 0.5 + n * 0.28;
+      const a = clamp(body * (0.8 + 0.2 * smooth(0.4, 0.88, t)) * (1 - smooth(0.88, 0.995, t)), 0, 1);
+      p[k] = p[k + 1] = p[k + 2] = 255; p[k + 3] = a * 255;
+    }
+    x.putImageData(d, 0, 0);
+  });
+}
+/* Schlieren: gestrecktes, verwirbeltes Rauschen, nur die Grate hell, zum Rand hin ausgeblendet */
+function streakCanvas(seed, S = 256) {
+  return cnv(S, S, (x) => {
+    const d = x.createImageData(S, S), p = d.data, c = S / 2;
+    for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
+      const u = (i - c) / c, v = (j - c) / c, t = Math.hypot(u, v), k = (j * S + i) * 4;
+      if (t >= 0.95) { p[k + 3] = 0; continue; }
+      /* gestreckte, verwirbelte Fahnen (weich) plus wenige feine Grate darin */
+      const w = fbm(u * 1.3, v * 1.3, 3.3, seed + 7, 3) * 1.2, f = fbm(u * 1.4 + w, v * 4.2 + w * 0.5, 1.7, seed + 3, 4);
+      const fine = smooth(0.9, 0.99, ridge(u * 2.2 + w, v * 6 + w, 2.9, seed + 5)) * 0.35;
+      const a = (smooth(0.02, 0.38, f) * 0.85 + fine * smooth(-0.1, 0.2, f)) * (1 - smooth(0.6, 0.93, t));
+      p[k] = p[k + 1] = p[k + 2] = 255; p[k + 3] = clamp(a, 0, 1) * 255;
+    }
+    x.putImageData(d, 0, 0);
+  });
+}
+const TN = {
+  veil: (i) => once('t.veil' + i, () => { const t = ctex(veilCanvas(300 + i * 17)); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t; }),
+  streak: (i) => once('t.streak' + i, () => { const t = ctex(streakCanvas(400 + i * 23)); t.wrapS = t.wrapT = THREE.ClampToEdgeWrapping; return t; })
+};
+/* MAX-Mischung: Farbe × Alpha (vormultipliziert), Ergebnis = hellerer Wert von Bild und Fläche */
+function maxMat(map, col) {
+  const m = new THREE.MeshBasicMaterial({ map, color: col, transparent: true, premultipliedAlpha: true, depthWrite: false, side: THREE.DoubleSide });
+  m.blending = THREE.CustomBlending; m.blendEquation = THREE.MaxEquation; m.blendSrc = THREE.OneFactor; m.blendDst = THREE.OneFactor;
+  return m;
+}
+const NEB = {
+  ion: { veil: '#241d52', s1: '#342a6e', s2: '#25336a', spark: '#c8b8ff', bolt: '#b4a4ff' },
+  ash: { veil: '#3c2620', s1: '#4e3c34', s2: '#454039', glow: '#62280f' }
+};
+const MN = {
+  layer: (kind, which, i) => once('m.neb' + kind + which + i, () => maxMat(which === 'veil' ? TN.veil(i) : which === 'glow' ? T.blob(i) : TN.streak(i), NEB[kind][which])),
+  spark: () => once('m.nebspark', () => new THREE.PointsMaterial({ size: 2.2, map: T.dot(), color: new THREE.Color(NEB.ion.spark).multiplyScalar(0.8), transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true })),
+  flake: () => once('m.nebflake', () => new THREE.PointsMaterial({ size: 2.4, map: T.dot(), color: new THREE.Color('#ff8a40').multiplyScalar(0.85), transparent: true, opacity: 0.7, depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true })),
+  bolt: () => once('m.nebbolt', () => new THREE.LineBasicMaterial({ color: new THREE.Color(NEB.ion.bolt).multiplyScalar(0.9), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }))
+};
+registerW('neb', (M, o) => {
+  const g = new THREE.Group(), R = o.r, kind = o.neb === 'ash' ? 'ash' : 'ion', seed = o.seed | 0, r = rng(seed * 59 + 17), P = NEB[kind];
+  const disc = once('g.disc', () => { const q = new THREE.CircleGeometry(1, 48); q.rotateX(-PI / 2); return q; });
+  const pg = once('g.plane', () => { const q = new THREE.PlaneGeometry(1, 1); q.rotateX(-PI / 2); return q; });
+  const layer = (geo, mat, s, y, spin, ord) => { const m = new THREE.Mesh(geo, mat); m.scale.setScalar(s); m.position.y = y; m.rotation.y = r() * TAU; m.userData.spin = { axis: 'y', speed: spin }; m.renderOrder = ord; g.add(m); return m; };
+  /* Grundschleier (füllt genau den Radius) und zwei Schlierenlagen */
+  layer(disc, MN.layer(kind, 'veil', seed % 2), R, -8, (r() < 0.5 ? 1 : -1) * 0.004, 1);
+  layer(disc, MN.layer(kind, 's1', seed % 3), R * 0.97, -7, 0.012 + r() * 0.006, 2);
+  layer(disc, MN.layer(kind, 's2', (seed + 1) % 3), R * 0.9, -6.5, -(0.008 + r() * 0.006), 2);
+  if (kind === 'ash') {
+    /* Glutflecken im Inneren, atmen langsam */
+    for (let i = 0; i < 3; i++) {
+      const a = r() * TAU, d = Math.sqrt(r()) * R * 0.4, s = R * (0.45 + r() * 0.3);
+      const m = layer(pg, MN.layer('ash', 'glow', i), s, -5, (r() - 0.5) * 0.02, 3); m.position.x = Math.cos(a) * d; m.position.z = Math.sin(a) * d;
+      m.userData.pulse = { amp: 0.06, speed: 0.18 + r() * 0.12, base: s };
+    }
+    /* Ascheflocken */
+    const n = Math.round(R * 0.35), pp = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const a = r() * TAU, d = Math.sqrt(r()) * R * 0.92; pp[i * 3] = Math.cos(a) * d; pp[i * 3 + 1] = r() * 12; pp[i * 3 + 2] = Math.sin(a) * d; }
+    const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
+    const fl = new THREE.Points(fg, MN.flake()); fl.userData.bob = { amp: 2.5, speed: 0.2 + r() * 0.1, y0: 0 }; fl.userData.spin = { axis: 'y', speed: 0.006 }; g.add(fl);
+  } else {
+    /* Funkenpunkte, drehen mit der inneren Schliere */
+    const n = Math.round(R * 0.18), pp = new Float32Array(n * 3);
+    for (let i = 0; i < n; i++) { const a = r() * TAU, d = Math.sqrt(r()) * R * 0.85; pp[i * 3] = Math.cos(a) * d; pp[i * 3 + 1] = -4 + r() * 6; pp[i * 3 + 2] = Math.sin(a) * d; }
+    const sg = new THREE.BufferGeometry(); sg.setAttribute('position', new THREE.BufferAttribute(pp, 3));
+    const sp = new THREE.Points(sg, MN.spark()); sp.userData.spin = { axis: 'y', speed: 0.01 }; g.add(sp);
+    /* feine Blitze: Zickzack-Linien, je Zone eigenes Material; schwellen selten und langsam auf (Periode 9–14 s) */
+    const pos = [];
+    for (let b = 0; b < 2; b++) {
+      let a = r() * TAU, d = Math.sqrt(r()) * R * 0.6, x = Math.cos(a) * d, z = Math.sin(a) * d, dir = r() * TAU;
+      for (let k = 0; k < 7; k++) { dir += (r() - 0.5) * 1.6; const l = R * (0.04 + r() * 0.05), nx = x + Math.cos(dir) * l, nz = z + Math.sin(dir) * l; pos.push(x, -3, z, nx, -3, nz); if (r() < 0.3) { const bd = dir + (r() < 0.5 ? 1 : -1) * (0.7 + r() * 0.6), bl = l * 0.7; pos.push(nx, -3, nz, nx + Math.cos(bd) * bl, -3, nz + Math.sin(bd) * bl); } x = nx; z = nz; }
+    }
+    const bg = new THREE.BufferGeometry(); bg.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    const bm = MN.bolt().clone(), per = 9 + r() * 5, ph = r() * per;
+    const bolt = new THREE.LineSegments(bg, bm); bolt.renderOrder = 4; bolt.userData.spin = { axis: 'y', speed: 0.01 };
+    bolt.onBeforeRender = () => { const t = ((performance.now() / 1000 + ph) % per) / per; bm.opacity = t < 0.14 ? 0.55 * Math.sin(t / 0.14 * PI) ** 2 : 0; };
+    g.add(bolt);
+  }
+  return g;
+});

@@ -16,7 +16,7 @@
    ab 30 % kommen über effects.spawn (falls vorhanden). Das Spiel wird nie beschrieben.
    ===================================================================== */
 import * as THREE from 'three';
-import { BUILD, BUILDB, mats, animate, bake, keepFor, flameTime, applyAim, applyCharge, farGeometry, farMaterial } from './models/kit.js';
+import { BUILD, BUILDB, mats, animate, bake, keepFor, flameTime, applyAim, applyCharge, farGeometry, farMaterial, cloneMat, cloneStation } from './models/kit.js';
 import SDATA from './models/stations.json';
 import SHIPJ from './models/ships.json';
 import { S, CAM_DIR } from './scene.js';
@@ -42,11 +42,14 @@ export function initEntities() {
 }
 
 /* ------------------------------------------------------------ Materialvarianten (zwischengespeichert je Material) */
-const VAR = new Map();
+const VAR = new WeakMap();
 function variant(m, kind, tint) {
   const key = kind + (tint ? '|' + tint : ''); let byKind = VAR.get(m); if (!byKind) VAR.set(m, byKind = {});
   if (byKind[key]) return byKind[key];
-  const c = m.clone();
+  const c = cloneMat(m);
+  /* 'inst': eigener Klon für InstancedMesh – teilen sich Instanz- und Einzel-Meshes ein Material, prüft three.js bei
+     jedem Wechsel das Shaderprogramm neu (getParameters/getProgram je Bild) */
+  if (kind === 'inst') { byKind[key] = c; return c; }
   if (kind === 'wreck') {
     if (c.color) c.color.multiplyScalar(c.isMeshBasicMaterial ? 0.12 : 0.4);
     if (c.emissiveIntensity !== undefined) c.emissiveIntensity *= 0.08;
@@ -81,21 +84,24 @@ function tplOf(def, color) {
     else if (o.isSprite || o.isPoints || o.isLine || o.isInstancedMesh) o.visible = false;
   });
   root.updateMatrixWorld(true);
-  /* Fernmodell aus einem frischen, ungebackenen Aufbau (kleine Teile fallen weg) */
-  const farGeo = farGeometry(buildShip(def, color), Math.max(1.2, def.len * 0.03));
-  t = { key, root, parts, def, t: -1, farParts: [{ node: root, geo: farGeo, mat: null, flame: false, shadow: true, order: 0, far: true }].concat(parts.filter(p => p.flame)) }; E.tpl.set(key, t); return t;
+  t = { key, root, parts, def, color, t: -1, farParts: null }; E.tpl.set(key, t); return t;
+}
+/* Fernmodell erst bei Bedarf (aus einem frischen, ungebackenen Aufbau; kleine Teile fallen weg) + die Flammen */
+function farPartsOf(t) {
+  if (!t.farParts) { const farGeo = farGeometry(buildShip(t.def, t.color), Math.max(1.2, t.def.len * 0.03)); t.farParts = [{ node: t.root, geo: farGeo, mat: null, flame: false, shadow: true, order: 0, far: true }].concat(t.parts.filter(p => p.flame)); }
+  return t.farParts;
 }
 function setOf(tpl, kind, far) {
   const key = tpl.key + '|' + kind + (far ? '|far' : '');
   let s = E.sets.get(key); if (s) return s;
-  s = { tpl, kind, far: !!far, parts: far ? tpl.farParts : tpl.parts, n: 0, cap: 0, ims: [], last: 0 };
+  s = { tpl, kind, far: !!far, parts: far ? farPartsOf(tpl) : tpl.parts, n: 0, cap: 0, ims: [], last: 0 };
   grow(s, 16); E.sets.set(key, s); return s;
 }
 function grow(s, cap) {
   const old = s.ims, keep = Math.min(s.n, s.cap);
   s.ims = []; s.cap = cap;
   s.parts.forEach((p, j) => {
-    const mat = p.far ? farMaterial(s.kind) : s.kind === 'wreck' ? variant(p.mat, 'wreck') : p.mat;
+    const mat = variant(p.far ? farMaterial(s.kind) : s.kind === 'wreck' ? variant(p.mat, 'wreck') : p.mat, 'inst');
     /* Flammen: eigene Geometrie je Menge mit Streckfaktor je Instanz (iFlame) */
     let geo = p.geo; if (p.flame) { geo = p.geo.clone(); geo.setAttribute('iFlame', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage)); }
     const im = new THREE.InstancedMesh(geo, mat, cap); im.frustumCulled = false; im.castShadow = p.shadow && S.detail >= 2; im.receiveShadow = true; im.renderOrder = p.order; im.count = 0;
@@ -133,15 +139,21 @@ function angDiff(a, b) { let d = a - b; while (d > Math.PI) d -= TAU; while (d <
 /* ------------------------------------------------------------ Stationen */
 const FACS = ['alliance', 'mars', 'legion', 'nexus', 'brood', 'guardian'];
 function bdefOf(f, role) { return SDATA.bldgs.find(d => d.f === f && d.id === role) || SDATA.bldgs.find(d => d.id === role); }
-function buildStation(f, def, lv, color) {
+/* Stationsvorlage je (Fraktion, Rolle, Stufe, Farbe): einmal gebaut und gebacken, je Station nur geklont
+   (cloneStation: Geometrien geteilt, eigene Uniforms für Zielwinkel und Ladung). Vorher wurde jede Station – und
+   bei Fertigstellung und Ausbau erneut – komplett neu gebaut (15–450 ms je Station). */
+const STPL = new Map();
+function stationTpl(f, def, lv, color) {
+  const key = f + '|' + (def.id || def.role) + '|' + lv + '|' + color;
+  let T = STPL.get(key); if (T) return T;
   const fn = BUILDB[f + ':' + def.id] || BUILDB[f + ':' + def.role], M = mats(f, color);
-  let g;
-  if (fn) g = fn(M, def, lv);
-  else { g = new THREE.Group(); g.add(new THREE.Mesh(new THREE.CylinderGeometry(def.r, def.r, def.r * 0.3, 24, 1), M.hull2)); }
-  bake(g, { face: 'cam', faceDir: CAM_DIR, keep: keepFor('station', S.detail), flames: true, station: true });
-  g.traverse(o => { if (o.isMesh && o.castShadow === undefined) o.castShadow = true; if (o.isMesh && o.material.transparent) o.castShadow = false; });
-  return g;
+  if (fn) T = fn(M, def, lv);
+  else { T = new THREE.Group(); T.add(new THREE.Mesh(new THREE.CylinderGeometry(def.r, def.r, def.r * 0.3, 24, 1), M.hull2)); }
+  bake(T, { face: 'cam', faceDir: CAM_DIR, keep: keepFor('station', S.detail), flames: true, station: true });
+  T.traverse(o => { if (o.isMesh && o.castShadow === undefined) o.castShadow = true; if (o.isMesh && o.material.transparent) o.castShadow = false; });
+  STPL.set(key, T); return T;
 }
+function buildStation(f, def, lv, color) { return cloneStation(stationTpl(f, def, lv, color)); }
 function stationKey(b, color) { return (b.def.f || b.f) + '|' + b.role + '|' + b.lv + '|' + color + '|' + (b.done ? 1 : 0); }
 /* Eintrag je Station; Voll- und Fernmodell entstehen erst, wenn sie gebraucht werden */
 function stationEntry(b, color) { return { m: null, far: null, key: stationKey(b, color), f: b.def.f || b.f, def: b.def, lv: b.lv, color, done: b.done, berth: null, berthType: '', berthMats: null, berthM: null, charge: -1, aimA: undefined }; }
@@ -169,12 +181,46 @@ function berthShip(e, type, def, color) {
   if (e.berthM) { e.berth.remove(e.berthM); e.berthM = null; e.berthMats = null; }
   e.berthType = type;
   if (!type || !e.berth || !def) return;
-  const m = bake(buildShip(def, color), { face: 'up', keep: keepFor('ship', S.detail), flames: true });
+  const m = tplOf(def, color).root.clone(true);
   m.traverse(o => { if (o.isSprite || o.isPoints || (o.material && o.material.userData.isFlame)) o.visible = false; o.castShadow = false; });
   e.berthMats = remat(m, 'ghost', '', true);
   const max = (e.berth.userData.berth && e.berth.userData.berth.len) || 60, k = Math.min(1, max / def.len);
   m.scale.setScalar(k); e.berth.add(m); e.berthM = m;
 }
+
+/* ------------------------------------------------------------ Vorbauen im Leerlauf
+   Nach setGame kommen alle Schiffstypen der beteiligten Fraktionen (in Spielerfarbe) und ihre Stationen (Stufe 1)
+   in eine Warteschlange; prebuild() baut im Leerlauf (requestIdleCallback, index.js) jeweils eine Vorlage, solange
+   Zeit bleibt. So entsteht der Ruck beim ersten Auftauchen eines Typs nicht mitten im Gefecht. */
+const PRE = [], LATER = [];
+export function queuePrebuild(g) {
+  const pcol = id => { const p = g.players[id]; return p && (p.color || (p.F && p.F.team)) || '#d8d0bd'; };
+  PRE.length = 0;
+  const seen = new Set();
+  for (const p of g.players) {
+    if (!p || p.neutral) continue;
+    const f = p.faction, col = pcol(p.id); if (seen.has(f + col)) continue; seen.add(f + col);
+    const list = typeof SHIPS !== 'undefined' ? Object.values(SHIPS).filter(d => d.f === f) : SHIPJ.ships.filter(d => d.f === f);
+    for (const d of list) if (d.id && BUILD[d.id]) PRE.push(() => { const t = tplOf(d, col); warm(setOf(t, 'normal', false).ims.concat(d.role === 'fighter' ? [] : setOf(t, 'wreck', false).ims)); });
+    for (const d of SDATA.bldgs) if (d.f === f && BUILDB[f + ':' + d.id]) PRE.push(() => { const T = stationTpl(f, d, 1, col), G = cloneStation(T); remat(G, 'ghost', col, false); warm([T, G]); });
+    LATER.push([f, col]);
+  }
+  /* zuletzt die Stufen 2 und 3 (Ausbau kommt erst im Lauf der Partie) */
+  for (const [f, col] of LATER) for (const lv of [2, 3]) for (const d of SDATA.bldgs) if (d.f === f && BUILDB[f + ':' + d.id]) PRE.push(() => warm([stationTpl(f, d, lv, col)]));
+  LATER.length = 0;
+}
+/* Shader der Objekte im Hintergrund übersetzen (compileAsync nutzt KHR_parallel_shader_compile, falls vorhanden):
+   sonst übersetzt three.js beim ersten Zeichnen synchron – unter Windows/ANGLE oft 50–200 ms je Programm */
+export function warm(list) {
+  const r = S.renderer; if (!r || !r.compileAsync) return;
+  for (const o of list) {
+    /* compile() geht nur über sichtbare Objekte: alles kurz sichtbar machen */
+    const hid = []; o.traverse(c => { if (!c.visible) { hid.push(c); c.visible = true; } });
+    try { r.compileAsync(o, S.camera, S.scene).catch(() => {}); } catch (e) { /* ältere Fassung */ }
+    for (const c of hid) c.visible = false;
+  }
+}
+export function prebuild(deadline) { let n = 0; while (PRE.length && (n === 0 || deadline() > 12)) { const fn = PRE.shift(); try { fn(); } catch (e) { /* Modell fehlt */ } n++; } return PRE.length; }
 
 /* ------------------------------------------------------------ Bauvorschau */
 /* Bauvorschau nach dem Rendern wieder ausblenden (ghost() wird vor frame() aufgerufen) */
@@ -209,9 +255,12 @@ export function updateEntities(g, dt, t, view) {
     if (u.dead || !vis(u)) continue;
     const def = u.def, R = Math.max(def.len * 0.7, def.r * 1.6);
     if (!inView(u.x, u.y, R, 10)) continue;
-    const col = pcol(u.owner), tp = tplOf(def, col), set = setOf(tp, u.derelict ? 'wreck' : 'normal', farShips);
+    /* je Schiff gemerkt: Farbe, Vorlage, Instanzmengen (keine Schlüssel-Zeichenketten je Bild), Kurs und Rollen */
+    const col = pcol(u.owner);
+    let pv = E.prev.get(u.id);
+    if (!pv || pv.col !== col || pv.def !== def) { pv = { ang: u.ang, roll: pv ? pv.roll : 0, col, def, tp: tplOf(def, col), sets: [null, null, null, null] }; E.prev.set(u.id, pv); }
+    const si = (u.derelict ? 1 : 0) + (farShips ? 2 : 0), set = pv.sets[si] || (pv.sets[si] = setOf(pv.tp, u.derelict ? 'wreck' : 'normal', farShips));
     /* Lage: schweben, rollen in Kurven (aus der Kursänderung) */
-    let pv = E.prev.get(u.id); if (!pv) { pv = { ang: u.ang, roll: 0 }; E.prev.set(u.id, pv); }
     const da = dt > 0 ? angDiff(u.ang, pv.ang) / dt : 0; pv.ang = u.ang;
     const rollT = def.role === 'fighter' || def.swarm ? -da * 0.12 : -da * 0.22; pv.roll += (Math.max(-0.4, Math.min(0.4, rollT)) - pv.roll) * Math.min(1, dt * 6);
     const hover = u.derelict ? -1.5 : Math.sin(t * 1.1 + u.id * 0.7) * (def.len < 40 ? 0.5 : 0.9);
@@ -247,7 +296,7 @@ export function updateEntities(g, dt, t, view) {
     if (u.boarding > 0) { const n = Math.min(8, Math.ceil(u.boarding / 12)), c = pcol(u.boardBy); for (let i = 0; i < n; i++) { const a = t * 3 + i * TAU / n; ring(u.x, u.y, def.r * 0.7, c, 2.5, { a0: a - 0.1, a1: a + 0.1 }); } }
     if (u.cocoon) { const kk = 1 - u.cocoon.t / u.cocoon.t0, r = def.r * 1.3 + 4; disc(u.x, u.y, r * 1.1, '#6f4d85', 0.6); ring(u.x, u.y, r * 0.7, '#d6ff6a', 2, { a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * kk }); }
   }
-  for (const [id, pv] of E.prev) { const u = g.byId.get(id); if (!u || u.dead) E.prev.delete(id); void pv; }
+  if ((E.sweep = (E.sweep || 0) + 1) % 30 === 0) for (const id of E.prev.keys()) { const u = g.byId.get(id); if (!u || u.dead) E.prev.delete(id); }
   /* Wracks */
   for (const w of g.wrecks) {
     if (!seen(w.x, w.y) || !inView(w.x, w.y, 60, 5)) continue;
@@ -310,10 +359,10 @@ export function updateEntities(g, dt, t, view) {
 export function clearEntities() {
   if (!E.root) return;
   for (const s of E.sets.values()) for (const im of s.ims) { E.root.remove(im); im.dispose(); }
-  E.sets.clear(); E.tpl.clear(); E.prev.clear(); FARST.clear();
+  E.sets.clear(); E.tpl.clear(); E.prev.clear(); FARST.clear(); STPL.clear(); PRE.length = 0;
   for (const e of E.stations.values()) dropStation(e); E.stations.clear();
   for (const m of E.ghost.values()) E.root.remove(m); E.ghost.clear(); E.ghostCur = null;
 }
 export function disposeEntities() { clearEntities(); if (E.root) { S.scene.remove(E.root); E.root = null; } }
 export const _E = E;
-export function entityStats() { let sets = 0, inst = 0; for (const s of E.sets.values()) { sets++; inst += s.ims.length; } return { tpl: E.tpl.size, sets, ims: inst, stations: E.stations.size }; }
+export function entityStats() { let sets = 0, inst = 0; for (const s of E.sets.values()) { sets++; inst += s.ims.length; } return { tpl: E.tpl.size, sets, ims: inst, stations: E.stations.size, pre: PRE.length }; }

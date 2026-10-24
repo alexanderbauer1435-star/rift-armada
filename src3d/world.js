@@ -15,7 +15,7 @@
    ===================================================================== */
 import * as THREE from 'three';
 import { BUILDW, mats, animate, bake, applyCharge, rng, keepFor } from './models/kit.js';
-import { S, CAM_DIR } from './scene.js';
+import { S, CAM_DIR, onScale } from './scene.js';
 import { CAM, inView } from './camera.js';
 import { ring } from './overlay.js';
 
@@ -51,6 +51,9 @@ function stars(n, ext, cx, y, cz, seed, size, map, bright) {
   }
   const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
   const m = new THREE.PointsMaterial({ size, sizeAttenuation: false, vertexColors: true, map: map || null, transparent: true, depthWrite: false, blending: THREE.NormalBlending, fog: false });
+  /* Punktgröße in Bildpunkten der Leinwand: mit der Render-Skalierung mitführen (gleich groß in CSS-Pixeln, mindestens
+     1 Bildpunkt – sonst flimmern feine Sterne bei kleiner Skalierung) */
+  onScale(sc => { m.size = Math.max(1, size * sc); });
   const p = new THREE.Points(g, m); p.frustumCulled = false; p.renderOrder = -9; return p;
 }
 /* Gasriese: Bänder, Beleuchtung von links oben, Ring (alles innerhalb der Leinwand) */
@@ -130,12 +133,13 @@ export function buildWorld(g) {
   }
   /* Nebelzonen */
   W.nebs = [];
-  for (const n of map.nebs || []) {
+  (map.nebs || []).forEach((n, i) => {
+    if (BUILDW.neb) { const m = buildW({ kind: 'neb', neb: n.kind, r: n.r, seed: n.seed || i * 37 + 5 }, M); m.name = 'neb'; put(anim, m, n.x, n.y); W.nebs.push({ n, m }); return; }
     const grp = new THREE.Group(); grp.position.set(n.x, -3, n.y);
     const pg = new THREE.PlaneGeometry(2, 2).rotateX(-Math.PI / 2);
     for (let k = 0; k < 3; k++) { const d = new THREE.Mesh(pg, nebMat(n.kind)); d.scale.setScalar(n.r * (1 - k * 0.22)); d.position.y = k * 0.4; d.renderOrder = 1; grp.add(d); }
     root.add(grp); W.nebs.push({ n, grp });
-  }
+  });
   /* Aschenebel am Rand (Schwaden eingefroren, Streifen je Material verschmolzen) */
   if (BUILDW.ash) { const a = buildW({ kind: 'ash', r: EDGE, w: map.w, h: map.h, seed: 1 }, M); bake(a, { face: 'cam', faceDir: CAM_DIR, drop: ['pulse', 'bob', 'sway'] }); put(root, a, map.w / 2, map.h / 2); a.name = 'ash'; }
   S.scene.add(root);
@@ -162,7 +166,9 @@ export function updateWorld(g, dt, t, view) {
     if (n.miners && view.visible(n) && inView(n.x, n.y, n.r + 20)) ring(n.x, n.y, n.r + 10, n.kind === 'ice' ? '#8fe3ff' : '#ffb86b', 1.5, { dash: 5, march: true, alpha: 0.4 });
   }
   /* Nebelzonen treiben */
-  for (const e of W.nebs) { const n = e.n, tt = t * 0.15 + n.x * 0.01; e.grp.children.forEach((d, k) => { d.position.x = Math.cos(tt + k * 2.1) * n.r * 0.18; d.position.z = Math.sin(tt * 1.3 + k * 2.1) * n.r * 0.18; }); }
+  /* Nebelmodelle (BUILDW.neb): nur im Bild sichtbar und animiert */
+  for (const e of W.nebs) if (e.m) e.m.visible = inView(e.n.x, e.n.y, e.n.r * 1.2, 20);
+  for (const e of W.nebs) if (e.grp) { const n = e.n, tt = t * 0.15 + n.x * 0.01; e.grp.children.forEach((d, k) => { d.position.x = Math.cos(tt + k * 2.1) * n.r * 0.18; d.position.z = Math.sin(tt * 1.3 + k * 2.1) * n.r * 0.18; }); }
   /* Stätten */
   const seen = view.vp < 0 ? () => true : view.seen;
   g.sites.forEach((st, i) => {
