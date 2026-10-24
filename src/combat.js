@@ -528,7 +528,7 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   t.hitT = g.time;
   /* Missionen: Hüllen-Untergrenze (das Schiff wird gestellt, nicht zerstört) */
   if (t.minHull && t.hull < t.minHull) t.hull = t.minHull;
-  if (t.k === 2 && p && g.time - p.hurtT > 12 && owner >= 0 && owner !== t.owner) { p.hurtT = g.time; p.hurtX = t.x; p.hurtY = t.y; ev(g, 'attack', { owner: t.owner, x: t.x, y: t.y }); }
+  if (t.k === 2 && p && g.time - p.hurtT > 12 && owner >= 0 && owner !== t.owner && !g.players[owner].pirate) { p.hurtT = g.time; p.hurtX = t.x; p.hurtY = t.y; ev(g, 'attack', { owner: t.owner, x: t.x, y: t.y }); }
   if (t.hull <= 0) { kill(g, t, src, owner); return; }
   if (t.k === 1 && t.crewMax && !t.derelict) { t.crew -= t.crewMax * d / t.hullMax * (t.shieldMax ? 0.45 : 0.25); if (t.crew <= 0) makeDerelict(g, t); }
   else if (t.k === 2 && t.crewMax) t.crew = Math.max(t.crewMax * 0.2, t.crew - t.crewMax * d / t.hullMax * 0.3);

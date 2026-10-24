@@ -66,6 +66,13 @@ function createGame(opts) {
     g.players.push({ id: i, faction: 'guardian', F: FACTIONS.guardian, human: false, ai: null, color: null, team: 99, ice: 0, ore: 0, eGen: 0, eUse: 0, lowPower: false, cpUse: 0, cpMax: 999, alive: true, lab: 0, start: { x: map.w / 2, y: map.h / 2, ang: 0 }, incAcc: 0, haulR: 0, shipCount: 0, queued: 0, lowT: -99, hurtT: -99, hurtX: 0, hurtY: 0, tech: {}, research: null, tfx: Object.assign({}, TFX0), doctrine: null, docAsk: false, relics: 0, heroIdx: 0, neutral: true, netT: 0, etech: null, vis: null, explored: new Uint8Array(g.vw * g.vh), stats: { built: 0, lost: 0, kills: 0, bLost: 0, razed: 0, earned: 0, spent: 0 } });
     g.neutral = i;
   }
+  /* Piraten: eigene Partei (Team 97, mit allen verfeindet, zählt nicht für den Sieg) für die Festung in der Kartenmitte */
+  if (map.fort) {
+    const i = g.players.length;
+    g.tm.push(97);
+    g.players.push({ id: i, faction: 'mars', F: FACTIONS.mars, human: false, ai: null, color: PIRATE_COL, name: 'Piraten', team: 97, ice: 0, ore: 0, eGen: 0, eUse: 0, lowPower: false, cpUse: 0, cpMax: 999, alive: true, lab: 0, start: { x: map.fort.x, y: map.fort.y, ang: 0 }, incAcc: 0, haulR: 0, shipCount: 0, queued: 0, lowT: -99, hurtT: -99, hurtX: 0, hurtY: 0, tech: {}, research: null, tfx: Object.assign({}, TFX0), doctrine: null, docAsk: false, relics: 0, heroIdx: 0, neutral: true, pirate: true, netT: 0, etech: null, vis: null, explored: new Uint8Array(g.vw * g.vh), stats: { built: 0, lost: 0, kills: 0, bLost: 0, razed: 0, earned: 0, spent: 0 } });
+    g.pirate = i;
+  }
   g.teamVisN = {};
   for (const p of g.players) { if (!g.teamVis[p.team]) { g.teamVis[p.team] = new Int32Array(g.vw * g.vh); g.teamVisN[p.team] = new Int32Array(g.vw * g.vh); } p.vis = g.teamVis[p.team]; p.visN = g.teamVisN[p.team]; }
   /* Stätten und Tore als Objekte mit Kennung (antippbar) */
@@ -77,6 +84,7 @@ function createGame(opts) {
     if (st.kind === 'citadel') for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, u = addShip(g, 'drone', g.neutral, st.x + dcos(a) * (st.r + 70), st.y + dsin(a) * (st.r + 70), a); u.hx = u.x; u.hy = u.y; u.o = { t: 'hold' }; u.hold = true; st.guard.push(u.id); }
     if (st.kind === 'warden') { const u = addShip(g, 'warden', g.neutral, st.x, st.y, 0); u.stance = 2; u.o = { t: 'hold' }; u.hold = true; u.asleep = 1; st.guard.push(u.id); }
   }
+  if (map.fort) fortSetup(g);
   /* Sonneneruptionen auf den größeren Karten */
   if (mapId !== 'haven' && mapId !== 'test' && mapId !== 'mission') g.events.push({ kind: 'flare', at: 420 + Math.floor(g.rng() * 180), state: 0 });
   /* Startaufstellung: Kommandobasis, Raffinerie am Eismond, zwei Frachter, ein Bauschiff, eine Korvette */
@@ -522,6 +530,8 @@ function pickNode(g, pi, x, y, maxD) {
   let best = null, bs = 1e9;
   for (const n of g.nodes) {
     if (n.amount <= 0) continue;
+    /* Schatzkammer der Piraten: nur nach dem Fall der Festung */
+    if (g.fort && !g.fort.done && hyp(n.x - g.map.fort.x, n.y - g.map.fort.y) < g.map.fort.r + 420) continue;
     const d = hyp(n.x - x, n.y - y) - n.r;
     if (d > (maxD || 900) + (needOre && n.kind === 'ore' ? 700 : 0)) continue;
     let sc = d + n.miners * 90;
@@ -709,6 +719,7 @@ function kill(g, t, src, owner) {
     /* Wächter der Erbauer: Relikte für den Sieger */
     if (t.type === 'warden' && owner >= 0) { const w = g.players[owner]; const n = Math.round(6 * w.tfx.relic); w.relics += n; ev(g, 'relics', { owner: owner, n, x: t.x, y: t.y, why: 'Der Wächter ist gefallen' }); for (const st of g.sites) if (st.kind === 'warden') st.done = true; }
   } else if (t.k === 2) {
+    if (g.fort && t.id === g.fort.core && owner >= 0) g.fort.by = owner;
     removeBldg(g, t);
     p.stats.bLost++;
     if (owner >= 0 && owner !== t.owner) g.players[owner].stats.razed++;
@@ -792,6 +803,7 @@ function stepGame(g) {
   if (g.tick % 30 === 7) for (const p of g.players) if (p.alive && p.faction === 'nexus') updateNet(g, p);
   if (g.tick % 300 === 150) for (const u of g.ships) if (!u.dead) { u.snapH = u.hull; u.snapS = u.shield; }
   updateSites(g, dt);
+  updateFort(g);
   if (g.opts.sandbox && g.tick % 1800 === 900) sandboxSpawn(g);
   if (g.tick % 60 === 30) checkAura(g);
   for (let i = g.wrecks.length - 1; i >= 0; i--) if (g.time > g.wrecks[i].until) g.wrecks.splice(i, 1);
@@ -959,6 +971,59 @@ function siteSpeed(g, pi, x, y) {
   return m;
 }
 function grantRelics(g, pi, n, x, y, why) { const p = g.players[pi]; const k = Math.round(n * p.tfx.relic); p.relics += k; ev(g, 'relics', { owner: pi, n: k, x, y, why }); }
+/* ------------------------------------------------------------------ Piratenfestung
+   Kommandobasis (Stufe 3) als Kern, Geschütze, Flak und Reaktoren im Ring, eine Garnison auf Posten. Die Garnison
+   verteidigt (greift an, was der Festung zu nahe kommt, und kehrt dann auf ihre Posten zurück) und wird aus dem Kern
+   nachgebaut, solange er steht. Wer den Kern zerstört oder entert, bekommt den Piratenschatz. */
+const PIRATE_COL = '#c8324a', FORT_LOOT = { ice: 2000, ore: 1200, relics: 4 };
+const FORT_SHIPS = ['needle', 'spear', 'hedgehog', 'needle', 'spear', 'hammer', 'hedgehog', 'longshot', 'needle', 'spear', 'wasp', 'hammer'];
+function fortBldg(g, role, x, y, lvl) {
+  const b = addBldg(g, role, g.pirate, x, y, true);
+  if (lvl > 1) { b.lv = lvl; const l = lvOf(b); b.hull = b.hullMax = l.hull; b.shieldMax = l.shield; b.shield = b.shieldMax; b.wcd = l.wpn.map(() => 0); }
+  return b;
+}
+function fortSetup(g) {
+  const F = g.map.fort, pi = g.pirate, np = g.players.filter(p => !p.neutral).length;
+  const core = fortBldg(g, 'base', F.x, F.y, 3);
+  for (let k = 0; k < 2; k++) fortBldg(g, 'reactor', F.x + dcos(k * Math.PI + 0.5) * 150, F.y + dsin(k * Math.PI + 0.5) * 150, 2);
+  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU; fortBldg(g, 'turret', F.x + dcos(a) * 250, F.y + dsin(a) * 250, 2); }
+  for (let k = 0; k < 3; k++) { const a = (k + 0.5) / 3 * TAU; fortBldg(g, 'flak', F.x + dcos(a) * 200, F.y + dsin(a) * 200, 2); }
+  recalcPower(g, pi);
+  g.fort = { core: core.id, done: false, cap: 6 + np, spawnT: 0, n: 0, alert: false, by: -1 };
+  for (let k = 0; k < g.fort.cap; k++) fortSpawn(g);
+}
+function fortSpawn(g) {
+  const F = g.map.fort, S = g.fort, k = S.n++, a = k * 2.399, d = 340 + (k % 3) * 45;
+  const u = addShip(g, FORT_SHIPS[k % FORT_SHIPS.length], g.pirate, F.x + dcos(a) * d, F.y + dsin(a) * d, a);
+  u.hx = u.x; u.hy = u.y; u.o = { t: 'hold' }; u.hold = true; u.post = 1;
+  return u;
+}
+function updateFort(g) {
+  const S = g.fort; if (!S || S.done || (g.tick % 15) !== 7) return;
+  const F = g.map.fort, pi = g.pirate, core = g.byId.get(S.core);
+  /* gefallen oder geentert: Schatz für den Eroberer */
+  if (!core || core.dead || core.owner !== pi) {
+    S.done = true;
+    const to = core && !core.dead ? core.owner : S.by;
+    if (to >= 0 && !g.players[to].neutral) { const p = g.players[to], rel = Math.round(FORT_LOOT.relics * p.tfx.relic); p.ice += FORT_LOOT.ice; p.ore += FORT_LOOT.ore; p.relics += rel; p.stats.earned += FORT_LOOT.ice + FORT_LOOT.ore; ev(g, 'fortFall', { owner: to, x: F.x, y: F.y, ice: FORT_LOOT.ice, ore: FORT_LOOT.ore, relics: rel }); }
+    /* die Garnison zerstreut sich: sie kämpft weiter, aber ohne Posten */
+    for (const u of g.ships) if (!u.dead && u.owner === pi) { u.post = 0; u.hold = false; u.o = { t: 'amove', x: F.x + (u.x - F.x) * 2, y: F.y + (u.y - F.y) * 2 }; u.path = null; }
+    return;
+  }
+  const guard = g.ships.filter(u => !u.dead && u.owner === pi && u.post);
+  /* Nachschub aus dem Kern */
+  if (guard.length < S.cap && g.time > S.spawnT) { S.spawnT = g.time + 45; fortSpawn(g); }
+  /* Eindringlinge in der Festungszone */
+  let foe = null, fd = F.r + 380;
+  for (const u of g.ships) { if (u.dead || u.derelict || u.owner === pi || g.tm[u.owner] >= 97) continue; const d = hyp(u.x - F.x, u.y - F.y); if (d < fd) { fd = d; foe = u; } }
+  for (const b of g.bldgs) { if (b.dead || b.owner === pi) continue; const d = hyp(b.x - F.x, b.y - F.y); if (d < fd) { fd = d; foe = b; } }
+  if (foe) { S.alert = true; for (const u of guard) if (u.o.t === 'hold' || u.o.t === 'idle' || (u.o.t === 'amove' && g.tick % 90 === 7)) { u.hold = false; u.o = { t: 'amove', x: foe.x + (u.id % 7 - 3) * 20, y: foe.y + (u.id % 5 - 2) * 20 }; u.path = null; } }
+  else if (S.alert || g.tick % 150 === 7) {
+    S.alert = false;
+    for (const u of guard) if (u.o.t !== 'hold' && hyp(u.x - u.hx, u.y - u.hy) > 60) { u.hold = false; u.o = { t: 'move', x: u.hx, y: u.hy }; u.path = null; }
+      else if (u.o.t === 'idle') { u.o = { t: 'hold' }; u.hold = true; }
+  }
+}
 function updateSites(g, dt) {
   if ((g.tick % 5) !== 2) return;
   const step = dt * 5;

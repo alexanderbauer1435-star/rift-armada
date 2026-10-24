@@ -352,7 +352,7 @@ R.consume = function (evs) {
   const g = R.g;
   for (const e of evs) {
     if (R.mode3d && e.x !== undefined && (R.vp < 0 || visAt(g, R.vp, e.x, e.y) || e.t === 'bdie' || e.t === 'strike' || e.t === 'superfire' || e.t === 'gateLance' || e.t === 'gateStorm' || e.t === 'wake' || e.t === 'breach' || e.t === 'gateDark' || e.t === 'gateOn')) { try { RA3D.event(e, g); } catch (err) { /* Effekt fehlt */ } }
-    if (e.x !== undefined && R.vp >= 0 && !visAt(g, R.vp, e.x, e.y) && e.t !== 'bdie' && e.t !== 'attack' && e.t !== 'strike' && e.t !== 'superfire' && e.t !== 'supercharged' && !(e.t === 'captured' && (e.from === R.vp || e.to === R.vp)) && e.t !== 'gateLance' && e.t !== 'gateStorm' && e.t !== 'wake' && e.t !== 'siteWon' && e.t !== 'gateOn' && e.t !== 'breach' && e.t !== 'gateDark') continue;
+    if (e.x !== undefined && R.vp >= 0 && !visAt(g, R.vp, e.x, e.y) && e.t !== 'bdie' && e.t !== 'attack' && e.t !== 'strike' && e.t !== 'superfire' && e.t !== 'supercharged' && !(e.t === 'captured' && (e.from === R.vp || e.to === R.vp)) && e.t !== 'gateLance' && e.t !== 'gateStorm' && e.t !== 'wake' && e.t !== 'siteWon' && e.t !== 'fortFall' && e.t !== 'gateOn' && e.t !== 'breach' && e.t !== 'gateDark') continue;
     switch (e.t) {
       case 'die': if (!e.quiet) { fxExplode(e.x, e.y, e.r, e.big, pcol(e.owner)); if (e.big && R.detail > 0 && SHIPS[e.type] && !SHIPS[e.type].swarm) { const s = sprScale(), sc = shipSprite(e.type, SHIPS[e.type].f, 'wreck', s); fxHulk(e.x, e.y, e.ang || 0, sc, sc.width / s, e.vx, e.vy); } if (e.big && R.inView(e.x, e.y, 300)) R.shake = Math.max(R.shake, 6); } R.lastAct = { x: e.x, y: e.y, t: R.time }; break;
       case 'bdie': fxExplode(e.x, e.y, e.r * 0.8, true, pcol(e.owner)); fxSmoke(e.x, e.y, 14, e.r, 2.5); for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, d = e.r * (0.3 + Math.random() * 0.5); fxLater(e.x + Math.cos(a) * d, e.y + Math.sin(a) * d, e.r * (0.35 + 0.15 * i), 0.22 + i * 0.28, i === 2); } if (R.inView(e.x, e.y, 400)) R.shake = Math.max(R.shake, 9); R.lastAct = { x: e.x, y: e.y, t: R.time }; break;
@@ -394,6 +394,7 @@ R.consume = function (evs) {
       case 'resurrect': fxRing(e.x, e.y, 120, 1.2, '#f2c14e', 4); fxFlash(e.x, e.y, 90, 0.5, '#fff6dc'); fxSpark(e.x, e.y, 30, 160, '#f2c14e', 0.9); fxText(e.x, e.y - 40, L('Wiederauferstehung'), '#f2c14e'); break;
       case 'recrew': fxRing(e.x, e.y, 30, 0.6, '#7ddc6b', 2); if (e.hero) fxText(e.x, e.y - 26, L('{0} kehrt zurück', L(e.hero)), '#f2c14e'); break;
       case 'ruin': fxRing(e.x, e.y, 60, 1, e.result === 'trap' ? '#ff5b47' : '#9ff0c0', 2); fxText(e.x, e.y - 40, L(e.result === 'relics' ? 'Relikte' : e.result === 'tech' ? 'Technikfragment' : e.result === 'map' ? 'Karte aufgedeckt' : 'Falle!'), e.result === 'trap' ? '#ff5b47' : '#9ff0c0'); break;
+      case 'fortFall': fxRing(e.x, e.y, 260, 1.6, '#ffd36b', 4); fxText(e.x, e.y - 90, L('Piratenschatz'), '#ffd36b'); break;
       case 'siteWon': fxRing(e.x, e.y, 120, 1.3, '#9ff0c0', 3); fxText(e.x, e.y - 60, L(e.reward), '#9ff0c0'); break;
       case 'relics': if (e.x !== undefined) fxText(e.x, e.y - 30, L('+{0} Relikte', e.n), '#c9a0ff'); break;
       case 'gateOn': fxRing(e.x, e.y, 110, 1.2, '#9ff0c0', 3); fxFlash(e.x, e.y, 70, 0.5, '#9ff0c0'); break;

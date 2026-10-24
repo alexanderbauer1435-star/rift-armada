@@ -47,6 +47,18 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 17 (Runde 15, mehr Karten und die Piratenfestung): Vier weitere Ringkarten für 2–8 Spieler (genRing-Stile):
+  Corsair's Keep (Piratenfestung in der Mitte hinter einem Felsring mit engen Pforten), Pinwheel (gekrümmte Felswände wie
+  ein Windrad, je eine Lücke), Archipelago (viele Gürtel-Inseln mit drei Durchfahrten, darin Vorkommen und Ruinen) und
+  Ion Storm (breiter Ionensturm um die Mitte, Aschenester darin). Piraten (sim.js, Team 97, neutral, zählen nicht für
+  den Sieg): Kern = Mars-Kommandobasis Stufe 3, sechs Geschütze und drei Flak Stufe 2, zwei Reaktoren, Garnison
+  6 + Spielerzahl auf Posten; sie greift an, was der Festung näher als r + 380 kommt, kehrt dann zurück und wird alle
+  45 s aus dem Kern ergänzt. Kern zerstört oder geentert → Piratenschatz (2000 Eis, 1200 Erz, 4 Relikte) für den
+  Eroberer, Ereignis fortFall. Die KI meidet die Festung, solange es andere Ziele gibt. Vorschau zeigt die Festung als
+  rotes Bollwerk; Spielstände speichern g.fort. Test: tests/fort.js (in tools/regress.sh).
+  Festungszone kostet in der Wegsuche (Bit 32, +8 je Zelle), Schatzkammer-Vorkommen erst nach dem Fall (pickNode),
+  Piratentreffer lösen keine KI-Verteidigung aus. KI allgemein: gegen einen Gegner ohne Basis und Werft reicht eine
+  kleine Flotte (weakFoe), nach 10 Minuten findet aiTarget auch unerkundete letzte Stationen.
 - Fassung 16 (Runde 14, Karten nach Spielerzahl): Drei neue Ringkarten für 2–8 Spieler, die mit der Spielerzahl wachsen
   (RING_DIM, genRing in map.js – Inhalt je Sektor in Polarkoordinaten, für jeden Spieler gedreht): Open Expanse (offen,
   keine Taschen, Vorkommen verstreut), Iron Bastions (jede Basis hinter einem undurchdringlichen Ring aus Gürtel und

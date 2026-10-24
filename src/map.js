@@ -23,11 +23,16 @@ const MAPS = {
   expanse: { name: 'Open Expanse', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np], desc: 'Offene Weite ohne Taschen: die Basen im Ring, Vorkommen überall verstreut, nur kleine Felder und Nebelflecken. Angriffe kommen von allen Seiten.' },
   bastions: { name: 'Iron Bastions', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np] + 800, desc: 'Jede Basis hinter einem undurchdringlichen Asteroidengürtel mit einem einzigen schmalen Zugang. Ein zweiter Felsring schützt die große Stätte in der Mitte – überall Engpässe.' },
   maelstrom: { name: 'Maelstrom', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np], desc: 'Felswände trennen die Basen voneinander, jeder Weg führt durch die Mitte. Dort liegen die reichsten Vorkommen und die große Stätte – hier tobt die Schlacht.' },
+  keep: { name: "Corsair's Keep", np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np] + 400, desc: 'In der Mitte eine Piratenfestung hinter einem Felsring mit engen Pforten: Geschütze, Flak und eine Garnison, die sich nachbaut. Wer den Kern zerstört oder entert, bekommt den Piratenschatz.' },
+  pinwheel: { name: 'Pinwheel', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np] + 200, desc: 'Gekrümmte Felswände drehen sich wie ein Windrad aus der Mitte. Jede Basis liegt am Ende ihres Arms; Nachbarn erreicht man durch eine Lücke in der Wand oder über die Mitte.' },
+  archipelago: { name: 'Archipelago', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np] + 200, desc: 'Viele kleine Asteroideninseln mit Vorkommen und Ruinen, jede mit drei Durchfahrten. Kleine Schiffe schlüpfen durch die Gürtel, große müssen die Kanäle nehmen.' },
+  storm: { name: 'Ion Storm', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np], desc: 'Ein breiter Ionensturm umschließt die Mitte: Schilde aus, Sicht nur aus der Nähe, darin Aschenester. Wer hindurch will, fliegt blind – Hinterhalte sind hier die Regel.' },
   quarantine: { name: 'Quarantine Line', np: [1, 2, 3, 4], w: 3800, h: 3800, desc: 'Das Siegel in der Mitte, die Basen im Ring darum, Risse am Rand. Nur für Wellen.', waves: true }
 };
-const MAP_ORDER = ['haven', 'twingates', 'ashfall', 'shattered', 'crown', 'narrows', 'arena', 'expanse', 'bastions', 'maelstrom'];
+const MAP_ORDER = ['haven', 'twingates', 'ashfall', 'shattered', 'crown', 'narrows', 'arena', 'expanse', 'bastions', 'maelstrom', 'keep', 'pinwheel', 'archipelago', 'storm'];
 /* Ringkarten wachsen mit der Spielerzahl (Kantenlänge je Spielerzahl) */
 const RING_DIM = [0, 3600, 4000, 4600, 5000, 5600, 6000, 6400, 6800];
+const RING_STYLE = { expanse: 'expanse', bastions: 'bastions', maelstrom: 'maelstrom', keep: 'keep', pinwheel: 'spiral', archipelago: 'archipelago', storm: 'storm' };
 /* Große Stätten: je Karte werden 1–2 aus dem Pool gezogen */
 const SITE_POOL = ['citadel', 'archive', 'warden', 'forge'];
 const SITE_DEF = {
@@ -65,12 +70,13 @@ function generateMap(id, np, seed, size) {
   else if (id === 'quarantine') genQuarantine(map, np, rng);
   else if (id === 'test') { map.starts = [{ x: 400, y: 2800, ang: -Math.PI / 4 }, { x: 2800, y: 400, ang: Math.PI * 0.75 }]; iceMoon(map, 700, 2800, rng); iceMoon(map, 2500, 400, rng); site(map, 'ruin', 1200, 1200); site(map, 'ruin', 2000, 2000); site(map, 'archive', 1000, 2200); site(map, 'citadel', 2200, 1300); gatePair(map, 900, 600, 2600, 2600, 'dead'); }
   else if (id === 'arena') genArena(map, np, rng);
-  else if (id === 'expanse' || id === 'bastions' || id === 'maelstrom') genRing(map, np, rng, id);
+  else if (RING_STYLE[id]) genRing(map, np, rng, RING_STYLE[id]);
   else genHaven(map, rng);
   const k = MAP_SIZES[size] || 1;
   if (k !== 1 && id !== 'test') {
     map.w = Math.round(W0 * k); map.h = Math.round(H0 * k);
     for (const key of ['starts', 'nodes', 'rocks', 'fields', 'nebs', 'sites', 'gates', 'rifts']) for (const o of map[key] || []) { o.x *= k; o.y *= k; if (key === 'fields' || key === 'nebs') o.r *= k; else if (key === 'rocks') o.r *= Math.sqrt(k); }
+    if (map.fort) { map.fort.x *= k; map.fort.y *= k; }
   }
   buildNav(map);
   return map;
@@ -471,6 +477,78 @@ function genRing(map, np, rng, style) {
     belt(map, pts, 120, rng, gaps.map(([t]) => [t, 230]), 0.45); wall(map, pts, rng, gaps, 22);
     bigSites(map, [{ x: cx, y: cy }], rng, 1);
     for (let k = 0; k < 2; k++) { const a = a0 + half + k * Math.PI; iceMoon(map, cx + Math.cos(a) * 330, cy + Math.sin(a) * 330, rng, true); }
+  } else if (style === 'keep') {
+    /* Piratenfestung in der Mitte hinter einem Felsring mit engen Pforten zwischen den Sektoren */
+    const Rf = 780;
+    each(i => {
+      const s = map.starts[i], base = axis(i) + Math.PI;
+      pocket(map, s, 560, base + 1.9, base - 1.9, rng, [[base + 0.5, 230], [base - 0.5, 230]], 130);
+      let p = at(i, R0 * 0.66, 300); iceMoon(map, p.x, p.y, rng);
+      p = at(i, R0 * 0.68, -320); oreCluster(map, p.x, p.y, rng, 3);
+      p = P(i, (Rf + R0) / 2 + 80, half); site(map, 'ruin', p.x, p.y);
+      p = P(i, (Rf + R0) / 2 - 60, half * 0.55); nebula(map, p.x, p.y, 130, 'ion');
+      p = P(i, (Rf + R0) / 2 - 40, -half * 0.6); oreCluster(map, p.x, p.y, rng, 3);
+      p = P(i, R0 * 0.9, half * 0.75); oreCluster(map, p.x, p.y, rng, 2);
+    });
+    /* Erz in der Schatzkammer */
+    for (let k = 0; k < 2; k++) { const a = a0 + k * Math.PI + 0.3 + Math.PI / 2; oreCluster(map, cx + Math.cos(a) * 540, cy + Math.sin(a) * 540, rng, 3); }
+    const pts = [], gaps = [], ng = Math.max(np, 3);
+    for (let k = 0; k <= 56; k++) { const a = a0 + k / 56 * TAU; pts.push([cx + Math.cos(a) * Rf, cy + Math.sin(a) * Rf]); }
+    for (let k = 0; k < ng; k++) { const t = (k + 0.5) / ng; gaps.push([t, 230]); }
+    belt(map, pts, 150, rng, gaps.map(([t]) => [t, 270]), 0.5); wall(map, pts, rng, gaps, 26);
+    /* Schatzkammer: zwei große Eismonde innerhalb des Rings, unter den Geschützen */
+    for (let k = 0; k < 2; k++) { const a = a0 + k * Math.PI + 0.3; iceMoon(map, cx + Math.cos(a) * 520, cy + Math.sin(a) * 520, rng, true); }
+    map.fort = { x: cx, y: cy, r: 330 };
+  } else if (style === 'spiral') {
+    /* Windrad: gekrümmte Felswände aus der Mitte, je eine Lücke auf halbem Weg; die Basis liegt am Ende ihres Arms */
+    const r0 = 620, tw = r => 1.0 * ((r - r0) / (R0 - r0) - 1), Q = (i, r, d) => P(i, r, d + tw(r));
+    each(i => {
+      const b = half, pts = [];
+      for (let r = r0; r <= rEdge; r += 90) { const p = Q(i, r, b); pts.push([p.x, p.y]); }
+      const L = pathLen(pts), rg = (r0 + R0) / 2, gt = (rg - r0) / (rEdge - r0);
+      wall(map, pts, rng, [[gt, 230]], 26); belt(map, pts.slice(0, Math.ceil((R0 + 300 - r0) / 90)), 120, rng, [[gt * L / pathLen(pts.slice(0, Math.ceil((R0 + 300 - r0) / 90))), 270]], 0.45);
+      let p = Q(i, R0 * 0.66, 0.22 * half); iceMoon(map, p.x, p.y, rng);
+      p = Q(i, R0 * 0.62, -0.3 * half); oreCluster(map, p.x, p.y, rng, 3);
+      p = Q(i, R0 * 0.42, 0); oreCluster(map, p.x, p.y, rng, 2);
+      p = Q(i, rg, half * 0.7); site(map, 'ruin', p.x, p.y);
+      p = Q(i, R0 * 0.8, -half * 0.55); nebula(map, p.x, p.y, 120, 'ion');
+    });
+    bigSites(map, [{ x: cx, y: cy }], rng, 1);
+    for (let k = 0; k < 2; k++) { const a = a0 + half + k * Math.PI; iceMoon(map, cx + Math.cos(a) * 380, cy + Math.sin(a) * 380, rng, true); }
+  } else if (style === 'archipelago') {
+    /* Inseln: Gürtelringe (für kleine Schiffe passierbar) mit zwei Durchfahrten, darin Vorkommen oder eine Ruine */
+    const isle = (x, y, R, open, fill) => {
+      const pts = []; for (let k = 0; k <= 28; k++) { const a = open + k / 28 * TAU; pts.push([x + Math.cos(a) * R, y + Math.sin(a) * R]); }
+      belt(map, pts, 110, rng, [[0, 210], [0.5, 210], [1, 210]], 0.7);
+      if (fill === 'ice') iceMoon(map, x, y, rng); else if (fill === 'ore') oreCluster(map, x, y, rng, 3); else if (fill) site(map, fill, x, y);
+    };
+    each(i => {
+      const s = map.starts[i], base = axis(i) + Math.PI;
+      pocket(map, s, 580, base + 1.9, base - 1.9, rng, [[base + 0.6, 230], [base - 0.6, 230]], 120);
+      let p = P(i, R0 * 0.64, half * 0.55); isle(p.x, p.y, 270, axis(i), 'ice');
+      p = P(i, R0 * 0.64, -half * 0.55); isle(p.x, p.y, 270, axis(i) + 0.6, 'ore');
+      p = P(i, R0 * 0.4, half); isle(p.x, p.y, 240, axis(i) + Math.PI / 2, 'ruin');
+      p = P(i, R0 * 0.86, half); field(map, p.x, p.y, 120, rng, 0.8);
+    });
+    const ng = Math.max(np, 3), pts = [], Rc = 520;
+    for (let k = 0; k <= 40; k++) { const a = a0 + k / 40 * TAU; pts.push([cx + Math.cos(a) * Rc, cy + Math.sin(a) * Rc]); }
+    belt(map, pts, 120, rng, Array.from({ length: ng + 1 }, (_, k) => [k / ng, 230]), 0.7);
+    bigSites(map, [{ x: cx, y: cy }], rng, 1);
+    for (let k = 0; k < 2; k++) { const a = a0 + half + k * Math.PI; oreCluster(map, cx + Math.cos(a) * 320, cy + Math.sin(a) * 320, rng, 2); }
+  } else if (style === 'storm') {
+    /* Ionensturm: breites Nebelband um die Mitte, kleine Aschenester darin; Vorkommen davor und dahinter */
+    const rs = R0 * 0.52, bw = Math.max(260, R0 * 0.26);
+    each(i => {
+      let p = at(i, R0 * 0.8, 380); iceMoon(map, p.x, p.y, rng);
+      p = at(i, R0 * 0.82, -380); oreCluster(map, p.x, p.y, rng, 3);
+      p = P(i, R0 * 0.24, half * 0.5); iceMoon(map, p.x, p.y, rng);
+      p = P(i, R0 * 0.27, -half * 0.5); oreCluster(map, p.x, p.y, rng, 2);
+      p = P(i, R0 * 0.82, half); site(map, 'ruin', p.x, p.y);
+      p = P(i, rs, half * 0.5); nebula(map, p.x, p.y, 110, 'ash');
+    });
+    const n = Math.max(10, Math.round(TAU * rs / (bw * 0.75)));
+    for (let k = 0; k < n; k++) { const a = a0 + k / n * TAU; nebula(map, cx + Math.cos(a) * rs, cy + Math.sin(a) * rs, bw * (0.55 + 0.1 * Math.sin(k * 2.3)), 'ion'); }
+    bigSites(map, [{ x: cx, y: cy }], rng, 1);
   } else {
     /* maelstrom */
     const rIn = Math.max(1000, R0 * 0.44);
@@ -496,7 +574,7 @@ function genRing(map, np, rng, style) {
     if (np >= 3) each(i => { const p = P(i, rIn * 0.78, 0); if (i % 2 === 0 || np % 2) site(map, 'ruin', p.x, p.y); });
   }
   /* Streufelsen, für alle Sektoren gleich */
-  const avoid = map.starts.concat(map.nodes, map.fields, map.sites, map.gates, map.nebs), n = style === 'expanse' ? 6 : 3;
+  const avoid = map.starts.concat(map.nodes, map.fields, map.sites, map.gates, map.nebs, map.fort ? [{ x: map.fort.x, y: map.fort.y, r: 800 }] : []), n = style === 'expanse' ? 6 : 3;
   for (let k = 0, t = 0; k < n && t < 200; t++) {
     const r = 500 + rng() * (R0 + 300 - 500), d = (rng() * 2 - 1) * half * 0.9, rr = 10 + rng() * 14;
     const ps = []; for (let i = 0; i < np; i++) ps.push(P(i, r, d));
@@ -536,6 +614,8 @@ function buildNav(map) {
     const x0 = Math.max(0, ((o.x - o.r) / NAV) | 0), x1 = Math.min(gw - 1, ((o.x + o.r) / NAV) | 0), y0 = Math.max(0, ((o.y - o.r) / NAV) | 0), y1 = Math.min(gh - 1, ((o.y + o.r) / NAV) | 0);
     for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) { const dx = (cx + 0.5) * NAV - o.x, dy = (cy + 0.5) * NAV - o.y; if (dx * dx + dy * dy <= o.r * o.r) map.fieldG[cy * gw + cx] = 1; }
   }
+  /* Piratenfestung: Gefahrenzone (Bit 32) – die Wegsuche führt außen herum, solange das Ziel nicht in der Festung liegt */
+  if (map.fort) for (let c = 0; c < 3; c++) stamp({ x: map.fort.x, y: map.fort.y, r: map.fort.r + 400 }, 0, c, 32);
   /* Nebel: 1 Ionennebel, 2 Aschewolke; Aschewolken kosten in der Wegsuche wie der Rand (Bit 4), Ionennebel etwas (Bit 16) */
   for (const o of map.nebs || []) {
     const v = o.kind === 'ash' ? 2 : 1, x0 = Math.max(0, ((o.x - o.r) / NAV) | 0), x1 = Math.min(gw - 1, ((o.x + o.r) / NAV) | 0), y0 = Math.max(0, ((o.y - o.r) / NAV) | 0), y1 = Math.min(gh - 1, ((o.y + o.r) / NAV) | 0);
@@ -562,7 +642,7 @@ const NAV_BLOCK = 1 | 2 | 8;                 // Fels, Station, Vorkommen
 function navFree(map, cls, x, y) { const cx = (x / NAV) | 0, cy = (y / NAV) | 0; return cx >= 0 && cy >= 0 && cx < map.gw && cy < map.gh && map.nav[cls][cy * map.gw + cx] === 0; }
 /* Rand (Aschenebel) zählt für die Wegsuche nicht als Sperre, sondern als teure Zelle: Wer dorthin geschickt wird, fliegt
    hin; die Suche umgeht ihn aber. Felsen und Gebäude (1, 2) sperren. */
-function navCost(nav, fieldG, i, cls) { const v = nav[i]; if (v & NAV_BLOCK) return 0; let c = 1; if (v & 4) c += 6; if (v & 16) c += 0.8; if (cls === 0 && fieldG[i]) c += 1.2; return c; }
+function navCost(nav, fieldG, i, cls) { const v = nav[i]; if (v & NAV_BLOCK) return 0; let c = 1; if (v & 4) c += 6; if (v & 16) c += 0.8; if (v & 32) c += 8; if (cls === 0 && fieldG[i]) c += 1.2; return c; }
 
 /* Nächste freie Zelle um ein Ziel (Spirale), damit ein Befehl auf einen Felsen trotzdem ein Ziel findet */
 function nearestFree(map, cls, cx, cy) {

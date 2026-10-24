@@ -41,7 +41,10 @@ function aiTarget(g, pi, x, y) {
   let best = null, bd = 1e9;
   /* Teamspiel: Ziele, die ein Verbündeter gerade angreift, sind deutlich attraktiver (gemeinsamer Angriff) */
   const p = g.players[pi], focus = new Set(); for (const q of g.players) if (q !== p && q.alive && !q.neutral && q.team === p.team && q.ai && q.ai.atk && q.ai.atk.tid) focus.add(q.ai.atk.tid);
-  for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || !g.players[pi].explored[clamp((b.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((b.x / VIS) | 0, 0, g.vw - 1)]) continue; const d = hyp(b.x - x, b.y - y) + (b.role === 'base' ? 300 : 0) + (b.role === 'turret' || b.role === 'flak' ? 200 : 0) - (focus.has(b.id) ? 900 : 0); if (d < bd) { bd = d; best = { x: b.x, y: b.y, id: b.id }; } }
+  for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || g.players[b.owner].pirate || !g.players[pi].explored[clamp((b.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((b.x / VIS) | 0, 0, g.vw - 1)]) continue; const d = hyp(b.x - x, b.y - y) + (b.role === 'base' ? 300 : 0) + (b.role === 'turret' || b.role === 'flak' ? 200 : 0) - (focus.has(b.id) ? 900 : 0); if (d < bd) { bd = d; best = { x: b.x, y: b.y, id: b.id }; } }
+  if (best) return best;
+  /* spät im Spiel: versprengte Reste aufspüren (ein letztes Geschütz hält eine Partei sonst ewig am Leben) */
+  if (g.time > 600) for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || g.players[b.owner].neutral) continue; const d = hyp(b.x - x, b.y - y); if (d < bd) { bd = d; best = { x: b.x, y: b.y, id: b.id }; } }
   if (best) return best;
   const s = aiEnemyStart(g, pi);
   return s ? { x: s.x, y: s.y } : null;
@@ -201,7 +204,9 @@ function aiThink(g, pi) {
       else { const idle = alive.filter(u => u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am)); if (idle.length) cmdMove(g, idle, tg.x, tg.y, true, 'wedge'); A.atk.t0 = t; A.atk.tid = tg.id || 0; }
     }
   } else {
-    const ready = t > cfg.first && cpF >= cfg.army + Math.min(16, Math.floor(t / 150) * 2) && t - A.atkT > 30;
+    /* ein Gegner ohne Basis und Werft kann sich nicht mehr erholen: dann reicht eine kleine Flotte, um ihn zu erledigen */
+    const weakFoe = t > 300 && g.players.some(q => q.alive && !q.neutral && !q.threat && q.team !== p.team && !g.bldgs.some(b => !b.dead && b.owner === q.id && (b.role === 'base' || b.role === 'yard')));
+    const ready = t > cfg.first && t - A.atkT > 30 && (cpF >= cfg.army + Math.min(16, Math.floor(t / 150) * 2) || (weakFoe && cpF >= 4));
     if (ready) {
       const tg = aiTarget(g, pi, anchor.x, anchor.y);
       if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'wedge'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; ev(g, 'aiattack', { owner: pi }); }

@@ -24,6 +24,8 @@ function mapLayout(cv, map, opts) {
   /* Stätten: Raute, große Stätten größer; Tore: Ring */
   for (const s of map.sites) { const r = Math.max(3, s.r * sc * 0.9), px = X(s.x), py = Y(s.y); x.fillStyle = MV_COL.site; x.beginPath(); x.moveTo(px, py - r); x.lineTo(px + r, py); x.lineTo(px, py + r); x.lineTo(px - r, py); x.closePath(); x.fill(); if (s.kind !== 'ruin') { x.strokeStyle = '#ffffff'; x.lineWidth = 1; x.stroke(); } }
   for (const g of map.gates) { x.strokeStyle = MV_COL.gate; x.lineWidth = Math.max(1.2, 6 * sc); x.beginPath(); x.arc(X(g.x), Y(g.y), Math.max(3, g.r * sc), 0, TAU); x.stroke(); }
+  /* Piratenfestung: rotes Bollwerk mit Zinnen */
+  if (map.fort) { const px = X(map.fort.x), py = Y(map.fort.y), r = Math.max(6, map.fort.r * sc); x.fillStyle = 'rgba(200,50,74,0.35)'; x.beginPath(); x.arc(px, py, r, 0, TAU); x.fill(); x.fillStyle = '#c8324a'; x.fillRect(px - r * 0.45, py - r * 0.3, r * 0.9, r * 0.6); for (let k = 0; k < 3; k++) x.fillRect(px - r * 0.45 + k * r * 0.35, py - r * 0.5, r * 0.2, r * 0.22); x.strokeStyle = '#ffd36b'; x.lineWidth = 1; x.strokeRect(px - r * 0.45, py - r * 0.3, r * 0.9, r * 0.6); }
   /* Startplätze */
   map.starts.forEach((s, i) => { const c = (opts.starts && opts.starts[i]) || MV_COL.start[i % 4], r = Math.max(5, 64 * sc); x.fillStyle = c; x.beginPath(); x.arc(X(s.x), Y(s.y), r, 0, TAU); x.fill(); x.strokeStyle = '#ffffff'; x.lineWidth = 1.5; x.stroke(); x.fillStyle = '#071018'; x.font = 'bold ' + Math.round(r * 1.3) + 'px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(i + 1), X(s.x), Y(s.y) + 0.5); });
   x.strokeStyle = '#2c4a7a'; x.lineWidth = 1; x.strokeRect(ox + 0.5, oy + 0.5, map.w * sc - 1, map.h * sc - 1);
@@ -34,5 +36,6 @@ function mapLegend(map) {
   const parts = [L('Blau: Eis'), L('Braun: Erz'), L('Grau: Asteroidengürtel'), L('Grün: Stätten und Tore')];
   if (ion) parts.push(L('Violett: Ionennebel (Schilde aus, nur Nahsicht)'));
   if (ash) parts.push(L('Rot: Aschewolke (Hüllenschaden)'));
+  if (map.fort) parts.push(L('Rotes Bollwerk: Piratenfestung'));
   return parts.join(' · ');
 }

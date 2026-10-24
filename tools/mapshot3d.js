@@ -11,7 +11,7 @@ const file = path.join(__dirname, '..', 'build', 'rift-armada.html'), OUT = path
     await page.goto('file://' + file); await page.waitForTimeout(800);
     await page.evaluate(id => { window.__RA_TEST = 1; MENU.map = id; MENU.slots = [{ f: 'mars', lvl: 2, team: 0 }].concat(Array.from({ length: 6 }, () => ({ f: 'off', lvl: 2, team: 0 }))); MENU.faction = 'alliance'; startSkirmish(); }, id);
     await page.waitForTimeout(2500);
-    await page.evaluate(() => { UI.speed = 0; const g = UI.g; for (const v of g.players[UI.me].explored || []) {} const s0 = g.map.starts[0], cx = g.map.w / 2; R.center(s0.x + (cx - s0.x) * 0.25, s0.y + (cx - s0.y) * 0.25); R.zoomAt(500, 300, 0.45); g.reveals.push({ x: g.map.w / 2, y: g.map.h / 2, r: 99999, owner: UI.me, until: 9999 }); UI.speed = 1; });
+    await page.evaluate(() => { UI.speed = 0; const g = UI.g; for (const v of g.players[UI.me].explored || []) {} const s0 = g.map.fort || g.map.starts[0], cx = g.map.w / 2; R.center(s0.x + (cx - s0.x) * 0.25, s0.y + (cx - s0.y) * 0.25); R.zoomAt(500, 300, g.map.fort ? 0.9 : 0.45); g.reveals.push({ x: g.map.w / 2, y: g.map.h / 2, r: 99999, owner: UI.me, until: 9999 }); UI.speed = 1; });
     await page.waitForTimeout(1500); await page.evaluate(() => { UI.speed = 0; }); await page.waitForTimeout(500); await page.screenshot({ path: path.join(OUT, 'neb-' + id + '.png') }); console.log('neb-' + id, await page.evaluate(() => UI.g.map.nebs.map(n => n.kind).join(',')));
     await page.close();
   }
