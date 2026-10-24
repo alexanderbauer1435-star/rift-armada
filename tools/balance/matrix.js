@@ -2,10 +2,18 @@
    node tools/balance/matrix.js [tag] [maps] [seeds] → Siegquote je Fraktion, mittlere Spieldauer, Unentschieden (Zeitlimit) */
 const { loadSim } = require('../../tests/harness.js'); const X = loadSim();
 const tag = process.argv[2] || 'run', maps = (process.argv[3] || 'expanse,bastions').split(','), seeds = +(process.argv[4] || 3);
-const F = ['alliance', 'mars', 'legion', 'nexus', 'brood'], LIM = 1800;
+const F = ['alliance', 'mars', 'legion', 'nexus', 'brood'], LIM = 1800, MODE = process.env.MODE || '1v1';
 const win = {}, games = {}, dur = [], pair = {}; let draws = 0, n = 0;
 for (const f of F) { win[f] = 0; games[f] = 0; }
-for (const map of maps) for (let i = 0; i < F.length; i++) for (let j = i + 1; j < F.length; j++) for (let s = 1; s <= seeds; s++) for (const sw of [0, 1]) {
+if (MODE === '2v2') for (const map of maps) for (let s = 1; s <= seeds; s++) for (let out = 0; out < 5; out++) { const four = F.filter((_, k) => k !== out); for (const [x, y] of [[0, 1], [0, 2], [0, 3]]) {
+  const t1 = [four[x], four[y]], t2 = four.filter(f => !t1.includes(f));
+  const g = X.createGame({ map, seed: s * 31 + out * 7 + x + y, players: [{ faction: t1[0], ai: 3, team: 1 }, { faction: t2[0], ai: 3, team: 2 }, { faction: t1[1], ai: 3, team: 1 }, { faction: t2[1], ai: 3, team: 2 }] });
+  const lim = LIM / X.STEP; for (let k = 0; k < lim && !g.over; k++) { X.stepGame(g); g.ev.length = 0; }
+  for (const f of four) games[f]++; n++;
+  if (!g.over) { draws++; continue; }
+  const wt = g.winTeam === 1 ? t1 : g.winTeam === 2 ? t2 : []; for (const f of wt) win[f]++; dur.push(g.time);
+} }
+if (MODE === '1v1') for (const map of maps) for (let i = 0; i < F.length; i++) for (let j = i + 1; j < F.length; j++) if (!process.env.ONLYF || F[i] === process.env.ONLYF || F[j] === process.env.ONLYF) for (let s = 1; s <= seeds; s++) for (const sw of [0, 1]) {
   const a = sw ? F[j] : F[i], b = sw ? F[i] : F[j];
   const g = X.createGame({ map, seed: s * 7 + i * 3 + j, players: [{ faction: a, ai: 3, team: 1 }, { faction: b, ai: 3, team: 2 }] });
   const lim = LIM / X.STEP; for (let k = 0; k < lim && !g.over; k++) { X.stepGame(g); g.ev.length = 0; }

@@ -17,13 +17,17 @@ const DMG_VS_HULL = { beam: 0.78, kin: 1.25, torp: 1.0, pd: 0.5, rail: 1.3, acid
 /* Konter nach Größenklasse des Ziels (f Jäger, s klein, m mittel, l groß): Torpedos gegen Große, Strahlen und Autokanonen
    gegen Kleine, Railguns gegen Mittlere. Stationen nehmen Torpedos und Railguns etwas stärker (BLD). */
 const COUNTER = {
-  torp: { f: 0.5, s: 0.75, m: 1.1, l: 1.5, b: 1.15 }, rail: { f: 0.5, s: 0.8, m: 1.35, l: 1.1, b: 1.15 },
+  torp: { f: 0.5, s: 0.75, m: 1.15, l: 1.9, b: 1.15 }, rail: { f: 0.5, s: 0.8, m: 1.35, l: 1.1, b: 1.15 },
   beam: { f: 1.15, s: 1.25, m: 1.0, l: 0.85, b: 0.9 }, kin: { f: 1.2, s: 1.2, m: 1.0, l: 0.85, b: 1.0 },
   acid: { f: 1, s: 0.9, m: 1.1, l: 1.2, b: 1.0 }, bite: { f: 1, s: 1.15, m: 1.0, l: 0.9, b: 0.9 }
 };
+/* Zielverfolgung: schwere Geschütze großer Schiffe folgen kleinen, wendigen Zielen schlecht (Schütze → Ziel) */
+const TRACK = { l: { f: 0.4, s: 0.5, m: 0.85 }, m: { f: 0.7, s: 0.85 } };
 const CLS_NAME = { s: 'kleine Schiffe', m: 'mittlere Schiffe', l: 'große Schiffe', b: 'Stationen' };
 /* Flanke und Heck: Treffer von der Seite +10 %, von hinten +25 % */
 const FLANK_SIDE = 1.1, FLANK_REAR = 1.25;
+/* Trefferchance der Punktverteidigung gegen Torpedos */
+const PD_TORP = 0.4;
 /* Bergung: Anteil der Baukosten, den ein Wrack als Rohstoff hergibt */
 const SALVAGE = 0.25;
 const RELIC_GATE = 3;                        // Relikte, um ein Tor zu aktivieren
@@ -278,7 +282,7 @@ const SUB_FRAC = 0.35;                       // Subsystem-Punkte als Anteil der 
 const SUB_HIT = 0.7;                         // Anteil des Hüllenschadens, der ins anvisierte Subsystem geht
 const SUB_REPAIR = 0.012;                    // Selbstreparatur je Sekunde (Anteil), an der Werft das Fünffache
 /* Gewicht in der KI-Flottenwahl (1 = normal): Unterstützer seltener */
-const AI_W = { leech: 0.45, sporer: 0.5, plaguebearer: 0.6, binder: 0.5, conduit: 0.5, lattice: 0.15, spire: 0.4, mirror: 0.6, beacon: 0.15, oracle: 0.15, reliquary: 0.5, boarder: 0.5, dropship: 0.5, aegis: 0.7, sanctum: 0.4 };
+const AI_W = { leech: 0.2, spitter: 0.6, shard: 0.5, wren: 0.4, sporer: 0.5, plaguebearer: 0.6, binder: 0.5, conduit: 0.5, lattice: 0.15, spire: 0.4, mirror: 0.6, beacon: 0.15, oracle: 0.15, reliquary: 0.5, boarder: 0.5, dropship: 0.5, aegis: 0.7, sanctum: 0.4 };
 /* Tarnung: je Fraktion ein Schiff für Hinterhalte und Aufklärung */
 for (const id of ['wren', 'boarder', 'herald', 'shard', 'leech']) SHIPS[id].ab2 = ['cloak'];
 for (const id in SHIPS) { const s = SHIPS[id]; s.id = id; s.aiW = AI_W[id] || 1; s.wpn = (s.wpn || []).map(w => W[w]); s.armor = s.armor || 0; s.shield = s.shield || 0; if (s.crew === undefined) s.crew = s.role === 'tanker' ? 12 : s.role === 'builder' ? 24 : CREW_CLS[s.cls] || 0; if (s.wpn.some(w => w.kind !== 'pd' && Math.abs(w.mount) > 1)) s.side = true; }
@@ -555,7 +559,7 @@ for (const f in BLDG) for (const role in BLDG[f]) { const b = BLDG[f][role]; b.f
    Geschütz-Schaden je Fraktion so, dass Stufe I überall etwa 85–105 Schaden/s macht (vorher 38–83). */
 const BAL = {
   speed: { f: 1, s: 0.88, m: 0.78, l: 0.66 }, accel: { f: 1, s: 0.9, m: 0.8, l: 0.7 }, turn: { f: 1, s: 0.92, m: 0.85, l: 0.78 },
-  tower: { roles: { turret: 1, flak: 1 }, hull: 1.5, shield: 1.5, range: 1.1, dps: { alliance: 1.8, mars: 2.2, legion: 1.25, nexus: 1.45, brood: 2.2, guardian: 1.6 }, flak: 1.5 },
+  tower: { roles: { turret: 1, flak: 1 }, hull: 1.3, shield: 1.3, range: 1.1, dps: { alliance: 1.55, mars: 1.9, legion: 1.3, nexus: 1.25, brood: 1.9, guardian: 1.6 }, flak: 1.4 },
   base: { hull: 1.3, shield: 1.3, dps: 1.4, range: 1.1 }
 };
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.role !== 'war') continue; s.speed = Math.round(s.speed * (s.f === 'brood' && s.cls === 's' ? 0.95 : BAL.speed[s.cls])); s.accel = Math.round(s.accel * BAL.accel[s.cls]); s.turn = +(s.turn * BAL.turn[s.cls]).toFixed(2); }
@@ -568,10 +572,18 @@ SHIPS.paladin.shield = 320;
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'mars' && s.role === 'war') s.hull = Math.round(s.hull * 1.08); }
 SHIPS.hedgehog.cost = { ice: 340, ore: 150 };
 /* Brood: fast nur kleine Schiffe, die Konter gegen Kleine treffen sie voll – dafür zäher und billiger */
-for (const id in SHIPS) { const s = SHIPS[id]; if (s.f !== 'brood' || s.role !== 'war') continue; s.hull = Math.round(s.hull * 1.3); for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.85); }
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.f !== 'brood' || s.role !== 'war') continue; s.hull = Math.round(s.hull * 1.12); for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.95); }
 /* Alliance: Schilde der Kampfschiffe +15 %, Lancer etwas billiger */
-for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'alliance' && s.role === 'war' && s.shield) s.shield = Math.round(s.shield * 1.15); }
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'alliance' && s.role === 'war') { if (s.shield) s.shield = Math.round(s.shield * 1.15); s.hull = Math.round(s.hull * 1.12); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.18).toFixed(2) })); } }
 SHIPS.lancer.cost = { ice: 350, ore: 140 };
+/* Brood: Biomasse aus allem – die Grube verwertet 15 % mehr (gleicht die anfällige Ausbreitung aus) */
+for (const l of BLDG.brood.refinery.lv) l.bonus = +((l.bonus || 1) + 0.15).toFixed(2);
+/* Kostenduelle (tools/balance/duel.js, Runde 17): Ausreißer auf etwa ±0,25 Vorsprung bei gleichem Budget bringen */
+const TUNE = { behemoth: { hull: 0.85, dps: 0.8 }, leviathan: { hull: 0.88, dps: 0.8 }, swarm: { hull: 0.88, dps: 0.65 }, larva: { cost: 1.2 }, broodmother: { cost: 1.3 }, sporer: { cost: 1.35 }, acidmaw: { hull: 0.9 }, spire: { cost: 1.15 }, zealot: { hull: 0.85, dps: 0.7 }, hammer: { hull: 0.92, cost: 1.15 },
+  wasp: { cost: 0.86 }, shard: { cost: 0.85, hull: 1.15 }, prism: { cost: 0.9 }, longshot: { cost: 0.72 }, basilica: { cost: 0.87 }, bulwark: { dps: 1.15 } };
+/* Erbauer-Lanze der Reckoning: Waffe der Alliance gegen große Schiffe */
+SHIPS.reckoning.wpn = SHIPS.reckoning.wpn.map((w, i) => i === 0 ? Object.assign({}, w, { antiL: 1.5 }) : w);
+for (const id in TUNE) { const s = SHIPS[id], t = TUNE[id]; if (t.hull) s.hull = Math.round(s.hull * t.hull); if (t.cost) for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * t.cost); if (t.dps) s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * t.dps).toFixed(2) })); }
 for (const f in BLDG) for (const role in BLDG[f]) {
   const tw = BAL.tower.roles[role], bs = role === 'base';
   if (!tw && !bs) continue;

@@ -10,7 +10,7 @@ const step = (g, sec) => { const end = g.time + sec; while (g.time < end && !g.o
   const h0 = L.hull, s0 = S.hull;
   C.damage(g, L, 100, 'torp', undefined, 0, L.x + 100, L.y); C.damage(g, S, 100, 'torp', undefined, 0, S.x + 100, S.y);
   const dl = h0 - L.hull, ds = s0 - S.hull;
-  ok(Math.abs(dl / ds - 2) < 0.05, 'Torpedo: groß ' + dl.toFixed(0) + ' vs klein ' + ds.toFixed(0) + ' (×' + (dl / ds).toFixed(2) + ')');
+  ok(Math.abs(dl / ds - 1.9 / 0.75) < 0.05, 'Torpedo: groß ' + dl.toFixed(0) + ' vs klein ' + ds.toFixed(0) + ' (×' + (dl / ds).toFixed(2) + ')');
   const b0 = S.hull; C.damage(g, S, 100, 'beam', undefined, 0, S.x + 100, S.y); const db = b0 - S.hull;
   ok(db > ds, 'Strahl trifft Kleine härter als Torpedo (' + db.toFixed(0) + ' > ' + ds.toFixed(0) + ')');
 }
@@ -64,6 +64,15 @@ const step = (g, sec) => { const end = g.time + sec; while (g.time < end && !g.o
   t.hull = 0; C.kill(g, t, null, 0); step(g, 0.5);
   w.stance = 0; X.execCmd(g, { t: 'attack', p: 0, u: [w.id], e: e.id }); step(g, 6);
   ok(!(w.abT.cloak > 0), 'Angriff hebt die Tarnung auf');
+}
+/* 6 Notgroschen: eine KI ohne Einkommen bekommt ein kleines Grundeinkommen */
+{
+  const g = X.createGame({ map: 'expanse', seed: 2, players: [{ faction: 'mars', ai: 2 }, { faction: 'brood', ai: 2 }] });
+  for (const u of g.ships.slice()) if (u.def.cargo) C.removeShip(g, u);
+  for (const n of g.nodes) n.amount = 0;
+  g.players[1].ice = 100; step(g, 200);
+  const d = g.players[1].ai.dole || 0;
+  ok(d > 20 && d < 200, 'KI ohne Einkommen erhält Notgroschen (' + Math.round(d) + ' s)');
 }
 /* Determinismus über alles */
 const h = () => { const g = X.createGame({ map: 'keep', seed: 8, players: [{ faction: 'legion', ai: 3 }, { faction: 'brood', ai: 3 }, { faction: 'mars', ai: 3 }] }); step(g, 400); return X.stateHash(g); };

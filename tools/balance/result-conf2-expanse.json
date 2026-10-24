@@ -1,0 +1,59 @@
+{
+ "tag": "conf2-expanse",
+ "maps": [
+  "expanse"
+ ],
+ "seeds": 2,
+ "games": 40,
+ "draws": 6,
+ "avgMin": 14.4,
+ "winrate": {
+  "alliance": 0.19,
+  "mars": 0.63,
+  "legion": 0.44,
+  "nexus": 0.56,
+  "brood": 0.31
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 1,
+   "mars": 3
+  },
+  "alliance-legion": {
+   "alliance": 1,
+   "legion": 1
+  },
+  "alliance-nexus": {
+   "alliance": 1,
+   "nexus": 2
+  },
+  "alliance-brood": {
+   "alliance": 0,
+   "brood": 3
+  },
+  "mars-legion": {
+   "mars": 3,
+   "legion": 1
+  },
+  "mars-nexus": {
+   "mars": 1,
+   "nexus": 3
+  },
+  "mars-brood": {
+   "mars": 3,
+   "brood": 0
+  },
+  "legion-nexus": {
+   "legion": 1,
+   "nexus": 2
+  },
+  "legion-brood": {
+   "legion": 4,
+   "brood": 0
+  },
+  "nexus-brood": {
+   "nexus": 2,
+   "brood": 2
+  }
+ }
+}

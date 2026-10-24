@@ -117,6 +117,15 @@ function engage(g, u, t, dt) {
     return;
   }
   if (d > keep + 12) { chase(g, u, t, dt, keep); return; }
+  /* Flankieren: kleine Schiffe umkreisen träge mittlere und große Ziele, bis sie im Heckbereich stehen (+25 % Schaden) */
+  if (def.cls === 's' && !def.side && t.k === 1 && (t.def.cls === 'l' || t.def.cls === 'm') && !t.derelict && u.stance !== 1) {
+    const rel = angDiff(datan2(u.y - t.y, u.x - t.x), t.ang + Math.PI);
+    if (Math.abs(rel) > 0.75) {
+      const dir = (rel >= 0 ? -1 : 1), a = t.ang + Math.PI + rel + dir * 0.7, r = Math.max(keep * 0.85, t.def.r + def.r + 30);
+      steer(g, u, t.x + dcos(a) * r, t.y + dsin(a) * r, dt, false, def.speed);
+      return;
+    }
+  }
   brake(u, dt);
   if (def.side) {
     /* Flanke: die Seite, die näher an der Zielrichtung liegt */
@@ -474,7 +483,8 @@ function firePd(g, s, w, i) {
   let best = null, bd = 1e9;
   for (const q of g.proj) { if (q.kind !== 'torp' || !foes(g, pi, q.owner)) continue; const dx = q.x - s.x, dy = q.y - s.y, d = dx * dx + dy * dy; if (d < r2 && d < bd) { bd = d; best = q; } }
   if (best) {
-    best.hp -= 1;
+    /* Punktverteidigung trifft schnelle Torpedos nicht immer (sonst wären Torpedoboote gegen Schlachtschiffe chancenlos) */
+    if (g.rng() < PD_TORP) best.hp -= 1;
     ev(g, 'pd', { x: s.x, y: s.y, tx: best.x, ty: best.y, owner: pi, kill: best.hp <= 0 });
     if (best.hp <= 0) { best.dead = true; ev(g, 'hit', { x: best.x, y: best.y, kind: 'torpdie' }); }
     return true;
@@ -552,6 +562,8 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   /* Konter nach Größenklasse; Flanke und Heck (nur Schiffe, nur gerichtete Treffer) */
   /* nur Waffenfeuer (Schütze oder Geschoss); Flächenwirkungen wie Eruptionen und Säure übergeben src = null */
   const ck = COUNTER[kind]; if (ck && !bypass && src !== null) amt *= t.k === 1 ? (ck[t.def.cls] || 1) : t.k === 2 ? ck.b : 1;
+  if (w && w.antiL && t.k === 1 && t.def.cls === 'l' && !bypass) amt *= w.antiL;
+  if (src && src.k === 1 && t.k === 1 && !bypass && kind !== 'torp') { const tr = TRACK[src.def.cls]; if (tr && tr[t.def.cls]) amt *= tr[t.def.cls]; }
   if (t.k === 1 && !bypass && src !== null && sx !== undefined && t.def.role !== 'fighter' && (sx !== t.x || sy !== t.y)) {
     const rel = Math.abs(angDiff(datan2(sy - t.y, sx - t.x), t.ang));
     if (rel > 2.1) { amt *= FLANK_REAR; if (owner >= 0 && g.time - (t.flankT || -9) > 2.5) { t.flankT = g.time; ev(g, 'flank', { x: t.x, y: t.y, owner, rear: 1 }); } }
@@ -639,7 +651,7 @@ function makeDerelict(g, u) {
 function derelictStep(g, u, dt) {
   brake(u, dt);
   /* nach zwei Minuten ohne Besatzung zerfällt das Wrack langsam */
-  if (g.time - u.derT > 120) { u.hull -= u.hullMax * 0.01 * dt; if (u.hull <= 0) { kill(g, u, null, -1); return; } }
+  if (g.time - u.derT > (u.dormant ? 60 : 120)) { u.hull -= u.hullMax * (u.dormant ? 0.02 : 0.01) * dt; if (u.hull <= 0) { kill(g, u, null, -1); return; } }
   if (u.v > 0.01) { u.x = clamp(u.x + dcos(u.ang) * u.v * dt, 8, g.map.w - 8); u.y = clamp(u.y + dsin(u.ang) * u.v * dt, 8, g.map.h - 8); }
   u.lx = u.x; u.ly = u.y;
   if (inAsh(g.map, u.x, u.y)) { u.hull -= u.hullMax * ASH_DMG * dt; if (u.hull <= 0) kill(g, u, null, -1); }

@@ -1,0 +1,27 @@
+{
+ "tag": "ally2-bastions",
+ "maps": [
+  "bastions"
+ ],
+ "seeds": 2,
+ "games": 16,
+ "draws": 11,
+ "avgMin": 12.2,
+ "winrate": {
+  "alliance": 0.06,
+  "mars": 0.5,
+  "legion": 0,
+  "nexus": 0,
+  "brood": 0.5
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 1,
+   "mars": 2
+  },
+  "alliance-brood": {
+   "alliance": 0,
+   "brood": 2
+  }
+ }
+}

@@ -1,0 +1,52 @@
+[
+ {
+  "s": "swarm",
+  "f": "brood",
+  "cls": "s",
+  "cost": 145,
+  "score": 0.625,
+  "vsS": 0.78,
+  "vsM": 0,
+  "vsL": 0.16
+ },
+ {
+  "s": "hammer",
+  "f": "mars",
+  "cls": "l",
+  "cost": 1920,
+  "score": 0.606,
+  "vsS": 0.61,
+  "vsM": 0,
+  "vsL": 0
+ },
+ {
+  "s": "lancer",
+  "f": "alliance",
+  "cls": "s",
+  "cost": 490,
+  "score": -0.117,
+  "vsS": 0.11,
+  "vsM": 0,
+  "vsL": -0.8
+ },
+ {
+  "s": "needle",
+  "f": "mars",
+  "cls": "s",
+  "cost": 300,
+  "score": -0.543,
+  "vsS": -0.42,
+  "vsM": 0,
+  "vsL": -0.92
+ },
+ {
+  "s": "paladin",
+  "f": "legion",
+  "cls": "s",
+  "cost": 800,
+  "score": -0.57,
+  "vsS": -0.47,
+  "vsM": 0,
+  "vsL": -0.86
+ }
+]

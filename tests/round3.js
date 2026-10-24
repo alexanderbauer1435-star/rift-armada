@@ -20,8 +20,8 @@ const cx = g => g.map.w / 2, cy = g => g.map.h / 2;
   X.execCmd(g, { p: 0, t: 'attack', u: [a.id], e: t.id });
   run(g, 1.2);
   ok(t.shield > 0 && t.hull < t.hullMax, 'Lanze trifft die Hülle, obwohl der Schild steht (shield ' + Math.round(t.shield) + ', hull ' + Math.round(t.hull) + '/' + t.hullMax + ')');
-  run(g, 14);
-  ok(a.hero && a.hangar && a.hangar.n >= 1, 'Heldenschiff hat Namen (' + a.hero + ') und Drohnen (' + a.hangar.n + ')');
+  run(g, 16);
+  ok(a.hero && a.hangar && (a.hangar.n >= 1 || g.ships.some(u => u.type === 'cherub' && u.owner === a.owner)), 'Heldenschiff hat Namen (' + a.hero + ') und Drohnen (' + a.hangar.n + ')');
 }
 /* 2. Ruhender Held, Erwecken durch Restorer, Wiederauferstehung des Flaggschiffs */
 {

@@ -1,0 +1,60 @@
+{
+ "tag": "final-bastions,pinwheel",
+ "maps": [
+  "bastions",
+  "pinwheel"
+ ],
+ "seeds": 3,
+ "games": 120,
+ "draws": 32,
+ "avgMin": 11.3,
+ "winrate": {
+  "alliance": 0.27,
+  "mars": 0.42,
+  "legion": 0.5,
+  "nexus": 0.15,
+  "brood": 0.5
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 2,
+   "mars": 5
+  },
+  "alliance-legion": {
+   "alliance": 3,
+   "legion": 4
+  },
+  "alliance-nexus": {
+   "alliance": 7,
+   "nexus": 2
+  },
+  "alliance-brood": {
+   "alliance": 1,
+   "brood": 9
+  },
+  "mars-legion": {
+   "mars": 2,
+   "legion": 7
+  },
+  "mars-nexus": {
+   "mars": 9,
+   "nexus": 2
+  },
+  "mars-brood": {
+   "mars": 4,
+   "brood": 3
+  },
+  "legion-nexus": {
+   "legion": 7,
+   "nexus": 3
+  },
+  "legion-brood": {
+   "legion": 6,
+   "brood": 3
+  },
+  "nexus-brood": {
+   "nexus": 0,
+   "brood": 9
+  }
+ }
+}

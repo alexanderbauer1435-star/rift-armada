@@ -15,6 +15,7 @@ const ship = (g, type, pi, x, y, ang) => X.addShip(g, type, pi, x, y, ang || 0);
   const g = mk({});
   const t = ship(g, 'hammer', 1, cx(g) + 200, cy(g), Math.PI), a = ship(g, 'lancer', 0, cx(g), cy(g), 0), b = ship(g, 'lancer', 0, cx(g), cy(g) + 400, 0); b.stance = 2;
   t.stance = 2; t.o = { t: 'hold' };
+  a.stance = 1; /* ohne Flankenmanöver: stehen bleiben und feuern */
   X.execCmd(g, { p: 0, t: 'attack', u: [a.id], e: t.id, sub: 'drive' });
   run(g, 10);
   ok(t.sub.drive < 0.9 && t.sub.drive < Math.min(t.sub.wpn, t.sub.sensor, t.sub.life), 'Subsystem-Ziel Antrieb beschädigt: drive=' + t.sub.drive.toFixed(2) + ' wpn=' + t.sub.wpn.toFixed(2));

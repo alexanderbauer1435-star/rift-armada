@@ -49,11 +49,20 @@ function aiTarget(g, pi, x, y) {
   const s = aiEnemyStart(g, pi);
   return s ? { x: s.x, y: s.y } : null;
 }
+const AI_DOLE = { ice: 8, ore: 4 };
 function aiThink(g, pi) {
   const p = g.players[pi], A = p.ai, cfg = A.cfg, f = p.faction, t = g.time;
   /* Brood: alles ist Biomasse (Eis); Erz-Schwellen gelten dann für Eis */
   const ore = p.F.bio ? p.ice : p.ore;
   const mine = g.bldgs.filter(b => !b.dead && b.owner === pi), base = mine.find(b => b.role === 'base');
+  /* Notgroschen: hat die KI seit 45 s nichts verdient und ist fast pleite, bekommt sie ein kleines Grundeinkommen
+     (etwa ein Frachter in 40 s) – genug, um Frachter und eine Raffinerie neu zu bauen, nicht genug für eine Flotte */
+  if (A.earnT === undefined || p.stats.earned > A.earned) { A.earned = p.stats.earned; A.earnT = t; }
+  const broke = t - A.earnT > 45 && (p.ice < 400 || (!p.F.bio && p.ore < 250)) && mine.some(b => b.done);
+  if (broke) { const dtA = Math.min(5, t - (A.doleT || t)); p.ice += AI_DOLE.ice * dtA; if (!p.F.bio) p.ore += AI_DOLE.ore * dtA; A.dole = (A.dole || 0) + dtA; }
+  /* Erz-Notgroschen: viel Eis, aber seit 60 s kein Erz mehr (alle Erzfelder leer) – sonst steht die Flotte still */
+  if (!p.F.bio) { if (A.oreT === undefined || p.ore > (A.oreLast || 0) + 1) A.oreT = t; A.oreLast = p.ore; if (!broke && t - A.oreT > 60 && p.ore < 200 && mine.some(b => b.done)) { p.ore += AI_DOLE.ore * Math.min(5, t - (A.doleT || t)); } }
+  A.doleT = t;
   /* Schiffe mit Sonderauftrag (u.task, etwa Wache an einer Kolonie) führt die KI nicht */
   const ships = g.ships.filter(u => !u.dead && !u.derelict && u.owner === pi && u.def.role !== 'fighter' && !u.task && !u.gar);
   const builders = ships.filter(u => u.def.build), tankers = ships.filter(u => u.def.cargo), fleet = ships.filter(u => armed(u));
@@ -77,13 +86,18 @@ function aiThink(g, pi) {
   /* ---- Wirtschaft (höchstens eine Station je Denkpause) ---- */
   let built = false;
   const rich = p.ice > 500 && ore > 250;
+  /* ausgehungert: an keiner eigenen Raffinerie liegt noch ein ergiebiges Vorkommen – dann hat die Ausbreitung Vorrang
+     (sonst gibt eine Fraktion, die alles in Schiffe steckt, nie genug für eine neue Raffinerie aus) */
+  const refsNow = mine.filter(b => b.role === 'refinery' && b.done);
+  let left = 0; for (const n of g.nodes) if (n.amount > 0 && refsNow.some(r => hyp(n.x - r.x, n.y - r.y) < 560)) left += n.amount;
+  const starving = t > 150 && left < 6000;
   if (!yards.length && !building.some(b => b.role === 'yard')) built = aiBuild(g, pi, 'yard', anchor.x + dcos(dirA) * 60, anchor.y + dsin(dirA) * 60, 150, 320);
   if (!built && p.eUse + 8 >= p.eGen && !building.some(b => b.role === 'reactor')) built = aiBuild(g, pi, 'reactor', anchor.x, anchor.y, 130, 360);
   if (!built && p.cpUse + p.queued + 4 >= p.cpMax && !building.some(b => b.role === 'relay') && relays.length < 4) built = aiBuild(g, pi, 'relay', anchor.x, anchor.y, 140, 380);
   /* Ausbreitung: neue Raffinerie an einem Vorkommen ohne eigene Raffinerie in der Nähe */
   if (!built && t > 60 && !building.some(b => b.role === 'refinery')) {
     const want = refs.length < 1 + Math.min(cfg.exp, 1 + Math.floor(t / 240));
-    if (want && rich) {
+    if ((want || starving) && (rich || (starving && p.ice > 150))) {
       let bestN = null, bd = 1e9;
       for (const n of g.nodes) {
         if (n.amount < n.max * 0.3) continue;
@@ -98,7 +112,7 @@ function aiThink(g, pi) {
         built = aiBuild(g, pi, 'refinery', bestN.x + dcos(a) * d, bestN.y + dsin(a) * d, 0, 160);
         /* zu weit von der Basis: erst ein Relais als Brücke */
         const whyP = canPlace(g, pi, 'refinery', bestN.x + dcos(a) * d, bestN.y + dsin(a) * d);
-        if (!built && (whyP === 'Zu weit von der Basis' || whyP === 'Außerhalb des Netzes')) {
+        if (!built && (whyP === 'Zu weit von der Basis' || whyP === 'Außerhalb des Netzes') && mine.filter(b => b.role === 'relay').length < 8 && !building.some(b => b.role === 'relay')) {
           let nearest = null, nd = 1e9;
           for (const b of mine) { if (!b.done) continue; const q = hyp(b.x - bestN.x, b.y - bestN.y); if (q < nd) { nd = q; nearest = b; } }
           if (nearest) { const a2 = datan2(bestN.y - nearest.y, bestN.x - nearest.x), rd = f === 'nexus' ? 330 : 380; built = aiBuild(g, pi, 'relay', nearest.x + dcos(a2) * rd, nearest.y + dsin(a2) * rd, 0, 120); }
@@ -151,8 +165,8 @@ function aiThink(g, pi) {
     const tk = w && tankers.find(u => u.o.t === 'harvest' && u.cargo < 10 && !u.def.net);
     if (tk) execCmd(g, { t: 'salvage', p: pi, u: [tk.id], w: w.id });
   }
-  /* ---- Flotte bauen ---- */
-  if (yards.length && (tankers.length >= Math.min(2, wantT) || t > 200)) {
+  /* ---- Flotte bauen ---- (ausgehungert: erst sparen, bis die neue Raffinerie steht) */
+  if (yards.length && (tankers.length >= Math.min(2, wantT) || t > 200) && !(starving && p.ice < 700 && !building.some(b => b.role === 'refinery'))) {
     const labL = labLevel(g, pi), yardL = Math.max(...yards.map(b => b.lv));
     const pool = Object.values(SHIPS).filter(d => d.f === f && (d.role === 'war' || d.role === 'carrier')).filter(d => !d.hidden && d.tier - 1 <= labL && d.yard <= yardL && !d.flag && (!d.doc || d.doc === p.doctrine) && d.wpn.length && d.id !== 'larva');
     const flag = Object.values(SHIPS).find(d => d.f === f && d.flag);
@@ -164,6 +178,8 @@ function aiThink(g, pi) {
       const r = g.rng();
       if (big.length && r < 0.22 && ore > 800) return wpick(big);
       if (mid.length && r < 0.55 && ore > 450) return wpick(mid);
+      /* ab einer kleinen Flotte für größere Schiffe sparen statt nur Kleinzeug zu bauen */
+      if ((mid.length && n >= 6 && r < 0.55) || (big.length && n >= 10 && r < 0.22)) return null;
       /* Korvetten früh, später mehr Fregatten */
       const frig = cheap.filter(d => d.cp >= 2), corv = cheap.filter(d => d.cp < 2);
       if (frig.length && (n > 3 || g.rng() < 0.5)) return wpick(frig);

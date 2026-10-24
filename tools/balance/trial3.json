@@ -1,0 +1,82 @@
+[
+ {
+  "s": "hammer",
+  "f": "mars",
+  "cls": "l",
+  "cost": 1920,
+  "score": 0.676,
+  "vsS": 0.79,
+  "vsM": 0,
+  "vsL": 0.38
+ },
+ {
+  "s": "lancer",
+  "f": "alliance",
+  "cls": "s",
+  "cost": 490,
+  "score": 0.127,
+  "vsS": 0.55,
+  "vsM": 0,
+  "vsL": -0.44
+ },
+ {
+  "s": "monolith",
+  "f": "nexus",
+  "cls": "l",
+  "cost": 2800,
+  "score": 0.109,
+  "vsS": 0.01,
+  "vsM": 0,
+  "vsL": 0.35
+ },
+ {
+  "s": "herald",
+  "f": "legion",
+  "cls": "s",
+  "cost": 350,
+  "score": 0.081,
+  "vsS": 0.23,
+  "vsM": 0,
+  "vsL": -0.11
+ },
+ {
+  "s": "basilica",
+  "f": "legion",
+  "cls": "l",
+  "cost": 2610,
+  "score": -0.022,
+  "vsS": 0.26,
+  "vsM": 0,
+  "vsL": -0.73
+ },
+ {
+  "s": "needle",
+  "f": "mars",
+  "cls": "s",
+  "cost": 300,
+  "score": -0.096,
+  "vsS": -0.26,
+  "vsM": 0,
+  "vsL": 0.12
+ },
+ {
+  "s": "shard",
+  "f": "nexus",
+  "cls": "s",
+  "cost": 260,
+  "score": -0.328,
+  "vsS": 0.15,
+  "vsM": 0,
+  "vsL": -0.97
+ },
+ {
+  "s": "wasp",
+  "f": "mars",
+  "cls": "s",
+  "cost": 301,
+  "score": -0.546,
+  "vsS": -0.67,
+  "vsM": 0,
+  "vsL": -0.38
+ }
+]

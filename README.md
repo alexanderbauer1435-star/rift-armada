@@ -47,6 +47,16 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 19 (Runde 17, Balancing): Messwerkzeuge tools/balance/ – duel.js (Kostenduelle Schiff gegen Schiff bei
+  gleichem Budget), towers.js (wie viel Flotte bricht einen Turm), matrix.js (KI-Partien jede Fraktion gegen jede, 1 gegen 1
+  oder MODE=2v2, ONLYF=Fraktion). Erkenntnisse und Änderungen: Punktverteidigung schoss jeden Torpedo ab → trifft Torpedos
+  nur zu 40 % (PD_TORP); Torpedos gegen groß ×1,9; große Schiffe treffen kleine schlechter (TRACK); kleine Schiffe
+  flankieren träge Ziele selbst (engage); Ausreißer per TUNE (Hammer, Brood-Großschiffe, Swarm, Zealot u. a.), Reckoning-
+  Lanze ×1,5 gegen große Schiffe; Türme leicht zurückgenommen (Hülle ×1,3), ein Turm Stufe I braucht etwa das 2- bis
+  4-Fache seiner Kosten an Schiffen. KI-Wirtschaft: Ausbreitung hat Vorrang, wenn die Vorkommen an den eigenen Raffinerien
+  zur Neige gehen (sparen statt Schiffe), höchstens acht Brücken-Relais, ab sechs Schiffen wird für größere gespart;
+  Notgroschen (8 Eis, 4 Erz je s), wenn 45 s nichts verdient wurde, Erz-Notgroschen bei leeren Erzfeldern. Brood-Gruben
+  +15 %, ruhende Legion-Helden zerfallen nach 60 s, Alliance-Kampfschiffe Hülle +12 % und Schaden +18 %.
 - Fassung 18 (Runde 16, Balance und fünf neue Mechaniken): Balance-Block am Ende der Gebäudedaten (BAL in data.js):
   Kampfschiffe langsamer (klein ×0,88, mittel ×0,78, groß ×0,66; Beschleunigung und Wendigkeit mit), Frachter und
   Bauschiffe unverändert. Geschütze: Hülle und Schild ×1,5, Reichweite ×1,1, Schaden je Fraktion so, dass Stufe I überall

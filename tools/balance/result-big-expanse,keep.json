@@ -1,0 +1,60 @@
+{
+ "tag": "big-expanse,keep",
+ "maps": [
+  "expanse",
+  "keep"
+ ],
+ "seeds": 3,
+ "games": 120,
+ "draws": 33,
+ "avgMin": 14.9,
+ "winrate": {
+  "alliance": 0.27,
+  "mars": 0.35,
+  "legion": 0.56,
+  "nexus": 0.4,
+  "brood": 0.23
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 1,
+   "mars": 4
+  },
+  "alliance-legion": {
+   "alliance": 1,
+   "legion": 8
+  },
+  "alliance-nexus": {
+   "alliance": 7,
+   "nexus": 4
+  },
+  "alliance-brood": {
+   "alliance": 4,
+   "brood": 5
+  },
+  "mars-legion": {
+   "mars": 1,
+   "legion": 5
+  },
+  "mars-nexus": {
+   "mars": 4,
+   "nexus": 7
+  },
+  "mars-brood": {
+   "mars": 8,
+   "brood": 1
+  },
+  "legion-nexus": {
+   "legion": 6,
+   "nexus": 3
+  },
+  "legion-brood": {
+   "legion": 8,
+   "brood": 1
+  },
+  "nexus-brood": {
+   "nexus": 5,
+   "brood": 4
+  }
+ }
+}

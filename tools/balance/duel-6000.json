@@ -1,0 +1,382 @@
+[
+ {
+  "s": "sporer",
+  "f": "brood",
+  "cls": "m",
+  "cost": 408,
+  "score": 0.91,
+  "vsS": 0.91,
+  "vsM": 0.93,
+  "vsL": 0.84
+ },
+ {
+  "s": "behemoth",
+  "f": "brood",
+  "cls": "l",
+  "cost": 1615,
+  "score": 0.78,
+  "vsS": 0.83,
+  "vsM": 0.76,
+  "vsL": 0.69
+ },
+ {
+  "s": "leviathan",
+  "f": "brood",
+  "cls": "l",
+  "cost": 1700,
+  "score": 0.694,
+  "vsS": 0.72,
+  "vsM": 0.71,
+  "vsL": 0.52
+ },
+ {
+  "s": "swarm",
+  "f": "brood",
+  "cls": "s",
+  "cost": 145,
+  "score": 0.648,
+  "vsS": 0.78,
+  "vsM": 0.65,
+  "vsL": 0.23
+ },
+ {
+  "s": "broodmother",
+  "f": "brood",
+  "cls": "m",
+  "cost": 578,
+  "score": 0.644,
+  "vsS": 0.57,
+  "vsM": 0.8,
+  "vsL": 0.37
+ },
+ {
+  "s": "larva",
+  "f": "brood",
+  "cls": "s",
+  "cost": 85,
+  "score": 0.461,
+  "vsS": 0.56,
+  "vsM": 0.55,
+  "vsL": -0.13
+ },
+ {
+  "s": "zealot",
+  "f": "legion",
+  "cls": "s",
+  "cost": 540,
+  "score": 0.452,
+  "vsS": 0.62,
+  "vsM": 0.48,
+  "vsL": -0.17
+ },
+ {
+  "s": "ravager",
+  "f": "brood",
+  "cls": "s",
+  "cost": 332,
+  "score": 0.44,
+  "vsS": 0.5,
+  "vsM": 0.53,
+  "vsL": -0.04
+ },
+ {
+  "s": "monolith",
+  "f": "nexus",
+  "cls": "l",
+  "cost": 2800,
+  "score": 0.438,
+  "vsS": 0.49,
+  "vsM": 0.52,
+  "vsL": -0.12
+ },
+ {
+  "s": "spire",
+  "f": "nexus",
+  "cls": "m",
+  "cost": 800,
+  "score": 0.405,
+  "vsS": 0.49,
+  "vsM": 0.49,
+  "vsL": -0.15
+ },
+ {
+  "s": "acidmaw",
+  "f": "brood",
+  "cls": "m",
+  "cost": 595,
+  "score": 0.399,
+  "vsS": 0.29,
+  "vsM": 0.57,
+  "vsL": 0.2
+ },
+ {
+  "s": "hedgehog",
+  "f": "mars",
+  "cls": "s",
+  "cost": 490,
+  "score": 0.279,
+  "vsS": 0.39,
+  "vsM": 0.36,
+  "vsL": -0.32
+ },
+ {
+  "s": "hammer",
+  "f": "mars",
+  "cls": "l",
+  "cost": 1920,
+  "score": 0.267,
+  "vsS": 0.41,
+  "vsM": 0.27,
+  "vsL": -0.33
+ },
+ {
+  "s": "prism",
+  "f": "nexus",
+  "cls": "m",
+  "cost": 900,
+  "score": 0.247,
+  "vsS": 0.44,
+  "vsM": 0.31,
+  "vsL": -0.58
+ },
+ {
+  "s": "plaguebearer",
+  "f": "brood",
+  "cls": "m",
+  "cost": 544,
+  "score": 0.218,
+  "vsS": 0.31,
+  "vsM": 0.23,
+  "vsL": -0.12
+ },
+ {
+  "s": "spitter",
+  "f": "brood",
+  "cls": "s",
+  "cost": 289,
+  "score": 0.146,
+  "vsS": 0.03,
+  "vsM": 0.32,
+  "vsL": -0.09
+ },
+ {
+  "s": "bastion",
+  "f": "legion",
+  "cls": "m",
+  "cost": 1240,
+  "score": 0.094,
+  "vsS": 0.21,
+  "vsM": 0.13,
+  "vsL": -0.37
+ },
+ {
+  "s": "lancer",
+  "f": "alliance",
+  "cls": "s",
+  "cost": 490,
+  "score": 0.076,
+  "vsS": 0.26,
+  "vsM": 0.09,
+  "vsL": -0.53
+ },
+ {
+  "s": "bulwark",
+  "f": "alliance",
+  "cls": "m",
+  "cost": 1080,
+  "score": -0.098,
+  "vsS": 0.01,
+  "vsM": -0.04,
+  "vsL": -0.63
+ },
+ {
+  "s": "basilica",
+  "f": "legion",
+  "cls": "l",
+  "cost": 3000,
+  "score": -0.108,
+  "vsS": -0.03,
+  "vsM": -0.03,
+  "vsL": -0.77
+ },
+ {
+  "s": "mirror",
+  "f": "nexus",
+  "cls": "m",
+  "cost": 1040,
+  "score": -0.11,
+  "vsS": 0.01,
+  "vsM": -0.09,
+  "vsL": -0.52
+ },
+ {
+  "s": "shard",
+  "f": "nexus",
+  "cls": "s",
+  "cost": 260,
+  "score": -0.121,
+  "vsS": 0.02,
+  "vsM": -0.05,
+  "vsL": -0.78
+ },
+ {
+  "s": "herald",
+  "f": "legion",
+  "cls": "s",
+  "cost": 350,
+  "score": -0.123,
+  "vsS": 0.03,
+  "vsM": -0.12,
+  "vsL": -0.59
+ },
+ {
+  "s": "binder",
+  "f": "nexus",
+  "cls": "m",
+  "cost": 760,
+  "score": -0.194,
+  "vsS": -0.04,
+  "vsM": -0.18,
+  "vsL": -0.74
+ },
+ {
+  "s": "paladin",
+  "f": "legion",
+  "cls": "s",
+  "cost": 800,
+  "score": -0.224,
+  "vsS": -0.06,
+  "vsM": -0.2,
+  "vsL": -0.79
+ },
+ {
+  "s": "needle",
+  "f": "mars",
+  "cls": "s",
+  "cost": 300,
+  "score": -0.229,
+  "vsS": -0.23,
+  "vsM": -0.13,
+  "vsL": -0.57
+ },
+ {
+  "s": "reckoning",
+  "f": "alliance",
+  "cls": "m",
+  "cost": 1180,
+  "score": -0.235,
+  "vsS": -0.17,
+  "vsM": -0.14,
+  "vsL": -0.77
+ },
+ {
+  "s": "wren",
+  "f": "alliance",
+  "cls": "s",
+  "cost": 280,
+  "score": -0.306,
+  "vsS": -0.2,
+  "vsM": -0.24,
+  "vsL": -0.83
+ },
+ {
+  "s": "conduit",
+  "f": "nexus",
+  "cls": "m",
+  "cost": 880,
+  "score": -0.356,
+  "vsS": -0.21,
+  "vsM": -0.35,
+  "vsL": -0.82
+ },
+ {
+  "s": "spear",
+  "f": "mars",
+  "cls": "m",
+  "cost": 1180,
+  "score": -0.359,
+  "vsS": -0.54,
+  "vsM": -0.06,
+  "vsL": -0.72
+ },
+ {
+  "s": "inquisitor",
+  "f": "legion",
+  "cls": "m",
+  "cost": 1260,
+  "score": -0.467,
+  "vsS": -0.43,
+  "vsM": -0.4,
+  "vsL": -0.8
+ },
+ {
+  "s": "leech",
+  "f": "brood",
+  "cls": "s",
+  "cost": 289,
+  "score": -0.531,
+  "vsS": -0.54,
+  "vsM": -0.44,
+  "vsL": -0.81
+ },
+ {
+  "s": "longshot",
+  "f": "mars",
+  "cls": "s",
+  "cost": 640,
+  "score": -0.58,
+  "vsS": -0.63,
+  "vsM": -0.48,
+  "vsL": -0.77
+ },
+ {
+  "s": "aegis",
+  "f": "alliance",
+  "cls": "m",
+  "cost": 1020,
+  "score": -0.597,
+  "vsS": -0.42,
+  "vsM": -0.69,
+  "vsL": -0.87
+ },
+ {
+  "s": "wasp",
+  "f": "mars",
+  "cls": "s",
+  "cost": 350,
+  "score": -0.605,
+  "vsS": -0.66,
+  "vsM": -0.56,
+  "vsL": -0.58
+ },
+ {
+  "s": "sanctum",
+  "f": "legion",
+  "cls": "m",
+  "cost": 1140,
+  "score": -0.662,
+  "vsS": -0.51,
+  "vsM": -0.72,
+  "vsL": -0.94
+ },
+ {
+  "s": "dropship",
+  "f": "mars",
+  "cls": "m",
+  "cost": 920,
+  "score": -0.792,
+  "vsS": -0.76,
+  "vsM": -0.76,
+  "vsL": -0.99
+ },
+ {
+  "s": "boarder",
+  "f": "mars",
+  "cls": "s",
+  "cost": 580,
+  "score": -0.9,
+  "vsS": -0.86,
+  "vsM": -0.92,
+  "vsL": -0.98
+ }
+]
