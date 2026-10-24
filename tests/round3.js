@@ -7,7 +7,7 @@ const X = loadSim();
 let fails = 0;
 const ok = (c, msg) => { console.log((c ? 'OK   ' : 'FAIL ') + msg); if (!c) fails++; };
 const run = (g, secs, fn) => { const t1 = g.time + secs; while (g.time < t1 && !g.over) { X.stepGame(g); if (fn) fn(g); g.ev.length = 0; } };
-const mk = (a, b, opts) => X.createGame(Object.assign({ map: 'test', seed: 3, players: [{ faction: a, ai: 0 }, { faction: b, ai: 0 }] }, opts || {}));
+const mk = (a, b, opts) => X.createGame(Object.assign({ map: 'test', seed: 3, pace: 'fast', players: [{ faction: a, ai: 0 }, { faction: b, ai: 0 }] }, opts || {}));
 const ship = (g, type, pi, x, y, ang) => X.addShip(g, type, pi, x, y, ang || 0);
 const cx = g => g.map.w / 2, cy = g => g.map.h / 2;
 

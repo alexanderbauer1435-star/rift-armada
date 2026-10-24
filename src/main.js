@@ -56,7 +56,7 @@ function beginGame(opts, kind, saved, seat) {
 function startWaves() {
   const players = [{ faction: MENU.faction, human: true, team: 0 }];
   if (MENU.mode === 'quarantine') { const others = PLAYABLE.filter(f => f !== MENU.faction); for (let i = 0; i < MENU.allies; i++) players.push({ faction: others[i % others.length], ai: MENU.allyLvl, team: 0 }); }
-  beginGame({ map: 'quarantine', seed: 1 + ((Math.random() * 1e6) | 0), players, mode: MENU.mode }, 'waves');
+  beginGame({ map: 'quarantine', seed: 1 + ((Math.random() * 1e6) | 0), players, mode: MENU.mode, pace: MENU.pace || 'tactical' }, 'waves');
   toast(L(MENU.mode === 'quarantine' ? 'Quarantine Line: Baue auf, bevor die erste Welle durch die Risse kommt. Das Siegel in der Mitte darf nicht fallen.' : 'Rift Survival: Baue auf, bevor die erste Welle kommt. Wie lange hältst du durch?'), 'good', 6000);
 }
 function startSkirmish() {
@@ -69,15 +69,18 @@ function startSkirmish() {
     if (f === 'random') { const used = list.map(x => x.faction), free = PLAYABLE.filter(x => used.indexOf(x) < 0); f = (free.length ? free : PLAYABLE)[(Math.random() * (free.length ? free : PLAYABLE).length) | 0]; q.faction = f; }
     return { faction: f, human: !!q.human, ai: q.ai || 0, team: q.team ? q.team : 10 + i, color: q.color || null };
   });
+  /* Startplätze: dein Platz frei wählbar (MENU.myStart, −1 = Zufall), die KI belegt die übrigen der Reihe nach */
+  const order = startOrder(np);
+  players.forEach((q, i) => { q.start = order[i]; });
   const res = MENU.res === 'low' ? { ice: 700, ore: 300 } : MENU.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
-  beginGame({ map, size: MENU.size || 'normal', seed: 1 + ((Math.random() * 1e6) | 0), players, res }, 'skirmish');
+  beginGame({ map, size: MENU.size || 'normal', seed: 1 + ((Math.random() * 1e6) | 0), players, res, pace: MENU.pace || 'tactical' }, 'skirmish');
 }
 /* Übungsplatz: Testkarte, alles freigeschaltet, reiche Mittel, Zielscheiben des Gegners ohne eigene KI */
 function startSandbox() {
   const others = PLAYABLE.filter(f => f !== MENU.faction);
   slotsFix();
   const sf = MENU.slots[0].f, players = [{ faction: MENU.faction, human: true }, { faction: sf !== 'random' && sf !== 'off' && sf !== MENU.faction ? sf : others[(Math.random() * others.length) | 0], ai: 0 }];
-  beginGame({ map: 'test', seed: 1 + ((Math.random() * 1e6) | 0), players, res: { ice: 30000, ore: 20000 }, sandbox: true }, 'sandbox');
+  beginGame({ map: 'test', seed: 1 + ((Math.random() * 1e6) | 0), players, res: { ice: 30000, ore: 20000 }, sandbox: true, pace: MENU.pace || 'tactical' }, 'sandbox');
   toast(L('Übungsplatz: alles erforscht, Werft III, Zielscheiben in der Mitte. Doktrin über die Kommandobasis.'), 'good', 6000);
 }
 function continueGame(slot) {

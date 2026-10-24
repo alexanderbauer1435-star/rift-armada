@@ -26,6 +26,9 @@ const TRACK = { l: { f: 0.4, s: 0.5, m: 0.85 }, m: { f: 0.7, s: 0.85 } };
 const CLS_NAME = { s: 'kleine Schiffe', m: 'mittlere Schiffe', l: 'große Schiffe', b: 'Stationen' };
 /* Flanke und Heck: Treffer von der Seite +10 %, von hinten +25 % */
 const FLANK_SIDE = 1.1, FLANK_REAR = 1.25;
+/* Kampftempo: Faktor auf allen Waffenschaden (Schiffe, Stationen) und auf Schild-/Hüllenregeneration (damit Schilde in
+   längeren Kämpfen nicht übermächtig werden). Eruptionen, Superwaffen und Aschenebel bleiben unverändert. */
+const PACE = { tactical: { dmg: 0.4, regen: 0.5 }, normal: { dmg: 0.7, regen: 0.75 }, fast: { dmg: 1, regen: 1 } };
 /* Trefferchance der Punktverteidigung gegen Torpedos */
 const PD_TORP = 0.4;
 /* Bergung: Anteil der Baukosten, den ein Wrack als Rohstoff hergibt */
@@ -572,15 +575,17 @@ SHIPS.paladin.shield = 320;
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'mars' && s.role === 'war') s.hull = Math.round(s.hull * 1.08); }
 SHIPS.hedgehog.cost = { ice: 340, ore: 150 };
 /* Brood: fast nur kleine Schiffe, die Konter gegen Kleine treffen sie voll – dafür zäher und billiger */
-for (const id in SHIPS) { const s = SHIPS[id]; if (s.f !== 'brood' || s.role !== 'war') continue; s.hull = Math.round(s.hull * 1.12); for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.95); }
+/* (Runde 17, Kampftempo Taktisch: Brood gewann 19 von 24 entschiedenen Partien – Rumpf- und Kostenbonus entfallen) */
+/* Nexus: Kampfschiffe Rumpf +12 %, Schaden +10 % (verlor im Tempo Taktisch fast alles) */
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.f !== 'nexus' || s.role !== 'war') continue; s.hull = Math.round(s.hull * 1.12); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.1).toFixed(2) })); }
 /* Alliance: Schilde der Kampfschiffe +15 %, Lancer etwas billiger */
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'alliance' && s.role === 'war') { if (s.shield) s.shield = Math.round(s.shield * 1.15); s.hull = Math.round(s.hull * 1.12); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.18).toFixed(2) })); } }
 SHIPS.lancer.cost = { ice: 350, ore: 140 };
 /* Brood: Biomasse aus allem – die Grube verwertet 15 % mehr (gleicht die anfällige Ausbreitung aus) */
-for (const l of BLDG.brood.refinery.lv) l.bonus = +((l.bonus || 1) + 0.15).toFixed(2);
+for (const l of BLDG.brood.refinery.lv) l.bonus = +((l.bonus || 1) + 0.08).toFixed(2);
 /* Kostenduelle (tools/balance/duel.js, Runde 17): Ausreißer auf etwa ±0,25 Vorsprung bei gleichem Budget bringen */
 const TUNE = { behemoth: { hull: 0.85, dps: 0.8 }, leviathan: { hull: 0.88, dps: 0.8 }, swarm: { hull: 0.88, dps: 0.65 }, larva: { cost: 1.2 }, broodmother: { cost: 1.3 }, sporer: { cost: 1.35 }, acidmaw: { hull: 0.9 }, spire: { cost: 1.15 }, zealot: { hull: 0.85, dps: 0.7 }, hammer: { hull: 0.92, cost: 1.15 },
-  wasp: { cost: 0.86 }, shard: { cost: 0.85, hull: 1.15 }, prism: { cost: 0.9 }, longshot: { cost: 0.72 }, basilica: { cost: 0.87 }, bulwark: { dps: 1.15 } };
+  wasp: { cost: 0.86 }, shard: { cost: 0.85, hull: 1.15 }, prism: { cost: 0.8 }, paladin: { cost: 1.08 }, herald: { cost: 1.08 }, longshot: { cost: 0.72 }, basilica: { cost: 0.87 }, bulwark: { dps: 1.15 } };
 /* Erbauer-Lanze der Reckoning: Waffe der Alliance gegen große Schiffe */
 SHIPS.reckoning.wpn = SHIPS.reckoning.wpn.map((w, i) => i === 0 ? Object.assign({}, w, { antiL: 1.5 }) : w);
 for (const id in TUNE) { const s = SHIPS[id], t = TUNE[id]; if (t.hull) s.hull = Math.round(s.hull * t.hull); if (t.cost) for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * t.cost); if (t.dps) s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * t.dps).toFixed(2) })); }

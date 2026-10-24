@@ -1,0 +1,59 @@
+{
+ "tag": "p5-expanse",
+ "maps": [
+  "expanse"
+ ],
+ "seeds": 2,
+ "games": 40,
+ "draws": 9,
+ "avgMin": 14.4,
+ "winrate": {
+  "alliance": 0.38,
+  "mars": 0.44,
+  "legion": 0.56,
+  "nexus": 0.31,
+  "brood": 0.25
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 2,
+   "mars": 2
+  },
+  "alliance-legion": {
+   "alliance": 0,
+   "legion": 3
+  },
+  "alliance-nexus": {
+   "alliance": 2,
+   "nexus": 2
+  },
+  "alliance-brood": {
+   "alliance": 2,
+   "brood": 0
+  },
+  "mars-legion": {
+   "mars": 3,
+   "legion": 0
+  },
+  "mars-nexus": {
+   "mars": 2,
+   "nexus": 1
+  },
+  "mars-brood": {
+   "mars": 0,
+   "brood": 1
+  },
+  "legion-nexus": {
+   "legion": 3,
+   "nexus": 0
+  },
+  "legion-brood": {
+   "legion": 3,
+   "brood": 1
+  },
+  "nexus-brood": {
+   "nexus": 2,
+   "brood": 2
+  }
+ }
+}

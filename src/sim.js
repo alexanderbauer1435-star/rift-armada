@@ -52,7 +52,7 @@ function createGame(opts) {
     const p = {
       id: i, faction: po.faction, F: FACTIONS[po.faction], human: !!po.human, ai: null, color: po.color || null, team, name: po.name || null, nob: po.base === false,
       ice: opts.res ? opts.res.ice : START_RES.ice, ore: opts.res ? opts.res.ore : START_RES.ore, eGen: 0, eUse: 0, lowPower: false, cpUse: 0, cpMax: CP_BASE,
-      alive: true, lab: 0, start: map.starts[i] || { x: map.w / 2, y: map.h / 2, ang: 0 }, incAcc: 0, haulR: 0, shipCount: 0, queued: 0, lowT: -99, hurtT: -99, hurtX: 0, hurtY: 0, tech: {}, research: null, tfx: Object.assign({}, TFX0), doctrine: null, docAsk: false, relics: 0, heroIdx: 0, neutral: !!po.neutral, netT: 0, etech: null,
+      alive: true, lab: 0, start: map.starts[po.start !== undefined && map.starts[po.start] ? po.start : i] || { x: map.w / 2, y: map.h / 2, ang: 0 }, incAcc: 0, haulR: 0, shipCount: 0, queued: 0, lowT: -99, hurtT: -99, hurtX: 0, hurtY: 0, tech: {}, research: null, tfx: Object.assign({}, TFX0), doctrine: null, docAsk: false, relics: 0, heroIdx: 0, neutral: !!po.neutral, netT: 0, etech: null,
       vis: null, explored: new Uint8Array(g.vw * g.vh), stats: { built: 0, lost: 0, kills: 0, bLost: 0, razed: 0, earned: 0, spent: 0 }
     };
     if (po.human) g.human = i;
@@ -73,6 +73,7 @@ function createGame(opts) {
     g.players.push({ id: i, faction: 'mars', F: FACTIONS.mars, human: false, ai: null, color: PIRATE_COL, name: 'Piraten', team: 97, ice: 0, ore: 0, eGen: 0, eUse: 0, lowPower: false, cpUse: 0, cpMax: 999, alive: true, lab: 0, start: { x: map.fort.x, y: map.fort.y, ang: 0 }, incAcc: 0, haulR: 0, shipCount: 0, queued: 0, lowT: -99, hurtT: -99, hurtX: 0, hurtY: 0, tech: {}, research: null, tfx: Object.assign({}, TFX0), doctrine: null, docAsk: false, relics: 0, heroIdx: 0, neutral: true, pirate: true, netT: 0, etech: null, vis: null, explored: new Uint8Array(g.vw * g.vh), stats: { built: 0, lost: 0, kills: 0, bLost: 0, razed: 0, earned: 0, spent: 0 } });
     g.pirate = i;
   }
+  g.pace = PACE[opts.pace] || PACE.tactical;
   g.teamVisN = {};
   for (const p of g.players) { if (!g.teamVis[p.team]) { g.teamVis[p.team] = new Int32Array(g.vw * g.vh); g.teamVisN[p.team] = new Int32Array(g.vw * g.vh); } p.vis = g.teamVis[p.team]; p.visN = g.teamVisN[p.team]; }
   /* Stätten und Tore als Objekte mit Kennung (antippbar) */
@@ -604,7 +605,7 @@ function updateBldg(g, b, dt) {
     for (const o of g.bldgs) { if (o.dead || o === b || o.owner !== b.owner || !o.done) continue; if (hyp(o.x - b.x, o.y - b.y) <= lv.aura) { if (o.givep < lv.give) o.givep = lv.give; if (o.give < o.givep) o.give = Math.min(o.givep, o.give + lv.give * 0.08); } }
   }
   /* Schild laden */
-  if (b.shieldMax && b.shield < b.shieldMax) { b.sT += dt; if (b.sT > p.tfx.sdelay) b.shield = Math.min(b.shieldMax, b.shield + lv.sreg * p.tfx.sreg * dt * (p.lowPower ? 0.5 : 1)); }
+  if (b.shieldMax && b.shield < b.shieldMax) { b.sT += dt; if (b.sT > p.tfx.sdelay) b.shield = Math.min(b.shieldMax, b.shield + lv.sreg * p.tfx.sreg * g.pace.regen * dt * (p.lowPower ? 0.5 : 1)); }
   /* Labor: Forschung läuft, solange ein fertiges Labor steht */
   if (b.role === 'lab' && p.research && !p.research.lab) { p.research.lab = b.id; }
   if (b.role === 'lab' && p.research && p.research.lab === b.id) { p.research.prog += dt / p.research.time * (p.lowPower ? 0.5 : 1); if (p.research.prog >= 1) finishResearch(g, p); }
@@ -1210,19 +1211,19 @@ function updateDots(g, dt) {
   for (const u of all) {
     if (u.dead) continue;
     if (u.until && g.time > u.until) { kill(g, u, null, -1); continue; }
-    if (u.acid) { const a = u.acid; a.t -= dt; damage(g, u, a.d * dt, 'acid', null, a.owner, u.x, u.y, null, true); if (u.dead) continue; if (a.t <= 0) u.acid = null; }
+    if (u.acid) { const a = u.acid; a.t -= dt; damage(g, u, a.d * dt * g.pace.dmg, 'acid', null, a.owner, u.x, u.y, null, true); if (u.dead) continue; if (a.t <= 0) u.acid = null; }
     if (u.para) { const q = u.para; q.t -= dt; if (q.t <= 0) { const o = g.players[q.owner]; if (o && o.alive) { const s = addShip(g, 'swarm', q.owner, u.x + 20, u.y, u.ang + Math.PI); s.hull = s.hullMax * Math.min(1, 0.4 + 0.2 * q.n); s.o = { t: 'attack', tid: u.id, x: u.x, y: u.y }; s.tgt = u.id; } ev(g, 'hatch', { x: u.x, y: u.y, owner: q.owner, r: u.def.r }); damage(g, u, 60 * q.n, 'acid', null, q.owner, u.x, u.y, null, true); u.para = null; } }
     if (u.dead || u.derelict) continue;
     const p = g.players[u.owner];
-    if (u.def.regen && u.hull < u.hullMax) { u.hull = Math.min(u.hullMax, u.hull + u.hullMax * u.def.regen * p.tfx.regen * dt * (p.lowPower ? 0.5 : 1)); }
+    if (u.def.regen && u.hull < u.hullMax) { u.hull = Math.min(u.hullMax, u.hull + u.hullMax * u.def.regen * p.tfx.regen * dt * (p.lowPower ? 0.5 : 1) * g.pace.regen); }
     else if (p.regenAll && u.hull < u.hullMax) u.hull = Math.min(u.hullMax, u.hull + u.hullMax * 0.01 * p.regenAll * dt);
     if (u.cocoon) { const c = u.cocoon; c.t -= dt; if (c.t <= 0) morphShip(g, u, c.to); }
   }
   for (const b of g.bldgs) {
     if (b.dead) continue;
-    if (b.acid) { const a = b.acid; a.t -= dt; damage(g, b, a.d * dt, 'acid', null, a.owner, b.x, b.y, null, true); if (b.dead) continue; if (a.t <= 0) b.acid = null; }
+    if (b.acid) { const a = b.acid; a.t -= dt; damage(g, b, a.d * dt * g.pace.dmg, 'acid', null, a.owner, b.x, b.y, null, true); if (b.dead) continue; if (a.t <= 0) b.acid = null; }
     const lv = lvOf(b);
-    if (lv.regen && b.done && b.hull < b.hullMax) { const p = g.players[b.owner]; b.hull = Math.min(b.hullMax, b.hull + b.hullMax * lv.regen * p.tfx.regen * dt * (p.lowPower ? 0.5 : 1)); }
+    if (lv.regen && b.done && b.hull < b.hullMax) { const p = g.players[b.owner]; b.hull = Math.min(b.hullMax, b.hull + b.hullMax * lv.regen * p.tfx.regen * dt * (p.lowPower ? 0.5 : 1) * g.pace.regen); }
   }
   /* Sporen: Teppiche und Nester */
   const areas = [];
@@ -1230,7 +1231,7 @@ function updateDots(g, dt) {
   for (const b of g.bldgs) if (!b.dead && b.role === 'spore' && b.done) areas.push({ x: b.x, y: b.y, r: lvOf(b).aura, owner: b.owner, heal: 0.02, hurt: 0.01 });
   for (const s of areas) {
     const tm = g.tm[s.owner];
-    nearShips(g, s.x, s.y, s.r, e => { if (e.dead || e.derelict || e.def.role === 'fighter') return false; if (g.tm[e.owner] === tm) { if (e.def.regen) e.hull = Math.min(e.hullMax, e.hull + e.hullMax * (s.heal || 0.02) * dt); } else damage(g, e, e.hullMax * (s.hurt || 0.015) * dt, 'acid', null, s.owner, s.x, s.y, null, true); return false; });
+    nearShips(g, s.x, s.y, s.r, e => { if (e.dead || e.derelict || e.def.role === 'fighter') return false; if (g.tm[e.owner] === tm) { if (e.def.regen) e.hull = Math.min(e.hullMax, e.hull + e.hullMax * (s.heal || 0.02) * dt * g.pace.regen); } else damage(g, e, e.hullMax * (s.hurt || 0.015) * dt * g.pace.dmg, 'acid', null, s.owner, s.x, s.y, null, true); return false; });
     for (const b of g.bldgs) if (!b.dead && g.tm[b.owner] !== tm && hyp(b.x - s.x, b.y - s.y) <= s.r + b.def.r * 0.5) damage(g, b, b.hullMax * 0.004 * dt, 'acid', null, s.owner, s.x, s.y, null, true);
   }
 }

@@ -2,7 +2,7 @@
 const { loadSim } = require('./harness.js'); const X = loadSim();
 let fail = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); if (!c) fail++; };
 function run(n, seed) {
-  const g = X.createGame({ map: 'haven', seed, players: [{ faction: 'alliance', human: true }, { faction: 'mars', ai: 0 }] });
+  const g = X.createGame({ map: 'haven', seed, pace: 'fast', players: [{ faction: 'alliance', human: true }, { faction: 'mars', ai: 0 }] });
   const s = g.players[0].start, us = [];
   for (let i = 0; i < n; i++) us.push(X.addShip(g, 'wren', 0, s.x + 60 * i, s.y - 80, 0));
   const r = X.execCmd(g, { t: 'explore', p: 0, u: us.map(u => u.id) });

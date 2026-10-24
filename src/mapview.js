@@ -28,6 +28,8 @@ function mapLayout(cv, map, opts) {
   if (map.fort) { const px = X(map.fort.x), py = Y(map.fort.y), r = Math.max(6, map.fort.r * sc); x.fillStyle = 'rgba(200,50,74,0.35)'; x.beginPath(); x.arc(px, py, r, 0, TAU); x.fill(); x.fillStyle = '#c8324a'; x.fillRect(px - r * 0.45, py - r * 0.3, r * 0.9, r * 0.6); for (let k = 0; k < 3; k++) x.fillRect(px - r * 0.45 + k * r * 0.35, py - r * 0.5, r * 0.2, r * 0.22); x.strokeStyle = '#ffd36b'; x.lineWidth = 1; x.strokeRect(px - r * 0.45, py - r * 0.3, r * 0.9, r * 0.6); }
   /* Startplätze */
   map.starts.forEach((s, i) => { const c = (opts.starts && opts.starts[i]) || MV_COL.start[i % 4], r = Math.max(5, 64 * sc); x.fillStyle = c; x.beginPath(); x.arc(X(s.x), Y(s.y), r, 0, TAU); x.fill(); x.strokeStyle = '#ffffff'; x.lineWidth = 1.5; x.stroke(); x.fillStyle = '#071018'; x.font = 'bold ' + Math.round(r * 1.3) + 'px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(String(i + 1), X(s.x), Y(s.y) + 0.5); });
+  /* eigener Startplatz: weißer Ring mit »DU« */
+  if (opts.mine >= 0 && map.starts[opts.mine]) { const s = map.starts[opts.mine], r = Math.max(5, 64 * sc) + 5; x.strokeStyle = '#ffffff'; x.lineWidth = 2.5; x.beginPath(); x.arc(X(s.x), Y(s.y), r, 0, TAU); x.stroke(); x.fillStyle = '#ffffff'; x.font = 'bold 11px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'bottom'; x.fillText(L('DU'), X(s.x), Y(s.y) - r - 2); }
   x.strokeStyle = '#2c4a7a'; x.lineWidth = 1; x.strokeRect(ox + 0.5, oy + 0.5, map.w * sc - 1, map.h * sc - 1);
 }
 /* Legende als Text (für die Beschreibung unter der Vorschau) */
@@ -38,4 +40,9 @@ function mapLegend(map) {
   if (ash) parts.push(L('Rot: Aschewolke (Hüllenschaden)'));
   if (map.fort) parts.push(L('Rotes Bollwerk: Piratenfestung'));
   return parts.join(' · ');
+}
+/* Startplatz unter einem Punkt der Vorschau (Leinwandkoordinaten), −1 wenn keiner nah genug */
+function mapStartAt(cv, map, px, py, tol) {
+  const W = cv.width, H = cv.height, pad = 6, sc = Math.min((W - pad * 2) / map.w, (H - pad * 2) / map.h), ox = (W - map.w * sc) / 2, oy = (H - map.h * sc) / 2;
+  let best = -1, bd = tol || 24; map.starts.forEach((s, i) => { const d = Math.hypot(ox + s.x * sc - px, oy + s.y * sc - py); if (d < bd) { bd = d; best = i; } }); return best;
 }

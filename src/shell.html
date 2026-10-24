@@ -543,7 +543,9 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
         <div class="secH">Karte</div>
         <div class="row" id="rowMap"><div class="seg wrap" id="mapSeg"></div></div>
         <div class="row" id="rowPrev"><canvas id="mapPrev" width="360" height="360"></canvas></div>
+        <p class="fine" id="startNote"></p>
         <div class="row" id="rowSize"><span class="lbl">Größe</span><div class="seg" id="sizeSeg"></div></div>
+        <div class="row" id="rowPace"><span class="lbl">Kampftempo</span><div class="seg" id="paceSeg"></div></div>
         <p class="fine" id="mapDesc"></p>
         <p class="fine" id="mapLegend" style="opacity:.8"></p>
       </section>
@@ -746,6 +748,9 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     <p><b>Forschung:</b> Labor wählen und eine Technologie antippen, eine zugleich. Labor Stufe II und III schalten weitere frei; das Labor schaltet außerdem Kreuzer (Stufe I) und Großschiffe (Stufe II) frei.</p>
     <p><b>Bedienung:</b> Ein Finger wischen verschiebt, zwei Finger zoomen. Tippen wählt, Tippen auf ein Ziel befiehlt (fliegen, angreifen, abbauen). Doppelt tippen wählt alle Schiffe dieses Typs. Langes Drücken auf freien Raum: Angriffsmarsch. »Auswahl« zieht einen Rahmen. Langes Drücken auf eine Taste zeigt die Erklärung. Gruppen 1–5: tippen wählt, lange drücken speichert. Der Übungsplatz im Hauptmenü hat alles freigeschaltet und Zielscheiben.</p>
     <p><b>Kampf:</b> Strahlen sind stark gegen Schilde, kinetische Waffen gegen Panzerung und Hülle. Torpedos treffen hart, werden aber von Punktverteidigung abgeschossen. Schiffe haben Schussfelder, die Taste ◎ zeigt sie. Abschüsse bringen Erfahrung.</p>
+    <p><b>Kampftempo:</b> Im Gefechtsmenü einstellbar. »Taktisch« (Vorgabe): Waffen machen 40 % Schaden, Gefechte dauern ein Vielfaches länger – Zeit für Rückzug, Flanken und Subsysteme. »Normal« liegt dazwischen, »Schnell« ist das alte Tempo.</p>
+    <p><b>Superwaffen:</b> Jede Fraktion hat eine (Kommandobasis III und Labor II nötig), sie lädt mehrere Minuten. Alliance: Exodus-Tor versetzt alle eigenen Schiffe im Umkreis an einen beliebigen Punkt. Mars: Massetreiber – eine Masse fliegt 3,5 s und trifft alles im Zielkreis schwer, auch Eigene. Legion: Sunbreaker – acht Sekunden Sterneneruption im Zielgebiet, auch gegen Eigene. Nexus: Resonanz übernimmt alle kleinen feindlichen Schiffe im Zielgebiet. Brood: Brutsturm lässt am Ziel Schwärme und Ravager schlüpfen, die 60 Sekunden leben.</p>
+    <p><b>Sonneneruptionen:</b> Auf den größeren Karten bricht ab Minute 7 bis 10 und danach alle 6 bis 10 Minuten eine Eruption aus. 25 Sekunden vorher kommt eine Warnung. Zwölf Sekunden lang fallen alle Schilde, und jedes Schiff im Freien verliert knapp 2 % Hülle pro Sekunde. Schutz bietet der Schatten von Monden, Asteroiden, Stätten, Stationen und Felsen.</p>
     <p><b>Konter:</b> Torpedos treffen große Schiffe hart (fast doppelt) und kleine schwach, Strahlen und Autokanonen sind stark gegen kleine Schiffe, Railguns gegen mittlere. Schlachtschiffe treffen kleine, wendige Schiffe schlecht, Punktverteidigung fängt nur einen Teil der Torpedos ab. Langes Drücken auf ein Schiff und der Bau-Hinweis zeigen, wogegen es stark oder schwach ist.</p>
     <p><b>Flanke und Heck:</b> Treffer von der Seite machen 10 %, von hinten 25 % mehr Schaden. Große Schiffe drehen langsam – kleine Schiffe umkreisen sie von selbst, bis sie im Heck stehen.</p>
     <p><b>Bergung:</b> Zerstörte Schiffe hinterlassen Wracks. Frachter wählen und ein Wrack antippen: sie zerlegen es und bringen ein Viertel der Baukosten als Erz heim (die Brood als Biomasse).</p>

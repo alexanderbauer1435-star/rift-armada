@@ -1,0 +1,1 @@
+{"tag":"p3-nexus","maps":["expanse","bastions"],"seeds":2,"games":32,"draws":9,"avgMin":13,"winrate":{"alliance":0.38,"mars":0.5,"legion":0.63,"nexus":0.09,"brood":1},"pair":{"alliance-nexus":{"alliance":3,"nexus":2},"mars-nexus":{"mars":4,"nexus":1},"legion-nexus":{"legion":5,"nexus":0},"nexus-brood":{"nexus":0,"brood":8}}}

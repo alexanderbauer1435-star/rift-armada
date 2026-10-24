@@ -118,10 +118,13 @@ function engage(g, u, t, dt) {
   }
   if (d > keep + 12) { chase(g, u, t, dt, keep); return; }
   /* Flankieren: kleine Schiffe umkreisen träge mittlere und große Ziele, bis sie im Heckbereich stehen (+25 % Schaden) */
-  if (def.cls === 's' && !def.side && t.k === 1 && (t.def.cls === 'l' || t.def.cls === 'm') && !t.derelict && u.stance !== 1) {
+  if (def.cls === 's' && !def.side && t.k === 1 && t.def.cls === 'l' && !t.derelict && u.stance !== 1 && !(u.flNo > g.time)) {
     const rel = angDiff(datan2(u.y - t.y, u.x - t.x), t.ang + Math.PI);
     if (Math.abs(rel) > 0.75) {
       const dir = (rel >= 0 ? -1 : 1), a = t.ang + Math.PI + rel + dir * 0.7, r = Math.max(keep * 0.85, t.def.r + def.r + 30);
+      /* höchstens 7 s am Stück umkreisen, dann 8 s normal kämpfen (sonst tanzen Schiffe endlos ohne zu feuern) */
+      if (!u.flT0 || g.time - u.flT0 > 15) u.flT0 = g.time;
+      if (g.time - u.flT0 > 7) { u.flNo = g.time + 8; u.flT0 = 0; }
       steer(g, u, t.x + dcos(a) * r, t.y + dsin(a) * r, dt, false, def.speed);
       return;
     }
@@ -165,7 +168,7 @@ function updateShip(g, u, dt) {
   /* Aschenebel: Schild aus, Hülle brennt */
   if (inAsh(m, u.x, u.y)) { u.shield = 0; u.sT = 0; u.hull -= u.hullMax * ASH_DMG * dt; if (u.hull <= 0) { kill(g, u, null, -1); return; } }
   else if (u.ion) { u.shield = 0; u.sT = 0; }
-  else if (u.shieldMax && u.shield < u.shieldMax) { u.sT += dt; if (u.sT > p.tfx.sdelay) u.shield = Math.min(u.shieldMax, u.shield + def.sreg * p.tfx.sreg * (1 + 0.1 * u.rank) * dt); }
+  else if (u.shieldMax && u.shield < u.shieldMax) { u.sT += dt; if (u.sT > p.tfx.sdelay) u.shield = Math.min(u.shieldMax, u.shield + def.sreg * p.tfx.sreg * g.pace.regen * (1 + 0.1 * u.rank) * dt); }
   if (u.beams) { let any = false; for (let i = 0; i < u.beams.length; i++) { const b = u.beams[i]; if (b) { b.t -= dt; if (b.t <= 0) u.beams[i] = null; else any = true; } } if (!any) u.beams = null; }
   if (u.hangar) updateHangar(g, u, dt);
   if (def.role === 'fighter') { fighterStep(g, u, dt); return; }
@@ -559,6 +562,8 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   t.sT = 0;
   if (t.k === 1) { if (t.abT.invuln > 0) { shieldHit(g, t, sx, sy); return; } if (t.dome > 0) amt *= 0.5; }
   if (t.marked > g.time && owner >= 0 && g.tm[owner] === t.markT) amt *= 1.3;
+  /* Kampftempo: Waffenfeuer (src gesetzt) wird skaliert; Flächenwirkungen (src = null) nicht */
+  if (src !== null && !bypass && g.pace) amt *= g.pace.dmg;
   /* Konter nach Größenklasse; Flanke und Heck (nur Schiffe, nur gerichtete Treffer) */
   /* nur Waffenfeuer (Schütze oder Geschoss); Flächenwirkungen wie Eruptionen und Säure übergeben src = null */
   const ck = COUNTER[kind]; if (ck && !bypass && src !== null) amt *= t.k === 1 ? (ck[t.def.cls] || 1) : t.k === 2 ? ck.b : 1;

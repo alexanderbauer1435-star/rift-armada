@@ -870,6 +870,26 @@ function closeSettings() { $('settings').hidden = true; SND.play('click'); }
 /* Sprachwahl ganz oben im Hauptmenü (dieselbe Einstellung wie unter Einstellungen) */
 function homeLang() { if (!$('homeLang')) return; segInit('homeLang', [['de', 'Deutsch'], ['en', 'English']], () => SET.lang, v => { SET.lang = v; savePrefs(); setLang(v); langRefresh(); }); }
 function menuPage(p) { UI.mPage = p; $('pHome').hidden = p !== 'home'; $('setup').hidden = p !== 'setup'; $('pCamp').hidden = p !== 'camp'; if (p !== 'camp') closeBrief(); if (p === 'setup') setupRender(); if (p === 'camp') campRender(); }
+/* Startplatz-Reihenfolge je Spieler: Platz 0 (du) auf MENU.myStart, falls gesetzt; sonst Zufall bei Spielstart */
+function startOrder(np) {
+  /* automatisierte Tests (webdriver): fester Platz 1, damit Abläufe reproduzierbar bleiben */
+  const auto = typeof navigator !== 'undefined' && navigator.webdriver && MENU.myStart === undefined;
+  let mine = MENU.myStart >= 0 && MENU.myStart < np ? MENU.myStart : auto ? 0 : (Math.random() * np) | 0;
+  const rest = []; for (let k = 0; k < np; k++) if (k !== mine) rest.push(k);
+  return [mine].concat(rest);
+}
+/* Farben der Startplätze in der Vorschau: bei gewähltem Platz die tatsächliche Verteilung, sonst der Reihe nach */
+function previewCols(pm) {
+  const list = slotPlayers(), cols = list.map(q => q.color || FACTIONS[q.faction === 'random' ? 'guardian' : q.faction].team);
+  if (!(MENU.myStart >= 0 && MENU.myStart < list.length)) return cols;
+  const order = startOrder(list.length), out = []; order.forEach((si, i) => { out[si] = cols[i]; }); return out;
+}
+function startPick(ev) {
+  const pm = UI.prevMap, cv = $('mapPrev'); if (!pm || MENU.mode !== 'skirmish') return;
+  const r = cv.getBoundingClientRect(), px = (ev.clientX - r.left) * cv.width / r.width, py = (ev.clientY - r.top) * cv.height / r.height;
+  const i = mapStartAt(cv, pm, px, py, 28); if (i < 0 || i >= slotPlayers().length) return;
+  MENU.myStart = MENU.myStart === i ? -1 : i; savePrefs(); SND.play('click'); setupRender();
+}
 function setupRender() {
   segInit('modeSeg', [['skirmish', 'Gefecht'], ['survival', 'Rift Survival'], ['quarantine', 'Quarantine Line']], () => MENU.mode, v => { MENU.mode = v; savePrefs(); setupRender(); });
   const wv = MENU.mode !== 'skirmish';
@@ -886,6 +906,8 @@ function setupRender() {
   const npTxt = a => a.every((v, i) => !i || v === a[i - 1] + 1) && a.length > 1 ? a[0] + '–' + a[a.length - 1] : a.join('/');
   segInit('mapSeg', MAP_ORDER.map(k => [k, MAPS[k].name, npTxt(MAPS[k].np), MAPS[k].np.indexOf(np) < 0 ? 'na' : '']), () => MENU.map, v => { MENU.map = v; savePrefs(); setupRender(); });
   segInit('sizeSeg', [['small', 'Klein'], ['normal', 'Mittel'], ['large', 'Groß']], () => MENU.size || 'normal', v => { MENU.size = v; savePrefs(); setupRender(); });
+  if (MENU.mode === 'skirmish') { const n = slotPlayers().length; setText('startNote', MENU.myStart >= 0 && MENU.myStart < n ? L('Dein Startplatz: {0}. Erneut antippen für Zufall.', MENU.myStart + 1) : L('Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.')); } else setText('startNote', '');
+  segInit('paceSeg', [['tactical', 'Taktisch'], ['normal', 'Normal'], ['fast', 'Schnell']], () => MENU.pace || 'tactical', v => { MENU.pace = v; savePrefs(); toast(L(v === 'tactical' ? 'Taktisch: lange Gefechte, Zeit für Rückzug, Flanken und Subsysteme' : v === 'normal' ? 'Normal: Gefechte etwa halb so lang wie Taktisch' : 'Schnell: Schiffe fallen in Sekunden')); });
   segInit('resSeg', [['low', 'Knapp'], ['normal', 'Normal'], ['rich', 'Reich']], () => MENU.res, v => { MENU.res = v; savePrefs(); });
   slotsRender();
   setText('slotNote', (mapId !== MENU.map ? L('{0} ist für {1} Spieler nicht ausgelegt – es wird {2} gespielt.', MAPS[MENU.map].name, np, MAPS[mapId].name) + ' ' : '') + L('Tippen wechselt Fraktion, Stärke und Team. Gleiches Team = Verbündete; »–« spielt für sich.'));
@@ -895,7 +917,9 @@ function setupRender() {
   /* Kartenvorschau: Layout der gewählten Karte (Gefecht) bzw. der Wellenkarte, Startplätze in den Spielerfarben */
   const pm = MENU.mode === 'skirmish' ? generateMap(mapId, np, 7, MENU.size) : MENU.mode === 'quarantine' ? generateMap('quarantine', MENU.allies + 1, 7) : null;
   $('rowPrev').hidden = !pm; $('mapLegend').hidden = !pm;
-  if (pm) { const cv = $('mapPrev'), side = Math.round(360 * Math.min(1, pm.w / pm.h)), tall = Math.round(360 * Math.min(1, pm.h / pm.w)); cv.width = side; cv.height = tall; cv.style.aspectRatio = side + ' / ' + tall; mapLayout(cv, pm, { starts: MENU.mode === 'skirmish' ? slotPlayers().map(q => q.color || FACTIONS[q.faction === 'random' ? 'guardian' : q.faction].team) : [FACTIONS[MENU.faction].team] }); setText('mapLegend', mapLegend(pm)); }
+  UI.prevMap = pm;
+  if (!UI.prevPickOn) { $('mapPrev').addEventListener('click', startPick); UI.prevPickOn = 1; }
+  if (pm) { const cv = $('mapPrev'), side = Math.round(360 * Math.min(1, pm.w / pm.h)), tall = Math.round(360 * Math.min(1, pm.h / pm.w)); cv.width = side; cv.height = tall; cv.style.aspectRatio = side + ' / ' + tall; mapLayout(cv, pm, { mine: MENU.mode === 'skirmish' && MENU.myStart >= 0 && MENU.myStart < pm.starts.length ? MENU.myStart : -1, starts: MENU.mode === 'skirmish' ? previewCols(pm) : [FACTIONS[MENU.faction].team] }); setText('mapLegend', mapLegend(pm)); }
 }
 /* ---------- Spielerplätze im Gefecht: Platz 0 bist du, bis zu sieben KI-Plätze mit Fraktion (oder Zufall), Stärke und Team ---------- */
 const SLOT_FACS = ['random'].concat(PLAYABLE);

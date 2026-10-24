@@ -57,6 +57,11 @@
   zur Neige gehen (sparen statt Schiffe), höchstens acht Brücken-Relais, ab sechs Schiffen wird für größere gespart;
   Notgroschen (8 Eis, 4 Erz je s), wenn 45 s nichts verdient wurde, Erz-Notgroschen bei leeren Erzfeldern. Brood-Gruben
   +15 %, ruhende Legion-Helden zerfallen nach 60 s, Alliance-Kampfschiffe Hülle +12 % und Schaden +18 %.
+  Kampftempo (opts.pace, Menü »Kampftempo«): Taktisch (Vorgabe) Waffenschaden ×0,4, Regeneration ×0,5; Normal ×0,7/×0,75;
+  Schnell wie vorher. Gilt für alle Waffen, Säure und Sporenfelder, nicht für Superwaffen, Eruptionen und Aschenebel.
+  Flankenmanöver nur noch gegen große Schiffe und höchstens 7 s am Stück. Startplatz frei wählbar (Vorschau antippen,
+  MENU.myStart, Spieleroption start). Ausgleich für das lange Tempo: Brood-Boni zurückgenommen, Nexus Rumpf +12 % und
+  Schaden +10 %, Prism billiger, Paladin und Herald teurer.
 - Fassung 18 (Runde 16, Balance und fünf neue Mechaniken): Balance-Block am Ende der Gebäudedaten (BAL in data.js):
   Kampfschiffe langsamer (klein ×0,88, mittel ×0,78, groß ×0,66; Beschleunigung und Wendigkeit mit), Frachter und
   Bauschiffe unverändert. Geschütze: Hülle und Schild ×1,5, Reichweite ×1,1, Schaden je Fraktion so, dass Stufe I überall
