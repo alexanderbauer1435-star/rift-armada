@@ -1,0 +1,36 @@
+{
+ "tag": "fin-leg",
+ "maps": [
+  "keep",
+  "crown"
+ ],
+ "seeds": 1,
+ "games": 16,
+ "draws": 8,
+ "avgMin": 14,
+ "winrate": {
+  "alliance": 0,
+  "mars": 0.5,
+  "legion": 0.25,
+  "nexus": 0.25,
+  "brood": 0.25
+ },
+ "pair": {
+  "legion-nexus": {
+   "legion": 2,
+   "nexus": 1
+  },
+  "legion-brood": {
+   "legion": 1,
+   "brood": 1
+  },
+  "alliance-legion": {
+   "alliance": 0,
+   "legion": 1
+  },
+  "mars-legion": {
+   "mars": 2,
+   "legion": 0
+  }
+ }
+}

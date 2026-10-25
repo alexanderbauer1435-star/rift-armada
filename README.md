@@ -62,6 +62,10 @@
   Flottenwert und Einnahmen am Ende; letzte Partie unter »Laden«. Fortschritt (progress.js): 20 Abzeichen, Rang aus
   Erfahrung, Statistik je Fraktion, Tagesaufgabe (aus dem Datum), Flottenfarben ab Rang. Klang (sfx.js): Waffen- und
   Trefferklänge je Art, Explosionen nach Größe, Sprachmeldungen (abschaltbar), Musik folgt dem Gefecht.
+  Messung (matrix.js, KI Schwer gegen Schwer): entschiedene Partien 18–19 Minuten, mit Unentschieden (30 Minuten) im
+  Mittel etwa 21; Siegquoten auf Open Expanse 0,38–0,5 für alle. Die Legion fiel mit der neuen Gefechts-KI auf 19 % –
+  Ursache war der Rückzug zur Werft (ihre Helden werden als Wracks geweckt): kein Rückzug für die Legion, Kampfschiffe
+  Rumpf +8 %. AI_OPT in ai.js schaltet die neuen KI-Verhalten für Messläufe einzeln ab (Umgebung AIOPT).
   Mehrspieler für bis zu acht: Stern um den Gastgeber (für jeden Mitspieler ein Codepaar, QR oder Text),
   Lobby mit acht Plätzen (Mensch, KI mit Fraktion und Stärke, aus), Teams je Platz und Vorlagen (Jeder für sich, Menschen
   gegen KI, Zwei Teams), Name, Fraktion und Startplatz wählt jeder auf dem eigenen Gerät, dazu Karte (alle mit passender

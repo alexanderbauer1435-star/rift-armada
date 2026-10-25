@@ -1,0 +1,51 @@
+{
+ "tag": "fin-bastions",
+ "maps": [
+  "bastions"
+ ],
+ "seeds": 1,
+ "games": 20,
+ "draws": 6,
+ "avgMin": 17.8,
+ "winrate": {
+  "alliance": 0.5,
+  "mars": 0.25,
+  "legion": 0.63,
+  "nexus": 0.13,
+  "brood": 0.25
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 2,
+   "mars": 0
+  },
+  "alliance-legion": {
+   "alliance": 1,
+   "legion": 1
+  },
+  "alliance-brood": {
+   "alliance": 1,
+   "brood": 1
+  },
+  "mars-legion": {
+   "mars": 1,
+   "legion": 1
+  },
+  "mars-brood": {
+   "mars": 1,
+   "brood": 0
+  },
+  "legion-nexus": {
+   "legion": 1,
+   "nexus": 1
+  },
+  "legion-brood": {
+   "legion": 2,
+   "brood": 0
+  },
+  "nexus-brood": {
+   "nexus": 0,
+   "brood": 1
+  }
+ }
+}
