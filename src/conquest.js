@@ -157,7 +157,8 @@ function cqBattleOpts(sp) {
   const ai = sp.cap ? sp.lvl : Math.max(1, sp.lvl - 1);
   const players = [{ faction: sp.fac, human: true, team: 0 }];
   if (sp.kind === 'attack') {
-    if (sp.foe === 'pir') players.push({ faction: sp.seed % 2 ? 'mars' : 'alliance', ai: 1, name: 'Piraten', color: CQ_PIR_COLOR, team: 1 });
+    if (cqFortB(sp)) players.push({ faction: 'mars', ai: 0, base: false, name: 'Piraten', color: CQ_PIR_COLOR, team: 1 });
+    else if (sp.foe === 'pir') players.push({ faction: sp.seed % 2 ? 'mars' : 'alliance', ai: 1, name: 'Piraten', color: CQ_PIR_COLOR, team: 1 });
     else players.push({ faction: sp.foe, ai, name: CQ_FNAME[sp.foe], team: 1 });
   } else if (sp.kind === 'defend') {
     players.push({ faction: sp.foe === 'pir' ? 'mars' : sp.foe, ai: 0, base: false, name: CQ_FNAME[sp.foe], color: sp.foe === 'pir' ? CQ_PIR_COLOR : undefined, team: 1 });
@@ -503,11 +504,29 @@ function cqVet(g, owner, type, x, y, ang, kills, hero) {
   if (hero) u.hero = hero;
   return u;
 }
-function cqFoeLabel(S) { return S.foe === 'pir' ? 'das Piratennest' : S.foe === 'brood' ? 'das Nest der Brood' : ['die Kommandobasis von {0}', CQ_FNAME[S.foe]]; }
+/* Kartenstil einer Systemschlacht (leer = klassische Mission-Karte): Ringkarten nach Systemtyp, je System abwechselnd;
+   ein Piratennest mit starker Garnison ist eine Festung (Corsair's Keep). Torsysteme, Haupttor und Archiv bleiben klassisch. */
+const CQ_STYLE = { yard: ['bastions', 'spiral'], mine: ['archipelago', 'expanse'], relic: ['storm', 'expanse'], cap: ['maelstrom', 'bastions'] };
+function cqStyle(S) {
+  if (S.kind !== 'attack' && S.kind !== 'defend') return '';
+  if (cqFortB(S)) return 'keep';
+  const T = CQ_STYLE[S.type];
+  return T ? T[(S.sys || 0) % 2] : '';
+}
+function cqFortB(S) { return S.kind === 'attack' && S.foe === 'pir' && S.gar >= 2 && S.type !== 'gate'; }
+function cqFoeLabel(S) { return cqFortB(S) ? 'die Piratenfestung' : S.foe === 'pir' ? 'das Piratennest' : S.foe === 'brood' ? 'das Nest der Brood' : ['die Kommandobasis von {0}', CQ_FNAME[S.foe]]; }
 MISSIONS.cqb = {
   act: 'cq', name: 'Schlacht', who: 'hq', seed: 1, hidden: 1,
   map(mis) {
     const S = mis.cq || { kind: 'attack', type: 'mine' }, big = S.cap || S.kind === 'core';
+    /* Fassung 20: Systemschlachten auf den Ringkarten (genRing) – Stil nach Systemtyp, je System wechselnd; Piratennester
+       mit starker Garnison sind Festungen wie in Corsair's Keep */
+    const style = cqStyle(S);
+    if (style) {
+      const dim = RING_DIM[2] + (style === 'keep' ? 400 : 0), G = { w: dim, h: dim, starts: [], nodes: [], rocks: [], fields: [], nebs: [], sites: [], gates: [] };
+      genRing(G, 2, makeRng((S.seed || 1) * 2654435761 + hashStr(style)), style);
+      return { w: dim, h: dim, starts: G.starts, build(m) { for (const k of ['nodes', 'rocks', 'fields', 'nebs', 'sites']) m[k] = G[k]; if (G.fort) m.fort = G.fort; } };
+    }
     const w = big ? 4000 : 3600, h = big ? 2700 : 2500;
     const starts = [{ x: 520, y: h / 2, ang: 0 }, { x: w - 520, y: h / 2, ang: Math.PI }];
     if (S.kind === 'core') starts.push({ x: 700, y: 480, ang: 0.3 }, { x: 700, y: h - 480, ang: -0.3 });
@@ -530,7 +549,8 @@ MISSIONS.cqb = {
   },
   goals(mis) {
     const S = mis.cq || {}, out = [];
-    if (S.kind === 'attack') {
+    if (cqFortB(S)) out.push({ id: 'fort', t: 'Erobere die Piratenfestung: Zerstöre oder entere ihren Kern' });
+    else if (S.kind === 'attack') {
       out.push({ id: 'base', t: ['Zerstöre {0}', cqFoeLabel(S)] });
       if (S.type === 'relic') out.push({ id: 'ruin', t: 'Scanne die Erbauer-Ruinen', n: 3, side: 1 });
       if (S.type === 'gate') out.push({ id: 'gate', t: 'Aktiviere ein Tor', side: 1 });
@@ -549,22 +569,35 @@ MISSIONS.cqb = {
     if (S.etech && ETECH[S.etech]) { h.etech = S.etech; if (ETECH[S.etech].reveal) misReveal(g, w / 2, H / 2, 4000, 9999); }
     recalcTech(g, h);
     /* Flotte: Flaggschiff mit Rang, Veteranen, Begleitschiffe aus den Werftsystemen */
-    const fl = cqVet(g, pi, S.flag.t, s0.x + 260, s0.y, 0, S.flag.kills, '');
+    /* Aufstellung in Blickrichtung des Starts (Ringkarten: Start schräg in der Ecke) */
+    const fa = s0.ang || 0, fx = dcos(fa), fy = dsin(fa), at = (f, sd) => [s0.x + fx * f - fy * sd, s0.y + fy * f + fx * sd];
+    const p0 = at(260, 0), fl = cqVet(g, pi, S.flag.t, p0[0], p0[1], fa, S.flag.kills, '');
     fl.cqFlag = 1; M.f.flag = fl.id; M.f.fk = fl.kills;
     M.tag.own = [fl.id];
-    S.vets.forEach((v, i) => { const u = cqVet(g, pi, v.t, s0.x + 180 - (i >> 2) * 50, s0.y - 150 + (i % 4) * 100, 0, v.k, v.h); u.cqv = 1; M.tag.own.push(u.id); });
+    S.vets.forEach((v, i) => { const q = at(180 - (i >> 2) * 50, -150 + (i % 4) * 100), u = cqVet(g, pi, v.t, q[0], q[1], fa, v.k, v.h); u.cqv = 1; M.tag.own.push(u.id); });
     const force = CQ_FORCE[S.fac].concat(Array((S.esc || 0) + [0, 2, 0, 0][S.lvl]).fill(CQ_ESCORT[S.fac])).slice(0, S.lvl === 3 ? CQ_FORCE[S.fac].length - 1 + (S.esc || 0) : 99);
-    misTag(g, 'own', misSpawn(g, pi, force, s0.x + 120, s0.y + 240, 0));
+    const p1 = at(120, 240);
+    misTag(g, 'own', misSpawn(g, pi, force, p1[0], p1[1], fa));
     const base = g.bldgs.find(b => b.owner === pi && b.role === 'base');
     if (S.yard >= 2 && base) { const sp = misSpot(g, pi, 'yard', base); if (sp) misBldg(g, pi, 'yard', sp[0], sp[1], S.yard >= 4 ? 2 : 1); }
     misSet(g, 'flag', 1);
     const foe = S.foe === 'pir' ? 'Piraten' : CQ_FNAME[S.foe] || '';
-    if (S.kind === 'attack') {
+    if (cqFortB(S) && g.fort) {
+      /* Piratenfestung: Garnison und Geschütze nach Garnisonsstufe und Runde; Raubzüge gegen die eigene Basis */
+      const F = g.map.fort, late = S.turn >= 12 ? 1 : 0;
+      misFortTune(g, { cap: clamp(2 + S.gar + Math.floor(S.turn / 6) + (S.lvl - 2), 3, 8), turrets: clamp(2 + S.gar + (S.lvl - 2), 3, 6), tlv: 1 + late, flak: S.gar, core: 2 + late });
+      misSet(g, 'fort', 1);
+      misMark(g, 'fort', F.x, F.y, F.r + 120, 'Piratenfestung');
+      misReveal(g, F.x, F.y, 500, 20);
+      M.t.raid = 150;
+      misSay(g, ['System {0}. Die Piraten haben sich eine Festung gebaut. Brecht den Kern – oder entert ihn. Darin liegt ihr Schatz.', S.name], 'hq', 1);
+      misSay(g, 'Die Garnison verlässt die Festung nur, wenn wir ihr zu nahe kommen. Erst sammeln, dann zuschlagen.', 'hq', 9);
+    } else if (S.kind === 'attack') {
       M.lvl = S.cap ? 3 : clamp(S.gar, 1, 2);
       misFortify(g, 1, (S.gar - 1) + S.fort + (S.cap ? 3 : 0) + Math.floor(S.turn / 6));
       if (S.cap) { const b = g.bldgs.find(x => x.owner === 1 && x.role === 'base'); if (b) for (const [dx, dy] of [[-260, -260], [-260, 260]]) if (!canPlace(g, 1, 'turret', b.x + dx, b.y + dy)) misBldg(g, 1, 'turret', b.x + dx, b.y + dy, 3); }
       misSet(g, 'base', 1);
-      if (S.type === 'relic') misSet(g, 'ruin', 1, 0, 3);
+      if (S.type === 'relic') misSet(g, 'ruin', 1, 0, clamp(g.sites.filter(x => x.kind === 'ruin').length, 1, 3));
       if (S.type === 'gate') misSet(g, 'gate', 1);
       const fb = g.bldgs.find(x => x.owner === 1 && x.role === 'base');
       if (fb) misMark(g, 'base', fb.x, fb.y, 380, S.foe === 'pir' ? 'Piratennest' : S.foe === 'brood' ? 'Nest' : 'Basis');
@@ -574,7 +607,8 @@ MISSIONS.cqb = {
       if (base) {
         const L = clamp(1 + S.fort, 1, 3);
         if (L > 1) { base.lv = L; const l = lvOf(base); base.hull = base.hullMax = l.hull; base.shieldMax = l.shield * h.tfx.shield; base.shield = base.shieldMax; base.wcd = l.wpn.map(() => 0); }
-        for (let i = 0; i < 1 + S.fort + (S.cap ? 2 : 0); i++) { const a = (i - S.fort / 2) * 0.55, x = base.x + dcos(a) * 260, y = base.y + dsin(a) * 260; if (!canPlace(g, pi, 'turret', x, y)) misBldg(g, pi, 'turret', x, y, Math.min(3, 1 + (S.fort >> 1))); }
+        const s1 = g.map.starts[1], a0 = datan2(s1.y - base.y, s1.x - base.x);
+        for (let i = 0; i < 1 + S.fort + (S.cap ? 2 : 0); i++) { const a = a0 + (i - S.fort / 2) * 0.55, x = base.x + dcos(a) * 260, y = base.y + dsin(a) * 260; if (!canPlace(g, pi, 'turret', x, y)) misBldg(g, pi, 'turret', x, y, Math.min(3, 1 + (S.fort >> 1))); }
       }
       const n = S.waves || 3;
       misSet(g, 'hold', 1, 0, n);
@@ -620,8 +654,19 @@ MISSIONS.cqb = {
     if (fl && !fl.dead) M.f.fk = fl.kills;
     else if (misOn(g, 'flag')) { misSet(g, 'flag', 3); misSay(g, 'Das Flaggschiff ist getroffen! Es muss zur Reparatur zurück.', 'hq'); }
     if (M.tag.nem && misOn(g, 'nem') && !misCount(g, M.tag.nem)) { misSet(g, 'nem', 2); M.f.nemDead = 1; misSay(g, '… nicht … so …', S.nem.who); }
-    if (S.kind === 'attack') {
-      if (S.type === 'relic' && misOn(g, 'ruin')) { const n = g.sites.filter(x => x.kind === 'ruin' && x.scanned && x.owner === pi).length; misGoal(g, 'ruin').v = n; if (n >= 3) misSet(g, 'ruin', 2); }
+    if (cqFortB(S)) {
+      if (g.fort && g.fort.done) { misSet(g, 'fort', 2); misSay(g, ['Die Festung ist gefallen. System {0} gehört uns – samt Piratenschatz.', S.name], 'hq'); misWin(g); return; }
+      /* Raubzüge aus der Festung gegen die eigene Basis, stärker mit der Zeit */
+      if (g.fort && g.time >= M.t.raid) {
+        M.f.raid = (M.f.raid || 0) + 1; M.t.raid = g.time + 140;
+        const F = g.map.fort, s0 = g.map.starts[0], a = datan2(s0.y - F.y, s0.x - F.x);
+        const list = ['needle', 'needle'].concat(M.f.raid > 1 ? ['hedgehog'] : [], M.f.raid > 3 ? ['spear', 'needle'] : [], S.lvl >= 3 ? ['needle'] : []);
+        misTag(g, 'raid', misSpawn(g, g.pirate, list, F.x + dcos(a) * (F.r + 520), F.y + dsin(a) * (F.r + 520), a));
+        if (M.f.raid === 1) misSay(g, 'Raubzug aus der Festung! Sie halten auf unsere Basis zu.', 'hq');
+      }
+      if (g.tick % 90 === 25) misHunt(g, M.tag.raid);
+    } else if (S.kind === 'attack') {
+      if (S.type === 'relic' && misOn(g, 'ruin')) { const q = misGoal(g, 'ruin'), n = g.sites.filter(x => x.kind === 'ruin' && x.scanned && x.owner === pi).length; q.v = n; if (n >= q.n) misSet(g, 'ruin', 2); }
       if (S.type === 'gate' && misOn(g, 'gate') && g.gates.some(x => x.state === 'active' && x.owner === pi)) misSet(g, 'gate', 2);
       if (!g.bldgs.some(b => !b.dead && b.owner === 1 && b.role === 'base')) { if (misOn(g, 'nem')) misSet(g, 'nem', 3); misSay(g, ['System {0} gehört uns.', S.name], 'hq'); misWin(g); }
       if (M.tag.nem && g.tick % 90 === 15 && M.f.nemOn && g.time > 600) { for (const u of misLive(g, M.tag.nem)) u.gar = 0; misHunt(g, M.tag.nem); }
@@ -630,9 +675,11 @@ MISSIONS.cqb = {
         M.f.w++; M.t.wave = g.time + 75;
         const val = 700 + (S.pow || 2) * 240 + M.f.w * 260 + (S.lvl - 2) * 300;
         const list = cqPack(g, S.foe === 'pir' ? 'mars' : S.foe, val);
-        const pack = misTag(g, 'att', misSpawn(g, 1, list, w - 260, H / 2 + (M.f.w % 2 ? -380 : 380), Math.PI));
+        /* Angreifer kommen vom gegnerischen Startplatz (auf Ringkarten frei von Fels), abwechselnd seitlich versetzt */
+        const s1 = g.map.starts[1], sa = s1.ang || Math.PI, sd = M.f.w % 2 ? -220 : 220;
+        const pack = misTag(g, 'att', misSpawn(g, 1, list, s1.x - dsin(sa) * sd, s1.y + dcos(sa) * sd, sa));
         misTag(g, 'w' + M.f.w, pack);
-        if (M.f.nemWave === M.f.w && CQ_FLAG[S.foe]) { const u = cqVet(g, 1, CQ_FLAG[S.foe], w - 300, H / 2, Math.PI, S.nem.lvl > 1 ? XP_RANKS[Math.min(2, S.nem.lvl - 2)] : 0, S.nem.name); misTag(g, 'nem', [u]); misTag(g, 'att', [u]); misTag(g, 'w' + M.f.w, [u]); misSay(g, 'Ich führe diese Welle selbst an. Für die Ehre – und für die Rache.', S.nem.who); }
+        if (M.f.nemWave === M.f.w && CQ_FLAG[S.foe]) { const u = cqVet(g, 1, CQ_FLAG[S.foe], s1.x, s1.y, sa, S.nem.lvl > 1 ? XP_RANKS[Math.min(2, S.nem.lvl - 2)] : 0, S.nem.name); misTag(g, 'nem', [u]); misTag(g, 'att', [u]); misTag(g, 'w' + M.f.w, [u]); misSay(g, 'Ich führe diese Welle selbst an. Für die Ehre – und für die Rache.', S.nem.who); }
         misSay(g, M.f.w === M.f.n ? 'Letzte Welle! Alles, was sie haben.' : ['Welle {0} von {1} im Anflug!', M.f.w, M.f.n], 'hq');
       }
       if (g.tick % 60 === 5) misHunt(g, M.tag.att);

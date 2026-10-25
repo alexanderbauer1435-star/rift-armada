@@ -296,7 +296,8 @@ function updateShip(g, u, dt) {
         if (o.sw) { const w = nearWreck(g, ref.x, ref.y, 1400); if (w) { u.o = { t: 'salvage', wid: w.id }; u.path = null; break; } }
         let n = g.byId.get(o.nid);
         /* selbst gewählte Frachter wählen nach jeder Lieferung neu nach Bedarf, befohlene bleiben bei ihrem Vorkommen */
-        if (o.auto || !n || n.amount <= 0) n = pickNode(g, u.owner, ref.x, ref.y, 900) || nearestNode(g, u.x, u.y, null, 1800);
+        /* Fassung 20: auch befohlene wechseln, wenn ihr Vorkommen bis auf einen nachwachsenden Rest leer ist */
+        if (o.auto || !n || n.amount <= 0 || n.amount < Math.min(120, n.max * 0.05)) n = pickNode(g, u.owner, ref.x, ref.y, 900) || nearestNode(g, u.x, u.y, null, 1800);
         u.o = n ? { t: 'harvest', nid: n.id, auto: o.auto } : { t: 'idle' };
         u.path = null;
       }

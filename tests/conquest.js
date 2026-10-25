@@ -83,6 +83,9 @@ function pilot(g) {
   const mine = g.ships.filter(u => !u.dead && !u.derelict && u.owner === h && u.def.role === 'war' && u.def.wpn.length);
   const foe = g.ships.filter(u => !u.dead && !u.derelict && g.tm[u.owner] !== t && u.def.role === 'war' && !g.players[u.owner].neutral);
   const tb = g.bldgs.filter(b => !b.dead && g.tm[b.owner] !== t && !g.players[b.owner].neutral).sort((a, b) => (b.role === 'base') - (a.role === 'base'))[0];
+  /* Piratenfestung (Fassung 20): die KI meidet sie, der Pilot führt die Flotte gegen den Kern */
+  const core = g.fort && !g.fort.done ? g.byId.get(g.fort.core) : null;
+  if (core && !tb && !foe.length) { if (cp(mine) >= 40 || g.time > 900) for (const u of mine) { u.task = 1; u.hold = false; u.o = { t: 'amove', x: core.x, y: core.y }; u.path = null; } return; }
   const tgt = tb || foe[0];
   if (tgt && (cp(mine) >= Math.max(26, cp(foe) * 1.25) || g.time > 700)) for (const u of mine) { u.task = 1; u.hold = false; u.o = { t: 'amove', x: tgt.x, y: tgt.y }; u.path = null; }
 }
@@ -93,7 +96,9 @@ const P = s => C.sys.find(s);
 const cases = [
   ['Piraten', X.cqSpec(C, 'attack', P(s => s.owner === 'pir').id)],
   ['Mars mit Erzfeind', Object.assign(X.cqSpec(C, 'attack', P(s => s.owner === 'pir').id), { foe: 'mars', type: 'relic', gar: 2, nem: { who: 'tarn', name: 'Major Ilka Tarn', lvl: 2 } })],
-  ['Brood-System', Object.assign(X.cqSpec(C, 'attack', P(s => s.owner === 'pir').id), { foe: 'brood', type: 'gate', gar: 2 })],
+  ['Piratenfestung', Object.assign(X.cqSpec(C, 'attack', P(s => s.owner === 'pir').id), { foe: 'pir', type: 'mine', gar: 2 })],
+  ['Werftsystem (Ringkarte)', Object.assign(X.cqSpec(C, 'attack', P(s => s.owner === 'pir').id), { foe: 'nexus', type: 'yard', gar: 1 })],
+  ['Brood-System',Object.assign(X.cqSpec(C, 'attack', P(s => s.owner === 'pir').id), { foe: 'brood', type: 'gate', gar: 2 })],
   ['Hauptwelt', X.cqSpec(C, 'attack', P(s => s.home === 'legion').id)],
   ['Verteidigung', Object.assign(X.cqSpec(C, 'defend', P(s => s.home === 'alliance').id, 'nexus'), { pow: 3.5, fort: 1, waves: 3 })],
   ['Haupttor', Object.assign(X.cqSpec(C, 'attack', P(s => s.type === 'core').id), { allies: ['mars'] })]
@@ -107,7 +112,7 @@ for (const [name, sp] of cases) {
     while (!g.over && g.time < secs) { X.stepGame(g); g.ev.length = 0; pilot(g); }
   } catch (e) { err = e; }
   const R = err ? null : X.cqBattleResult(g);
-  ok(!err && g.mis.goals.length >= 2 && R && Array.isArray(R.vets), name + ' (' + sp.kind + '): läuft ' + (g ? Math.round(g.time) : 0) + ' s, Ergebnis ' + (g ? g.mis.res : '-') + ', Ziele ' + (g ? g.mis.goals.map(q => q.id + ':' + q.st).join(' ') : '') + (err ? '\n' + err.stack.split('\n').slice(0, 4).join('\n') : ''));
+  ok(!err && g.mis.goals.length >= 2 && R && Array.isArray(R.vets), name + ' (' + sp.kind + ', Karte ' + (Cx.cqStyle(sp) || 'klassisch') + '): läuft ' + (g ? Math.round(g.time) : 0) + ' s, Ergebnis ' + (g ? g.mis.res : '-') + ', Ziele ' + (g ? g.mis.goals.map(q => q.id + ':' + q.st).join(' ') : '') + (err ? '\n' + err.stack.split('\n').slice(0, 4).join('\n') : ''));
 }
 /* Ergebnis zurück in den Feldzug */
 {
