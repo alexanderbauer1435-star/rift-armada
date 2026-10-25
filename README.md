@@ -69,6 +69,25 @@
   Befehlspakete aller je Runde und verteilt das Bündel; wer geht, wird im nächsten Bündel auf allen Geräten zur KI.
   Prüfsumme alle fünf Sekunden mit Meldung, bei wem es abwich, und Abgleich für alle. Im Gefecht Mitspieler mit Name
   und Farbe in der Kopfleiste, Funksignale (Angriff, Verteidigen, Hilfe, Rückzug, Sammeln, Gut gemacht, Ja, Nein).
+  Kampagne und Conquest im taktischen Tempo: Alle Missionen mit KI am Steuer im Tempo Taktisch gemessen
+  (tools/balance/missions.js: jede Mission auf gewählten Stufen parallel, Dauer, Ergebnis, Zeitpunkt jedes Ziels) und
+  nachgestellt (Wellenabstände, Zeitziele, Gegnerstufen, Garnisonen). Neue Inhalte in drei Missionen: »Haven hält« lehrt
+  Tarnung und Sensorimpuls (getarnte Wren kundschaftet das Nest aus – Bedingung für den Gegenangriff –, getarnte Lauerer
+  an der Ruine), »Ankunft« lehrt Bergung und Außenbasis (Wrackfeld aus der Nacht der Stille, die Kaskade hinter einem
+  Ionennebel ist nur mit einer Außenbasis zu erreichen), »Torsturm« ist eine Festungsmission (Vex hat seine
+  Piratenfestung um das tote Tor gebaut; misFortTune in mission.js schneidet fortSetup je Schwierigkeit zu, der Kern
+  schirmt das Tor ab, bis er fällt). Conquest: Systemschlachten auf den Ringkarten (cqStyle: Werftsystem Iron Bastions
+  oder Pinwheel, Rohstoffwelt Archipelago oder Open Expanse, Reliktwelt Ion Storm oder Open Expanse, Hauptwelt Maelstrom
+  oder Iron Bastions, je System abwechselnd), Piratennester mit Garnison 2+ sind Festungen (Ziel: Kern zerstören oder
+  entern, Raubzüge aus der Festung), Verteidiger kommen vom gegnerischen Startplatz. Wirtschaft: Frachter wechseln von
+  einem bis auf den nachwachsenden Rest geleerten Vorkommen (pickNode meidet Vorkommen unter 120 bzw. 5 %) – vorher
+  pendelten sie zum Rest zurück, die KI verhungerte in den Missionen an Erz. Gekaperte Legion-Schiffe zählen in
+  »Torsturm« nicht mehr als lebende Gegner. Gegner nachgestellt: misFortify gibt auf Schwer kleinere Rücklagen, die
+  KI-Gegner in Akt 1, 3 und 4 sind auf Schwer KI Leicht mit stärkerer Befestigung, »Das Netz« hat statt einer freien KI
+  geskriptete Kampfgruppen der Republik, »Die Verräterin« bekommt Legion-Verstärkung, das Finale stärkere Nester.
+  Missionshilfe für Tests (misAutoArmy): Flotte sammeln, dann geschlossen angreifen. Gemessen (KI Schwer am Steuer,
+  Leicht/Normal/Schwer, Minuten): Prolog 1,7/2,2/2,7 · 1.1 12/19/16 · 1.2 8/7/7 · 1.3 8/8/8 · 2.1 7/12/17 ·
+  2.2 6/7/11 · 3.1 14/12/25 · 3.2 27/16/15 · 4.1 6/10/14 · 4.2 7/8/9 · Finale 8/7/13 · Bonus 15/15/20.
 - Fassung 19 (Runde 17, Balancing): Messwerkzeuge tools/balance/ – duel.js (Kostenduelle Schiff gegen Schiff bei
   gleichem Budget), towers.js (wie viel Flotte bricht einen Turm), matrix.js (KI-Partien jede Fraktion gegen jede, 1 gegen 1
   oder MODE=2v2, ONLYF=Fraktion). Erkenntnisse und Änderungen: Punktverteidigung schoss jeden Torpedo ab → trifft Torpedos

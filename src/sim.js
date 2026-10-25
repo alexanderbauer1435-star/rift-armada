@@ -539,7 +539,9 @@ function pickNode(g, pi, x, y, maxD) {
   const pen = needOre ? Math.min(1600, 420 + Math.max(0, 400 - p.ore) * 3) : 420;
   let best = null, bs = 1e9;
   for (const n of g.nodes) {
-    if (n.amount <= 0) continue;
+    /* Fassung 20: fast leere Vorkommen meiden – sie wachsen nur langsam nach (NODE_REGROW), und Frachter, die immer
+       wieder zum nachgewachsenen Rest flogen, brachten kaum noch etwas (Erzmangel der KI in den Missionen) */
+    if (n.amount <= 0 || n.amount < Math.min(120, n.max * 0.05)) continue;
     /* Schatzkammer der Piraten: nur nach dem Fall der Festung */
     if (g.fort && !g.fort.done && hyp(n.x - g.map.fort.x, n.y - g.map.fort.y) < g.map.fort.r + 420) continue;
     const d = hyp(n.x - x, n.y - y) - n.r;

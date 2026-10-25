@@ -183,6 +183,21 @@ function misBldg(g, owner, role, x, y, lvl) {
   if (lvl && lvl > 1) { b.lv = lvl; const l = lvOf(b); b.hull = b.hullMax = l.hull; b.shieldMax = l.shield * g.players[owner].tfx.shield; b.shield = b.shieldMax; b.wcd = l.wpn.map(() => 0); }
   return b;
 }
+/* Stufe einer Station nachträglich setzen (Hülle, Schild, Waffen neu) */
+function misSetLv(g, b, L) { b.lv = L; const l = lvOf(b); b.hull = b.hullMax = l.hull; b.shieldMax = (l.shield || 0) * g.players[b.owner].tfx.shield; b.shield = b.shieldMax; b.wcd = l.wpn.map(() => 0); }
+/* Piratenfestung (fortSetup in sim.js) für eine Mission zuschneiden: Garnisonsgröße, Zahl und Stufe der Geschütze,
+   Stufe des Kerns. Überzählige Geschütze fallen weg (die ersten im Uhrzeigersinn ab Osten). */
+function misFortTune(g, o) {
+  if (!g.fort) return;
+  g.fort.cap = o.cap;
+  for (const u of g.ships.filter(u => !u.dead && u.owner === g.pirate && u.post).slice(o.cap)) removeShip(g, u);
+  const tur = g.bldgs.filter(b => !b.dead && b.owner === g.pirate && b.role === 'turret');
+  tur.forEach((b, i) => { if (i < tur.length - o.turrets) removeBldg(g, b); else if (b.lv !== o.tlv) misSetLv(g, b, o.tlv); });
+  if (o.flak !== undefined) for (const b of g.bldgs.filter(b => !b.dead && b.owner === g.pirate && b.role === 'flak').slice(o.flak)) removeBldg(g, b);
+  const core = g.byId.get(g.fort.core);
+  if (core && o.core && core.lv !== o.core) misSetLv(g, core, o.core);
+  recalcPower(g, g.pirate);
+}
 /* Angriff: untätige Schiffe einer Gruppe fliegen im Angriffsmarsch zum Ziel (Punkt) oder zum nächsten Ziel des Spielerteams */
 function misHunt(g, ids, to) {
   const team = g.tm[g.human];
@@ -220,7 +235,9 @@ function misFortify(g, pi, extra) {
   for (let i = 0; i < Math.round(set.length * (0.75 + 0.5 * L)) + (extra || 0); i++) list.push(set[i % set.length]);
   const gar = misSpawn(g, pi, list, b.x + dcos(a) * 330, b.y + dsin(a) * 330, a, { hold: true });
   for (const u of gar) { u.hx = u.x; u.hy = u.y; u.gar = 1; }
-  p.ice += [0, 900, 1800, 2800][L]; p.ore += [0, 500, 1000, 1600][L];
+  /* Fassung 20: Rücklagen auf Schwer kleiner – im taktischen Tempo und mit der besseren Erzwirtschaft überrannten die
+     Gegner mit vollen Rücklagen die Basis, bevor ein Angriff möglich war */
+  p.ice += [0, 900, 1600, 2000][L]; p.ore += [0, 500, 900, 1100][L];
   recalcPower(g, pi); recalcCp(g, pi);
   return gar;
 }
