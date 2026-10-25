@@ -742,7 +742,7 @@ function mpStep(g) {
 /* Sitz an die KI – auf allen Geräten in derselben Runde */
 function mpSeatToAi(g, seat, lvl) {
   const p = g.players[seat], s = NET.seats.find(x => x.seat === seat);
-  if (p && !p.ai) { p.ai = aiInit(lvl || 2); p.human = false; }
+  if (p && !p.ai) { p.ai = aiInit(lvl || 2); p.human = false; g.loadedMid = 1; }
   if (s && !s.gone) {
     s.gone = true;
     if (seat !== NET.seat) { toast(L('{0} hat das Gefecht verlassen – die KI übernimmt.', mpSeatName(seat)), 'warn', 4500); SND.play('click'); }
@@ -909,7 +909,7 @@ function mpTakeover() {
   NET.mine.clear(); NET.inb.clear(); NET.bund.clear(); NET.out = [];
   g.net = null;
   for (const c of pend) issueCmd(g, c);
-  for (const s of NET.seats) { const p = g.players[s.seat]; if (s.seat !== NET.seat && p && !p.ai) { p.ai = aiInit(2); p.human = false; } }
+  for (const s of NET.seats) { const p = g.players[s.seat]; if (s.seat !== NET.seat && p && !p.ai) { p.ai = aiInit(2); p.human = false; g.loadedMid = 1; } }
   NET.seat = -1;
   UI.kind = 'skirmish';
   $('mpLost').hidden = true; $('mpWait').hidden = true;
