@@ -1,34 +1,39 @@
 /* ===== net.js ===== */
 'use strict';
 /* =====================================================================
-   MEHRSPIELER – zwei Geräte, direkt miteinander verbunden (WebRTC-Datenkanal, ohne Server). Übernommen aus RTS – Rapid
-   Tactical Strike und an Rift Armada angepasst.
-   Verbindung: Das eröffnende Gerät zeigt einen Code, das beitretende antwortet mit einem eigenen; beide als QR-Code und
-   als Text zum Kopieren. Ein Code enthält nur, was die Geräte zum Finden brauchen (Adressen im lokalen Netz,
-   Zugangsdaten, Prüfsumme des Schlüssels), kompakt verpackt. Ohne STUN finden sich die Geräte nur im selben WLAN oder
-   Hotspot; mit »Über das Internet« fragen beide öffentliche Adressdienste, ein eigener TURN-Server leitet notfalls weiter.
-   Gleichschritt: Beide Geräte rechnen dieselbe Partie. Ein Befehl wirkt D Runden später (Vorlauf 4 bis 15 Runden je nach
-   Laufzeit), auf beiden Geräten in derselben Runde und Reihenfolge (kleinerer Sitz zuerst). Mit jeder Runde t schickt
-   jedes Gerät sein Befehlspaket für t+D, auch ein leeres; Runde t wird erst gerechnet, wenn das Paket des anderen da ist.
-   Alle fünf Sekunden vergleichen die Geräte eine Prüfsumme; weicht sie ab, übernimmt das beitretende Gerät den Spielstand
-   des eröffnenden (Abgleich).
-   Spielarten: 1 gegen 1, Gemeinsam (beide gegen zwei KI), 2 gegen 2 (jeder mit einem KI-Partner), Quarantine Line
-   (beide halten das Siegel, dazu bis zu zwei KI-Verbündete).
+   MEHRSPIELER – zwei bis acht Geräte, direkt verbunden (WebRTC-Datenkanal, ohne Server). Ursprung: RTS – Rapid Tactical
+   Strike; seit Fassung 20 als Stern: Ein Gerät eröffnet (Gastgeber), jedes weitere verbindet sich nur mit ihm.
+   Verbindung: Für jeden Mitspieler zeigt der Gastgeber einen eigenen Code (»Mitspieler einladen«), das beitretende Gerät
+   antwortet mit einem Code; beide als QR-Code und als Text zum Kopieren. Ein Code enthält nur, was die Geräte zum Finden
+   brauchen (Adressen im lokalen Netz, Zugangsdaten, Prüfsumme des Schlüssels), kompakt verpackt. Ohne STUN finden sich die
+   Geräte nur im selben WLAN oder Hotspot; mit »Über das Internet« fragen sie öffentliche Adressdienste, ein eigener
+   TURN-Server leitet notfalls weiter.
+   Lobby: acht Plätze, jeder Mensch, KI (Fraktion, Stärke) oder aus; Team je Platz; jeder Mensch wählt Fraktion, Name und
+   Startplatz auf dem eigenen Gerät, der Gastgeber Spielart, Karte, Größe, Kampftempo und Startmittel.
+   Gleichschritt: Alle Geräte rechnen dieselbe Partie. Jedes Gerät schickt mit jeder Runde t sein Befehlspaket für t+D an
+   den Gastgeber (auch ein leeres). Der Gastgeber bündelt die Pakete aller Menschen für eine Runde in Sitzreihenfolge und
+   verteilt das Bündel; eine Runde wird erst gerechnet, wenn ihr Bündel da ist. Verlässt jemand die Partie, setzt der
+   Gastgeber den Sitz ins nächste Bündel: Ab dieser Runde spielt dort auf allen Geräten die KI.
+   Alle fünf Sekunden vergleichen Gastgeber und Mitspieler eine Prüfsumme; weicht sie ab, verteilt der Gastgeber seinen
+   Spielstand an alle (Abgleich) und sagt, bei wem es abwich.
+   Funksignale: einige feste Meldungen (Angriff, Hilfe …) an alle Mitspieler, über den Gastgeber weitergereicht.
    Nur in der Offline-Datei: Die Artefakt-Fassung im Browser darf keine direkten Verbindungen aufbauen.
    ===================================================================== */
-const MP_PROTO = 1, MP_HASH = 150, MP_CHUNK = 16000, MP_CODE_V = 2, MP_PFX = 'RIFT';
+const MP_PROTO = 2, MP_HASH = 150, MP_CHUNK = 16000, MP_CODE_V = 2, MP_PFX = 'RIFT', MP_MAX = 8;
 const MP_STUN = ['stun:stun.l.google.com:19302', 'stun:stun.cloudflare.com:3478'];
 const MP_TYP = ['host', 'srflx', 'relay', 'prflx'], NET_KEY = 'ra.net';
-const MP_KINDS = { vs: '1 gegen 1', coop: 'Gemeinsam', duo: '2 gegen 2', waves: 'Quarantine' };
+const MP_KINDS = { free: 'Gefecht', waves: 'Quarantine' };
+/* Funksignale (Index wird verschickt, jedes Gerät zeigt sie in seiner Sprache) */
+const MP_SIGNALS = ['Angriff!', 'Verteidigen!', 'Hilfe!', 'Rückzug!', 'Sammeln!', 'Gut gemacht', 'Ja', 'Nein'];
 const NET = {
-  pc: null, dc: null, role: '', open: false, hello: false, beat: 0, connT: 0, lastRx: 0, rtt: [],
-  peer: { f: 'mars', in: false },
-  live: false, seat: -1, pseat: -1, D: 6, D0: 6, ep: 0, base: 0, nx: 6, out: [], mine: new Map(), theirs: new Map(), pmax: -1, pd: 6,
-  hs: new Map(), rhs: new Map(), wait: '', rx: null, stall: 0, syncs: 0, soft: false, inet: false, okHash: 0
+  role: '', open: false, hello: false, inet: false, id: 0, nextId: 1, peers: [], pend: null, lobby: false, beat: 0, connT: 0,
+  live: false, seat: -1, D: 6, D0: 6, ep: 0, base: 0, nx: 6, out: [], mine: new Map(), inb: new Map(), bund: new Map(), bx: 6,
+  need: new Set(), dropQ: [], seats: [], rmax: 0, pmax: -1, pd: 6,
+  hs: new Map(), rhs: new Map(), wait: '', rx: null, stall: 0, syncs: 0, okHash: 0, soft: false, sigT: 0
 };
-/* Wahl in der Lobby; bestimmt vom eröffnenden Gerät */
-const MPL = { kind: 'vs', map: 'haven', lvl: 2, res: 'normal', allies: 0, seed: 1 };
-const MPU = { pane: 'home', own: '', ownType: '', stream: null, scanT: 0, scanFor: '', canScan: false, busy: false, prevKey: '', inet: false, turn: { url: '', user: '', pass: '' } };
+/* Wahl in der Lobby; bestimmt vom Gastgeber. slots: { t: 'h' (Mensch, id) | 'ai' (f, lvl) | 'off', team, s (Startplatz) } */
+const MPL = { kind: 'free', map: 'haven', size: 'normal', pace: 'tactical', res: 'normal', seed: 1, slots: [] };
+const MPU = { pane: 'home', own: '', ownType: '', stream: null, scanT: 0, scanFor: '', canScan: false, busy: false, prevKey: '', inet: false, name: '', roster: [], turn: { url: '', user: '', pass: '' } };
 function mpBuildId() { return String(window.RA_BUILD || window.RA_VERSION || 'dev'); }
 
 /* ------------------------------------------------------------------ Verbindungscode (Aufbau wie im RTS, Kennung »RIFT«) */
@@ -156,32 +161,43 @@ function mpIce(inet) {
   if (t.url && /^turns?:[^\s]+$/i.test(t.url)) out.push({ urls: t.url, username: t.user || '', credential: t.pass || '' });
   return out;
 }
-function mpNew(role, inet) {
-  mpDrop();
+/* Eine Verbindung (Gastgeber: je Mitspieler eine, Mitspieler: eine zum Gastgeber) */
+function mpPeerNew(inet) {
   let pc;
   try { pc = new RTCPeerConnection({ iceServers: mpIce(inet) }); } catch (e) { pc = new RTCPeerConnection({ iceServers: mpIce(inet).slice(0, 1) }); }
-  NET.inet = !!inet;
   const dc = pc.createDataChannel('ra', { negotiated: true, id: 0, ordered: true });
-  NET.pc = pc; NET.dc = dc; NET.role = role; NET.open = false; NET.hello = false; NET.rtt = [];
-  dc.onopen = () => { if (NET.dc === dc) mpOnOpen(); };
-  dc.onclose = () => { if (NET.dc === dc) mpLost('drop'); };
-  dc.onmessage = e => { if (NET.dc === dc) mpRecv(e.data); };
-  pc.onconnectionstatechange = () => { if (NET.pc === pc && NET.open && (pc.connectionState === 'failed' || pc.connectionState === 'closed')) mpLost('drop'); };
-  return pc;
+  const P = { id: 0, pc, dc, open: false, hello: false, gone: false, n: '', f: 'mars', in: false, lastRx: 0, rtt: [] };
+  dc.onopen = () => { if (!P.gone) mpOnOpen(P); };
+  dc.onclose = () => { if (!P.gone) mpPeerLost(P, 'drop'); };
+  dc.onmessage = e => { if (!P.gone) mpRecv(P, e.data); };
+  pc.onconnectionstatechange = () => { if (!P.gone && P.open && (pc.connectionState === 'failed' || pc.connectionState === 'closed')) mpPeerLost(P, 'drop'); };
+  return P;
 }
+function mpPeerClose(P, later) {
+  if (!P) return;
+  P.gone = true; P.open = false;
+  const fin = () => { try { P.dc.close(); } catch (e) { /* schon zu */ } try { P.pc.close(); } catch (e) { /* schon zu */ } };
+  if (later) setTimeout(fin, 250); else fin();
+}
+function mpFlags() {
+  const h = NET.peers[0];
+  NET.open = NET.hello = NET.role === 'host' ? NET.lobby : NET.role === 'guest' && !!(h && h.open && h.hello);
+}
+/* alles schließen (Gastgeber: alle Mitspieler) */
 function mpDrop() {
-  const pc = NET.pc, dc = NET.dc;
-  NET.pc = null; NET.dc = null; NET.open = false; NET.hello = false;
+  for (const P of NET.peers) mpPeerClose(P);
+  mpPeerClose(NET.pend);
+  NET.peers = []; NET.pend = null; NET.lobby = false; NET.role = ''; NET.id = 0;
   clearInterval(NET.beat); NET.beat = 0; clearTimeout(NET.connT);
-  try { if (dc) dc.close(); } catch (e) { /* schon zu */ }
-  try { if (pc) pc.close(); } catch (e) { /* schon zu */ }
+  mpFlags();
 }
 function mpLeave() {
-  const pc = NET.pc, dc = NET.dc;
   mpSend({ k: 'bye' });
-  NET.pc = null; NET.dc = null; NET.open = false; NET.hello = false; NET.live = false; NET.seat = -1;
+  for (const P of NET.peers) mpPeerClose(P, true);
+  mpPeerClose(NET.pend);
+  NET.peers = []; NET.pend = null; NET.lobby = false; NET.role = ''; NET.live = false; NET.seat = -1;
   clearInterval(NET.beat); NET.beat = 0;
-  setTimeout(() => { try { if (dc) dc.close(); if (pc) pc.close(); } catch (e) { /* schon zu */ } }, 250);
+  mpFlags();
   mpMenuSub();
 }
 function mpGather(pc) {
@@ -194,30 +210,54 @@ function mpGather(pc) {
     setTimeout(fin, NET.inet ? 8000 : 3500);
   });
 }
-function mpSend(o) {
-  const dc = NET.dc;
-  if (!dc || dc.readyState !== 'open') return false;
-  try { dc.send(JSON.stringify(o)); return true; } catch (e) { return false; }
+function mpSendTo(P, o) {
+  const dc = P && P.dc;
+  if (!dc || P.gone || dc.readyState !== 'open') return false;
+  try { dc.send(typeof o === 'string' ? o : JSON.stringify(o)); return true; } catch (e) { return false; }
 }
-async function mpHostStart() {
+/* an alle: Gastgeber an jeden Mitspieler (außer »not«), Mitspieler an den Gastgeber */
+function mpSend(o, not) {
+  const s = JSON.stringify(o);
+  let ok = false;
+  for (const P of NET.peers) if (P !== not && P.open && mpSendTo(P, s)) ok = true;
+  return ok;
+}
+/* Gastgeber: »Spiel eröffnen« – Rolle übernehmen und den ersten Mitspieler einladen */
+function mpHostStart() {
   if (MPU.busy || !mpAvail()) return;
+  mpDrop();
+  NET.role = 'host'; NET.id = 0; NET.nextId = 1;
+  mpInvite();
+}
+async function mpInvite() {
+  if (MPU.busy || !mpAvail() || NET.role !== 'host') return;
+  if (mpFreeSlot() < 0 && NET.lobby) { mpMsg(L('Alle acht Plätze sind besetzt.'), 'warn'); return; }
   MPU.busy = true;
   MPU.own = ''; MPU.ownType = ''; $('mpOwn').value = '';
   mpMsg(L('Code wird erstellt …'));
   try {
-    const pc = mpNew('host', MPU.inet);
+    mpPeerClose(NET.pend);
+    NET.inet = !!MPU.inet;
+    const P = mpPeerNew(MPU.inet), pc = P.pc;
+    P.id = NET.nextId++;
+    NET.pend = P;
     if (MPU.inet) mpMsg(L('Code wird erstellt, die Adresse von außen wird erfragt …'));
     await pc.setLocalDescription(await pc.createOffer());
     await mpGather(pc);
-    if (NET.pc !== pc) return;
+    if (NET.pend !== P) return;
     const code = mpPack(pc.localDescription.sdp, 'offer', mpBuild(), NET.inet), d = code && mpUnpack(code);
     if (!d || d.err) throw new Error('code');
-    if (!d.n) { mpDrop(); mpPane('home'); mpMsg(L('Kein Netzwerk gefunden. WLAN oder Hotspot einschalten und noch einmal versuchen.'), 'bad'); return; }
+    if (!d.n) { mpInviteEnd(); mpMsg(L('Kein Netzwerk gefunden. WLAN oder Hotspot einschalten und noch einmal versuchen.'), 'bad'); return; }
     mpShowCode(code, 'offer');
     if (NET.inet && !d.ext) mpMsg(L('Keine Adresse von außen gefunden: Ist das Gerät online? Im selben WLAN klappt es trotzdem.'), 'warn');
   } catch (e) {
-    mpDrop(); mpPane('home'); mpMsg(L('Die Verbindung ließ sich nicht vorbereiten.'), 'bad');
+    mpInviteEnd(); mpMsg(L('Die Verbindung ließ sich nicht vorbereiten.'), 'bad');
   } finally { MPU.busy = false; }
+}
+/* Einladung abbrechen: zurück in die Lobby, ohne Lobby ganz zurück */
+function mpInviteEnd() {
+  mpPeerClose(NET.pend); NET.pend = null;
+  if (NET.role === 'host' && NET.lobby) mpLobbyEnter(); else { mpDrop(); mpPane('home'); }
 }
 function mpCodeErr(d, want) {
   if (!d || d.err === 'code') return L('Das ist kein gültiger Code.');
@@ -234,11 +274,14 @@ async function mpJoinCode(code) {
   MPU.own = ''; MPU.ownType = ''; $('mpOwn').value = '';
   mpMsg(L('Antwort wird erstellt …'));
   try {
-    const pc = mpNew('guest', d.inet || MPU.inet);
+    mpDrop();
+    NET.role = 'guest'; NET.inet = !!(d.inet || MPU.inet);
+    const P = mpPeerNew(NET.inet), pc = P.pc;
+    NET.peers = [P];
     await pc.setRemoteDescription({ type: 'offer', sdp: d.sdp });
     await pc.setLocalDescription(await pc.createAnswer());
     await mpGather(pc);
-    if (NET.pc !== pc) return;
+    if (NET.peers[0] !== P) return;
     const ans = mpPack(pc.localDescription.sdp, 'answer', mpBuild(), NET.inet), a = ans && mpUnpack(ans);
     if (!a || a.err) throw new Error('code');
     if (!a.n) { mpDrop(); mpPane('enter'); mpMsg(L('Kein Netzwerk gefunden. WLAN oder Hotspot einschalten und noch einmal versuchen.'), 'bad'); return; }
@@ -248,7 +291,7 @@ async function mpJoinCode(code) {
   } finally { MPU.busy = false; }
 }
 async function mpAnswerCode(code) {
-  const pc = NET.pc;
+  const P = NET.pend, pc = P && P.pc;
   if (MPU.busy || !pc || NET.role !== 'host') return;
   const d = mpUnpack(code), why = mpCodeErr(d, 'answer');
   if (why) { mpMsg(why, 'bad'); SND.play('err'); return; }
@@ -258,189 +301,342 @@ async function mpAnswerCode(code) {
     await pc.setRemoteDescription({ type: 'answer', sdp: d.sdp });
     mpMsg(L('Verbinde …'));
     clearTimeout(NET.connT);
-    NET.connT = setTimeout(() => { if (NET.pc === pc && !NET.open) mpMsg(NET.inet ? L('Noch keine Verbindung. Strenge Netze (Firma, manche Mobilfunknetze) brauchen einen eigenen TURN-Server.') : L('Noch keine Verbindung. Sind beide Geräte im selben WLAN oder Hotspot?'), 'warn'); }, NET.inet ? 20000 : 12000);
+    NET.connT = setTimeout(() => { if (NET.pend === P && !P.open) mpMsg(NET.inet ? L('Noch keine Verbindung. Strenge Netze (Firma, manche Mobilfunknetze) brauchen einen eigenen TURN-Server.') : L('Noch keine Verbindung. Sind beide Geräte im selben WLAN oder Hotspot?'), 'warn'); }, NET.inet ? 20000 : 12000);
   } catch (e) { mpMsg(L('Dieser Antwort-Code passt nicht. Bitte neu eröffnen.'), 'bad'); }
   finally { MPU.busy = false; }
 }
-function mpOnOpen() {
-  NET.open = true; NET.lastRx = performance.now();
-  clearTimeout(NET.connT);
-  clearInterval(NET.beat);
-  NET.beat = setInterval(mpBeat, 1000);
-  mpSend({ k: 'hi', v: MP_PROTO, b: mpBuildId() });
+function mpOnOpen(P) {
+  P.open = true; P.lastRx = performance.now();
+  if (NET.role === 'host') {
+    clearTimeout(NET.connT);
+    if (NET.pend === P) NET.pend = null;
+    if (NET.peers.indexOf(P) < 0) NET.peers.push(P);
+  }
+  if (!NET.beat) NET.beat = setInterval(mpBeat, 1000);
+  mpSendTo(P, { k: 'hi', v: MP_PROTO, b: mpBuildId(), id: P.id });
 }
 function mpBeat() {
-  if (!NET.open) return;
-  mpSend({ k: 'p', t: performance.now() });
-  const quiet = performance.now() - NET.lastRx;
+  const now = performance.now(), host = NET.role === 'host', game = NET.live && UI.kind === 'mp' && !UI.endShown;
+  for (const P of NET.peers.slice()) {
+    if (!P.open) continue;
+    mpSendTo(P, { k: 'p', t: now });
+    const quiet = now - P.lastRx;
+    /* Gastgeber: ein stummer Mitspieler hält alle auf – nach 30 s (in der Lobby 45 s) übernimmt die KI bzw. der Platz wird frei */
+    if (host && quiet > (game ? 30000 : 45000) && !(game && UI.paused)) mpPeerLost(P, 'quiet');
+    else if (!host && game && !UI.paused && quiet > 15000 && $('mpLost').hidden) mpLost('quiet');
+  }
   if (NET.live) mpAdapt();
-  if (NET.live && UI.kind === 'mp' && !UI.paused && !UI.endShown && quiet > 15000 && $('mpLost').hidden) mpLost('quiet');
   if (!$('mp').hidden && MPU.pane === 'lobby') mpLobbyState();
 }
-function mpRtt() { if (!NET.rtt.length) return -1; const a = NET.rtt.slice().sort((x, y) => x - y); return a[a.length >> 1]; }
-function mpRecv(data) {
-  NET.lastRx = performance.now();
+function mpRtt(P) { const r = P ? P.rtt : null; if (!r || !r.length) return -1; const a = r.slice().sort((x, y) => x - y); return a[a.length >> 1]; }
+function mpRttMax() { let m = -1; for (const P of NET.peers) m = Math.max(m, mpRtt(P)); return m; }
+function mpRecv(P, data) {
+  P.lastRx = performance.now();
   let m;
   try { m = JSON.parse(data); } catch (e) { return; }
   if (!m || typeof m.k !== 'string') return;
-  if (NET.soft) mpUnlost();
+  const host = NET.role === 'host';
+  if (!host && NET.soft) mpUnlost();
   switch (m.k) {
     case 'hi':
-      if (m.v !== MP_PROTO || m.b !== mpBuildId()) { mpDrop(); mpPane('home'); mpMsg(L('Das andere Gerät hat eine andere Fassung des Spiels. Bitte auf beiden Geräten dieselbe Datei öffnen.'), 'bad'); return; }
-      NET.hello = true;
-      if (NET.role === 'host') { MPL.seed = 1 + ((Math.random() * 999999) | 0); if (MENU.mode === 'skirmish' && MAPS[MENU.map] && !MAPS[MENU.map].waves) MPL.map = MENU.map; }
+      if (m.v !== MP_PROTO || m.b !== mpBuildId()) { if (host) { mpPeerLost(P, 'ver'); mpMsg(L('Ein Gerät mit einer anderen Fassung des Spiels wurde abgewiesen. Bitte überall dieselbe Datei öffnen.'), 'bad'); } else { mpDrop(); mpPane('home'); mpMsg(L('Das andere Gerät hat eine andere Fassung des Spiels. Bitte auf beiden Geräten dieselbe Datei öffnen.'), 'bad'); } return; }
+      P.hello = true;
+      if (host) {
+        if (NET.live) { mpSendTo(P, { k: 'full', live: 1 }); mpPeerLost(P, 'full'); return; }
+        if (!NET.lobby) mpLobbyNew();
+        if (mpSlotFor(P.id) < 0) { mpSendTo(P, { k: 'full' }); mpPeerLost(P, 'full'); return; }
+        NET.lobby = true;
+      } else NET.id = m.id | 0;
+      mpFlags();
       SND.play('upgrade'); buzz(30);
       mpLobbyEnter();
       break;
-    case 'p': mpSend({ k: 'q', t: m.t }); break;
-    case 'q': { const r = performance.now() - m.t; if (r >= 0 && r < 60000) { NET.rtt.push(r); if (NET.rtt.length > 9) NET.rtt.shift(); } break; }
-    case 'st': if (PLAYABLE.indexOf(m.f) >= 0) NET.peer.f = m.f; NET.peer.in = !!m.in; mpLobbyRender(); break;
-    case 'cfg': if (NET.role === 'guest' && m.s) { mpCfgApply(m.s); mpLobbyRender(); } break;
-    case 'go': if (NET.role === 'guest') mpGo(m); break;
-    case 'no': if (NET.role === 'host') mpRefused(); break;
-    case 'b': mpRxBatch(m); break;
-    case 'h': if (NET.live && m.e === NET.ep && typeof m.x === 'number') { NET.rhs.set(m.x, m.h >>> 0); mpCheckHash(m.x); } break;
-    case 'ds': if (NET.role === 'host' && NET.live && m.e === NET.ep) mpSyncSend(); break;
-    case 'sy': if (NET.role === 'guest' && NET.live) mpRxSync(m); break;
-    case 'pz': if (NET.live && UI.kind === 'mp' && !UI.endShown && !!m.on !== UI.paused) setPaused(!!m.on, true); break;
-    case 'bye': mpLost('bye'); break;
+    case 'p': mpSendTo(P, { k: 'q', t: m.t }); break;
+    case 'q': { const r = performance.now() - m.t; if (r >= 0 && r < 60000) { P.rtt.push(r); if (P.rtt.length > 9) P.rtt.shift(); } break; }
+    case 'st':
+      if (!host) break;
+      if (PLAYABLE.indexOf(m.f) >= 0) P.f = m.f;
+      P.in = !!m.in; P.n = mpCleanName(m.n);
+      if (typeof m.s === 'number') mpStartWish(P.id, m.s | 0);
+      mpLobbySend();
+      break;
+    case 'lob': if (!host && m.s) { mpCfgApply(m.s); if (Array.isArray(m.r)) MPU.roster = m.r.filter(r => r && typeof r.id === 'number').slice(0, MP_MAX).map(r => ({ id: r.id, n: mpCleanName(r.n), f: PLAYABLE.indexOf(r.f) >= 0 ? r.f : 'mars', in: !!r.in })); mpLobbyRender(); } break;
+    case 'full': if (!host) { mpDrop(); mpPane('home'); mpMsg(m.live ? L('Das Gefecht läuft schon. Bitte warten, bis der Gastgeber zurück in der Lobby ist.') : L('Alle acht Plätze sind besetzt.'), 'bad'); } break;
+    case 'go': if (!host) mpGo(m); break;
+    case 'no': if (host) { toast(L('{0} ist gerade in einem eigenen Gefecht.', mpPeerName(P)), 'warn'); mpPeerLost(P, 'busy'); } break;
+    case 'b': if (host) mpRxBatch(P, m); break;
+    case 'B': if (!host) mpRxBundle(m); break;
+    case 'h':
+      if (!NET.live || m.e !== NET.ep || typeof m.x !== 'number') break;
+      if (host) { const s = mpSeatOf(P.id); if (s < 0) break; if (!NET.rhs.has(m.x)) NET.rhs.set(m.x, new Map()); NET.rhs.get(m.x).set(s, m.h >>> 0); }
+      else NET.rhs.set(m.x, m.h >>> 0);
+      mpCheckHash(m.x);
+      break;
+    case 'ds': if (host && NET.live && m.e === NET.ep) mpSyncSend(mpSeatName(mpSeatOf(P.id))); break;
+    case 'sy': if (!host && NET.live) mpRxSync(m); break;
+    case 'pz':
+      if (!NET.live || UI.kind !== 'mp' || UI.endShown) break;
+      if (host) mpSend({ k: 'pz', on: !!m.on }, P);
+      if (!!m.on !== UI.paused) setPaused(!!m.on, true);
+      break;
+    case 'ch': {
+      if (!NET.live || UI.kind !== 'mp') break;
+      const i = m.m | 0, s = host ? mpSeatOf(P.id) : m.s | 0;
+      if (!(i >= 0 && i < MP_SIGNALS.length) || s < 0) break;
+      if (host) mpSend({ k: 'ch', m: i, s }, P);
+      mpSigShow(s, i);
+      break;
+    }
+    case 'bye': if (host) mpPeerLost(P, 'bye'); else mpLost('bye'); break;
   }
+}
+/* Gastgeber: ein Mitspieler ist weg – Lobby: Platz frei; Gefecht: Sitz an die KI (im nächsten Bündel, auf allen Geräten gleich) */
+function mpPeerLost(P, why) {
+  if (NET.role !== 'host') { mpLost(why); return; }
+  if (P.gone) return;
+  const wasOpen = P.open;
+  mpPeerClose(P, why === 'bye');
+  if (NET.pend === P) { NET.pend = null; return; }
+  const i = NET.peers.indexOf(P);
+  if (i >= 0) NET.peers.splice(i, 1);
+  if (!wasOpen && i < 0) return;
+  const name = mpPeerName(P), seat = mpSeatOf(P.id);
+  if (NET.live && seat >= 0 && NET.need.has(seat)) { NET.need.delete(seat); NET.dropQ.push([seat, 2]); mpPump(); }
+  mpSlotFree(P.id);
+  if (P.hello && why !== 'full' && why !== 'ver') {
+    if (!NET.live && !$('mp').hidden && MPU.pane === 'lobby') mpMsg(L('{0} hat die Lobby verlassen.', name), 'warn');
+    if (!NET.live && UI.kind === 'mp' && UI.endShown) toast(L('{0} hat die Verbindung getrennt.', name), 'warn');
+  }
+  mpLobbySend();
+  mpMenuSub();
 }
 
 /* ------------------------------------------------------------------ Lobby */
-function mpKindNp(kind) { return kind === 'vs' ? 2 : kind === 'waves' ? 2 + (MPL.allies | 0) : 4; }
-function mpMaps(kind) { if (kind === 'waves') return ['quarantine']; const np = mpKindNp(kind); return MAP_ORDER.filter(k => MAPS[k].np.indexOf(np) >= 0); }
+function mpCleanName(s) { return String(s || '').replace(/[\x00-\x1f<>]/g, '').trim().slice(0, 16); }
+function mpFacShort(f) { return f === 'random' ? L('Zufall') : FACTIONS[f] ? FACTIONS[f].name.replace('The ', '').replace('Martian ', '').replace('Golden ', '') : '?'; }
+/* Teilnehmer: Gastgeber (id 0) und verbundene Mitspieler; beim Mitspieler die Liste vom Gastgeber */
+function mpRoster() {
+  if (NET.role !== 'host') return MPU.roster;
+  return [{ id: 0, n: MPU.name, f: MENU.faction, in: true }].concat(NET.peers.filter(P => P.hello && P.open).map(P => ({ id: P.id, n: P.n, f: P.f, in: P.in })));
+}
+function mpWho(id) { return mpRoster().find(r => r.id === id) || null; }
+function mpNameOf(r) { return r ? r.n || L(FACTIONS[r.f] ? FACTIONS[r.f].name : 'Mitspieler') : L('Mitspieler'); }
+function mpPeerName(P) { return P.n || L(FACTIONS[P.f] ? FACTIONS[P.f].name : 'Mitspieler'); }
+function mpLobbyNew() {
+  MPL.slots = [{ t: 'h', id: 0, f: 'random', lvl: 2, team: 0, s: -1 }];
+  for (let i = 1; i < MP_MAX; i++) MPL.slots.push({ t: 'off', id: 0, f: 'random', lvl: 2, team: 0, s: -1 });
+  MPL.kind = 'free'; MPL.seed = 1 + ((Math.random() * 999999) | 0);
+  if (MAPS[MENU.map] && !MAPS[MENU.map].waves) MPL.map = MENU.map;
+  MPL.size = MENU.size || 'normal'; MPL.pace = MENU.pace || 'tactical'; MPL.res = MENU.res || 'normal';
+}
+function mpFreeSlot() { let i = MPL.slots.findIndex(q => q.t === 'off'); if (i < 0) i = MPL.slots.findIndex(q => q.t === 'ai'); return i; }
+function mpSlotFor(id) {
+  if (MPL.slots.some(q => q.t === 'h' && q.id === id)) return MPL.slots.findIndex(q => q.t === 'h' && q.id === id);
+  const i = mpFreeSlot();
+  if (i >= 0) Object.assign(MPL.slots[i], { t: 'h', id, s: -1 });
+  return i;
+}
+function mpSlotFree(id) { for (const q of MPL.slots) if (q.t === 'h' && q.id === id) { q.t = 'off'; q.s = -1; } }
+/* Spielerliste aus den Plätzen (Reihenfolge = Sitz in der Partie) */
+function mpPlayers() {
+  const out = [];
+  MPL.slots.forEach((q, i) => {
+    if (q.t === 'off') return;
+    if (q.t === 'h') { const r = mpWho(q.id); out.push({ slot: i, human: true, id: q.id, f: r ? r.f : 'mars', n: r ? r.n : '', team: q.team, s: q.s, r }); }
+    else out.push({ slot: i, human: false, f: q.f, lvl: q.lvl, team: q.team, s: -1 });
+  });
+  return out;
+}
+/* Farben wie im Gefecht: Fraktionsfarbe, solange jede Fraktion nur einmal vorkommt und höchstens vier spielen, sonst feste Platzfarben */
+function mpColors(facs) { const dup = facs.length > 4 || facs.some((f, i) => f === 'random' || facs.indexOf(f) !== i); return facs.map((f, i) => dup ? SLOT_COLS[i] : null); }
+function mpMaps() { if (MPL.kind === 'waves') return ['quarantine']; const np = Math.max(2, mpPlayers().length); return MAP_ORDER.filter(k => MAPS[k].np.indexOf(np) >= 0); }
+function mpFixMap() {
+  const ok = mpMaps();
+  if (ok.indexOf(MPL.map) < 0) MPL.map = ok[0];
+  const np = mpPlayers().length;
+  for (const q of MPL.slots) if (q.s >= np) q.s = -1;
+}
+function mpStartWish(id, s) {
+  const q = MPL.slots.find(x => x.t === 'h' && x.id === id), np = mpPlayers().length;
+  if (!q) return;
+  if (s < 0 || s >= np) { q.s = -1; return; }
+  if (!MPL.slots.some(x => x !== q && x.t === 'h' && x.s === s)) q.s = s;
+}
 function mpCfgApply(s) {
   if (MP_KINDS[s.kind]) MPL.kind = s.kind;
   if (MAPS[s.map]) MPL.map = s.map;
-  if (AI_LEVELS[s.lvl]) MPL.lvl = s.lvl;
+  if (MAP_SIZES[s.size]) MPL.size = s.size;
+  if (PACE[s.pace]) MPL.pace = s.pace;
   if (s.res === 'low' || s.res === 'normal' || s.res === 'rich') MPL.res = s.res;
-  if (s.allies >= 0 && s.allies <= 2) MPL.allies = s.allies | 0;
   if (s.seed > 0 && s.seed < 1e7) MPL.seed = s.seed | 0;
+  if (Array.isArray(s.slots) && s.slots.length === MP_MAX) {
+    MPL.slots = s.slots.map(q => ({ t: q && (q.t === 'h' || q.t === 'ai') ? q.t : 'off', id: q ? q.id | 0 : 0, f: q && (q.f === 'random' || PLAYABLE.indexOf(q.f) >= 0) ? q.f : 'random', lvl: q && AI_LEVELS[q.lvl] ? q.lvl : 2, team: q ? clamp(q.team | 0, 0, 4) : 0, s: q && q.s >= 0 && q.s < MP_MAX ? q.s | 0 : -1 }));
+  }
 }
-function mpCfgSend() { if (NET.role === 'host') mpSend({ k: 'cfg', s: MPL }); }
-function mpSendSt() { mpSend({ k: 'st', f: MENU.faction, in: !$('mp').hidden && MPU.pane === 'lobby' }); }
+/* Gastgeber: Wahl an alle */
+function mpLobbySend() {
+  if (NET.role !== 'host' || !NET.lobby) return;
+  mpFixMap();
+  mpSend({ k: 'lob', s: MPL, r: mpRoster() });
+  mpLobbyRender();
+}
+function mpSendSt() { mpSend({ k: 'st', f: MENU.faction, in: !$('mp').hidden && MPU.pane === 'lobby', n: MPU.name, s: mpMySlot() ? mpMySlot().s : -1 }); }
+function mpMySlot() { return MPL.slots.find(q => q.t === 'h' && q.id === NET.id) || null; }
 function mpLobbyEnter() {
   mpScanStop();
   $('mp').hidden = false;
   mpPane('lobby');
   mpMsg('');
-  mpFixMap();
-  mpCfgSend(); mpSendSt();
+  $('mpName').value = MPU.name;
+  if (NET.role === 'host') mpLobbySend(); else mpSendSt();
   mpLobbyRender();
   mpMenuSub();
 }
-function mpFixMap() { const ok = mpMaps(MPL.kind); if (ok.indexOf(MPL.map) < 0) MPL.map = ok[0]; }
-/* Sitze aus der Karte: bei vier Plätzen ist der Partner der nächstgelegene Start. 1 gegen 1: Sitze 0 und 1. Gemeinsam:
-   beide Menschen auf einer Seite gegen zwei KI. 2 gegen 2: jeder Mensch mit einem KI-Partner. Quarantine: alle in Team 0. */
-function mpSeats(kind, map, seed) {
-  const np = mpKindNp(kind);
-  if (kind === 'vs') return { np, host: 0, guest: 1, team: [0, 1], ai: [] };
-  if (kind === 'waves') { const ai = []; for (let i = 2; i < np; i++) ai.push(i); return { np, host: 0, guest: 1, team: Array(np).fill(0), ai }; }
-  const st = generateMap(map, np, seed).starts, mate = i => { let b = -1, bd = 1e9; for (let j = 0; j < np; j++) if (j !== i) { const d = hyp(st[j].x - st[i].x, st[j].y - st[i].y); if (d < bd) { bd = d; b = j; } } return b; };
-  const m0 = mate(0), rest = [0, 1, 2, 3].filter(i => i !== 0 && i !== m0), team = [];
-  for (let i = 0; i < 4; i++) team[i] = i === 0 || i === m0 ? 0 : 1;
-  if (kind === 'coop') return { np, host: 0, guest: m0, team, ai: rest };
-  return { np, host: 0, guest: rest[0], team, ai: [m0, rest[1]] };
+/* Vorlagen für die Teams */
+function mpPreset(v) {
+  const on = MPL.slots.filter(q => q.t !== 'off');
+  on.forEach((q, i) => { q.team = v === 'ffa' ? 0 : v === 'hvai' ? (q.t === 'h' ? 1 : 2) : 1 + (i % 2); });
 }
 function mpLobbyRender() {
   if ($('mp').hidden || MPU.pane !== 'lobby') return;
-  const host = NET.role === 'host', ro = !host;
+  const host = NET.role === 'host', ro = !host, waves = MPL.kind === 'waves';
   mpFixMap();
-  segInit('mpFac', PLAYABLE.map(f => [f, FACTIONS[f].name.replace('The ', '').replace('Martian ', '').replace('Golden ', '')]), () => MENU.faction, v => { MENU.faction = v; savePrefs(); mpSendSt(); mpLobbyRender(); });
-  const pf = FACTIONS[NET.peer.f] || FACTIONS.mars;
-  $('mpPeerN').textContent = L(pf.name); $('mpPeerN').style.color = pf.team;
-  const seg = (id, opts, key) => { segInit(id, opts, () => MPL[key], v => { MPL[key] = v; mpFixMap(); mpCfgSend(); mpLobbyRender(); }); $(id).classList.toggle('ro', ro); if (ro) $(id).querySelectorAll('button').forEach(b => { b.disabled = true; }); };
+  segInit('mpFac', PLAYABLE.map(f => [f, mpFacShort(f)]), () => MENU.faction, v => { MENU.faction = v; savePrefs(); if (host) mpLobbySend(); else { mpSendSt(); mpLobbyRender(); } });
+  const seg = (id, opts, key) => { segInit(id, opts, () => MPL[key], v => { MPL[key] = v; mpLobbySend(); }); $(id).classList.toggle('ro', ro); if (ro) $(id).querySelectorAll('button').forEach(b => { b.disabled = true; }); };
   seg('mpKind', Object.keys(MP_KINDS).map(k => [k, MP_KINDS[k]]), 'kind');
-  seg('mpMap', mpMaps(MPL.kind).map(k => [k, MAPS[k].name]), 'map');
-  seg('mpLvl', [[1, 'Leicht'], [2, 'Mittel'], [3, 'Schwer']], 'lvl');
+  seg('mpMap', mpMaps().map(k => [k, MAPS[k].name]), 'map');
+  seg('mpSize', [['small', 'Klein'], ['normal', 'Mittel'], ['large', 'Groß']], 'size');
+  seg('mpPace', [['tactical', 'Taktisch'], ['normal', 'Normal'], ['fast', 'Schnell']], 'pace');
   seg('mpRes', [['low', 'Knapp'], ['normal', 'Normal'], ['rich', 'Reich']], 'res');
-  seg('mpAllies', [[0, '0'], [1, '1'], [2, '2']], 'allies');
-  $('mpLvlRow').hidden = MPL.kind === 'vs' || (MPL.kind === 'waves' && !MPL.allies);
-  $('mpAlliesRow').hidden = MPL.kind !== 'waves';
-  $('mpResRow').hidden = MPL.kind === 'waves';
-  $('mpRoll').hidden = ro || MPL.kind === 'waves';
-  setText('mpKindInfo', L(MPL.kind === 'vs' ? 'Ihr spielt gegeneinander.' : MPL.kind === 'coop' ? 'Ihr seid ein Team gegen zwei KI-Gegner.' : MPL.kind === 'duo' ? 'Ihr spielt gegeneinander, jeder mit einem KI-Partner.' : 'Ihr haltet gemeinsam das Siegel gegen 20 Wellen der Brood.'));
+  segInit('mpPreset', [['ffa', 'Jeder für sich'], ['hvai', 'Menschen gegen KI'], ['two', 'Zwei Teams']], () => '', v => { mpPreset(v); mpLobbySend(); });
+  $('mpPresetRow').hidden = ro || waves;
+  $('mpSizeRow').hidden = waves; $('mpResRow').hidden = waves;
+  $('mpRoll').hidden = ro || waves;
+  $('mpInvite').hidden = ro;
+  setText('mpKindInfo', waves ? L('Ihr haltet gemeinsam das Siegel gegen 20 Wellen der Brood.') + ' ' + L('KI-Plätze sind Verbündete, höchstens vier Spieler.') : L('Gleiches Team = Verbündete; »–« spielt für sich.'));
+  mpSlotsRender();
   mpPreview();
   mpLobbyState();
 }
-/* Vorschau: Karte mit Startplätzen (du, Verbündete, Gegner) */
+function mpSlotsRender() {
+  const box = $('mpSlots'), host = NET.role === 'host', waves = MPL.kind === 'waves', list = mpPlayers(), cols = mpColors(list.map(q => q.f));
+  box.textContent = '';
+  let shownOff = false;
+  MPL.slots.forEach((q, i) => {
+    if (q.t === 'off' && (!host || shownOff)) return;
+    if (q.t === 'off') shownOff = true;
+    const el = document.createElement('div'); el.className = 'slot' + (q.t === 'off' ? ' off' : '');
+    const li = list.findIndex(x => x.slot === i), col = li >= 0 ? cols[li] || FACTIONS[list[li].f === 'random' ? 'guardian' : list[li].f].team : '';
+    const add = (cls, txt, fn) => {
+      const b = document.createElement('button'); b.className = cls; b.textContent = txt;
+      if (host && fn) b.addEventListener('click', () => { fn(); SND.play('click'); mpLobbySend(); }); else b.disabled = true;
+      el.appendChild(b); return b;
+    };
+    add(q.t === 'h' && q.id === NET.id ? 'me' : '', String(li >= 0 ? li + 1 : '+'));
+    if (q.t === 'h') {
+      const r = mpWho(q.id);
+      add('fac', (r && r.n ? r.n + ' · ' : '') + mpFacShort(r ? r.f : 'mars')).style.color = col;
+      add('lvl', q.id === 0 ? L('Gastgeber') : r && r.in ? L('bereit') : L('nicht in der Lobby'));
+    } else if (q.t === 'ai') {
+      add('fac', L('KI') + ' · ' + mpFacShort(q.f), () => { const o = SLOT_FACS; q.f = o[(o.indexOf(q.f) + 1) % o.length]; }).style.color = col;
+      add('lvl', L(['', 'Leicht', 'Mittel', 'Schwer'][q.lvl]), () => { q.lvl = q.lvl % 3 + 1; });
+    } else add('fac', L('KI hinzufügen'), () => { q.t = 'ai'; q.f = 'random'; q.s = -1; });
+    if (q.t !== 'off' && !waves) add('tm', q.team ? L('Team') + ' ' + q.team : '–', () => { q.team = (q.team + 1) % 5; });
+    if (q.t === 'ai' && host) add('x', '✕', () => { q.t = 'off'; });
+    box.appendChild(el);
+  });
+}
+/* Vorschau: Karte mit Startplätzen in den Spielerfarben (frei: grau), eigener Platz mit »DU«; Tippen wählt den eigenen Startplatz */
+function mpPrevMap() {
+  const np = Math.max(MPL.kind === 'waves' ? 1 : 2, mpPlayers().length);
+  try { return MPL.kind === 'waves' ? generateMap('quarantine', np, MPL.seed) : generateMap(mapFor(MPL.map, np), np, MPL.seed, MPL.size); } catch (e) { return null; }
+}
 function mpPreview() {
-  const key = [MPL.kind, MPL.map, MPL.seed, MPL.allies, NET.role].join('/');
+  const list = mpPlayers(), cols = mpColors(list.map(q => q.f)), me = mpMySlot();
+  const key = JSON.stringify([MPL.kind, MPL.map, MPL.size, MPL.seed, list.map(q => [q.f, q.s, q.id]), NET.id]);
   if (MPU.prevKey === key) return;
   MPU.prevKey = key;
-  const cv = $('mpPrev'), x = cv.getContext('2d'), st = mpSeats(MPL.kind, MPL.map, MPL.seed), me = NET.role === 'host' ? st.host : st.guest;
-  let m = null;
-  try { m = generateMap(MPL.map, st.np, MPL.seed); } catch (e) { m = null; }
-  x.fillStyle = '#05070f'; x.fillRect(0, 0, cv.width, cv.height);
+  const cv = $('mpPrev'), m = mpPrevMap();
+  MPU.prevMap = m;
   if (!m) return;
-  const k = cv.width / Math.max(m.w, m.h), ox = (cv.width - m.w * k) / 2, oy = (cv.height - m.h * k) / 2;
-  x.strokeStyle = 'rgba(120,40,20,0.8)'; x.lineWidth = Math.max(2, EDGE * k); x.strokeRect(ox, oy, m.w * k, m.h * k);
-  for (const f of m.fields) { x.fillStyle = 'rgba(110,100,90,0.35)'; x.beginPath(); x.arc(ox + f.x * k, oy + f.y * k, f.r * k, 0, TAU); x.fill(); }
-  for (const o of m.rocks) { x.fillStyle = '#5a554f'; x.beginPath(); x.arc(ox + o.x * k, oy + o.y * k, Math.max(1, o.r * k), 0, TAU); x.fill(); }
-  for (const n of m.nodes) { x.fillStyle = n.kind === 'ice' ? '#8fc3e6' : '#c89050'; x.beginPath(); x.arc(ox + n.x * k, oy + n.y * k, Math.max(1.5, n.r * k), 0, TAU); x.fill(); }
-  for (const s of m.sites) { x.strokeStyle = '#9ff0c0'; x.lineWidth = 1.5; x.strokeRect(ox + s.x * k - 3, oy + s.y * k - 3, 6, 6); }
-  if (MPL.kind === 'waves') { x.strokeStyle = '#9ff0c0'; x.lineWidth = 2; x.beginPath(); x.arc(ox + m.w / 2 * k, oy + m.h / 2 * k, 6, 0, TAU); x.stroke(); }
-  m.starts.forEach((s, i) => { const col = i === me ? '#ffffff' : st.team[i] === st.team[me] ? '#7ddc6b' : '#ff5b47'; x.fillStyle = col; x.beginPath(); x.arc(ox + s.x * k, oy + s.y * k, 6, 0, TAU); x.fill(); x.fillStyle = '#05070f'; x.font = 'bold 9px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(i === st.host ? 'H' : i === st.guest ? 'G' : 'KI'.slice(0, 1), ox + s.x * k, oy + s.y * k + 0.5); });
-  setText('mpMapInfo', L(MAPS[MPL.map].name) + ' · ' + L('{0} Plätze', st.np) + ' · ' + L('weiß: du, grün: Verbündete, rot: Gegner'));
+  const starts = m.starts.map(() => '#5d6b80');
+  list.forEach((q, i) => { if (q.s >= 0 && q.s < starts.length) starts[q.s] = cols[i] || FACTIONS[q.f === 'random' ? 'guardian' : q.f].team; });
+  mapLayout(cv, m, { starts, mine: me && me.s >= 0 ? me.s : -1 });
+  setText('mpMapInfo', L(MAPS[m.id] ? MAPS[m.id].name : MPL.map) + ' · ' + L('{0} Spieler', list.length) + ' · ' + m.w + ' × ' + m.h);
+  setText('mpStartNote', me && me.s >= 0 ? L('Dein Startplatz: {0}. Erneut antippen für Zufall.', me.s + 1) : L('Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.'));
+}
+function mpPrevPick(ev) {
+  const m = MPU.prevMap, cv = $('mpPrev'), me = mpMySlot();
+  if (!m || !me || MPU.pane !== 'lobby') return;
+  const r = cv.getBoundingClientRect(), px = (ev.clientX - r.left) * cv.width / r.width, py = (ev.clientY - r.top) * cv.height / r.height;
+  const i = mapStartAt(cv, m, px, py, 28);
+  if (i < 0) return;
+  const want = me.s === i ? -1 : i;
+  if (want >= 0 && MPL.slots.some(x => x !== me && x.t === 'h' && x.s === want)) { SND.play('err'); mpMsg(L('Diesen Startplatz hat schon ein Mitspieler gewählt.'), 'warn'); return; }
+  SND.play('click');
+  if (NET.role === 'host') { mpStartWish(0, want); mpLobbySend(); } else { me.s = want; MPU.prevKey = ''; mpPreview(); mpSendSt(); }
 }
 function mpLobbyState() {
-  const host = NET.role === 'host', r = mpRtt(), ok = NET.open && NET.hello;
-  setText('mpStateT', ok ? L('Verbunden') + (r >= 0 ? ' · ' + Math.round(r) + ' ms' : '') : L('Getrennt'));
+  const host = NET.role === 'host', ok = NET.open && NET.hello, guests = NET.peers.filter(P => P.hello && P.open);
+  const r = host ? mpRttMax() : mpRtt(NET.peers[0]);
+  setText('mpStateT', !ok ? L('Getrennt') : host ? L('Gastgeber · {0} Mitspieler verbunden', guests.length) : L('Verbunden') + (r >= 0 ? ' · ' + Math.round(r) + ' ms' : ''));
   $('mpState').classList.toggle('on', ok);
-  const peerIn = ok && NET.peer.in;
-  setText('mpPeerS', peerIn ? L('bereit') : L('nicht in der Lobby'));
+  const list = mpPlayers(), np = list.length, ready = guests.length > 0 && guests.every(P => P.in);
+  const bad = MPL.kind === 'waves' ? np > 4 : np < 2;
   $('mpStart').hidden = !host;
-  $('mpStart').disabled = !peerIn;
-  setText('mpLobbyNote', host ? (peerIn ? L('Ihr seid bereit. Du startest für beide.') : L('Warte, bis dein Mitspieler in der Lobby ist.')) : L('Das eröffnende Gerät wählt Spielart und Karte und startet.'));
+  $('mpStart').disabled = !ready || bad;
+  $('mpInvite').disabled = MPU.busy || mpFreeSlot() < 0;
+  setText('mpLobbyNote', !host ? L('Der Gastgeber wählt Spielart, Plätze und Karte und startet.') : !guests.length ? L('»Mitspieler einladen« zeigt einen Code für das nächste Gerät.') : bad ? L('Quarantine: höchstens vier Spieler.') : ready ? L('Alle bereit. Du startest für alle.') : L('Warte, bis alle Mitspieler in der Lobby sind.'));
 }
-/* Start durch das eröffnende Gerät: Aufstellung festlegen, an beide verteilen */
+/* Start durch den Gastgeber: Aufstellung festlegen, an alle verteilen */
 function mpStart() {
-  if (NET.role !== 'host' || !NET.open || !NET.peer.in) return;
-  const st = mpSeats(MPL.kind, MPL.map, MPL.seed), players = [], used = [MENU.faction, NET.peer.f];
-  const rnd = () => { const free = PLAYABLE.filter(f => used.indexOf(f) < 0), list = free.length ? free : PLAYABLE, f = list[(Math.random() * list.length) | 0]; used.push(f); return f; };
-  for (let i = 0; i < st.np; i++) {
-    const team = st.team[i];
-    if (i === st.host) players.push({ faction: MENU.faction, human: true, team });
-    else if (i === st.guest) players.push({ faction: NET.peer.f, human: true, team });
-    else players.push({ faction: rnd(), ai: MPL.lvl, team });
-  }
-  const res = MPL.res === 'low' ? { ice: 700, ore: 300 } : MPL.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
-  const opts = JSON.parse(JSON.stringify({ map: MPL.map, seed: MPL.seed, players, res, mode: MPL.kind === 'waves' ? 'quarantine' : undefined, mp: 1 }));
-  const D = clamp(Math.ceil(((Math.max(0, mpRtt()) / 2) + 120) / (STEP * 1000)), 5, 12);
-  if (!mpSend({ k: 'go', opts, seat: st.guest, hs: st.host, D })) return;
-  mpLockstep(st.host, st.guest, D);
+  if (NET.role !== 'host' || !NET.lobby) return;
+  mpFixMap();
+  const list = mpPlayers(), waves = MPL.kind === 'waves', guests = NET.peers.filter(P => P.hello && P.open);
+  if (!guests.length || !guests.every(P => P.in) || (waves ? list.length > 4 : list.length < 2)) return;
+  const used = list.filter(q => q.human).map(q => q.f);
+  const facs = list.map(q => { if (q.f !== 'random') return q.f; const free = PLAYABLE.filter(f => used.indexOf(f) < 0), pool = free.length ? free : PLAYABLE, f = pool[(Math.random() * pool.length) | 0]; used.push(f); return f; });
+  const cols = mpColors(list.map(q => q.f === 'random' ? 'random' : q.f));
+  /* Startplätze: gewählte bleiben, die übrigen werden zufällig verteilt */
+  const np = list.length, taken = list.map(q => q.s).filter(s => s >= 0 && s < np), free = [];
+  for (let i = 0; i < np; i++) if (taken.indexOf(i) < 0) free.push(i);
+  for (let i = free.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [free[i], free[j]] = [free[j], free[i]]; }
+  const players = list.map((q, i) => ({ faction: facs[i], human: q.human, ai: q.human ? 0 : q.lvl, team: waves ? 0 : q.team ? q.team : 10 + i, color: cols[i], name: q.human && q.n ? q.n : null, start: q.s >= 0 && q.s < np && taken.indexOf(q.s) === taken.lastIndexOf(q.s) ? q.s : free.shift() }));
+  const res = waves ? undefined : MPL.res === 'low' ? { ice: 700, ore: 300 } : MPL.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
+  const opts = JSON.parse(JSON.stringify({ map: waves ? 'quarantine' : mapFor(MPL.map, np), size: waves ? undefined : MPL.size, seed: MPL.seed, players, res, pace: MPL.pace, mode: waves ? 'quarantine' : undefined, mp: 1 }));
+  const seats = list.map((q, i) => q.human ? { seat: i, id: q.id, n: q.n || '' } : null).filter(Boolean);
+  const D = clamp(Math.ceil((Math.max(0, mpRttMax()) + 120) / (STEP * 1000)), 5, 12);
+  for (const P of guests) { const s = seats.find(x => x.id === P.id); if (s) mpSendTo(P, { k: 'go', opts, seat: s.seat, D, seats }); P.in = false; }
+  const me = seats.find(x => x.id === 0).seat;
+  mpLockstep(me, D, seats);
   $('mp').hidden = true;
   SND.init();
-  launch(() => beginGame(opts, 'mp', null, st.host));
+  launch(() => beginGame(opts, 'mp', null, me));
 }
 function mpGo(m) {
-  const o = m.opts;
-  const bad = !o || !Array.isArray(o.players) || o.players.length < 2 || o.players.length > 4 || !MAPS[o.map] || !(o.seed > 0) ||
-    o.players.some(p => !p || PLAYABLE.indexOf(p.faction) < 0) || !(m.seat >= 0 && m.seat < o.players.length) || !o.players[m.seat].human;
+  const o = m.opts, seats = Array.isArray(m.seats) ? m.seats.filter(s => s && s.seat >= 0 && o && Array.isArray(o.players) && s.seat < o.players.length).map(s => ({ seat: s.seat | 0, id: s.id | 0, n: mpCleanName(s.n) })) : [];
+  const bad = !o || !Array.isArray(o.players) || o.players.length < 1 || o.players.length > MP_MAX || !MAPS[o.map] || !(o.seed > 0) ||
+    o.players.some(p => !p || PLAYABLE.indexOf(p.faction) < 0) || !(m.seat >= 0 && m.seat < o.players.length) || !o.players[m.seat].human || !seats.length;
   if (bad) { mpMsg(L('Das andere Gerät hat unbekannte Einstellungen geschickt.'), 'bad'); return; }
   if (UI.g && !UI.attract && !UI.endShown && UI.kind !== 'mp') { mpSend({ k: 'no' }); return; }
-  mpLockstep(m.seat, m.hs | 0, m.D);
+  mpLockstep(m.seat, m.D, seats);
   mpScanStop();
   $('mp').hidden = true;
   SND.init();
   launch(() => beginGame(o, 'mp', null, m.seat));
 }
-function mpRefused() {
-  if (UI.kind !== 'mp' || !UI.g || UI.g.tick > 30 * 30) return;
-  NET.live = false; NET.seat = -1;
-  toMenu();
-  mpLobbyEnter();
-  mpMsg(L('Dein Mitspieler ist gerade in einem eigenen Gefecht.'), 'warn');
-}
 
 /* ------------------------------------------------------------------ Gleichschritt */
-function mpLockstep(seat, pseat, D) {
-  NET.seat = seat; NET.pseat = pseat; NET.D = NET.D0 = NET.pd = clamp(D | 0, 2, 20); NET.ep = 0; NET.base = 0; NET.nx = NET.D0;
-  NET.out = []; NET.mine.clear(); NET.theirs.clear(); NET.pmax = -1; NET.hs.clear(); NET.rhs.clear();
-  NET.wait = ''; NET.rx = null; NET.stall = 0; NET.syncs = 0; NET.okHash = 0; NET.soft = false; NET.live = false; NET.peer.in = false;
+function mpLockstep(seat, D, seats) {
+  NET.seat = seat; NET.D = NET.D0 = NET.pd = clamp(D | 0, 2, 20); NET.ep = 0; NET.base = 0; NET.nx = NET.bx = NET.D0;
+  NET.seats = seats.map(s => ({ seat: s.seat, id: s.id, n: s.n, gone: false }));
+  NET.need = new Set(NET.seats.map(s => s.seat)); NET.dropQ = [];
+  NET.out = []; NET.mine.clear(); NET.inb.clear(); NET.bund.clear(); NET.pmax = -1; NET.hs.clear(); NET.rhs.clear(); NET.rmax = 0;
+  NET.wait = ''; NET.rx = null; NET.stall = 0; NET.syncs = 0; NET.okHash = 0; NET.soft = false; NET.live = false;
 }
-function mpGameStart(g) { g.net = mpCmd; NET.live = true; NET.lastRx = performance.now(); }
+function mpGameStart(g) { g.net = mpCmd; NET.live = true; for (const P of NET.peers) P.lastRx = performance.now(); mpHudRender(); }
+function mpSeatOf(id) { const s = NET.seats.find(x => x.id === id); return s ? s.seat : -1; }
+function mpSeatName(seat) { const s = NET.seats.find(x => x.seat === seat), p = UI.g && UI.g.players[seat]; return s && s.n ? s.n : p ? L(p.F.name) : L('Mitspieler'); }
 /* Vorprüfung: Was sicher scheitert, meldet die Bedienung sofort; alles andere entscheidet die Ausführung D Runden später */
 function mpPre(g, c) {
   const p = g.players[c.p];
@@ -471,44 +667,87 @@ function mpCmd(c) {
   NET.out.push(JSON.parse(JSON.stringify(c)));
   return null;
 }
-function mpRxBatch(m) {
+/* eigenes Paket für Runde x: Gastgeber legt es zu den gesammelten, Mitspieler schicken es an den Gastgeber */
+function mpOwnBatch(x, c) {
+  if (NET.role === 'host') { if (!NET.inb.has(x)) NET.inb.set(x, new Map()); NET.inb.get(x).set(NET.seat, c); }
+  else { NET.mine.set(x, c); mpSend({ k: 'b', e: NET.ep, x, d: NET.D, c }); }
+}
+function mpCleanCmds(list, seat) { const out = []; if (Array.isArray(list)) for (const c of list) if (c && typeof c === 'object' && typeof c.t === 'string') { c.p = seat; out.push(c); } return out; }
+function mpRxBatch(P, m) {
+  const seat = mpSeatOf(P.id);
+  if (!NET.live || seat < 0 || !NET.need.has(seat) || m.e !== NET.ep || typeof m.x !== 'number' || m.x < NET.bx || m.x < NET.base + NET.D0) return;
+  if (!NET.inb.has(m.x)) NET.inb.set(m.x, new Map());
+  NET.inb.get(m.x).set(seat, mpCleanCmds(m.c, seat));
+  if (m.x > NET.pmax) { NET.pmax = m.x; NET.pd = m.d > 0 ? m.d : NET.D0; }
+  mpPump();
+}
+/* Gastgeber: Bündel verteilen, sobald für die nächste Runde alle Pakete da sind */
+function mpPump() {
+  if (NET.role !== 'host' || !NET.live) return;
+  for (;;) {
+    const x = NET.bx, got = NET.inb.get(x);
+    for (const s of NET.need) if (!got || !got.has(s)) return;
+    const c = [];
+    for (const s of [...NET.need].sort((a, b) => a - b)) { const l = got.get(s); if (l.length) c.push([s, l]); }
+    const B = { c };
+    if (NET.dropQ.length) { B.dr = NET.dropQ; NET.dropQ = []; }
+    NET.inb.delete(x); NET.bund.set(x, B);
+    mpSend(Object.assign({ k: 'B', e: NET.ep, x, d: NET.D, r: Math.round(Math.max(0, mpRttMax())) }, B));
+    NET.bx++;
+  }
+}
+function mpRxBundle(m) {
   if (NET.seat < 0 || m.e !== NET.ep || typeof m.x !== 'number' || !Array.isArray(m.c) || m.x < NET.base + NET.D0) return;
-  const list = [];
-  for (const c of m.c) if (c && typeof c === 'object' && typeof c.t === 'string') { c.p = NET.pseat; list.push(c); }
-  NET.theirs.set(m.x, list);
+  const c = [];
+  for (const e of m.c) if (Array.isArray(e) && e[0] >= 0) c.push([e[0] | 0, mpCleanCmds(e[1], e[0] | 0)]);
+  const dr = Array.isArray(m.dr) ? m.dr.filter(d => Array.isArray(d) && d[0] >= 0).map(d => [d[0] | 0, AI_LEVELS[d[1]] ? d[1] : 2]) : null;
+  NET.bund.set(m.x, dr ? { c, dr } : { c });
+  if (m.r >= 0) NET.rmax = m.r;
   if (m.x > NET.pmax) { NET.pmax = m.x; NET.pd = m.d > 0 ? m.d : NET.D0; }
 }
-function mpReady(g) { return !NET.wait && (g.tick < NET.base + NET.D0 || NET.theirs.has(g.tick)); }
+function mpReady(g) { return !NET.wait && (g.tick < NET.base + NET.D0 || NET.bund.has(g.tick)); }
 function mpBehind(g) { return NET.pmax < 0 ? 0 : NET.pmax - NET.pd - g.tick; }
+/* Vorlauf: Mitspieler brauchen den Weg zum Gastgeber und zurück (eigene Laufzeit, dazu die langsamste der anderen) */
 function mpAdapt() {
-  const a = NET.rtt.slice(-6);
-  if (!a.length) return;
-  const want = clamp(Math.ceil((Math.max(...a) / 2 + 70) / (STEP * 1000)), 4, 15);
+  const host = NET.role === 'host', a = host ? [] : (NET.peers[0] ? NET.peers[0].rtt.slice(-6) : []);
+  const r = host ? mpRttMax() : Math.max(a.length ? Math.max(...a) : -1, NET.rmax || 0);
+  if (r < 0) return;
+  const want = clamp(Math.ceil((r + 70) / (STEP * 1000)), 4, 15);
   if (want > NET.D) NET.D = want; else if (want < NET.D) NET.D--;
 }
 function mpStep(g) {
   const T = g.tick, target = T + NET.D;
   if (NET.nx <= target) {
-    while (NET.nx < target) { NET.mine.set(NET.nx, []); mpSend({ k: 'b', e: NET.ep, x: NET.nx, d: NET.D, c: [] }); NET.nx++; }
+    while (NET.nx < target) { mpOwnBatch(NET.nx, []); NET.nx++; }
     const own = NET.out;
     NET.out = [];
-    NET.mine.set(target, own);
-    mpSend({ k: 'b', e: NET.ep, x: target, d: NET.D, c: own });
+    mpOwnBatch(target, own);
     NET.nx = target + 1;
+    mpPump();
   }
-  const early = T < NET.base + NET.D0, a = early ? null : NET.mine.get(T), b = early ? null : NET.theirs.get(T);
-  NET.mine.delete(T); NET.theirs.delete(T);
-  const lists = NET.seat < NET.pseat ? [a, b] : [b, a];
-  for (const l of lists) {
-    if (!l) continue;
-    for (const c of l) {
+  const early = T < NET.base + NET.D0, B = early ? null : NET.bund.get(T);
+  NET.mine.delete(T); NET.bund.delete(T);
+  if (B) {
+    if (B.dr) for (const [seat, lvl] of B.dr) mpSeatToAi(g, seat, lvl);
+    for (const [seat, list] of B.c) for (const c of list) {
+      c.p = seat;
       g.log.push(T, c);
       const r = execCmd(g, c);
-      if (c.p === NET.seat && typeof r === 'string') { toast(L(r), 'warn'); SND.play('err'); }
+      if (seat === NET.seat && typeof r === 'string') { toast(L(r), 'warn'); SND.play('err'); }
     }
   }
   stepGame(g);
   if (g.tick % MP_HASH === 0) mpHash(g);
+}
+/* Sitz an die KI – auf allen Geräten in derselben Runde */
+function mpSeatToAi(g, seat, lvl) {
+  const p = g.players[seat], s = NET.seats.find(x => x.seat === seat);
+  if (p && !p.ai) { p.ai = aiInit(lvl || 2); p.human = false; }
+  if (s && !s.gone) {
+    s.gone = true;
+    if (seat !== NET.seat) { toast(L('{0} hat das Gefecht verlassen – die KI übernimmt.', mpSeatName(seat)), 'warn', 4500); SND.play('click'); }
+  }
+  mpHudRender();
 }
 function mpHash(g) {
   const x = g.tick, h = stateHash(g);
@@ -518,24 +757,37 @@ function mpHash(g) {
   for (const k of NET.rhs.keys()) if (k < x - MP_HASH * 12) NET.rhs.delete(k);
   mpCheckHash(x);
 }
+/* Prüfsummen vergleichen. Gastgeber: mit jedem Mitspieler; weicht einer ab, Abgleich für alle. Mitspieler: mit dem Gastgeber. */
 function mpCheckHash(x) {
   if (!NET.hs.has(x) || !NET.rhs.has(x)) return;
-  const same = NET.hs.get(x) === NET.rhs.get(x);
-  NET.hs.delete(x); NET.rhs.delete(x);
+  const mine = NET.hs.get(x);
+  if (NET.role === 'host') {
+    const got = NET.rhs.get(x), bad = [];
+    for (const [s, h] of got) { if (h === mine) NET.okHash++; else bad.push(s); }
+    got.clear();
+    if (bad.length) { NET.syncs++; mpSyncSend(bad.map(mpSeatName).join(', ')); }
+    return;
+  }
+  const same = NET.rhs.get(x) === mine;
+  NET.rhs.delete(x);
   if (same) { NET.okHash++; return; }
   NET.syncs++;
-  toast(L('Abgleich mit dem Mitspieler …'), 'warn');
-  if (NET.role === 'host') mpSyncSend();
-  else { NET.wait = 'sync'; mpSend({ k: 'ds', e: NET.ep, x }); }
+  NET.wait = 'sync';
+  mpSend({ k: 'ds', e: NET.ep, x });
 }
-function mpSyncSend() {
+function mpDesyncNote(who) {
+  toast(L('Abweichung bei {0} erkannt – der Spielstand wird abgeglichen.', who), 'warn', 4500);
+  if (NET.syncs >= 3) toast(L('Die Geräte laufen wiederholt auseinander. Haben alle dieselbe Datei geöffnet?'), 'bad', 6000);
+}
+function mpSyncSend(who) {
   const g = UI.g;
   if (!g || !NET.live) return;
   let txt;
   try { txt = JSON.stringify(saveGame(g)); } catch (e) { return; }
   NET.ep++;
   const n = Math.ceil(txt.length / MP_CHUNK);
-  for (let i = 0; i < n; i++) mpSend({ k: 'sy', e: NET.ep, i, n, d: txt.slice(i * MP_CHUNK, (i + 1) * MP_CHUNK) });
+  for (let i = 0; i < n; i++) mpSend({ k: 'sy', e: NET.ep, i, n, w: i ? undefined : who, d: txt.slice(i * MP_CHUNK, (i + 1) * MP_CHUNK) });
+  mpDesyncNote(who);
   const g2 = loadGame(JSON.parse(txt));
   if (g2) mpSwap(g2);
   mpPipeReset(UI.g.tick);
@@ -544,6 +796,7 @@ function mpRxSync(m) {
   if (!(m.e > NET.ep) || !(m.n > 0) || !(m.i >= 0 && m.i < m.n) || typeof m.d !== 'string') return;
   if (!NET.rx || NET.rx.e !== m.e) NET.rx = { e: m.e, n: m.n, got: 0, parts: [] };
   NET.wait = 'sync';
+  if (typeof m.w === 'string') mpDesyncNote(mpCleanName(m.w) || L('Mitspieler'));
   if (NET.rx.parts[m.i] === undefined) { NET.rx.parts[m.i] = m.d; NET.rx.got++; }
   if (NET.rx.got < NET.rx.n) return;
   const txt = NET.rx.parts.join('');
@@ -556,7 +809,7 @@ function mpRxSync(m) {
   mpPipeReset(g2.tick);
   toast(L('Abgleich fertig'), 'good');
 }
-function mpPipeReset(base) { NET.base = base; NET.nx = base + NET.D0; NET.mine.clear(); NET.theirs.clear(); NET.pmax = -1; NET.hs.clear(); NET.rhs.clear(); NET.wait = ''; }
+function mpPipeReset(base) { NET.base = base; NET.nx = NET.bx = base + NET.D0; NET.mine.clear(); NET.inb.clear(); NET.bund.clear(); NET.pmax = -1; NET.hs.clear(); NET.rhs.clear(); NET.wait = ''; }
 function mpSwap(g2) {
   const cam = { x: R.cam.x, y: R.cam.y, z: R.cam.z };
   g2.net = mpCmd;
@@ -571,17 +824,66 @@ function mpStallTick(starved, dt) {
   const show = NET.wait === 'sync' || NET.stall > 1.2;
   const el = $('mpWait');
   if (el.hidden === show) el.hidden = !show;
-  if (show) setText('mpWaitT', NET.wait === 'sync' ? L('Abgleich mit dem Mitspieler …') : L('Warte auf Mitspieler … {0} s', Math.floor(NET.stall)));
+  if (!show) return;
+  let who = '';
+  if (NET.role === 'host' && NET.wait !== 'sync') { const got = NET.inb.get(NET.bx); who = [...NET.need].filter(s => s !== NET.seat && !(got && got.has(s))).map(mpSeatName).join(', '); }
+  setText('mpWaitT', NET.wait === 'sync' ? L('Abgleich mit dem Mitspieler …') : who ? L('Warte auf {0} … {1} s', who, Math.floor(NET.stall)) : L('Warte auf Mitspieler … {0} s', Math.floor(NET.stall)));
 }
 
-/* ------------------------------------------------------------------ Verbindung weg */
+/* ------------------------------------------------------------------ Mitspieler im Gefecht: Namen, Farben, Funksignale */
+function mpHudRender() {
+  const on = UI.kind === 'mp' && NET.live && !!UI.g;
+  $('mpRoster').hidden = !on; $('mpSig').hidden = !on;
+  if (!on) { $('mpSigBox').hidden = true; return; }
+  const box = $('mpRoster'), g = UI.g;
+  box.textContent = '';
+  for (const s of NET.seats) {
+    if (s.seat === NET.seat) continue;
+    const p = g.players[s.seat];
+    if (!p) continue;
+    const el = document.createElement('span');
+    el.style.color = pcolor(p);
+    el.textContent = '● ' + mpSeatName(s.seat) + (s.gone ? ' (' + L('KI') + ')' : '');
+    if (s.gone) el.className = 'gone';
+    box.appendChild(el);
+  }
+}
+function mpSigOpen() {
+  const box = $('mpSigBox');
+  if (!box.hidden) { box.hidden = true; return; }
+  box.textContent = '';
+  MP_SIGNALS.forEach((t, i) => { const b = document.createElement('button'); b.className = 'key'; b.textContent = L(t); b.addEventListener('click', () => { box.hidden = true; mpSig(i); }); box.appendChild(b); });
+  box.hidden = false;
+}
+function mpSig(i) {
+  if (!NET.live || UI.kind !== 'mp') return;
+  const now = performance.now();
+  if (now - NET.sigT < 1500) { SND.play('err'); return; }
+  NET.sigT = now;
+  mpSend({ k: 'ch', m: i, s: NET.seat });
+  mpSigShow(NET.seat, i);
+}
+function mpSigShow(seat, i) {
+  const g = UI.g, p = g && g.players[seat];
+  if (!p) return;
+  const box = $('toasts'), el = document.createElement('div'), nm = document.createElement('b');
+  el.className = 'toast sig';
+  nm.style.color = pcolor(p); nm.textContent = mpSeatName(seat) + ': ';
+  el.appendChild(nm); el.appendChild(document.createTextNode(L(MP_SIGNALS[i])));
+  box.appendChild(el);
+  while (box.children.length > 4) box.firstChild.remove();
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s'; setTimeout(() => el.remove(), 420); }, 4000);
+  if (seat !== NET.seat) { SND.play('click'); buzz(20); }
+}
+
+/* ------------------------------------------------------------------ Verbindung weg (Mitspieler: zum Gastgeber) */
 function mpLost(why) {
   if (why !== 'quiet') mpDrop();
   const g = UI.g;
   if (UI.kind === 'mp' && NET.live && !UI.endShown && g && !g.over) {
     NET.soft = why === 'quiet';
-    setText('mpLostT', why === 'bye' ? L('Mitspieler hat das Gefecht verlassen') : why === 'quiet' ? L('Keine Antwort vom Mitspieler') : L('Verbindung abgebrochen'));
-    setText('mpLostB', why === 'quiet' ? L('Seit einigen Sekunden kommt nichts mehr an. Kommt die Verbindung zurück, geht es von selbst weiter.') : L('Du kannst weiterspielen: Die KI übernimmt die Seite deines Mitspielers.'));
+    setText('mpLostT', why === 'bye' ? L('Der Gastgeber hat das Gefecht verlassen') : why === 'quiet' ? L('Keine Antwort vom Gastgeber') : L('Verbindung abgebrochen'));
+    setText('mpLostB', why === 'quiet' ? L('Seit einigen Sekunden kommt nichts mehr an. Kommt die Verbindung zurück, geht es von selbst weiter.') : L('Du kannst weiterspielen: Die KI übernimmt die Seiten der anderen Spieler.'));
     $('mpLost').hidden = false;
     $('pause').hidden = true; UI.paused = false;
     if (!NET.soft) SND.play('alarm');
@@ -590,30 +892,30 @@ function mpLost(why) {
   }
   if (why === 'quiet') return;
   NET.live = false; NET.seat = -1;
-  if (UI.kind === 'mp' && UI.endShown) { $('eAgain').hidden = true; toast(L('Die Verbindung zum Mitspieler ist getrennt.'), 'warn'); }
-  if (!$('mp').hidden) { mpScanStop(); mpPane('home'); mpMsg(why === 'bye' ? L('Dein Mitspieler hat die Verbindung getrennt.') : L('Die Verbindung ist abgebrochen.'), 'bad'); }
+  if (UI.kind === 'mp' && UI.endShown) { $('eAgain').hidden = true; toast(L('Die Verbindung zum Gastgeber ist getrennt.'), 'warn'); }
+  if (!$('mp').hidden) { mpScanStop(); mpPane('home'); mpMsg(why === 'bye' ? L('Der Gastgeber hat die Verbindung getrennt.') : L('Die Verbindung ist abgebrochen.'), 'bad'); }
   mpMenuSub();
 }
 function mpUnlost() { NET.soft = false; if (!$('mpLost').hidden && NET.open) $('mpLost').hidden = true; }
-/* Die KI übernimmt den Sitz des Mitspielers; eigene, noch nicht ausgeführte Befehle werden jetzt ausgeführt */
+/* Die KI übernimmt die Sitze aller anderen Menschen; eigene, noch nicht ausgeführte Befehle werden jetzt ausgeführt */
 function mpTakeover() {
   const g = UI.g;
   if (!g || UI.kind !== 'mp' || NET.seat < 0) return;
-  const ps = NET.pseat, pend = [];
+  const pend = [];
   mpDrop();
   NET.live = false; NET.soft = false; NET.wait = '';
   [...NET.mine.keys()].sort((a, b) => a - b).forEach(x => { if (x >= g.tick) pend.push(...NET.mine.get(x)); });
   pend.push(...NET.out);
-  NET.mine.clear(); NET.theirs.clear(); NET.out = [];
+  NET.mine.clear(); NET.inb.clear(); NET.bund.clear(); NET.out = [];
   g.net = null;
   for (const c of pend) issueCmd(g, c);
-  const p = g.players[ps];
-  if (p && p.alive) { p.ai = aiInit(AI_LEVELS[MPL.lvl] ? MPL.lvl : 2); p.human = false; }
+  for (const s of NET.seats) { const p = g.players[s.seat]; if (s.seat !== NET.seat && p && !p.ai) { p.ai = aiInit(2); p.human = false; } }
   NET.seat = -1;
   UI.kind = 'skirmish';
   $('mpLost').hidden = true; $('mpWait').hidden = true;
   UI.paused = false; $('pause').hidden = true;
-  toast(L('Die KI übernimmt die Seite deines Mitspielers.'), 'warn');
+  mpHudRender();
+  toast(L('Die KI übernimmt die Seiten der anderen Spieler.'), 'warn');
   mpMenuSub();
 }
 function mpToLobby() {
@@ -645,8 +947,8 @@ function mpOpen() {
 function mpClose() {
   mpScanStop();
   $('mp').hidden = true;
-  if (NET.open && NET.hello) mpSendSt();
-  else if (NET.pc && !NET.open) mpDrop();
+  if (NET.open && NET.hello) { if (NET.role === 'host') { mpPeerClose(NET.pend); NET.pend = null; } else mpSendSt(); }
+  else if (NET.role) mpDrop();
   menuRender();
 }
 function mpShowCode(code, type) {
@@ -661,7 +963,8 @@ function mpShowCode(code, type) {
   $('mpOwn').value = code;
   const host = type === 'offer';
   setText('mpShowStep', host ? L('Schritt 1 von 2') : L('Schritt 2 von 2'));
-  setText('mpShowText', host ? L('Auf dem anderen Gerät »Beitreten« wählen und diesen Code scannen. Ohne Kamera: Code kopieren und hinüberschicken.') : L('Jetzt scannt das eröffnende Gerät diesen Antwort-Code oder fügt ihn ein. Danach verbinden sich die Geräte von selbst.'));
+  setText('mpShowText', (host && NET.lobby ? L('Einladung für den nächsten Mitspieler.') + ' ' : '') + (host ? L('Auf dem anderen Gerät »Beitreten« wählen und diesen Code scannen. Ohne Kamera: Code kopieren und hinüberschicken.') : L('Jetzt scannt das eröffnende Gerät diesen Antwort-Code oder fügt ihn ein. Danach verbinden sich die Geräte von selbst.')));
+  setText('mpBack', host && NET.lobby ? L('Zurück zur Lobby') : L('Abbrechen'));
   $('mpAns').hidden = !host;
   $('mpIn2').value = '';
   $('mpShare').hidden = !((navigator.share && typeof navigator.share === 'function') || appPlugin('Share'));
@@ -738,8 +1041,8 @@ function mpInputCode(id, fn) {
   const ta = $(id), re = new RegExp('^' + MP_PFX + '[A-Za-z0-9_-]{40,}$');
   ta.addEventListener('input', () => { const s = ta.value.replace(/\s+/g, ''); if (re.test(s) && !mpUnpack(s).err) fn(s); });
 }
-function mpNetLoad() { try { const s = JSON.parse(localStorage.getItem(NET_KEY) || 'null'); if (s) { MPU.inet = !!s.inet; MPU.turn.url = String(s.url || '').slice(0, 200); MPU.turn.user = String(s.user || '').slice(0, 100); } } catch (e) { /* ohne Speicher */ } }
-function mpNetSave() { try { localStorage.setItem(NET_KEY, JSON.stringify({ inet: MPU.inet, url: MPU.turn.url, user: MPU.turn.user })); } catch (e) { /* ohne Speicher */ } }
+function mpNetLoad() { try { const s = JSON.parse(localStorage.getItem(NET_KEY) || 'null'); if (s) { MPU.inet = !!s.inet; MPU.turn.url = String(s.url || '').slice(0, 200); MPU.turn.user = String(s.user || '').slice(0, 100); MPU.name = mpCleanName(s.name); } } catch (e) { /* ohne Speicher */ } }
+function mpNetSave() { try { localStorage.setItem(NET_KEY, JSON.stringify({ inet: MPU.inet, url: MPU.turn.url, user: MPU.turn.user, name: MPU.name })); } catch (e) { /* ohne Speicher */ } }
 function mpNetRender() {
   $('mpInet').classList.toggle('on', MPU.inet);
   $('mpInetNote').hidden = !MPU.inet; $('mpTurn').hidden = !MPU.inet;
@@ -766,12 +1069,16 @@ function initMp() {
   $('mpCamX').addEventListener('click', () => { mpScanStop(); mpPane(MPU.scanBack || 'home'); mpMsg(''); });
   $('mpCopy').addEventListener('click', mpCopy);
   $('mpShare').addEventListener('click', mpShare);
-  $('mpBack').addEventListener('click', () => { mpDrop(); mpPane('home'); mpMsg(''); });
+  $('mpBack').addEventListener('click', () => { if (NET.role === 'host') mpInviteEnd(); else { mpDrop(); mpPane('home'); } mpMsg(''); });
   $('mpBack1').addEventListener('click', () => { mpPane('home'); mpMsg(''); });
-  $('mpRoll').addEventListener('click', () => { MPL.seed = 1 + ((Math.random() * 999999) | 0); SND.play('click'); mpCfgSend(); mpLobbyRender(); });
+  $('mpRoll').addEventListener('click', () => { MPL.seed = 1 + ((Math.random() * 999999) | 0); SND.play('click'); mpLobbySend(); });
+  $('mpInvite').addEventListener('click', () => { SND.play('click'); mpInvite(); });
   $('mpStart').addEventListener('click', () => { SND.play('click'); mpStart(); });
   $('mpLeave').addEventListener('click', () => { mpLeave(); mpPane('home'); mpMsg(L('Verbindung getrennt.')); SND.play('click'); });
+  $('mpName').addEventListener('change', () => { MPU.name = mpCleanName($('mpName').value); $('mpName').value = MPU.name; mpNetSave(); if (NET.role === 'host') mpLobbySend(); else { mpSendSt(); mpLobbyRender(); } });
+  $('mpPrev').addEventListener('click', mpPrevPick);
   $('mpAi').addEventListener('click', () => { SND.play('click'); mpTakeover(); });
   $('mpLostMenu').addEventListener('click', () => { mpLeave(); $('mpLost').hidden = true; toMenu(); });
+  bindHold($('mpSig'), mpSigOpen, () => '<h4>' + L('Funksignal') + '</h4><p>' + L('Kurze Meldung an alle Mitspieler: Angriff, Hilfe, Rückzug …') + '</p>');
   mpMenuSub();
 }

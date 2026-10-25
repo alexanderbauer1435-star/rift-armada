@@ -47,6 +47,13 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 20, Mehrspieler für bis zu acht: Stern um den Gastgeber (für jeden Mitspieler ein Codepaar, QR oder Text),
+  Lobby mit acht Plätzen (Mensch, KI mit Fraktion und Stärke, aus), Teams je Platz und Vorlagen (Jeder für sich, Menschen
+  gegen KI, Zwei Teams), Name, Fraktion und Startplatz wählt jeder auf dem eigenen Gerät, dazu Karte (alle mit passender
+  Spielerzahl), Größe, Kampftempo, Startmittel, Quarantine mit bis zu vier. Gleichschritt: Der Gastgeber bündelt die
+  Befehlspakete aller je Runde und verteilt das Bündel; wer geht, wird im nächsten Bündel auf allen Geräten zur KI.
+  Prüfsumme alle fünf Sekunden mit Meldung, bei wem es abwich, und Abgleich für alle. Im Gefecht Mitspieler mit Name
+  und Farbe in der Kopfleiste, Funksignale (Angriff, Verteidigen, Hilfe, Rückzug, Sammeln, Gut gemacht, Ja, Nein).
 - Fassung 19 (Runde 17, Balancing): Messwerkzeuge tools/balance/ – duel.js (Kostenduelle Schiff gegen Schiff bei
   gleichem Budget), towers.js (wie viel Flotte bricht einen Turm), matrix.js (KI-Partien jede Fraktion gegen jede, 1 gegen 1
   oder MODE=2v2, ONLYF=Fraktion). Erkenntnisse und Änderungen: Punktverteidigung schoss jeden Torpedo ab → trifft Torpedos
@@ -186,8 +193,9 @@
   vollständig, Vorlagen, Simulation gleich auf Deutsch und Englisch
 - `tools/` – `shot.js` Bildschirmtests im Handyformat, `shot2.js` Bildschirmtests Runde 2 (Übungsplatz, Doktrin, Entern,
   Superwaffen), `shot3.js` Bildschirmtests Runde 3 (Legion, Nexus, Tore, Ruinen, Archiv, Verschmelzen, Übernahme, Spielstand), `shot4.js` Brood,
-  `shot5.js` Wellenmodi, `shot6.js` Kampagne (Seite, Besprechung, Funk, Ziele, Entscheidung, Nachbesprechung, Spielstand), `shot7.js` Conquest (Auswahl, Karte, Kapitel, Schlachten, Rückkehr, Rückzug, Ende), `shot8.js` Ausbildung und Schadensbilder, `mp.js` Mehrspieler mit zwei Browsern über echtes WebRTC (Verbinden, 2 gegen 2,
-  Befehle beider Seiten, Pause, erzwungener Abgleich, Neuverbindung, KI-Übernahme, Quarantine zu zweit), `interact.js` Bedienungstest mit Fingerereignissen (Playwright), `showcase.js` Schaubilder der Grafik, `gallery2.js` Schiffsgalerie
+  `shot5.js` Wellenmodi, `shot6.js` Kampagne (Seite, Besprechung, Funk, Ziele, Entscheidung, Nachbesprechung, Spielstand), `shot7.js` Conquest (Auswahl, Karte, Kapitel, Schlachten, Rückkehr, Rückzug, Ende), `shot8.js` Ausbildung und Schadensbilder, `mp.js` Mehrspieler mit bis zu vier Browsern über echtes WebRTC (2 gegen 2 mit KI,
+  Befehle, Pause, erzwungener Abgleich, Gastgeber geht, Quarantine zu zweit, drei Menschen mit Namen, Startplatz und
+  Funksignal, vier Menschen über einige Minuten, wer geht, wird KI; zweites Argument: Sekunden für Teil 4), `interact.js` Bedienungstest mit Fingerereignissen (Playwright), `showcase.js` Schaubilder der Grafik, `gallery2.js` Schiffsgalerie
 
 ## Bauen und prüfen
 
