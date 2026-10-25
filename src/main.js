@@ -16,6 +16,7 @@ function keepAwake() { try { if (navigator.wakeLock && navigator.wakeLock.reques
 function resetUi() {
   hpReset(); UI.sel.clear(); UI.selB = 0; UI.mode = 'normal'; UI.place = null; UI.box = null; UI.boxMode = false; UI.paused = false; UI.endShown = false; UI.hasSel = false; UI.mark = null; UI.alertT = -99; UI.alertPos = null; UI.saveAt = performance.now(); UI.askSell = 0; UI.subAim = ''; UI.superTgt = null; UI.slow = false; UI.docPick = null; UI.selS = 0; UI.etechMode = false;
   $('doctrine').hidden = true; $('eMenu').hidden = false; $('ask').hidden = true; $('misBox').hidden = true; $('misTitle').hidden = true; UI.askOpen = false; $('mpWait').hidden = true; $('mpLost').hidden = true; $('eAgain').hidden = false; $('pRestart').hidden = false;
+  $('mpRoster').hidden = true; $('mpSig').hidden = true; $('mpSigBox').hidden = true; /* Mehrspieler-Leiste (net.js mpHudRender) */
   $('end').hidden = true; $('pause').hidden = true; $('help').hidden = true; $('settings').hidden = true; $('toasts').textContent = ''; $('info').hidden = true; $('tip').hidden = true;
   $('bRange').classList.toggle('on', UI.showRange);
   inputReset();
@@ -42,7 +43,7 @@ function beginGame(opts, kind, saved, seat) {
     toast(L('Gefecht fortgesetzt, Spielzeit {0}', clock(g.time)), 'good');
   } else {
     clearSave();
-    if (kind === 'mp') toast(L('Mehrspieler: Befehle wirken auf beiden Geräten zugleich, mit einem Hauch Verzögerung.'), 'good', 5000);
+    if (kind === 'mp') toast(L('Mehrspieler: Befehle wirken auf allen Geräten zugleich, mit einem Hauch Verzögerung.'), 'good', 5000);
     else if (!opts.sandbox && !opts.mode && !opts.mis) toast(L('Baue Werft und Reaktor. Frachter sammeln schon Eis und Erz.'), '', 5000);
     if (!opts.mis) setTimeout(() => { if (UI.g === g && !g.over) toast(L('Lange auf eine Taste drücken zeigt die Erklärung'), '', 4000); }, 6000);
   }

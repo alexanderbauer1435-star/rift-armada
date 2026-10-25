@@ -308,6 +308,19 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 .seg.ro button:not(.on) { opacity: 0.45; }
 #mpWait { position: absolute; top: 3em; left: 50%; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--acc2); border-radius: 12px; box-shadow: 0 0 18px rgba(255,184,107,0.3); padding: 0.4em 1em; font-weight: 600; z-index: 9; font-size: var(--ui); }
 @media (max-width: 640px) { .mpCode, .mpGrid { grid-template-columns: 1fr; } }
+/* Mehrspieler für bis zu acht (net.js): Lobby-Plätze, Name, Mitspieler in der Kopfleiste, Funksignale */
+#mpSlots { margin: 0.4em 0; }
+#mpSlots .slot button.x { flex: 0 0 2.6em; color: var(--dim); }
+#mpSlots .slot button.lvl { flex: 0 0 6.5em; }
+.mpName { min-width: 0; flex: 1 1 8em; max-width: 14em; background: rgba(0,0,0,0.45); color: var(--txt); border: 1px solid var(--line); border-radius: 8px; padding: 0.4em 0.6em; min-height: var(--tap); box-sizing: border-box; font: inherit; }
+.mpName:focus { outline: none; border-color: var(--acc); }
+#mpPrev { cursor: pointer; }
+#mpRoster { display: flex; gap: 0.6em; min-width: 0; overflow: hidden; white-space: nowrap; font-size: 0.85em; font-weight: 600; }
+#mpRoster span { overflow: hidden; text-overflow: ellipsis; max-width: 9em; }
+#mpRoster span.gone { opacity: 0.55; }
+#mpSigBox { position: absolute; right: 10.5em; top: calc(2.6em + env(safe-area-inset-top)); display: grid; grid-template-columns: 1fr 1fr; gap: 0.3em; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 0.4em; z-index: 8; }
+#mpSigBox .key { min-width: 7em; }
+.toast.sig b { font-weight: 700; }
 
 
 /* ---------- Conquest ---------- */
@@ -528,7 +541,9 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
       <div class="res" id="resCp"><span class="ico cp">★</span><span id="rCp">0/0</span></div>
       <div class="res" id="resWave" hidden title="Welle"><span class="ico wave">≋</span><span id="rWave">0</span></div>
       <div class="res" id="resRelic" title="Relikte"><span class="ico relic">◆</span><span id="rRelic">0</span></div>
+      <div id="mpRoster" hidden data-nol></div><!-- Mehrspieler: andere Menschen mit Farbe (net.js) -->
       <div id="clock">0:00</div>
+      <button class="key" id="mpSig" hidden data-tip="Funksignal an alle Mitspieler">⚑</button><!-- Mehrspieler: Funksignale (net.js) -->
       <button class="key" id="bRange" data-tip="Reichweiten und Schussfelder der Auswahl anzeigen">◎</button>
       <button class="key" id="bPause" data-al="Pause">❚❚</button>
     </div>
@@ -537,7 +552,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
       <button class="key tb" id="bAlert" data-tip="Zur letzten Meldung springen (Leertaste)">!</button>
       <button class="key tb" id="bFollow" data-tip="Kamera folgt der gewählten Flotte (F)">⌖</button>
       <button class="key tb" id="bArmy" data-tip="Armeeleiste: alle Schiffe nach Typ">☰</button>
-      <button class="key tb" id="bTeam" hidden data-tip="Team: Signale und Rohstoffe senden">⚑</button>
+      <button class="key tb" id="bTeam" hidden data-tip="Team: Signale und Rohstoffe senden">⇆</button>
     </div>
     <div id="army" hidden></div>
     <div id="rpBar" hidden>
@@ -567,6 +582,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     </div>
     <div id="misTitle" hidden></div>
     <div id="toasts"></div>
+    <div id="mpSigBox" hidden></div><!-- Mehrspieler: Auswahl der Funksignale (net.js) -->
     <div id="info" hidden></div>
     <div id="tip" hidden></div>
   </div>
@@ -633,7 +649,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
   <div class="ovl" id="mp" hidden><div class="win">
     <div class="row" style="justify-content:space-between;margin-top:0"><h2 id="mpTitle" style="margin:0">Mehrspieler</h2><button class="key" id="mpX">✕</button></div>
     <div id="mpHome" class="mpPane">
-      <p class="fine">Zwei Geräte, jedes mit dieser Datei, im selben WLAN oder über einen Hotspot verbunden. Ein Gerät eröffnet, das andere tritt bei. Dazu tauschen die Geräte zwei Codes aus: per Kamera als QR-Code oder kopiert und hinübergeschickt.</p>
+      <p class="fine">Zwei bis acht Geräte, jedes mit dieser Datei, im selben WLAN oder über einen Hotspot verbunden. Ein Gerät eröffnet als Gastgeber, die anderen treten bei. Für jeden Mitspieler tauschen Gastgeber und Mitspieler zwei Codes aus: per Kamera als QR-Code oder kopiert und hinübergeschickt.</p>
       <div class="row"><button id="mpHost" class="key big arm">Spiel eröffnen</button><button id="mpJoin" class="key big">Beitreten</button></div>
       <div id="mpNet" class="mpNet">
         <button id="mpInet" class="key">Über das Internet</button>
@@ -677,23 +693,28 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
       <video id="mpVideo" playsinline muted style="width:100%;max-height:50vh;border-radius:8px;background:#000"></video>
       <div class="row"><button id="mpCamX" class="key">Abbrechen</button></div>
     </div>
+    <!-- Mehrspieler-Lobby (net.js): bis zu acht Plätze, Mensch / KI / aus, Teams, Karte, Größe, Kampftempo, Startplätze -->
     <div id="mpLobby" class="mpPane" hidden>
       <div class="mpGrid">
         <div>
           <p id="mpState" class="mpState"><i></i><span id="mpStateT"></span></p>
+          <div class="row"><span class="lbl">Dein Name</span><input id="mpName" class="mpName" type="text" maxlength="16" spellcheck="false" autocomplete="off" placeholder="Name"></div>
           <div class="row"><span class="lbl">Deine Fraktion</span><div class="seg" id="mpFac"></div></div>
-          <div class="row"><span class="lbl">Mitspieler</span><b id="mpPeerN"></b><small class="fine" id="mpPeerS"></small></div>
           <div class="row"><span class="lbl">Spielart</span><div class="seg" id="mpKind"></div></div>
           <p id="mpKindInfo" class="fine"></p>
+          <div class="slots" id="mpSlots" data-nol></div>
+          <div class="row" id="mpPresetRow"><span class="lbl">Teams</span><div class="seg" id="mpPreset"></div></div>
           <div class="row"><span class="lbl">Karte</span><div class="seg" id="mpMap"></div></div>
-          <div class="row" id="mpAlliesRow"><span class="lbl">KI-Verbündete</span><div class="seg" id="mpAllies"></div></div>
-          <div class="row" id="mpLvlRow"><span class="lbl">KI-Stärke</span><div class="seg" id="mpLvl"></div></div>
+          <div class="row" id="mpSizeRow"><span class="lbl">Größe</span><div class="seg" id="mpSize"></div></div>
+          <div class="row"><span class="lbl">Kampftempo</span><div class="seg" id="mpPace"></div></div>
           <div class="row" id="mpResRow"><span class="lbl">Startmittel</span><div class="seg" id="mpRes"></div></div>
         </div>
         <div>
           <canvas id="mpPrev" width="220" height="220"></canvas>
           <p id="mpMapInfo" class="fine" style="max-width:11em"></p>
+          <p id="mpStartNote" class="fine" style="max-width:11em"></p>
           <div class="mpRight">
+            <button id="mpInvite" class="key">Mitspieler einladen</button>
             <button id="mpRoll" class="key">Neu würfeln</button>
             <button id="mpStart" class="key arm">Gefecht starten</button>
             <button id="mpLeave" class="key">Verbindung trennen</button>
