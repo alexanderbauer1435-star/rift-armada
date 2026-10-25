@@ -565,7 +565,7 @@ for (const f in BLDG) for (const role in BLDG[f]) { const b = BLDG[f][role]; b.f
 const BAL = {
   speed: { f: 1, s: 0.88, m: 0.78, l: 0.66 }, accel: { f: 1, s: 0.9, m: 0.8, l: 0.7 }, turn: { f: 1, s: 0.92, m: 0.85, l: 0.78 },
   tower: { roles: { turret: 1, flak: 1 }, hull: 1.3, shield: 1.3, range: 1.1, dps: { alliance: 1.55, mars: 1.9, legion: 1.3, nexus: 1.25, brood: 1.9, guardian: 1.6 }, flak: 1.4 },
-  base: { hull: 1.3, shield: 1.3, dps: 1.4, range: 1.1 }
+  base: { hull: 2.1, shield: 1.6, dps: 1.4, range: 1.1 }, other: { hull: 1.25 }
 };
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.role !== 'war') continue; s.speed = Math.round(s.speed * (s.f === 'brood' && s.cls === 's' ? 0.95 : BAL.speed[s.cls])); s.accel = Math.round(s.accel * BAL.accel[s.cls]); s.turn = +(s.turn * BAL.turn[s.cls]).toFixed(2); }
 /* Fraktionsausgleich nach der Balance-Matrix (Legion gewann 91 %, Brood 20 %): Paladin-Lanze schwächer und teurer,
@@ -595,7 +595,7 @@ SHIPS.reckoning.wpn = SHIPS.reckoning.wpn.map((w, i) => i === 0 ? Object.assign(
 for (const id in TUNE) { const s = SHIPS[id], t = TUNE[id]; if (t.hull) s.hull = Math.round(s.hull * t.hull); if (t.cost) for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * t.cost); if (t.dps) s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * t.dps).toFixed(2) })); }
 for (const f in BLDG) for (const role in BLDG[f]) {
   const tw = BAL.tower.roles[role], bs = role === 'base';
-  if (!tw && !bs) continue;
+  if (!tw && !bs) { for (const l of BLDG[f][role].lv) l.hull = Math.round(l.hull * BAL.other.hull); continue; }
   const k = bs ? BAL.base : BAL.tower, dk = bs ? BAL.base.dps : role === 'flak' ? BAL.tower.flak : (BAL.tower.dps[f] || 1.5);
   for (const l of BLDG[f][role].lv) { l.hull = Math.round(l.hull * k.hull); l.shield = Math.round(l.shield * k.shield); l.wpn = l.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * dk).toFixed(2), range: Math.round(w.range * k.range) })); }
 }

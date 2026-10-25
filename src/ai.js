@@ -50,6 +50,8 @@ function aiTarget(g, pi, x, y) {
   return s ? { x: s.x, y: s.y } : null;
 }
 const AI_DOLE = { ice: 8, ore: 4 };
+/* Fenster für den ersten Angriff je Stärke (Sekunden): Leicht spät, Schwer früher – innerhalb des Fensters zufällig */
+const AI_FIRST = { 1: [540, 900], 2: [420, 780], 3: [300, 600] };
 function aiThink(g, pi) {
   const p = g.players[pi], A = p.ai, cfg = A.cfg, f = p.faction, t = g.time;
   /* Brood: alles ist Biomasse (Eis); Erz-Schwellen gelten dann für Eis */
@@ -232,10 +234,14 @@ function aiThink(g, pi) {
   } else {
     /* ein Gegner ohne Basis und Werft kann sich nicht mehr erholen: dann reicht eine kleine Flotte, um ihn zu erledigen */
     const weakFoe = t > 300 && g.players.some(q => q.alive && !q.neutral && !q.threat && q.team !== p.team && !g.bldgs.some(b => !b.dead && b.owner === q.id && (b.role === 'base' || b.role === 'yard')));
-    const ready = t > cfg.first && t - A.atkT > 30 && (cpF >= cfg.army + Math.min(16, Math.floor(t / 150) * 2) || (weakFoe && cpF >= 4));
+    /* Persönlichkeit je KI (einmal gewürfelt, deterministisch): erster Angriff früher oder später, Flottengröße, Pause
+       zwischen Angriffen. So greift im selben Spiel die eine KI früh an, die andere baut erst in Ruhe auf. */
+    if (A.first === undefined) { const w = AI_FIRST[A.lvl] || AI_FIRST[2]; A.first = w[0] + g.rng() * (w[1] - w[0]); A.armyK = 1.2 + g.rng() * 0.6; A.gapK = 0.6 + g.rng() * 1.2; }
+    if (A.gap === undefined) A.gap = 40;
+    const ready = t > A.first && t - A.atkT > A.gap && (cpF >= cfg.army * A.armyK + Math.min(16, Math.floor(t / 150) * 2) || (weakFoe && cpF >= 4));
     if (ready) {
       const tg = aiTarget(g, pi, anchor.x, anchor.y);
-      if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'wedge'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; ev(g, 'aiattack', { owner: pi }); }
+      if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'wedge'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; A.gap = (40 + g.rng() * 140) * A.gapK; ev(g, 'aiattack', { owner: pi }); }
     } else {
       /* sammeln vor der Basis; Verwundete zur Werft */
       const rp = { x: anchor.x + dcos(dirA) * 300, y: anchor.y + dsin(dirA) * 300 };
