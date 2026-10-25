@@ -2264,5 +2264,20 @@ const EN = {
   "Tagesaufgabe": "Daily challenge",
   "Abzeichen": "Badges",
   "Fraktionen": "Factions",
-  "Flottenfarbe": "Fleet colour"
+  "Flottenfarbe": "Fleet colour",
+  "Sprachmeldungen": "Voice alerts",
+  "An": "On",
+  "Station verloren": "Structure lost",
+  "Basis wird angegriffen": "Our base is under attack",
+  "Sonneneruption in 25 Sekunden": "Solar flare in 25 seconds",
+  "Sonneneruption! Sofort in Deckung": "Solar flare! Take cover now",
+  "Feindliche Superwaffe abgefeuert": "Enemy superweapon launched",
+  "Feindliche Superwaffe geladen": "Enemy superweapon charged",
+  "Energiemangel": "Low power",
+  "Torlanze lädt": "Gate lance charging",
+  "Feindliche Welle im Anmarsch": "Enemy wave incoming",
+  "Forschung abgeschlossen": "Research complete",
+  "Ausbau abgeschlossen": "Upgrade complete",
+  "Dieses Gerät hat keine Sprachausgabe – es bleibt beim Signalton.": "This device has no speech output – alert tones only.",
+  "Sprachmeldungen an": "Voice alerts on"
 };

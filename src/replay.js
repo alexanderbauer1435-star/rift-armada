@@ -104,7 +104,7 @@ function rpBarUpdate() {
 function rpInit() {
   /* vor jedem Schritt die Befehle des Takts einspeisen (nur wenn eine Wiederholung läuft) */
   const step0 = stepGame; stepGame = function (g) { if (g.rp) rpFeed(g); return step0(g); };
-  const cons = UI.consume; UI.consume = function (evs) { if (UI.kind === 'replay') { for (const e of evs) if (e.t === 'shot' || e.t === 'hit' || e.t === 'die' || e.t === 'bdie') { if (e.t === 'die') SND.play(e.big ? 'bigboom' : 'boom', e.x, e.y); } return; } return cons.call(this, evs); };
+  const cons = UI.consume; UI.consume = function (evs) { if (UI.kind === 'replay') { if (typeof sfxEvents === 'function') { try { sfxEvents(UI.g, RP.view && RP.view.d.me >= 0 ? RP.view.d.me : 0, evs); } catch (e) { /* nur Ton */ } } return; } return cons.call(this, evs); };
   const hu = hudUpdate; hudUpdate = function () { if (UI.kind === 'replay') { rpTick(); return; } hu(); rpSample(UI.g); };
   const se = showEnd; showEnd = function () { const was = UI.endShown; se(); if (!was && UI.endShown && !UI.g.mis) { rpStore(UI.g, UI.kind); $('eReplay').hidden = !rpPossible(UI.g, UI.kind); rpEndCharts(); } };
   $('eReplay').addEventListener('click', () => { const d = rpLoadLast(); if (d) rpStart(d); else toast(L('Keine Wiederholung vorhanden'), 'warn'); });
