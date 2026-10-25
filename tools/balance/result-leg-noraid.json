@@ -1,0 +1,36 @@
+{
+ "tag": "leg-noraid",
+ "maps": [
+  "expanse",
+  "bastions"
+ ],
+ "seeds": 1,
+ "games": 16,
+ "draws": 2,
+ "avgMin": 17.9,
+ "winrate": {
+  "alliance": 0.75,
+  "mars": 0.5,
+  "legion": 0.25,
+  "nexus": 0.75,
+  "brood": 0.5
+ },
+ "pair": {
+  "alliance-legion": {
+   "alliance": 3,
+   "legion": 1
+  },
+  "mars-legion": {
+   "mars": 2,
+   "legion": 2
+  },
+  "legion-nexus": {
+   "legion": 0,
+   "nexus": 3
+  },
+  "legion-brood": {
+   "legion": 1,
+   "brood": 2
+  }
+ }
+}

@@ -71,7 +71,8 @@ function aiThink(g, pi) {
   const ships = g.ships.filter(u => !u.dead && !u.derelict && u.owner === pi && u.def.role !== 'fighter' && !u.task && !u.gar);
   const builders = ships.filter(u => u.def.build), tankers = ships.filter(u => u.def.cargo), fleet = ships.filter(u => armed(u) && !u.retreat);
   /* Gefecht (Mittel, Schwer): angeschlagene Schiffe ab Fregatte ziehen sich zur Werft zurück und kommen repariert wieder */
-  if (A.lvl >= 2 && AI_OPT.caut) for (const u of fleet) if (u.stance === 0 && (u.def.cls !== 's' || u.def.cp >= 2)) u.stance = 3;
+  /* (nicht die Legion: ihre Helden fallen als ruhende Wracks und werden vom Restorer geweckt – Rückzug kostete sie Partien) */
+  if (A.lvl >= 2 && AI_OPT.caut && f !== 'legion') for (const u of fleet) if (u.stance === 0 && (u.def.cls !== 's' || u.def.cp >= 2)) u.stance = 3;
   /* Aufklärung: welche Größenklassen hat der Gegner? (gleitendes Mittel über die gesichteten Schiffe) */
   aiScout(g, pi);
   const anchor = base || mine[0];

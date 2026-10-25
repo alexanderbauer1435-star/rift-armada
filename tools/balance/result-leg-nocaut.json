@@ -1,0 +1,36 @@
+{
+ "tag": "leg-nocaut",
+ "maps": [
+  "expanse",
+  "bastions"
+ ],
+ "seeds": 1,
+ "games": 16,
+ "draws": 1,
+ "avgMin": 15.7,
+ "winrate": {
+  "alliance": 0.75,
+  "mars": 0.75,
+  "legion": 0.31,
+  "nexus": 0.5,
+  "brood": 0.5
+ },
+ "pair": {
+  "alliance-legion": {
+   "alliance": 3,
+   "legion": 1
+  },
+  "mars-legion": {
+   "mars": 3,
+   "legion": 1
+  },
+  "legion-nexus": {
+   "legion": 1,
+   "nexus": 2
+  },
+  "legion-brood": {
+   "legion": 2,
+   "brood": 2
+  }
+ }
+}

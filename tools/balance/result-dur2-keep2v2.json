@@ -1,0 +1,18 @@
+{
+ "tag": "dur2-keep2v2",
+ "maps": [
+  "keep"
+ ],
+ "seeds": 1,
+ "games": 15,
+ "draws": 12,
+ "avgMin": 28.6,
+ "winrate": {
+  "alliance": 0,
+  "mars": 0.08,
+  "legion": 0.08,
+  "nexus": 0.08,
+  "brood": 0.25
+ },
+ "pair": {}
+}
