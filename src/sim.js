@@ -36,8 +36,9 @@ function foes(g, a, b) { return a >= 0 && b >= 0 && g.tm[a] !== g.tm[b]; }
 
 /* ------------------------------------------------------------------ Aufbau */
 function createGame(opts) {
-  const np = opts.players.length, mapId = opts.mis ? 'mission' : mapFor(opts.map || 'haven', np);
-  const map = opts.mis ? misMap(opts.mis.id, opts.seed || 1, opts.mis) : generateMap(mapId, np, opts.seed || 1, opts.size);
+  /* KARTENEDITOR: opts.custom trägt das Layout einer eigenen Karte (Spielstand und Mehrspieler bauen sie daraus identisch nach) */
+  const np = opts.players.length, mapId = opts.mis ? 'mission' : opts.custom ? 'custom' : mapFor(opts.map || 'haven', np);
+  const map = opts.mis ? misMap(opts.mis.id, opts.seed || 1, opts.mis) : generateMap(mapId, np, opts.seed || 1, opts.size, opts.custom);
   const g = {
     map, rng: makeRng((opts.seed || 1) * 7919 + 13), tick: 0, time: 0, players: [], ships: [], bldgs: [], nodes: [], proj: [], wrecks: [], ev: [],
     byId: new Map(), nextId: 1, over: false, winner: -1, winTeam: -1, opts, human: -1, tm: [], deadFlag: false, bDied: false, reveals: [], strikes: [], flares: [], sites: [], gates: [], events: [], neutral: -1, spores: [], threat: -1, wave: null,

@@ -45,6 +45,9 @@ const SITE_DEF = {
 };
 /* leere Prüfkarte (nur für Tests, nicht im Menü) */
 MAPS.test = { name: 'Testfläche', np: [2], w: 3200, h: 3200, desc: '', hidden: true };
+/* KARTENEDITOR (editor.js): eigene Karten. 'custom' baut die Karte aus einem gespeicherten Layout (opts.custom bzw. MAPS[id].layout);
+   ohne Layout entsteht die Vorlage des Editors (customDefault). Gespeicherte Karten trägt editor.js als MAPS['cu_…'] ein. */
+MAPS.custom = { name: 'Eigene Karte', np: [2, 3, 4, 5, 6, 7, 8], w: 5000, h: 5000, desc: 'Eigene Karte aus dem Karteneditor.', hidden: true, custom: true };
 
 function mapFor(id, np) {
   const m = MAPS[id] || MAPS.haven;
@@ -59,8 +62,11 @@ function farFrom(list, x, y, d) { for (const o of list) if (hyp(o.x - x, o.y - y
 /* Kartengröße: klein, normal, groß – die Karte wird nach dem Aufbau gestreckt (Lagen, Gürtel- und Nebelradien), Felsen,
    Vorkommen, Stätten und Tore behalten ihre Größe. So bleiben Taschen und Korridore erhalten, nur die Wege werden länger. */
 const MAP_SIZES = { small: 0.85, normal: 1, large: 1.3 };
-function generateMap(id, np, seed, size) {
+function generateMap(id, np, seed, size, layout) {
   const def = MAPS[id] || MAPS.haven, rng = makeRng((seed || 1) * 2654435761 + hashStr(id));
+  /* KARTENEDITOR: eigene Karte aus dem Layout (opts.custom oder dem eingetragenen MAPS-Eintrag), Größenwahl gilt hier nicht */
+  const lay = layout || def.layout || (def.custom ? customDefault(np) : null);
+  if (lay) { const m = { id: 'custom', name: def.name, w: 5000, h: 5000, np, starts: [], nodes: [], rocks: [], fields: [], nebs: [], sites: [], gates: [], seed, size: 'normal' }; genCustom(m, lay, makeRng((seed || 1) * 2654435761 + hashStr('custom'))); buildNav(m); return m; }
   const dim = def.dim ? def.dim(np) : null, W0 = dim || def.w, H0 = dim || def.h;
   const map = { id, name: def.name, w: W0, h: H0, np, starts: [], nodes: [], rocks: [], fields: [], nebs: [], sites: [], gates: [], seed, size: size || 'normal' };
   if (id === 'ashfall') genAshfall(map, np, rng);
@@ -81,6 +87,38 @@ function generateMap(id, np, seed, size) {
   }
   buildNav(map);
   return map;
+}
+/* ---------- KARTENEDITOR: Karte aus einem Layout (Felder siehe editor.js, Koordinaten in Karteneinheiten) ----------
+   { n: Name, s: Seitenlänge 3000–7000, np, st: Starts [[x, y]], ice: [[x, y, groß]], ore: [[x, y]], bl: Gürtel [[x0, y0, x1, y1]],
+     wl: Felswände [[x0, y0, x1, y1]], ion/ash: Nebel [[x, y, r]], ru: Ruinen [[x, y]], gs: große Stätten [[x, y]] (Art per Zufall der Partie),
+     gt: Torpaare [[x0, y0, x1, y1]], ft: Piratenfestung [x, y] oder 0 }. Fremde Layouts (Import, Mehrspieler) werden hier begrenzt. */
+const CUSTOM_MAX = 300;
+function genCustom(map, L, rng) {
+  L = L && typeof L === 'object' ? L : {};
+  const s0 = +L.s, s = Number.isFinite(s0) ? clamp(Math.round(s0), 3000, 7000) : 5000;
+  map.w = map.h = s; if (typeof L.n === 'string' && L.n.trim()) map.name = L.n.trim().slice(0, 32);
+  const arr = a => Array.isArray(a) ? a.slice(0, CUSTOM_MAX).filter(Array.isArray) : [];
+  const c = v => { v = +v; return Number.isFinite(v) ? clamp(v, 0, s) : s / 2; }, rad = v => { v = +v; return Number.isFinite(v) ? clamp(v, 80, 700) : 220; };
+  for (const p of arr(L.st).slice(0, 8)) { const x = c(p[0]), y = c(p[1]); map.starts.push({ x, y, ang: datan2(s / 2 - y, s / 2 - x) }); }
+  for (const p of arr(L.ice)) iceMoon(map, c(p[0]), c(p[1]), rng, !!p[2]);
+  for (const p of arr(L.ore)) oreCluster(map, c(p[0]), c(p[1]), rng, 3);
+  for (const p of arr(L.bl)) belt(map, [[c(p[0]), c(p[1])], [c(p[2]), c(p[3])]], 150, rng, null);
+  for (const p of arr(L.wl)) wall(map, [[c(p[0]), c(p[1])], [c(p[2]), c(p[3])]], rng, null, 26);
+  for (const p of arr(L.ion)) nebula(map, c(p[0]), c(p[1]), rad(p[2]), 'ion');
+  for (const p of arr(L.ash)) nebula(map, c(p[0]), c(p[1]), rad(p[2]), 'ash');
+  for (const p of arr(L.ru)) site(map, 'ruin', c(p[0]), c(p[1]));
+  for (const p of arr(L.gs)) site(map, SITE_POOL[(rng() * SITE_POOL.length) | 0], c(p[0]), c(p[1]));
+  for (const p of arr(L.gt).slice(0, 8)) gatePair(map, c(p[0]), c(p[1]), c(p[2]), c(p[3]), 'dead');
+  if (Array.isArray(L.ft) && L.ft.length >= 2) map.fort = { x: c(L.ft[0]), y: c(L.ft[1]), r: 330 };
+}
+/* Vorlage des Editors: Starts im Ring, je Start ein Eismond und Erz Richtung Mitte, eine große Stätte in der Mitte */
+function customDefault(np, size) {
+  np = clamp(np | 0 || 2, 2, 8);
+  const s = clamp(size || RING_DIM[np], 3000, 7000), cx = s / 2, R = s / 2 - 650, a0 = np === 2 ? -0.75 * Math.PI : -Math.PI / 2;
+  const L = { v: 1, n: '', s, np, st: [], ice: [], ore: [], bl: [], wl: [], ion: [], ash: [], ru: [], gs: [[cx, cx]], gt: [], ft: 0 };
+  const at = (a, r, side) => [Math.round(cx + Math.cos(a) * r - Math.sin(a) * side), Math.round(cx + Math.sin(a) * r + Math.cos(a) * side)];
+  for (let i = 0; i < np; i++) { const a = a0 + i * TAU / np; L.st.push(at(a, R, 0)); L.ice.push(at(a, R - 480, 260).concat(0)); L.ore.push(at(a, R - 480, -260)); }
+  return L;
 }
 /* Stätten und Tore */
 /* Stätten entstehen nie nahe eines Starts (Fallen und Wächter würden sonst die Startbasis treffen) */

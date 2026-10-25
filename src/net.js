@@ -449,7 +449,7 @@ function mpPlayers() {
 }
 /* Farben wie im Gefecht: Fraktionsfarbe, solange jede Fraktion nur einmal vorkommt und höchstens vier spielen, sonst feste Platzfarben */
 function mpColors(facs) { const dup = facs.length > 4 || facs.some((f, i) => f === 'random' || facs.indexOf(f) !== i); return facs.map((f, i) => dup ? SLOT_COLS[i] : null); }
-function mpMaps() { if (MPL.kind === 'waves') return ['quarantine']; const np = Math.max(2, mpPlayers().length); return MAP_ORDER.filter(k => MAPS[k].np.indexOf(np) >= 0); }
+function mpMaps() { if (MPL.kind === 'waves') return ['quarantine']; const np = Math.max(2, mpPlayers().length); return MAP_ORDER.filter(k => MAPS[k].np.indexOf(np) >= 0).concat(edMapIds(np)); }   /* KARTENEDITOR: eigene Karten */
 function mpFixMap() {
   const ok = mpMaps();
   if (ok.indexOf(MPL.map) < 0) MPL.map = ok[0];
@@ -464,6 +464,7 @@ function mpStartWish(id, s) {
 }
 function mpCfgApply(s) {
   if (MP_KINDS[s.kind]) MPL.kind = s.kind;
+  if (s.custom && typeof s.map === 'string') edPeerMap(s.map, s.custom);   /* KARTENEDITOR: Karte des eröffnenden Geräts eintragen */
   if (MAPS[s.map]) MPL.map = s.map;
   if (MAP_SIZES[s.size]) MPL.size = s.size;
   if (PACE[s.pace]) MPL.pace = s.pace;
@@ -477,7 +478,7 @@ function mpCfgApply(s) {
 function mpLobbySend() {
   if (NET.role !== 'host' || !NET.lobby) return;
   mpFixMap();
-  mpSend({ k: 'lob', s: MPL, r: mpRoster() });
+  mpSend({ k: 'lob', s: Object.assign({}, MPL, { custom: edLayoutOf(MPL.map) }), r: mpRoster() });   /* KARTENEDITOR: Layout mitschicken */
   mpLobbyRender();
 }
 function mpSendSt() { mpSend({ k: 'st', f: MENU.faction, in: !$('mp').hidden && MPU.pane === 'lobby', n: MPU.name, s: mpMySlot() ? mpMySlot().s : -1 }); }
@@ -603,7 +604,7 @@ function mpStart() {
   for (let i = free.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [free[i], free[j]] = [free[j], free[i]]; }
   const players = list.map((q, i) => ({ faction: facs[i], human: q.human, ai: q.human ? 0 : q.lvl, team: waves ? 0 : q.team ? q.team : 10 + i, color: cols[i], name: q.human && q.n ? q.n : null, start: q.s >= 0 && q.s < np && taken.indexOf(q.s) === taken.lastIndexOf(q.s) ? q.s : free.shift() }));
   const res = waves ? undefined : MPL.res === 'low' ? { ice: 700, ore: 300 } : MPL.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
-  const opts = JSON.parse(JSON.stringify({ map: waves ? 'quarantine' : mapFor(MPL.map, np), size: waves ? undefined : MPL.size, seed: MPL.seed, players, res, pace: MPL.pace, mode: waves ? 'quarantine' : undefined, mp: 1 }));
+  const opts = JSON.parse(JSON.stringify({ map: waves ? 'quarantine' : mapFor(MPL.map, np), size: waves ? undefined : MPL.size, seed: MPL.seed, players, res, pace: MPL.pace, mode: waves ? 'quarantine' : undefined, mp: 1, custom: waves ? undefined : edLayoutOf(MPL.map) }));   /* KARTENEDITOR: custom */
   const seats = list.map((q, i) => q.human ? { seat: i, id: q.id, n: q.n || '' } : null).filter(Boolean);
   const D = clamp(Math.ceil((Math.max(0, mpRttMax()) + 120) / (STEP * 1000)), 5, 12);
   for (const P of guests) { const s = seats.find(x => x.id === P.id); if (s) mpSendTo(P, { k: 'go', opts, seat: s.seat, D, seats }); P.in = false; }
@@ -615,7 +616,7 @@ function mpStart() {
 }
 function mpGo(m) {
   const o = m.opts, seats = Array.isArray(m.seats) ? m.seats.filter(s => s && s.seat >= 0 && o && Array.isArray(o.players) && s.seat < o.players.length).map(s => ({ seat: s.seat | 0, id: s.id | 0, n: mpCleanName(s.n) })) : [];
-  const bad = !o || !Array.isArray(o.players) || o.players.length < 1 || o.players.length > MP_MAX || !MAPS[o.map] || !(o.seed > 0) ||
+  const bad = !o || !Array.isArray(o.players) || o.players.length < 1 || o.players.length > MP_MAX || !(MAPS[o.map] || o.custom) || !(o.seed > 0) ||
     o.players.some(p => !p || PLAYABLE.indexOf(p.faction) < 0) || !(m.seat >= 0 && m.seat < o.players.length) || !o.players[m.seat].human || !seats.length;
   if (bad) { mpMsg(L('Das andere Gerät hat unbekannte Einstellungen geschickt.'), 'bad'); return; }
   if (UI.g && !UI.attract && !UI.endShown && UI.kind !== 'mp') { mpSend({ k: 'no' }); return; }
