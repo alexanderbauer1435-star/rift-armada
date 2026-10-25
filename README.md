@@ -47,6 +47,21 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 20 (Runde 18, Übersicht, Team, Wiederholung, Fortschritt): Partiedauer – jede KI würfelt eine Persönlichkeit
+  (erster Angriff innerhalb eines Fensters je Stärke, Flottengröße, Pause zwischen Angriffen), Kommandobasen stärker.
+  Befehlstasten als eine wischbare Reihe am unteren Rand; schmale Hochkant-Bildschirme: Kopfleiste mit Pause-Taste passt.
+  Rückmeldung (Pause und Hauptmenü, feedback.js): Art, Text, automatischer Kontext, lokal gespeichert, Kopieren/Teilen/Export.
+  KI im Gefecht (Mittel, Schwer): angeschlagene Schiffe ab Fregatte ziehen sich zur Werft zurück (Haltung Vorsichtig),
+  Gegenzusammenstellung nach gesichteten Größenklassen (aiScout/aiFit), Torpedo- und Railgunschiffe zielen gemeinsam auf
+  die Waffen des stärksten großen Gegners (aiFocus), Überfälle schneller Schiffe auf abgelegene Raffinerien und
+  Außenbasen (aiRaid), Außenposten als bevorzugte Ziele. Team (hudplus.js): Signale Angriff/Hilfe/Sammeln an der
+  Bildmitte (Befehl ping, KI-Verbündete reagieren), Rohstoffe senden (Befehl gift), Verbündete auf der Minikarte
+  umrandet. Übersicht: Alarmtaste, Kamera folgt der Auswahl (F), Armeeleiste je Schiffstyp, Gefechtsblitze auf der
+  Minikarte – keine bildschirmfüllenden Meldungen. Wiederholung (replay.js): Startoptionen + Befehlsliste spielen die
+  Partie exakt nach (tests/replay.js), Betrachter ohne Nebel mit Pause, 1×–16× und Zeitleiste; Verlaufsgrafik
+  Flottenwert und Einnahmen am Ende; letzte Partie unter »Laden«. Fortschritt (progress.js): 20 Abzeichen, Rang aus
+  Erfahrung, Statistik je Fraktion, Tagesaufgabe (aus dem Datum), Flottenfarben ab Rang. Klang (sfx.js): Waffen- und
+  Trefferklänge je Art, Explosionen nach Größe, Sprachmeldungen (abschaltbar), Musik folgt dem Gefecht.
 - Fassung 19 (Runde 17, Balancing): Messwerkzeuge tools/balance/ – duel.js (Kostenduelle Schiff gegen Schiff bei
   gleichem Budget), towers.js (wie viel Flotte bricht einen Turm), matrix.js (KI-Partien jede Fraktion gegen jede, 1 gegen 1
   oder MODE=2v2, ONLYF=Fraktion). Erkenntnisse und Änderungen: Punktverteidigung schoss jeden Torpedo ab → trifft Torpedos
