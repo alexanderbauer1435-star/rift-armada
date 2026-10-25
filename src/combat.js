@@ -291,7 +291,7 @@ function updateShip(g, u, dt) {
         const bonus = lvOf(ref).bonus || 1, amt = Math.round(u.cargo * bonus * (p.ai ? p.ai.cfg.inc : 1));
         earn(p, u.ckind, amt); p.haulR += amt / 45;
         u.cargo = 0; ref.docks--; u.dk = 0;
-        ev(g, 'deliver', { owner: u.owner, x: ref.x, y: ref.y, kind: u.ckind, amt });
+        ev(g, 'deliver', { owner: u.owner, x: ref.x, y: ref.y, kind: u.ckind, amt, sal: u.o.sw ? 1 : 0 });
         /* Bergung: weiter am nächsten Wrack, solange eines in der Nähe liegt */
         if (o.sw) { const w = nearWreck(g, ref.x, ref.y, 1400); if (w) { u.o = { t: 'salvage', wid: w.id }; u.path = null; break; } }
         let n = g.byId.get(o.nid);

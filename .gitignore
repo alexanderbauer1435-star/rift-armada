@@ -19,3 +19,5 @@ rts-src/
 *.keystore
 signing/
 __pycache__/
+.claude/
+tools/balance/*.log

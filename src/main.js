@@ -14,7 +14,7 @@ function layout() {
 }
 function keepAwake() { try { if (navigator.wakeLock && navigator.wakeLock.request) navigator.wakeLock.request('screen').catch(() => {}); } catch (e) { /* nicht erlaubt */ } }
 function resetUi() {
-  UI.sel.clear(); UI.selB = 0; UI.mode = 'normal'; UI.place = null; UI.box = null; UI.boxMode = false; UI.paused = false; UI.endShown = false; UI.hasSel = false; UI.mark = null; UI.alertT = -99; UI.alertPos = null; UI.saveAt = performance.now(); UI.askSell = 0; UI.subAim = ''; UI.superTgt = null; UI.slow = false; UI.docPick = null; UI.selS = 0; UI.etechMode = false;
+  hpReset(); UI.sel.clear(); UI.selB = 0; UI.mode = 'normal'; UI.place = null; UI.box = null; UI.boxMode = false; UI.paused = false; UI.endShown = false; UI.hasSel = false; UI.mark = null; UI.alertT = -99; UI.alertPos = null; UI.saveAt = performance.now(); UI.askSell = 0; UI.subAim = ''; UI.superTgt = null; UI.slow = false; UI.docPick = null; UI.selS = 0; UI.etechMode = false;
   $('doctrine').hidden = true; $('eMenu').hidden = false; $('ask').hidden = true; $('misBox').hidden = true; $('misTitle').hidden = true; UI.askOpen = false; $('mpWait').hidden = true; $('mpLost').hidden = true; $('eAgain').hidden = false; $('pRestart').hidden = false;
   $('end').hidden = true; $('pause').hidden = true; $('help').hidden = true; $('settings').hidden = true; $('toasts').textContent = ''; $('info').hidden = true; $('tip').hidden = true;
   $('bRange').classList.toggle('on', UI.showRange);
@@ -192,7 +192,7 @@ function frame(t) {
   initMp();
   initCampaign();
   initConquest();
-  appInit();
+  appInit(); fbInit(); hpInit(); rpInit(); progInit();
   applySet();
   $('mSkirm').addEventListener('click', () => { SND.init(); SND.play('click'); if (MENU.mode !== 'skirmish') { MENU.mode = 'skirmish'; } menuPage('setup'); });
   $('mWaves').addEventListener('click', () => { SND.init(); SND.play('click'); if (MENU.mode === 'skirmish') MENU.mode = 'quarantine'; menuPage('setup'); });

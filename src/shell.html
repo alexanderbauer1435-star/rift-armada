@@ -77,7 +77,12 @@ button { font: inherit; color: inherit; }
 .item.done { opacity: 0.55; border-color: var(--good); } .item.done .q { background: var(--good); }
 .item .pb { position: absolute; left: 0.3em; right: 0.3em; bottom: 0.2em; height: 3px; background: rgba(255,255,255,0.15); }
 .item .pb i { display: block; height: 100%; background: var(--acc); }
-#cmds { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.35em; max-width: 12em; }
+/* Befehlstasten als eine Reihe am unteren Rand (wischbar), damit der Bildschirm frei bleibt */
+#cmds { display: flex; flex-wrap: nowrap; gap: 0.35em; flex: 0 1 auto; min-width: 0; margin-left: auto; overflow-x: auto; overflow-y: hidden; touch-action: pan-x; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+#cmds::-webkit-scrollbar { display: none; }
+/* Hochformat: Tasten in voller Breite unter der Auswahlkarte, ein Wisch zeigt die übrigen */
+@media (max-aspect-ratio: 1/1) { #bottom { flex-wrap: wrap; } #bottom #selCard { order: 1; } #bottom #build { order: 1; } #cmds { order: 2; flex: 1 1 100%; margin-left: 0; } }
+#cmds .key { flex: 0 0 auto; }
 #cmds .key { width: 3.4em; min-height: 2.9em; padding: 0.2em; flex-direction: column; gap: 0; font-size: 0.9em; line-height: 1.1; }
 #cmds .key small { font-size: 0.75em; opacity: 0.8; text-transform: none; }
 #cmds .key.ab { position: relative; overflow: hidden; border-color: var(--acc2); }
@@ -474,6 +479,41 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 #pLog .bSec { color: var(--acc); }
 #pLogList { list-style: none; margin: 0.2em 0 0.4em; padding: 0; max-height: 34vh; overflow-y: auto; touch-action: pan-y; font-size: 0.95em; }
 #pLogList li { margin: 0.25em 0; line-height: 1.3; } #pLogList b { font-weight: 600; margin-right: 0.35em; }
+#fbWin textarea { width: 100%; box-sizing: border-box; margin: 0.6em 0 0.3em; background: rgba(4,6,11,0.7); color: inherit; border: 1px solid var(--line); border-radius: 10px; padding: 0.6em; font: inherit; resize: vertical; }
+#fbCtx { font-size: 0.75em; opacity: 0.75; word-break: break-word; }
+#hpBar { position: absolute; right: 0.5em; top: calc(12.3em + env(safe-area-inset-top)); width: 9.5em; display: flex; justify-content: flex-end; gap: 0.3em; }
+#hpBar .tb { min-height: 2em; min-width: 2.1em; padding: 0.15em 0.4em; background: rgba(5,7,15,0.7); }
+#hpBar .tb.on { border-color: var(--acc); color: var(--acc); }
+#bAlert { opacity: 0.5; } #bAlert.hot { opacity: 1; color: var(--bad); border-color: var(--bad); animation: blink 1s steps(2) infinite; }
+#army { position: absolute; left: 0.4em; top: calc(2.7em + env(safe-area-inset-top)); right: 10.6em; display: flex; flex-wrap: nowrap; gap: 0.3em; overflow-x: auto; scrollbar-width: none; touch-action: pan-x; }
+#army::-webkit-scrollbar { display: none; }
+#army .chip { flex: 0 0 auto; display: flex; gap: 0.35em; align-items: center; background: rgba(5,7,15,0.75); border: 1px solid var(--line); border-radius: 999px; color: inherit; font: inherit; font-size: 0.8em; padding: 0.2em 0.65em; min-height: 2em; }
+#army .chip b { color: var(--acc); }
+#teamBox { position: absolute; right: 0.5em; top: calc(14.9em + env(safe-area-inset-top)); width: 16em; max-width: 70vw; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 0.5em; }
+#teamBox .key { font-size: 0.85em; }
+#teamBox .tbH { font-size: 0.8em; opacity: 0.7; margin: 0.2em 0; }
+#teamBox .row { display: flex; gap: 0.3em; flex-wrap: wrap; }
+.tgRow { display: flex; gap: 0.3em; align-items: center; flex-wrap: wrap; margin: 0.2em 0; } .tgRow span { flex: 1 1 100%; font-weight: 600; }
+.toast.ping { border-color: #ffd27a; }
+/* schmale Hochkant-Bildschirme: Kopfleiste muss mit Pause-Taste in die Breite passen */
+#top .res { white-space: nowrap; }
+@media (max-width: 600px) { #top { gap: 0.45em; font-size: 0.82em; padding-left: 0.4em; padding-right: 0.4em; } #resRelic.zero { display: none; } #top .ico { margin-right: -0.1em; } #bRange, #bPause { padding: 0.15em 0.45em; } }
+@media (max-width: 380px) { #top { font-size: 0.74em; gap: 0.35em; } }
+#endCharts { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; margin: 0.6em 0; } #endCharts canvas { width: 100%; height: 7.5em; background: rgba(4,6,11,0.5); border: 1px solid var(--line); border-radius: 8px; }
+@media (max-width: 560px) { #endCharts { grid-template-columns: 1fr; } }
+#rpBar { position: absolute; left: 0.5em; right: 0.5em; bottom: calc(0.5em + env(safe-area-inset-bottom)); display: flex; gap: 0.5em; align-items: center; flex-wrap: wrap; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 0.4em 0.6em; }
+#rpSeek { flex: 1 1 10em; min-width: 8em; accent-color: var(--acc); }
+#rpTime { font-variant-numeric: tabular-nums; min-width: 6.5em; }
+body.replay #top, body.replay #bottom, body.replay #groups, body.replay #hpBar, body.replay #army, body.replay #teamBox, body.replay #misBox { display: none !important; }
+body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
+.pgRow { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; }
+.pgBar { height: 0.5em; background: rgba(143,227,255,0.12); border-radius: 99px; overflow: hidden; margin: 0.3em 0 0.6em; } .pgBar i { display: block; height: 100%; background: var(--acc); }
+#pgBadges { display: grid; grid-template-columns: repeat(auto-fill, minmax(11em, 1fr)); gap: 0.35em; }
+.pgB { border: 1px solid var(--line); border-radius: 8px; padding: 0.3em 0.5em; opacity: 0.45; font-size: 0.85em; display: flex; flex-direction: column; } .pgB span { font-size: 0.85em; opacity: 0.8; } .pgB.on { opacity: 1; border-color: #f2c14e; } .pgB.on b { color: #f2c14e; }
+.pgBadges { display: flex; flex-wrap: wrap; gap: 0.35em; margin: 0.3em 0; } .pgBadges .pgB { display: inline-block; }
+#pgStats { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: 0.2em 0.6em; font-size: 0.85em; }
+#pgCols { display: flex; gap: 0.45em; flex-wrap: wrap; margin: 0.3em 0 0.6em; } .pgC { width: 2.3em; height: 2.3em; border-radius: 50%; border: 2px solid transparent; color: #04060b; font-weight: 700; cursor: pointer; } .pgC.on { border-color: #fff; box-shadow: 0 0 0 2px var(--acc); } .pgC:disabled { opacity: 0.3; cursor: default; } .pgC.fac { background: linear-gradient(135deg,#5fb8ff,#ff6a3d 50%,#b4ff3c); }
+#endProg { margin: 0.5em 0; }
 </style>
 </head>
 <body>
@@ -493,6 +533,26 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
       <button class="key" id="bPause" data-al="Pause">❚❚</button>
     </div>
     <canvas id="mini"></canvas>
+    <div id="hpBar">
+      <button class="key tb" id="bAlert" data-tip="Zur letzten Meldung springen (Leertaste)">!</button>
+      <button class="key tb" id="bFollow" data-tip="Kamera folgt der gewählten Flotte (F)">⌖</button>
+      <button class="key tb" id="bArmy" data-tip="Armeeleiste: alle Schiffe nach Typ">☰</button>
+      <button class="key tb" id="bTeam" hidden data-tip="Team: Signale und Rohstoffe senden">⚑</button>
+    </div>
+    <div id="army" hidden></div>
+    <div id="rpBar" hidden>
+      <button class="key" id="rpPlay">❚❚</button>
+      <input type="range" id="rpSeek" min="0" max="1000" value="0">
+      <span id="rpTime">0:00</span>
+      <div class="seg" id="rpSpeed" data-nol></div>
+      <button class="key warn" id="rpQuit">Beenden</button>
+    </div>
+    <div id="teamBox" hidden>
+      <div class="tbH">Signal an der Bildmitte</div>
+      <div class="row"><button class="key" id="ping_atk">Angriff</button><button class="key" id="ping_help">Hilfe</button><button class="key" id="ping_go">Sammeln</button></div>
+      <div class="tbH">Rohstoffe senden</div>
+      <div id="teamGift"></div>
+    </div>
     <div id="groups">
       <button class="key grp" data-g="1">1</button><button class="key grp" data-g="2">2</button><button class="key grp" data-g="3">3</button><button class="key grp" data-g="4">4</button><button class="key grp" data-g="5">5</button>
     </div>
@@ -532,6 +592,8 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
           <button class="key" id="mSandbox"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="1.2" fill="currentColor"/><path d="M12 4V2M20 12h2"/></svg><span>Übungsplatz</span></button>
           <button class="key" id="mSettings"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/><circle cx="9" cy="7" r="2" fill="#04060b"/><circle cx="15" cy="12" r="2" fill="#04060b"/><circle cx="8" cy="17" r="2" fill="#04060b"/></svg><span>Einstellungen</span></button>
           <button class="key" id="mHelp"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.8.4-1.1.9-1.1 1.8"/><circle cx="12" cy="17" r="0.9" fill="currentColor" stroke="none"/></svg><span>Hilfe</span></button>
+          <button class="key" id="mProfile"><svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.4 6.8 19.1l1-5.8L3.5 9.2l5.9-.9z"/></svg><span>Profil</span></button>
+          <button class="key" id="mFeedback"><svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12h5"/></svg><span>Rückmeldung</span></button>
         </div>
       </div>
     </div>
@@ -711,21 +773,45 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
     <h2>Pause</h2>
     <p class="fine" id="pNote" hidden></p>
     <div id="pLog" hidden><div class="bSec">Funkprotokoll</div><ul id="pLogList"></ul></div>
-    <div class="row"><button class="key arm" id="pResume">Weiter</button><button class="key" id="pSettings">Einstellungen</button><button class="key" id="pHelp">Hilfe</button></div>
+    <div class="row"><button class="key arm" id="pResume">Weiter</button><button class="key" id="pSettings">Einstellungen</button><button class="key" id="pHelp">Hilfe</button><button class="key" id="pFeedback">Rückmeldung</button></div>
     <div class="row" id="pSaveRow"><span class="lbl">Speichern</span><button class="key" id="pSave1">Platz 1</button><button class="key" id="pSave2">Platz 2</button><button class="key" id="pSave3">Platz 3</button></div>
     <div class="row"><button class="key" id="pRestart">Neustart</button><button class="key warn" id="pQuit">Hauptmenü</button><button class="key" id="pFull">Vollbild</button></div>
+  </div></div>
+  <div class="ovl" id="profWin" hidden><div class="win">
+    <h2>Profil</h2>
+    <div id="pgHead"></div>
+    <div class="bSec">Tagesaufgabe</div>
+    <div class="row"><span id="pgDaily" class="fine"></span><button class="key arm" id="pgDailyGo">Starten</button></div>
+    <div class="bSec">Abzeichen <span id="pgBadgeN"></span></div>
+    <div id="pgBadges"></div>
+    <div class="bSec">Fraktionen</div>
+    <div id="pgStats"></div>
+    <div class="bSec">Flottenfarbe</div>
+    <div id="pgCols"></div>
+    <div class="row"><button class="key" id="pgClose">Schließen</button></div>
+  </div></div>
+  <div class="ovl" id="fbWin" hidden><div class="win">
+    <h2>Rückmeldung</h2>
+    <p class="fine">Was ist dir aufgefallen? Fassung, Karte, Fraktion, Spielzeit und Gerät werden automatisch angehängt. Gespeichert wird nur auf diesem Gerät – gesendet wird erst, wenn du teilst.</p>
+    <div class="seg" id="fbKind" data-nol></div>
+    <textarea id="fbText" rows="5" maxlength="2000" placeholder="z. B. Turm schießt nicht auf getarnte Schiffe"></textarea>
+    <p class="fine" id="fbCtx"></p>
+    <div class="row"><button class="key arm" id="fbShareB">Teilen</button><button class="key" id="fbCopyB">Kopieren</button><button class="key" id="fbSaveB">Nur speichern</button><button class="key" id="fbClose">Schließen</button></div>
+    <div class="row"><span class="fine" id="fbCount"></span><button class="key" id="fbAll">Alle exportieren</button><button class="key warn" id="fbClear">Liste leeren</button></div>
   </div></div>
   <div class="ovl" id="loadWin" hidden><div class="win">
     <h2>Spielstand laden</h2>
     <div id="loadList" class="slotList"></div>
-    <div class="row"><button class="key" id="loadClose">Zurück</button></div>
+    <div class="row"><button class="key" id="mReplay">Letzte Partie ansehen</button><button class="key" id="loadClose">Zurück</button></div>
   </div></div>
   <div class="ovl" id="end" hidden><div class="win">
     <h2 id="endTitle">Sieg</h2>
     <p id="endText" class="fine"></p>
     <div id="endMis" hidden><ul id="endGoals"></ul><p id="endChoice" hidden></p><p id="endOutro" hidden></p></div>
     <div id="endStats"></div>
-    <div class="row"><button class="key arm" id="eNext" hidden>Weiter</button><button class="key arm" id="eAgain">Noch einmal</button><button class="key" id="eMenu">Hauptmenü</button></div>
+    <div id="endProg" hidden></div>
+    <div id="endCharts" hidden><canvas id="chFleet"></canvas><canvas id="chInc"></canvas></div>
+    <div class="row"><button class="key arm" id="eNext" hidden>Weiter</button><button class="key arm" id="eAgain">Noch einmal</button><button class="key" id="eReplay" hidden>Wiederholung</button><button class="key" id="eMenu">Hauptmenü</button></div>
   </div></div>
   <div class="ovl" id="settings" hidden><div class="win">
     <h2>Einstellungen</h2>
