@@ -1,0 +1,59 @@
+{
+ "tag": "dur2-expanse",
+ "maps": [
+  "expanse"
+ ],
+ "seeds": 2,
+ "games": 40,
+ "draws": 5,
+ "avgMin": 18.3,
+ "winrate": {
+  "alliance": 0.38,
+  "mars": 0.5,
+  "legion": 0.25,
+  "nexus": 0.56,
+  "brood": 0.5
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 2,
+   "mars": 2
+  },
+  "alliance-legion": {
+   "alliance": 2,
+   "legion": 2
+  },
+  "alliance-nexus": {
+   "alliance": 1,
+   "nexus": 3
+  },
+  "alliance-brood": {
+   "alliance": 1,
+   "brood": 1
+  },
+  "mars-legion": {
+   "mars": 4,
+   "legion": 0
+  },
+  "mars-nexus": {
+   "mars": 0,
+   "nexus": 3
+  },
+  "mars-brood": {
+   "mars": 2,
+   "brood": 2
+  },
+  "legion-nexus": {
+   "legion": 0,
+   "nexus": 3
+  },
+  "legion-brood": {
+   "legion": 2,
+   "brood": 2
+  },
+  "nexus-brood": {
+   "nexus": 0,
+   "brood": 3
+  }
+ }
+}

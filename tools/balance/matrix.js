@@ -1,6 +1,7 @@
 /* Balance-Matrix: jede Fraktion gegen jede (KI Schwer, beide Seiten, mehrere Startwerte) auf offenen und geschützten Karten.
    node tools/balance/matrix.js [tag] [maps] [seeds] → Siegquote je Fraktion, mittlere Spieldauer, Unentschieden (Zeitlimit) */
 const { loadSim } = require('../../tests/harness.js'); const X = loadSim();
+if (process.env.AIOPT) Object.assign(X.ctx.AI_OPT, JSON.parse(process.env.AIOPT));
 const tag = process.argv[2] || 'run', maps = (process.argv[3] || 'expanse,bastions').split(','), seeds = +(process.argv[4] || 3);
 const F = ['alliance', 'mars', 'legion', 'nexus', 'brood'], LIM = 1800, MODE = process.env.MODE || '1v1';
 const win = {}, games = {}, dur = [], pair = {}; let draws = 0, n = 0;

@@ -1,0 +1,59 @@
+{
+ "tag": "dur2-bastions",
+ "maps": [
+  "bastions"
+ ],
+ "seeds": 2,
+ "games": 40,
+ "draws": 11,
+ "avgMin": 16.5,
+ "winrate": {
+  "alliance": 0.44,
+  "mars": 0.5,
+  "legion": 0.06,
+  "nexus": 0.44,
+  "brood": 0.38
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 2,
+   "mars": 2
+  },
+  "alliance-legion": {
+   "alliance": 3,
+   "legion": 0
+  },
+  "alliance-nexus": {
+   "alliance": 0,
+   "nexus": 2
+  },
+  "alliance-brood": {
+   "alliance": 2,
+   "brood": 2
+  },
+  "mars-legion": {
+   "mars": 3,
+   "legion": 0
+  },
+  "mars-nexus": {
+   "mars": 0,
+   "nexus": 2
+  },
+  "mars-brood": {
+   "mars": 3,
+   "brood": 0
+  },
+  "legion-nexus": {
+   "legion": 0,
+   "nexus": 3
+  },
+  "legion-brood": {
+   "legion": 1,
+   "brood": 1
+  },
+  "nexus-brood": {
+   "nexus": 0,
+   "brood": 3
+  }
+ }
+}

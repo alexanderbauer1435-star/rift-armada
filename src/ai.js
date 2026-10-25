@@ -50,6 +50,8 @@ function aiTarget(g, pi, x, y) {
   return s ? { x: s.x, y: s.y } : null;
 }
 const AI_DOLE = { ice: 8, ore: 4 };
+/* Schalter für Messläufe (tools/balance/matrix.js, Umgebung AIOPT='{"caut":0}') */
+var AI_OPT = { caut: 1, fit: 1, focus: 1, raid: 1 };
 /* Fenster für den ersten Angriff je Stärke (Sekunden): Leicht spät, Schwer früher – innerhalb des Fensters zufällig */
 const AI_FIRST = { 1: [540, 900], 2: [420, 780], 3: [300, 600] };
 function aiThink(g, pi) {
@@ -69,7 +71,7 @@ function aiThink(g, pi) {
   const ships = g.ships.filter(u => !u.dead && !u.derelict && u.owner === pi && u.def.role !== 'fighter' && !u.task && !u.gar);
   const builders = ships.filter(u => u.def.build), tankers = ships.filter(u => u.def.cargo), fleet = ships.filter(u => armed(u) && !u.retreat);
   /* Gefecht (Mittel, Schwer): angeschlagene Schiffe ab Fregatte ziehen sich zur Werft zurück und kommen repariert wieder */
-  if (A.lvl >= 2) for (const u of fleet) if (u.stance === 0 && (u.def.cls !== 's' || u.def.cp >= 2)) u.stance = 3;
+  if (A.lvl >= 2 && AI_OPT.caut) for (const u of fleet) if (u.stance === 0 && (u.def.cls !== 's' || u.def.cp >= 2)) u.stance = 3;
   /* Aufklärung: welche Größenklassen hat der Gegner? (gleitendes Mittel über die gesichteten Schiffe) */
   aiScout(g, pi);
   const anchor = base || mine[0];
@@ -242,7 +244,7 @@ function aiThink(g, pi) {
     const alive = fleet.filter(u => A.atk.ids.indexOf(u.id) >= 0), cp = alive.reduce((s, u) => s + u.def.cp, 0);
     if (!alive.length || cp < A.atk.cp * 0.35) { if (alive.length) cmdMove(g, alive, anchor.x + dcos(dirA) * 260, anchor.y + dsin(dirA) * 260, false, 'wedge'); A.atk = null; A.atkT = t; }
     else {
-      if (A.lvl >= 2) aiFocus(g, pi, alive);
+      if (A.lvl >= 2 && AI_OPT.focus) aiFocus(g, pi, alive);
       if (t - A.atk.t0 > 14) {
       const tg = aiTarget(g, pi, alive[0].x, alive[0].y);
       if (!tg) { A.atk = null; }
@@ -263,7 +265,7 @@ function aiThink(g, pi) {
     } else {
       /* sammeln vor der Basis; Verwundete zur Werft */
       const rp = { x: anchor.x + dcos(dirA) * 300, y: anchor.y + dsin(dirA) * 300 };
-      if (A.lvl >= 2) aiRaid(g, pi, fleet, anchor, rp);
+      if (A.lvl >= 2 && AI_OPT.raid) aiRaid(g, pi, fleet, anchor, rp);
       const idle = fleet.filter(u => u.o.t === 'idle' && hyp(u.x - rp.x, u.y - rp.y) > 220 && !(A.raid && A.raid.ids.indexOf(u.id) >= 0));
       if (idle.length) cmdMove(g, idle, rp.x, rp.y, false, 'wedge');
       const hurtS = fleet.filter(u => u.hull < u.hullMax * 0.5 && u.o.t === 'idle' && yards.length);
@@ -282,7 +284,7 @@ function aiScout(g, pi) {
 }
 /* Wie gut passt ein Schiffstyp gegen die gesehene Zusammenstellung? (Konterfaktoren der Waffen, ×0,5 … ×2) */
 function aiFit(A, d) {
-  if (!A.seen || A.lvl < 2) return 1;
+  if (!A.seen || A.lvl < 2 || !AI_OPT.fit) return 1;
   let sum = 0, wsum = 0;
   for (const w of d.wpn) { if (w.kind === 'pd') continue; const C = COUNTER[w.kind]; if (!C) continue; const v = A.seen.s * C.s + A.seen.m * C.m + A.seen.l * C.l, dm = (w.dmg || 1) / (w.reload || 1); sum += v * dm; wsum += dm; }
   if (!wsum) return 1; const f = sum / wsum;
