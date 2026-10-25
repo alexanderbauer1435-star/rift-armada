@@ -25,8 +25,10 @@ const file = path.resolve(process.argv[2] || path.join(__dirname, '..', 'build',
   await wait(B, () => document.getElementById('mpOwn').value.startsWith('RIFT') && RA.MPU.ownType === 'answer', 15000);
   await A.fill('#mpIn2', await B.evaluate(() => document.getElementById('mpOwn').value));
   check('connected', await wait(A, () => RA.NET.hello && RA.MPU.pane === 'lobby', 20000) && await wait(B, () => RA.NET.hello && RA.MPU.pane === 'lobby', 20000));
-  /* 1 gegen 1, eigene Karte wählen */
-  await A.evaluate(() => { [...document.querySelectorAll('#mpKind button')].find(x => /1 gegen 1/.test(x.textContent)).click(); });
+  /* zwei Menschen, eigene Karte wählen */
+  /* Lobby für bis zu acht: Gastgeber und Gast belegen zwei Plätze, »Jeder für sich« */
+  await A.evaluate(() => { const b = [...document.querySelectorAll('#mpPreset button')].find(x => /Jeder für sich/.test(x.textContent)); if (b) b.click(); });
+  await wait(A, () => RA.MPL.slots.filter(q => q.t === 'h').length === 2, 8000);
   await A.evaluate(() => { [...document.querySelectorAll('#mpMap button')].find(x => /Duell am Gürtel/.test(x.textContent)).click(); });
   check('guest receives the layout and shows it in the lobby', await wait(B, () => RA.MPL.map === 'cu_mptest' && MAPS.cu_mptest && MAPS.cu_mptest.layout.bl.length === 1 && /Duell am Gürtel/.test(document.getElementById('mpMapInfo').textContent), 8000));
   await wait(A, () => !document.getElementById('mpStart').disabled, 5000);

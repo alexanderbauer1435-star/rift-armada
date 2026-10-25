@@ -563,7 +563,7 @@ function mpPreview() {
   const starts = m.starts.map(() => '#5d6b80');
   list.forEach((q, i) => { if (q.s >= 0 && q.s < starts.length) starts[q.s] = cols[i] || FACTIONS[q.f === 'random' ? 'guardian' : q.f].team; });
   mapLayout(cv, m, { starts, mine: me && me.s >= 0 ? me.s : -1 });
-  setText('mpMapInfo', L(MAPS[m.id] ? MAPS[m.id].name : MPL.map) + ' · ' + L('{0} Spieler', list.length) + ' · ' + m.w + ' × ' + m.h);
+  setText('mpMapInfo', L(MAPS[MPL.map] ? MAPS[MPL.map].name : MAPS[m.id] ? MAPS[m.id].name : MPL.map) + ' · ' + L('{0} Spieler', list.length) + ' · ' + m.w + ' × ' + m.h);
   setText('mpStartNote', me && me.s >= 0 ? L('Dein Startplatz: {0}. Erneut antippen für Zufall.', me.s + 1) : L('Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.'));
 }
 function mpPrevPick(ev) {
