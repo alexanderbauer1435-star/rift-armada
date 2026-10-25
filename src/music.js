@@ -11,11 +11,14 @@
    Stücke: je Fraktion ein Thema mit Leitmotiv in mehreren Teilen (A, B, Überleitung C), dazu das Menüthema und kurze
    Stücke für Sieg und Niederlage. Jede Stimme hat je Stufe eine Lautstärke: Ruhe (0) – Flächen, Bass, das Motiv leise;
    Spannung (1) – dazu Begleitfiguren, Pauken, das Motiv voll; Gefecht (2) – volles Schlagwerk, Blech, Becken.
-   MUS.want (0 … 1, aus musMood) wählt die Stufe; hinauf geht es zum nächsten Takt, hinab erst nach vier ruhigen Takten.
+   MUS.want (0 … 1, aus musMood) wählt die Stufe; hinauf geht es zum nächsten Takt, hinab erst nach drei ruhigen Takten.
+   Runde 18: MUS.heat (0 … 1, aus der Kampfdichte in sfx.js) lässt Schlagwerk und Bass innerhalb der Stufe stufenlos
+   anschwellen (eigener Pegel S.perc) und hebt das Ganze leicht an; beim Sprung ins Gefecht schlägt das Becken sofort.
+   MUS.duck senkt die Musik während einer Sprachmeldung ab.
 
    Für Prüfungen und Hörproben rechnet MUS.render dasselbe Stück in einem OfflineAudioContext.
    ===================================================================== */
-const MUS = { out: null, dry: null, rev: null, on: false, vol: 0.45, want: 0, name: '', S: null, bank: new Map(), need: null, ready: false, sting: null };
+const MUS = { out: null, dry: null, rev: null, on: false, vol: 0.45, want: 0, heat: 0, duck: 1, name: '', S: null, bank: new Map(), need: null, ready: false, sting: null };
 
 /* ------------------------------------------------------------------ Klangerzeugung (rein rechnerisch) */
 const MUS_RND = { s: 1 };
@@ -530,6 +533,7 @@ function musPrep(th) {
     if (L.fill) L.fp = musPat(L.fill);
   }
   th.inst = [...new Set(th.layers.map(L => L.i))];
+  th.bassI = new Set(th.layers.filter(L => L.k === 'bass').map(L => L.i));
   th.ready = true;
   return th;
 }
@@ -559,8 +563,10 @@ function musBus(S, id, d) {
   if (b) return b;
   const ctx = S.ctx;
   b = ctx.createGain();
-  if (d.pan && ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); pn.pan.value = d.pan; b.connect(pn); pn.connect(S.dry); }
-  else b.connect(S.dry);
+  /* Schlagwerk und Bass über den Schwellpegel (MUS.heat) */
+  const to = S.perc && (d.drum || S.th.bassI.has(id)) ? S.perc : S.dry;
+  if (d.pan && ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); pn.pan.value = d.pan; b.connect(pn); pn.connect(to); }
+  else b.connect(to);
   if (d.send) { const sg = ctx.createGain(); sg.gain.value = d.send; b.connect(sg); sg.connect(S.rev); }
   return (B[id] = b);
 }
@@ -584,9 +590,9 @@ function musPlay(S, t, id, m, dur, v) {
 function musSession(ctx, chain, name, t0) {
   const th = musPrep(MUS_THEMES[name]);
   /* eigene Pegel je Sitzung: Beim Wechsel des Stücks klingt das alte kurz aus, statt mit dem neuen zu überlappen */
-  const dry = ctx.createGain(), rev = ctx.createGain();
-  dry.connect(chain.dry); rev.connect(chain.rev);
-  return { ctx, dry, rev, th, name, next: t0, step: 0, si: 0, sb: 0, cycle: 0, var: 0, lvl: th.lvl !== undefined ? th.lvl : 0, low: 0, want: 0, done: false, prev: null };
+  const dry = ctx.createGain(), rev = ctx.createGain(), perc = ctx.createGain();
+  dry.connect(chain.dry); rev.connect(chain.rev); perc.connect(dry); perc.gain.value = 0.72;
+  return { ctx, dry, rev, perc, ph: 0, th, name, next: t0, step: 0, si: 0, sb: 0, cycle: 0, var: 0, lvl: th.lvl !== undefined ? th.lvl : 0, low: 0, want: 0, done: false, prev: null };
 }
 /* Taktanfang: Teil weiterschalten, Stufe wählen */
 function musBar(S) {
@@ -601,8 +607,8 @@ function musBar(S) {
   }
   if (th.lvl === undefined) {
     const tg = S.want >= 0.75 ? 2 : S.want >= 0.35 ? 1 : 0;
-    if (tg > S.lvl) { S.lvl = tg; S.low = 0; }
-    else if (tg < S.lvl) { if (++S.low >= 4) { S.lvl--; S.low = 0; } }
+    if (tg > S.lvl) { S.rise = tg === 2; S.lvl = tg; S.low = 0; }
+    else if (tg < S.lvl) { S.rise = false; if (++S.low >= 3) { S.lvl--; S.low = 0; } }
     else S.low = 0;
   }
   return sec;
@@ -628,7 +634,7 @@ function musStep(S, t) {
       if (st !== 0) continue;
       for (const m of L.notes) musPlay(S, t, L.i, m, spb * 16 + 0.4, v);
     } else if (L.k === 'hit') {
-      if (st !== 0 || b !== 0) continue;
+      if (st !== 0 || (b !== 0 && !S.rise)) continue;
       musPlay(S, t, L.i, L.tone ? musTone(ch, 0, L.tone) + 12 : 60, 3, v);
     } else if (L.k === 'motif') {
       const n = sec.at[b] && sec.at[b].get(st);
@@ -650,6 +656,7 @@ function musStep(S, t) {
     }
   }
   if (S.step === 0 && b === 0 && th.form[S.si] !== S.prev) S.prev = th.form[S.si];
+  if (S.step === 0) S.rise = false;
 }
 function nextHit(pp, st) { for (let i = st + 1; i < 16; i++) if (pp[i]) return i; return 16; }
 /* Schritte bis zur Zeit until planen */
@@ -686,9 +693,11 @@ MUS.tick = function () {
   const c = SND.ctx;
   if (!c || !MUS.out || c.state !== 'running') return;
   const playing = MUS.on && SND.on;
-  const target = playing ? MUS.vol * 0.55 * (typeof UI !== 'undefined' && UI.paused ? 0.35 : 1) : 0;
-  MUS.out.gain.setTargetAtTime(target, c.currentTime, 0.6);
+  const h = clamp(MUS.heat || 0, 0, 1);
+  const target = playing ? MUS.vol * 0.55 * (1 + 0.14 * h) * MUS.duck * (typeof UI !== 'undefined' && UI.paused ? 0.35 : 1) : 0;
+  MUS.out.gain.setTargetAtTime(target, c.currentTime, MUS.duck < 1 ? 0.15 : 0.6);
   const S = MUS.S;
+  if (S && S.perc && Math.abs(S.ph - h) > 0.02) { S.ph = h; S.perc.gain.setTargetAtTime(0.72 + 0.48 * h, c.currentTime, 1.4); }
   if (!S || !MUS.on) return;
   if (!musWarm(S.th, 6)) return;
   if (S.next < c.currentTime) S.next = c.currentTime + 0.06;
@@ -708,7 +717,7 @@ MUS.start = function (name, now) {
   if (!MUS_THEMES[name]) name = 'alliance';
   if (MUS.on && MUS.name === name && MUS.S) return;
   musFade(MUS.S);
-  MUS.name = name; MUS.on = true; MUS.want = 0;
+  MUS.name = name; MUS.on = true; MUS.want = 0; MUS.heat = 0;
   const c = SND.ctx;
   MUS.S = c && MUS.out ? musSession(c, { dry: MUS.dry, rev: MUS.rev }, name, c.currentTime + 0.1) : null;
   if (now && MUS.S) musWarm(MUS.S.th, 1e9);

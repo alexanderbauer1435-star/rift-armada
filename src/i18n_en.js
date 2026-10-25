@@ -2154,5 +2154,20 @@ const EN = {
   "DU": "YOU",
   "Dein Startplatz: {0}. Erneut antippen für Zufall.": "Your start: {0}. Tap again for random.",
   "Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.": "Start position: random. Tap a start position in the preview to choose it.",
-  "Außenbasis: ein Bauschiff kann weitere Kommandobasen überall auf der Karte errichten, auch fern der eigenen Stationen. Um sie herum lässt sich wieder bauen.": "Outpost: a builder can raise additional command bases anywhere on the map, even far from your own stations. You can build around them again."
+  "Außenbasis: ein Bauschiff kann weitere Kommandobasen überall auf der Karte errichten, auch fern der eigenen Stationen. Um sie herum lässt sich wieder bauen.": "Outpost: a builder can raise additional command bases anywhere on the map, even far from your own stations. You can build around them again.",
+  "Sprachmeldungen": "Voice alerts",
+  "An": "On",
+  "Station verloren": "Structure lost",
+  "Basis wird angegriffen": "Our base is under attack",
+  "Sonneneruption in 25 Sekunden": "Solar flare in 25 seconds",
+  "Sonneneruption! Sofort in Deckung": "Solar flare! Take cover now",
+  "Feindliche Superwaffe abgefeuert": "Enemy superweapon launched",
+  "Feindliche Superwaffe geladen": "Enemy superweapon charged",
+  "Energiemangel": "Low power",
+  "Torlanze lädt": "Gate lance charging",
+  "Feindliche Welle im Anmarsch": "Enemy wave incoming",
+  "Forschung abgeschlossen": "Research complete",
+  "Ausbau abgeschlossen": "Upgrade complete",
+  "Dieses Gerät hat keine Sprachausgabe – es bleibt beim Signalton.": "This device has no speech output – alert tones only.",
+  "Sprachmeldungen an": "Voice alerts on"
 };

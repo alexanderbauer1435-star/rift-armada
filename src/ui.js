@@ -9,7 +9,7 @@ const UI = {
   g: null, me: -1, P: null, sel: new Set(), selB: 0, mode: 'normal', place: null, box: null, boxMode: false, keys: {}, paused: false, endShown: false, attract: true, kind: '', opts: null,
   speed: 1, tab: 'eco', showRange: false, showAll: false, mark: null, mouse: false, cx: 0, cy: 0, hx: 0, hy: 0, onView: false, rect: null, form: 'wedge', lastTap: 0, lastTapId: 0, hovT: 0, tipT: 0, saveAt: 0, alertT: -99, alertPos: null, camTravel: 0, fsOff: false, fsPause: false, mPage: 'home', items: []
 };
-const SET = { vol: 55, mus: 40, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d' };
+const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d' };
 const MENU = { faction: 'alliance', map: 'haven', opp: 1, lvl: 2, res: 'normal', oppF: 'random', mode: 'skirmish', allies: 1, allyLvl: 2 };
 const SCALES = [0.9, 1, 1.15, 1.3], SPEEDS = [0.75, 1, 1.5, 2];
 const $ = id => document.getElementById(id);
@@ -719,19 +719,17 @@ function musMood(g, P) {
   let firing = 0, seen = 0;
   for (const u of g.ships) { if (u.dead) continue; if (u.owner === UI.me) { if (u.beams || u.o.t === 'attack') firing++; } else if (isFoe(u.owner) && canSee(g, UI.me, u)) seen++; }
   const hurt = g.time - P.hurtT < 15;
-  MUS.want = firing >= 2 || hurt ? 1 : firing || seen ? 0.5 : 0;
+  MUS.want = Math.max(hurt ? 0.6 : firing || seen ? 0.5 : 0, sfxCombat(g));   /* Runde 18: Kampfdichte aus sfx.js */
 }
 /* Ereignisse der Simulation → Meldungen und Töne */
 UI.consume = function (evs) {
   const g = UI.g, me = UI.me;
+  sfxEvents(g, me, evs);   /* Runde 18: Kampfgeräusche, Sprachmeldungen, Kampfdichte (sfx.js) */
   for (const e of evs) {
     const mine = e.owner === me;
     switch (e.t) {
-      case 'shot': if (e.x !== undefined && visAt(g, me, e.x, e.y)) SND.play(e.snd, e.x, e.y); break;
-      case 'hit': if (e.kind === 'torp') SND.play('boom', e.x, e.y, 0.5); else if (e.kind === 'rail') SND.play('hit', e.x, e.y); else if ((g.tick + (e.x | 0)) % 4 === 0) SND.play('hit', e.x, e.y, 0.5); break;
-      case 'shield': if ((g.tick + (e.x | 0)) % 3 === 0) SND.play('shield', e.x, e.y, 0.5); break;
-      case 'die': if (!e.quiet) { SND.play(e.big ? 'bigboom' : 'boom', e.x, e.y); if (mine && e.type !== 'fighter') { UI.alertT = g.time; UI.alertPos = { x: e.x, y: e.y }; } } break;
-      case 'bdie': SND.play('bboom', e.x, e.y); if (mine) { toast(L('{0} verloren', L(BLDG[g.players[me].faction][e.role].name)), 'bad'); R.ping(e.x, e.y); UI.alertT = g.time; UI.alertPos = { x: e.x, y: e.y }; } break;
+      case 'die': if (!e.quiet) { if (mine && e.type !== 'fighter') { UI.alertT = g.time; UI.alertPos = { x: e.x, y: e.y }; } } break;
+      case 'bdie': if (mine) { toast(L('{0} verloren', L(BLDG[g.players[me].faction][e.role].name)), 'bad'); R.ping(e.x, e.y); UI.alertT = g.time; UI.alertPos = { x: e.x, y: e.y }; } break;
       case 'attack': if (mine && g.time - UI.alertT > 10) { UI.alertT = g.time; UI.alertPos = { x: e.x, y: e.y }; toast(L('Basis unter Beschuss! Leertaste oder Minikarte springt hin'), 'bad'); SND.play('alert'); buzz(40); } break;
       case 'built': if (mine) { SND.play('built'); toast(L('{0} fertig', L(BLDG[g.players[me].faction][e.role].name)), 'good', 2200); hudSel(); } break;
       case 'ready': if (mine) { SND.play('ready'); hudBuild(); } break;
@@ -846,6 +844,7 @@ function initSettings() {
     segInit('sScale', [[0.9, 'Klein'], [1, 'Normal'], [1.15, 'Groß'], [1.3, 'Sehr groß']], () => SET.scale, v => { SET.scale = v; applySet(); savePrefs(); });
     segInit('sSpeed', [[0.75, 'Langsam'], [1, 'Normal'], [1.5, 'Schnell'], [2, 'Sehr schnell']], () => SET.speed, v => { SET.speed = v; applySet(); savePrefs(); });
     segInit('sBars', [['auto', 'Bei Schaden'], ['all', 'Immer']], () => SET.bars, v => { SET.bars = v; applySet(); savePrefs(); });
+    segInit('sVoice', [[true, 'An'], [false, 'Aus']], () => SET.voice !== false, v => { SET.voice = v; savePrefs(); if (v) VOX.test(); else VOX.stop(); });   /* Runde 18 */
     segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
     segInit('sQual', [['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); });
     segInit('sLang', [['de', 'Deutsch'], ['en', 'English']], () => SET.lang, v => { SET.lang = v; savePrefs(); setLang(v); langRefresh(); seg(); });
