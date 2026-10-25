@@ -251,7 +251,7 @@ function buildReq(g, pi, role) {
   if (lk && lk.bldgs && lk.bldgs.indexOf(role) < 0) return 'In dieser Mission nicht verfügbar';
   if (def.unique && hasBldg(g, pi, role, false)) return 'Nur einmal möglich';
   if (role !== 'base' && !hasBldg(g, pi, 'base', true)) return 'Benötigt Kommandobasis';
-  if (def.req) { const b = hasBldg(g, pi, 'base', true); if (def.req.base && (!b || b.lv < def.req.base)) return 'Benötigt Kommandobasis Stufe ' + ROMAN[def.req.base]; if (def.req.lab && labLevel(g, pi) < def.req.lab) return 'Benötigt Labor Stufe ' + ROMAN[def.req.lab]; }
+  if (def.req) { let b = null; for (const q of g.bldgs) if (!q.dead && q.owner === pi && q.role === 'base' && q.done && (!b || q.lv > b.lv)) b = q; if (def.req.base && (!b || b.lv < def.req.base)) return 'Benötigt Kommandobasis Stufe ' + ROMAN[def.req.base]; if (def.req.lab && labLevel(g, pi) < def.req.lab) return 'Benötigt Labor Stufe ' + ROMAN[def.req.lab]; }
   return null;
 }
 /* Platzprüfung: nicht im Aschenebel, nicht auf Felsen, Feldern, Ressourcen oder Gebäuden; nahe an einem eigenen Gebäude */
@@ -266,6 +266,8 @@ function canPlace(g, pi, role, x, y) {
   for (const o of g.sites) if (hyp(o.x - x, o.y - y) < o.r + r + 20) return 'Zu nahe an einer Stätte';
   for (const o of g.gates) if (hyp(o.x - x, o.y - y) < o.r + r + 40) return 'Zu nahe am Tor';
   const p = g.players[pi];
+  /* Außenbasis: überall, unabhängig von Reichweite und Netz – so kommt man an entfernte Vorkommen */
+  if (role === 'base') return null;
   if (p.faction === 'nexus') { if (!netCovered(g, pi, x, y, true)) return 'Außerhalb des Netzes'; return null; }
   let ok = false;
   for (const b of g.bldgs) { if (b.dead || b.owner !== pi || !b.done) continue; const d = hyp(b.x - x, b.y - y); if (d < (b.role === 'base' ? BUILD_RANGE_BASE : BUILD_RANGE)) { ok = true; break; } }
@@ -810,6 +812,8 @@ function stepGame(g) {
   if (g.tick % 300 === 150) for (const u of g.ships) if (!u.dead) { u.snapH = u.hull; u.snapS = u.shield; }
   updateSites(g, dt);
   updateFort(g);
+  /* Vorkommen wachsen langsam nach (Eis kondensiert, Erz sammelt sich aus Staub): bis 60 % des Anfangswerts, 0,05 % je s */
+  if (g.tick % 30 === 11) for (const n of g.nodes) if (n.max && n.amount < n.max * NODE_REGROW_CAP) n.amount = Math.min(n.max * NODE_REGROW_CAP, n.amount + n.max * NODE_REGROW * 30 * STEP);
   if (g.opts.sandbox && g.tick % 1800 === 900) sandboxSpawn(g);
   if (g.tick % 60 === 30) checkAura(g);
   for (let i = g.wrecks.length - 1; i >= 0; i--) if (g.time > g.wrecks[i].until) g.wrecks.splice(i, 1);
@@ -914,7 +918,8 @@ function updateNet(g, p) {
   const base = nodes.find(n => n.k === 2 && n.role === 'base');
   const seen = new Set();
   const stack = [];
-  if (base) { stack.push(base); seen.add(base); }
+  /* jede Kommandobasis ist ein eigener Kern (Außenbasen bilden ein eigenes Netz) */
+  for (const n of nodes) if (n.k === 2 && n.role === 'base') { stack.push(n); seen.add(n); }
   while (stack.length) {
     const a = stack.pop(), ra = netRange(g, p, a);
     for (const b of nodes) { if (seen.has(b)) continue; if (hyp(a.x - b.x, a.y - b.y) <= Math.max(ra, netRange(g, p, b))) { seen.add(b); stack.push(b); } }

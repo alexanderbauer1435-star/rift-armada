@@ -10,7 +10,8 @@
 const NAV = 32;                               // Rasterzelle der Wegsuche in Pixeln
 const EDGE = 110;                             // Breite des Aschenebels am Kartenrand
 const CLS_IDX = { f: 0, s: 0, m: 1, l: 2 };   // Größenklasse → Navigationsraster
-const NODE_ICE = 9000, NODE_ORE = 4200;
+const NODE_ICE = 18000, NODE_ORE = 8400;
+const NODE_REGROW = 0.0005, NODE_REGROW_CAP = 0.6;   // Nachwachsen je Sekunde (Anteil am Anfangswert) und Obergrenze
 
 const MAPS = {
   haven: { name: "Haven's Reach", np: [2], w: 3200, h: 3200, desc: 'Zwei Ecktaschen mit je zwei Zugängen, ein Eismond in der Mitte, eine Stätte und ein flackerndes Tor. Für den Einstieg.' },

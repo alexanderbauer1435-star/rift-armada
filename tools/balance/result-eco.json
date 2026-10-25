@@ -1,0 +1,60 @@
+{
+ "tag": "eco",
+ "maps": [
+  "expanse",
+  "bastions"
+ ],
+ "seeds": 2,
+ "games": 80,
+ "draws": 7,
+ "avgMin": 15.3,
+ "winrate": {
+  "alliance": 0.28,
+  "mars": 0.47,
+  "legion": 0.38,
+  "nexus": 0.5,
+  "brood": 0.66
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 3,
+   "mars": 5
+  },
+  "alliance-legion": {
+   "alliance": 4,
+   "legion": 4
+  },
+  "alliance-nexus": {
+   "alliance": 0,
+   "nexus": 8
+  },
+  "alliance-brood": {
+   "alliance": 2,
+   "brood": 4
+  },
+  "mars-legion": {
+   "mars": 5,
+   "legion": 3
+  },
+  "mars-nexus": {
+   "mars": 3,
+   "nexus": 3
+  },
+  "mars-brood": {
+   "mars": 2,
+   "brood": 5
+  },
+  "legion-nexus": {
+   "legion": 3,
+   "nexus": 5
+  },
+  "legion-brood": {
+   "legion": 2,
+   "brood": 5
+  },
+  "nexus-brood": {
+   "nexus": 0,
+   "brood": 7
+  }
+ }
+}

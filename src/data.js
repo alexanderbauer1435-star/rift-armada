@@ -555,6 +555,8 @@ for (const f in BLDG) BLDG[f].seal = { role: 'seal', name: 'Das Siegel', r: 80, 
   { hull: 16000, shield: 1800, sreg: 44, energy: 0, cp: 0, cost: { ice: 2000, ore: 1200 }, time: 90, wpn: ['wardBeam', 'wardBeam'] },
   { hull: 18000, shield: 2200, sreg: 48, energy: 0, cp: 0, cost: { ice: 3000, ore: 1800 }, time: 120, wpn: ['wardBeam', 'wardBeam', 'wardLance', 'pdH', 'pdH'] }),
   desc: 'Das Siegel der Erbauer. Fällt es, strömt die Brood ungehindert in den Kessel – alle haben verloren. Lässt sich ausbauen und wehrt sich dann.' };
+/* Außenbasen: die Kommandobasis ist mehrfach baubar (die erste steht zum Start), überall auf der Karte */
+for (const f in BLDG) { const b = BLDG[f].base; if (!b) continue; b.unique = false; b.lv[0].cost = f === 'brood' ? { ice: 2300, ore: 0 } : { ice: 1500, ore: 800 }; b.lv[0].time = 75; }
 for (const f in BLDG) for (const role in BLDG[f]) { const b = BLDG[f][role]; b.f = f; b.id = role; for (const l of b.lv) { l.wpn = (l.wpn || []).map(w => W[w]); l.armor = l.armor || 0; l.shield = l.shield || 0; l.sreg = l.sreg || 0; } }
 /* ------------------------------------------------------------------ Balance (Runde 16)
    Verteidigung zählt wie bei Armada 2: Geschütze sind kosteneffizient gegen gleich teure Schiffe, große Schiffe sind
@@ -581,8 +583,10 @@ for (const id in SHIPS) { const s = SHIPS[id]; if (s.f !== 'nexus' || s.role !==
 /* Alliance: Schilde der Kampfschiffe +15 %, Lancer etwas billiger */
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'alliance' && s.role === 'war') { if (s.shield) s.shield = Math.round(s.shield * 1.15); s.hull = Math.round(s.hull * 1.12); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.18).toFixed(2) })); } }
 SHIPS.lancer.cost = { ice: 350, ore: 140 };
+/* Runde 18: Alliance-Kampfschiffe 4 % billiger, Mars-Rümpfe +6 % */
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'alliance' && s.role === 'war') for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.96); if (s.f === 'mars' && s.role === 'war') s.hull = Math.round(s.hull * 1.06); }
 /* Brood: Biomasse aus allem – die Grube verwertet 15 % mehr (gleicht die anfällige Ausbreitung aus) */
-for (const l of BLDG.brood.refinery.lv) l.bonus = +((l.bonus || 1) + 0.08).toFixed(2);
+/* (Runde 18: mit doppelten Vorkommen kein Brood-Bonus mehr nötig) */
 /* Kostenduelle (tools/balance/duel.js, Runde 17): Ausreißer auf etwa ±0,25 Vorsprung bei gleichem Budget bringen */
 const TUNE = { behemoth: { hull: 0.85, dps: 0.8 }, leviathan: { hull: 0.88, dps: 0.8 }, swarm: { hull: 0.88, dps: 0.65 }, larva: { cost: 1.2 }, broodmother: { cost: 1.3 }, sporer: { cost: 1.35 }, acidmaw: { hull: 0.9 }, spire: { cost: 1.15 }, zealot: { hull: 0.85, dps: 0.7 }, hammer: { hull: 0.92, cost: 1.15 },
   wasp: { cost: 0.86 }, shard: { cost: 0.85, hull: 1.15 }, prism: { cost: 0.8 }, paladin: { cost: 1.08 }, herald: { cost: 1.08 }, longshot: { cost: 0.72 }, basilica: { cost: 0.87 }, bulwark: { dps: 1.15 } };

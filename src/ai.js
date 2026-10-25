@@ -112,6 +112,10 @@ function aiThink(g, pi) {
         built = aiBuild(g, pi, 'refinery', bestN.x + dcos(a) * d, bestN.y + dsin(a) * d, 0, 160);
         /* zu weit von der Basis: erst ein Relais als Brücke */
         const whyP = canPlace(g, pi, 'refinery', bestN.x + dcos(a) * d, bestN.y + dsin(a) * d);
+        /* weit weg: lieber eine Außenbasis direkt am Vorkommen (sobald bezahlbar), sonst Relais als Brücke */
+        if (!built && (whyP === 'Zu weit von der Basis' || whyP === 'Außerhalb des Netzes') && !building.some(b => b.role === 'base') && canPay(p, bcost(p, bdef(g, pi, 'base')))) {
+          const a3 = datan2(anchor.y - bestN.y, anchor.x - bestN.x); built = aiBuild(g, pi, 'base', bestN.x + dcos(a3) * (bestN.r + 230), bestN.y + dsin(a3) * (bestN.r + 230), 0, 200);
+        }
         if (!built && (whyP === 'Zu weit von der Basis' || whyP === 'Außerhalb des Netzes') && mine.filter(b => b.role === 'relay').length < 8 && !building.some(b => b.role === 'relay')) {
           let nearest = null, nd = 1e9;
           for (const b of mine) { if (!b.done) continue; const q = hyp(b.x - bestN.x, b.y - bestN.y); if (q < nd) { nd = q; nearest = b; } }

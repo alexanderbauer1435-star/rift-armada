@@ -1,0 +1,59 @@
+{
+ "tag": "eco3-expanse",
+ "maps": [
+  "expanse"
+ ],
+ "seeds": 2,
+ "games": 40,
+ "draws": 2,
+ "avgMin": 15.2,
+ "winrate": {
+  "alliance": 0.5,
+  "mars": 0.38,
+  "legion": 0.5,
+  "nexus": 0.5,
+  "brood": 0.5
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 3,
+   "mars": 1
+  },
+  "alliance-legion": {
+   "alliance": 1,
+   "legion": 3
+  },
+  "alliance-nexus": {
+   "alliance": 1,
+   "nexus": 3
+  },
+  "alliance-brood": {
+   "alliance": 3,
+   "brood": 0
+  },
+  "mars-legion": {
+   "mars": 3,
+   "legion": 1
+  },
+  "mars-nexus": {
+   "mars": 1,
+   "nexus": 2
+  },
+  "mars-brood": {
+   "mars": 1,
+   "brood": 3
+  },
+  "legion-nexus": {
+   "legion": 3,
+   "nexus": 1
+  },
+  "legion-brood": {
+   "legion": 1,
+   "brood": 3
+  },
+  "nexus-brood": {
+   "nexus": 2,
+   "brood": 2
+  }
+ }
+}

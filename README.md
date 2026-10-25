@@ -62,6 +62,10 @@
   Flankenmanöver nur noch gegen große Schiffe und höchstens 7 s am Stück. Startplatz frei wählbar (Vorschau antippen,
   MENU.myStart, Spieleroption start). Ausgleich für das lange Tempo: Brood-Boni zurückgenommen, Nexus Rumpf +12 % und
   Schaden +10 %, Prism billiger, Paladin und Herald teurer.
+  Wirtschaft: Kommandobasis mehrfach baubar (Außenbasis, überall unabhängig von Reichweite und Netz, 1500 Eis / 800 Erz,
+  Brood 2300), jede Basis ist eigener Netzkern; KI baut Außenbasen an entfernten Vorkommen. Vorkommen verdoppelt
+  (NODE_ICE 18000, NODE_ORE 8400) und wachsen nach (0,05 % je s bis 60 %). Ergebnis: Unentschieden 25 % → 5 %,
+  Siegquoten 38–59 %. Brood-Biomassebonus entfällt, Alliance −4 % Kosten, Mars-Rümpfe +6 %.
 - Fassung 18 (Runde 16, Balance und fünf neue Mechaniken): Balance-Block am Ende der Gebäudedaten (BAL in data.js):
   Kampfschiffe langsamer (klein ×0,88, mittel ×0,78, groß ×0,66; Beschleunigung und Wendigkeit mit), Frachter und
   Bauschiffe unverändert. Geschütze: Hülle und Schild ×1,5, Reichweite ×1,1, Schaden je Fraktion so, dass Stufe I überall

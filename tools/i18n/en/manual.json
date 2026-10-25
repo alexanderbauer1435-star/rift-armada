@@ -212,5 +212,6 @@
  "Schnell: Schiffe fallen in Sekunden": "Fast: ships go down in seconds",
  "DU": "YOU",
  "Dein Startplatz: {0}. Erneut antippen für Zufall.": "Your start: {0}. Tap again for random.",
- "Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.": "Start position: random. Tap a start position in the preview to choose it."
+ "Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.": "Start position: random. Tap a start position in the preview to choose it.",
+ "Außenbasis: ein Bauschiff kann weitere Kommandobasen überall auf der Karte errichten, auch fern der eigenen Stationen. Um sie herum lässt sich wieder bauen.": "Outpost: a builder can raise additional command bases anywhere on the map, even far from your own stations. You can build around them again."
 }

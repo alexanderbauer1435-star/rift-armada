@@ -564,7 +564,7 @@ function objTip(o) {
 }
 function bldgTip(def) {
   const l = def.lv[0];
-  return '<h4>' + esc(L(def.name)) + '</h4><div class="cost">' + costTxt(l.cost) + ' · ' + l.time + ' s</div><p>' + esc(L(def.desc)) + '</p><p class="fine">' + L('Hülle') + ' ' + l.hull + (l.shield ? ' · ' + L('Schild') + ' ' + l.shield : '') + (l.armor ? ' · ' + L('Panzerung') + ' ' + l.armor : '') + (l.energy ? ' · ' + L('Energie') + ' ' + (l.energy > 0 ? '+' : '') + l.energy : '') + (l.cp ? ' · ' + L('Kommando') + ' +' + l.cp : '') + '</p>';
+  return '<h4>' + esc(L(def.name)) + '</h4><div class="cost">' + costTxt(l.cost) + ' · ' + l.time + ' s</div><p>' + esc(L(def.desc)) + '</p>' + (def.role === 'base' ? '<p class="fine">' + L('Außenbasis: ein Bauschiff kann weitere Kommandobasen überall auf der Karte errichten, auch fern der eigenen Stationen. Um sie herum lässt sich wieder bauen.') + '</p>' : '') + '<p class="fine">' + L('Hülle') + ' ' + l.hull + (l.shield ? ' · ' + L('Schild') + ' ' + l.shield : '') + (l.armor ? ' · ' + L('Panzerung') + ' ' + l.armor : '') + (l.energy ? ' · ' + L('Energie') + ' ' + (l.energy > 0 ? '+' : '') + l.energy : '') + (l.cp ? ' · ' + L('Kommando') + ' +' + l.cp : '') + '</p>';
 }
 function hudBuild(force) {
   const box = $('build'), items = $('items'), tabs = $('tabs');
@@ -580,7 +580,7 @@ function hudBuild(force) {
   if (builder && !us.some(u => armed(u))) {
     box.hidden = false;
     for (const [id, nm] of BLDG_TABS) { const t = document.createElement('button'); t.className = 'key' + (UI.tab === id ? ' on' : ''); t.textContent = L(nm); t.dataset.k = 'tab:' + id; t.addEventListener('click', () => { UI.tab = id; SND.play('click'); hudBuild(true); }); tabs.appendChild(t); }
-    const list = Object.values(BLDG[P.faction]).filter(d => d.tab === UI.tab && d.role !== 'base');
+    const list = Object.values(BLDG[P.faction]).filter(d => d.tab === UI.tab);
     if (!list.length) { const p = document.createElement('p'); p.className = 'fine'; p.textContent = L('Kommt in einer späteren Runde.'); items.appendChild(p); }
     for (const d of list) {
       const why = buildReq(g, UI.me, d.role), afford = canPay(P, bcost(P, d));

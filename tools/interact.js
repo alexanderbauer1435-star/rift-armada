@@ -68,7 +68,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   check('tap selects builder', await page.evaluate(id => RA.UI.sel.has(id), s.id));
   const items = await page.$$('#items .item');
   check('build menu shows items (' + items.length + ')', items.length >= 3);
-  await items[1].tap(); await page.waitForTimeout(150);
+  await (await page.$('#items .item[data-k="item:reactor"]')).tap(); await page.waitForTimeout(150);
   check('place mode after tapping Reaktor', await page.evaluate(() => RA.UI.mode === 'place' && RA.UI.place.role === 'reactor'));
   await tap(s.x + 140, s.y - 60);
   const ok = await page.evaluate(() => RA.UI.place && RA.UI.place.ok);
