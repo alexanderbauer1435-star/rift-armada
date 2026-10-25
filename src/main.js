@@ -73,7 +73,8 @@ function startSkirmish() {
   const order = startOrder(np);
   players.forEach((q, i) => { q.start = order[i]; });
   const res = MENU.res === 'low' ? { ice: 700, ore: 300 } : MENU.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
-  beginGame({ map, size: MENU.size || 'normal', seed: 1 + ((Math.random() * 1e6) | 0), players, res, pace: MENU.pace || 'tactical' }, 'skirmish');
+  /* KARTENEDITOR: eigene Karte – das Layout reist in opts mit (Spielstand) */
+  beginGame({ map, size: MENU.size || 'normal', seed: 1 + ((Math.random() * 1e6) | 0), players, res, pace: MENU.pace || 'tactical', custom: edLayoutOf(map) }, 'skirmish');
 }
 /* Übungsplatz: Testkarte, alles freigeschaltet, reiche Mittel, Zielscheiben des Gegners ohne eigene KI */
 function startSandbox() {
@@ -193,6 +194,7 @@ function frame(t) {
   initCampaign();
   initConquest();
   appInit();
+  initEditor();   /* KARTENEDITOR (editor.js): eigene Karten eintragen, Knopf im Hauptmenü */
   applySet();
   $('mSkirm').addEventListener('click', () => { SND.init(); SND.play('click'); if (MENU.mode !== 'skirmish') { MENU.mode = 'skirmish'; } menuPage('setup'); });
   $('mWaves').addEventListener('click', () => { SND.init(); SND.play('click'); if (MENU.mode === 'skirmish') MENU.mode = 'quarantine'; menuPage('setup'); });

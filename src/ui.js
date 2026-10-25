@@ -901,10 +901,11 @@ function setupRender() {
   for (const f of PLAYABLE) { const F = FACTIONS[f], c = document.createElement('button'); c.className = 'card' + (MENU.faction === f ? ' on' : ''); c.style.setProperty('--fc', F.team); c.innerHTML = '<h4 style="color:' + F.team + '">' + esc(F.name) + '</h4><p>' + esc(L(F.desc)) + '</p>'; c.addEventListener('click', () => { MENU.faction = f; savePrefs(); SND.play('click'); setupRender(); }); fc.appendChild(c); }
   slotsFix();
   const np = slotPlayers().length, mapId = mapFor(MENU.map, np);
-  $('rowSize').hidden = wv; $('rowSlots').hidden = wv; $('slotNote').hidden = wv;
+  $('rowSize').hidden = wv || !!MAPS[mapId].layout; $('rowSlots').hidden = wv; $('slotNote').hidden = wv;   /* KARTENEDITOR: eigene Karten ohne Größenwahl */
   /* Karten mit Spielerzahl; Karten, die für die aktuelle Zahl nicht ausgelegt sind, erscheinen gedimmt */
   const npTxt = a => a.every((v, i) => !i || v === a[i - 1] + 1) && a.length > 1 ? a[0] + '–' + a[a.length - 1] : a.join('/');
-  segInit('mapSeg', MAP_ORDER.map(k => [k, MAPS[k].name, npTxt(MAPS[k].np), MAPS[k].np.indexOf(np) < 0 ? 'na' : '']), () => MENU.map, v => { MENU.map = v; savePrefs(); setupRender(); });
+  /* KARTENEDITOR: eigene Karten (editor.js) hinter den eingebauten */
+  segInit('mapSeg', MAP_ORDER.concat(edMapIds()).map(k => [k, MAPS[k].name, npTxt(MAPS[k].np), MAPS[k].np.indexOf(np) < 0 ? 'na' : '']), () => MENU.map, v => { MENU.map = v; savePrefs(); setupRender(); });
   segInit('sizeSeg', [['small', 'Klein'], ['normal', 'Mittel'], ['large', 'Groß']], () => MENU.size || 'normal', v => { MENU.size = v; savePrefs(); setupRender(); });
   if (MENU.mode === 'skirmish') { const n = slotPlayers().length; setText('startNote', MENU.myStart >= 0 && MENU.myStart < n ? L('Dein Startplatz: {0}. Erneut antippen für Zufall.', MENU.myStart + 1) : L('Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.')); } else setText('startNote', '');
   segInit('paceSeg', [['tactical', 'Taktisch'], ['normal', 'Normal'], ['fast', 'Schnell']], () => MENU.pace || 'tactical', v => { MENU.pace = v; savePrefs(); toast(L(v === 'tactical' ? 'Taktisch: lange Gefechte, Zeit für Rückzug, Flanken und Subsysteme' : v === 'normal' ? 'Normal: Gefechte etwa halb so lang wie Taktisch' : 'Schnell: Schiffe fallen in Sekunden')); });

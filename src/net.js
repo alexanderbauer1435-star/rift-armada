@@ -309,16 +309,17 @@ function mpRecv(data) {
 
 /* ------------------------------------------------------------------ Lobby */
 function mpKindNp(kind) { return kind === 'vs' ? 2 : kind === 'waves' ? 2 + (MPL.allies | 0) : 4; }
-function mpMaps(kind) { if (kind === 'waves') return ['quarantine']; const np = mpKindNp(kind); return MAP_ORDER.filter(k => MAPS[k].np.indexOf(np) >= 0); }
+function mpMaps(kind) { if (kind === 'waves') return ['quarantine']; const np = mpKindNp(kind); return MAP_ORDER.filter(k => MAPS[k].np.indexOf(np) >= 0).concat(edMapIds(np)); }   /* KARTENEDITOR: eigene Karten */
 function mpCfgApply(s) {
   if (MP_KINDS[s.kind]) MPL.kind = s.kind;
+  if (s.custom && typeof s.map === 'string') edPeerMap(s.map, s.custom);   /* KARTENEDITOR: Karte des eröffnenden Geräts eintragen */
   if (MAPS[s.map]) MPL.map = s.map;
   if (AI_LEVELS[s.lvl]) MPL.lvl = s.lvl;
   if (s.res === 'low' || s.res === 'normal' || s.res === 'rich') MPL.res = s.res;
   if (s.allies >= 0 && s.allies <= 2) MPL.allies = s.allies | 0;
   if (s.seed > 0 && s.seed < 1e7) MPL.seed = s.seed | 0;
 }
-function mpCfgSend() { if (NET.role === 'host') mpSend({ k: 'cfg', s: MPL }); }
+function mpCfgSend() { if (NET.role === 'host') mpSend({ k: 'cfg', s: Object.assign({}, MPL, { custom: edLayoutOf(MPL.map) }) }); }   /* KARTENEDITOR: Layout mitschicken */
 function mpSendSt() { mpSend({ k: 'st', f: MENU.faction, in: !$('mp').hidden && MPU.pane === 'lobby' }); }
 function mpLobbyEnter() {
   mpScanStop();
@@ -406,7 +407,7 @@ function mpStart() {
     else players.push({ faction: rnd(), ai: MPL.lvl, team });
   }
   const res = MPL.res === 'low' ? { ice: 700, ore: 300 } : MPL.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
-  const opts = JSON.parse(JSON.stringify({ map: MPL.map, seed: MPL.seed, players, res, mode: MPL.kind === 'waves' ? 'quarantine' : undefined, mp: 1 }));
+  const opts = JSON.parse(JSON.stringify({ map: MPL.map, seed: MPL.seed, players, res, mode: MPL.kind === 'waves' ? 'quarantine' : undefined, mp: 1, custom: edLayoutOf(MPL.map) }));   /* KARTENEDITOR: custom */
   const D = clamp(Math.ceil(((Math.max(0, mpRtt()) / 2) + 120) / (STEP * 1000)), 5, 12);
   if (!mpSend({ k: 'go', opts, seat: st.guest, hs: st.host, D })) return;
   mpLockstep(st.host, st.guest, D);
@@ -416,7 +417,7 @@ function mpStart() {
 }
 function mpGo(m) {
   const o = m.opts;
-  const bad = !o || !Array.isArray(o.players) || o.players.length < 2 || o.players.length > 4 || !MAPS[o.map] || !(o.seed > 0) ||
+  const bad = !o || !Array.isArray(o.players) || o.players.length < 2 || o.players.length > 4 || !(MAPS[o.map] || o.custom) || !(o.seed > 0) ||
     o.players.some(p => !p || PLAYABLE.indexOf(p.faction) < 0) || !(m.seat >= 0 && m.seat < o.players.length) || !o.players[m.seat].human;
   if (bad) { mpMsg(L('Das andere Gerät hat unbekannte Einstellungen geschickt.'), 'bad'); return; }
   if (UI.g && !UI.attract && !UI.endShown && UI.kind !== 'mp') { mpSend({ k: 'no' }); return; }
