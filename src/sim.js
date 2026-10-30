@@ -208,7 +208,7 @@ function updateVision(g) {
   g.visStamp++;
   const st = g.visStamp, vw = g.vw, vh = g.vh;
   /* Ionennebel: wer darin steht, sieht nur ION_SEE weit (u.ion) und wird selbst nur aus der Nähe gesehen (Nahsicht visN) */
-  for (const u of g.ships) { if (u.dead) continue; const p = g.players[u.owner]; u.ion = inIon(g.map, u.x, u.y); let r = u.def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor); if (u.ion) r = Math.min(r, ION_SEE); markVis(p.vis, p.explored, vw, vh, st, u.x, u.y, r); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, u.x, u.y, ION_SEE); }
+  for (const u of g.ships) { if (u.dead) continue; const p = g.players[u.owner]; u.ion = inIon(g.map, u.x, u.y); let r = u.def.sensor * p.tfx.sensor * (u.rfV || 1) * (0.4 + 0.6 * u.sub.sensor); if (u.ion) r = Math.min(r, ION_SEE); markVis(p.vis, p.explored, vw, vh, st, u.x, u.y, r); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, u.x, u.y, ION_SEE); }
   for (let i = g.reveals.length - 1; i >= 0; i--) { const r = g.reveals[i]; if (g.time > r.until) { g.reveals.splice(i, 1); continue; } const p = g.players[r.owner]; markVis(p.vis, p.explored, vw, vh, st, r.x, r.y, r.r); if (p.visN && r.r < 3000) markVis(p.visN, p.explored, vw, vh, st, r.x, r.y, r.r); }
   for (const b of g.bldgs) { if (b.dead) continue; const p = g.players[b.owner]; markVis(p.vis, p.explored, vw, vh, st, b.x, b.y, b.done ? (SENSOR_B[b.role] || 360) : 220); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, b.x, b.y, b.done && DETECT_B[b.role] ? Math.max(ION_SEE, maxRange(lvOf(b))) : ION_SEE); }
   /* Verbündete teilen Sicht: dieselbe Tabelle je Team; erkundet nachziehen */
@@ -424,7 +424,7 @@ function recalcTech(g, p) {
   if (p.rewards) for (const id of p.rewards) { const r = REWARDS.find(x => x.id === id); if (r) apply(r.fx); }
   if (p.mfx) apply(p.mfx);
   p.tfx = fx;
-  for (const u of g.ships) { if (u.dead || u.owner !== p.id) continue; const f = (1 + 0.1 * u.rank) * (u.hmul || 1), hm = u.def.hull * fx.hull * f, sm = u.def.shield * fx.shield * f; u.hull = u.hull / u.hullMax * hm; u.hullMax = hm; if (sm !== u.shieldMax) { u.shield = u.shieldMax ? u.shield / u.shieldMax * sm : sm; u.shieldMax = sm; } }
+  for (const u of g.ships) { if (u.dead || u.owner !== p.id) continue; const f = (1 + 0.1 * u.rank) * (u.hmul || 1), hm = u.def.hull * fx.hull * f * (u.rfH || 1), sm = u.def.shield * fx.shield * f; u.hull = u.hull / u.hullMax * hm; u.hullMax = hm; if (sm !== u.shieldMax) { u.shield = u.shieldMax ? u.shield / u.shieldMax * sm : sm; u.shieldMax = sm; } }
   for (const b of g.bldgs) { if (b.dead || b.owner !== p.id) continue; const sm = lvOf(b).shield * fx.shield * fx.bshield; if (sm !== b.shieldMax) { b.shield = b.shieldMax ? b.shield / b.shieldMax * sm : sm; b.shieldMax = sm; } }
 }
 function finishResearch(g, p) {
@@ -517,6 +517,9 @@ function execCmd(g, c) {
     case 'gate': return cmdGate(g, pi, c.id, c.mode);
     case 'etech': return cmdEtech(g, pi, c.id);
     case 'ab': return cmdAbility(g, pi, c.u, c.id, c.e);
+    /* Fassung 22: Nachrüsten an der Werft */
+    case 'refit': return cmdRefit(g, pi, c.u, c.id);
+    case 'refitCancel': return cmdRefitCancel(g, pi, c.u);
     case 'super': return cmdSuper(g, pi, c.x, c.y);
     case 'board': { const t = g.byId.get(c.e); if (!t || t.dead || t.k === 3) return 'Nicht möglich'; const us = shipsOf(g, pi, c.u).filter(u => u.def.marines); if (!us.length) return 'Kein Enterschiff'; for (const u of us) { u.o = { t: 'board', tid: t.id, x: t.x, y: t.y }; u.path = null; u.tgt = t.id; } return null; }
   }
@@ -722,7 +725,7 @@ function kill(g, t, src, owner) {
     /* Plaguebearer platzt in eine Säurewolke */
     if (t.def.burst) { nearShips(g, t.x, t.y, 130, e => { if (!e.dead && foes(g, t.owner, e.owner)) { damage(g, e, 120, 'acid', null, t.owner, t.x, t.y); acidOn(g, e, 90, t.owner); } return false; }); ev(g, 'burst', { x: t.x, y: t.y, r: 130, owner: t.owner }); }
     /* Matriarch wächst mit jedem Abschuss */
-    if (src && !src.dead && src.k === 1 && src.def.grow && t.def.role !== 'fighter' && owner !== t.owner) { const cap = src.def.hull * g.players[src.owner].tfx.hull * 2; if (src.hullMax < cap) { const add = src.def.hull * 0.05; src.hullMax = Math.min(cap, src.hullMax + add); src.hull = Math.min(src.hullMax, src.hull + add); src.hmul = src.hullMax / (src.def.hull * g.players[src.owner].tfx.hull * (1 + 0.1 * src.rank)); } }
+    if (src && !src.dead && src.k === 1 && src.def.grow && t.def.role !== 'fighter' && owner !== t.owner) { const cap = src.def.hull * g.players[src.owner].tfx.hull * 2; if (src.hullMax < cap) { const add = src.def.hull * 0.05; src.hullMax = Math.min(cap, src.hullMax + add); src.hull = Math.min(src.hullMax, src.hull + add); src.hmul = src.hullMax / (src.def.hull * g.players[src.owner].tfx.hull * (1 + 0.1 * src.rank) * (src.rfH || 1)); } }
     if (t.def.role !== 'fighter') { p.stats.lost++; g.wrecks.push({ x: t.x, y: t.y, ang: t.ang, type: t.type, owner: t.owner, until: g.time + 120, id: t.id, sal: Math.round(SALVAGE * (((t.def.cost || {}).ice || 0) + ((t.def.cost || {}).ore || 0))) }); if (g.wrecks.length > 60) g.wrecks.shift(); }
     ev(g, 'die', { x: t.x, y: t.y, r: t.def.r, owner: t.owner, big: t.def.cls === 'l' || t.def.cls === 'm', type: t.type, id: t.id, ang: t.ang, vx: t.vx || 0, vy: t.vy || 0 });
     if (owner >= 0 && owner !== t.owner && t.def.role !== 'fighter') {
@@ -747,7 +750,7 @@ function gainXp(g, u, v) {
   if (r > u.rank) {
     u.rank = r;
     const f = 1 + 0.1 * r;
-    const p = g.players[u.owner], hm = u.def.hull * p.tfx.hull * f * (u.hmul || 1); u.hull = Math.min(hm, u.hull + (hm - u.hullMax)); u.hullMax = hm;
+    const p = g.players[u.owner], hm = u.def.hull * p.tfx.hull * f * (u.hmul || 1) * (u.rfH || 1); u.hull = Math.min(hm, u.hull + (hm - u.hullMax)); u.hullMax = hm;
     u.shieldMax = u.def.shield * p.tfx.shield * f * (u.hmul || 1);
     ev(g, 'rank', { owner: u.owner, id: u.id, rank: r, x: u.x, y: u.y });
   }
@@ -780,7 +783,7 @@ function stateHash(g) {
   for (const p of g.players) { h = hmix(h, p.ice); h = hmix(h, p.ore); h = hmix(h, p.relics); h = hmix(h, p.alive ? p.shipCount : -1); h = hmix(h, p.research ? p.research.prog : -1); }
   for (const st of g.sites) { h = hmix(h, st.prog || 0); h = hmix(h, st.owner + 2); }
   for (const gt of g.gates) { h = hmix(h, gt.prog || 0); h = hmix(h, gt.owner + 2); h = hmix(h, gt.charge || 0); }
-  for (const u of g.ships) if (!u.dead) { h = hmix(h, u.id); h = hmix(h, u.x); h = hmix(h, u.y); h = hmix(h, u.hull); h = hmix(h, u.shield); h = hmix(h, u.crew); h = hmix(h, u.sub.drive + u.sub.wpn * 3 + u.sub.shield * 7 + u.sub.sensor * 11 + u.sub.life * 13); }
+  for (const u of g.ships) if (!u.dead) { h = hmix(h, u.id); h = hmix(h, u.x); h = hmix(h, u.y); h = hmix(h, u.hull); h = hmix(h, u.shield); h = hmix(h, u.crew); h = hmix(h, u.sub.drive + u.sub.wpn * 3 + u.sub.shield * 7 + u.sub.sensor * 11 + u.sub.life * 13); if (u.rf || u.rfq) h = hmix(h, (u.rf ? u.rf.length : 0) + (u.rfq ? u.rfq.prog : 0)); if (u.fcT > 0) h = hmix(h, u.fcT); }
   for (const p of g.players) h = hmix(h, p.doctrine ? hashStr(p.doctrine) : 0);
   if (g.wave) { h = hmix(h, g.wave.n); h = hmix(h, g.wave.phase === 'wave' ? 1 : 0); }
   if (g.mis) { for (const q of g.mis.goals) { h = hmix(h, q.st); h = hmix(h, q.v); } h = hmix(h, g.mis.res); }
@@ -861,6 +864,65 @@ function cmdAbility(g, pi, uids, id, eid) {
   let n = 0;
   for (const u of us) if (abilityUse(g, u, id, t)) n++;
   return n ? null : (ABIL[id].mut ? 'Mutation nicht möglich: Biomasse, Brutgrube oder Kommandopunkte fehlen' : 'Kein Ziel in Reichweite');
+}
+/* ------------------------------------------------------------------ Fassung 22: Nachrüsten an der Werft
+   u.rf: fertige Nachrüstungen (Kennungen aus REFIT), u.rfq: laufende { id, prog, time, c (bezahlt), away (außer Reichweite) }.
+   Wirkung als Faktoren am Schiff: rfH Hülle, armorPlus Panzerung, rfD Schaden, rfS Tempo, rfV Sensoren. */
+function refitYard(g, u, lvl) {
+  let best = null, bd = 1e9;
+  for (const b of g.bldgs) if (!b.dead && b.done && b.owner === u.owner && b.role === 'yard' && b.lv >= (lvl || 1)) { const d = hyp(b.x - u.x, b.y - u.y) - b.def.r; if (d <= REFIT_R && d < bd) { bd = d; best = b; } }
+  return best;
+}
+function refitCost(p, u, id) { const c = shipCost(p, u.def), k = REFIT[id].cost; return { ice: Math.round(c.ice * k), ore: Math.round(c.ore * k) }; }
+function refitReq(g, u, id) {
+  const R = REFIT[id];
+  if (!R || u.dead || u.derelict || u.cocoon || u.def.role === 'fighter' || u.dummy) return 'Nicht möglich';
+  if (u.rfq) return 'Nachrüstung läuft schon';
+  const rf = u.rf || [];
+  if (rf.indexOf(id) >= 0) return 'Schon nachgerüstet';
+  if (rf.length >= REFIT_MAX) return 'Höchstens zwei Nachrüstungen je Schiff';
+  if (id === 'wpn' && !armed(u)) return 'Nicht möglich';
+  if (!refitYard(g, u, 1)) return 'Nur nahe einer eigenen Werft';
+  if (!refitYard(g, u, R.yard)) return 'Benötigt Werft Stufe ' + ROMAN[R.yard];
+  return null;
+}
+function cmdRefit(g, pi, uids, id) {
+  const p = g.players[pi];
+  if (!REFIT[id]) return 'Nicht möglich';
+  let why = null, n = 0;
+  for (const u of shipsOf(g, pi, uids || [])) {
+    const w = refitReq(g, u, id);
+    if (w) { why = why || w; continue; }
+    const c = refitCost(p, u, id);
+    if (!canPay(p, c)) { why = 'Nicht genug Rohstoffe'; continue; }
+    pay(p, c);
+    u.rfq = { id, prog: 0, time: refitTime(u.def), c, away: 0 };
+    if (u.o.t !== 'hold') setIdle(u);
+    ev(g, 'refit', { owner: pi, id: u.id, k: id, st: 0, x: u.x, y: u.y });
+    n++;
+  }
+  return n ? null : (why || 'Nicht möglich');
+}
+function cmdRefitCancel(g, pi, uids) {
+  let n = 0;
+  for (const u of shipsOf(g, pi, uids || [])) if (u.rfq) { refund(g.players[pi], u.rfq.c, 1); u.rfq = null; n++; }
+  return n ? null : 'Nicht möglich';
+}
+/* je Takt aus shipUpkeep: Fortschritt nur nahe einer Werft der nötigen Stufe; gibt es keine solche Werft mehr, Abbruch mit Erstattung */
+function refitStep(g, u, dt) {
+  const q = u.rfq, p = g.players[u.owner], need = REFIT[q.id].yard;
+  if (refitYard(g, u, need)) { q.away = 0; q.prog += dt / q.time * (p.lowPower ? 0.5 : 1); if (q.prog >= 1) { u.rfq = null; applyRefit(g, u, q.id); ev(g, 'refit', { owner: u.owner, id: u.id, k: q.id, st: 1, x: u.x, y: u.y }); } return; }
+  q.away = 1;
+  if (!g.bldgs.some(b => !b.dead && b.done && b.owner === u.owner && b.role === 'yard' && b.lv >= need)) { refund(p, q.c, 1); u.rfq = null; ev(g, 'refit', { owner: u.owner, id: u.id, k: q.id, st: -1, x: u.x, y: u.y }); }
+}
+function applyRefit(g, u, id) {
+  const fx = REFIT[id].fx;
+  u.rf = (u.rf || []).concat([id]);
+  if (fx.hull) { u.rfH = (u.rfH || 1) * fx.hull; u.hullMax *= fx.hull; u.hull *= fx.hull; }
+  if (fx.armor) u.armorPlus = (u.armorPlus || 0) + fx.armor;
+  if (fx.dmg) u.rfD = (u.rfD || 1) * fx.dmg;
+  if (fx.speed) u.rfS = (u.rfS || 1) * fx.speed;
+  if (fx.sensor) u.rfV = (u.rfV || 1) * fx.sensor;
 }
 /* Marines an Bord kämpfen gegen die Crew; ist sie besiegt, wechselt das Schiff (oder die Station) den Besitzer */
 function boardTick(g, t, dt) {
@@ -1212,7 +1274,7 @@ function morphShip(g, u, toId) {
   p.shipCount += def.cp - u.def.cp;
   const frac = u.hull / u.hullMax;
   u.def = def; u.type = toId; u.cls = CLS_IDX[def.cls] || 0; u.hmul = 1;
-  u.hullMax = def.hull * p.tfx.hull * f; u.hull = u.hullMax * Math.max(0.5, frac);
+  u.hullMax = def.hull * p.tfx.hull * f * (u.rfH || 1); u.hull = u.hullMax * Math.max(0.5, frac);
   u.wcd = def.wpn.map(() => 0); u.abcd = {}; u.abT = {}; u.cocoon = null; u.beams = null; u.tgt = 0; u.acid = null; u.para = null;
   setIdle(u);
   ev(g, 'morph', { x: u.x, y: u.y, owner: u.owner, r: def.r, id: u.id, name: def.name });
