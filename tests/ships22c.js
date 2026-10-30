@@ -1,7 +1,7 @@
 /* Fassung 22: Nachrüsten an der Werft und Flottenbefehle der Flaggschiffe */
 'use strict';
 const vm = require('vm');
-const { loadSim } = require('./harness.js'); const X = loadSim(), C = X.ctx;
+const { loadSim } = require('./harness.js'); const X = loadSim(['save.js']), C = X.ctx;   /* mit Spielstand im selben Kontext (Schiffstypen werden als Kennung abgelegt) */
 const K = n => vm.runInContext(n, C);
 const REFIT = K('REFIT'), FCMD = K('FCMD');
 let fail = 0; const ok = (c, m) => { console.log((c ? 'OK   ' : 'FAIL ') + m); if (!c) fail++; };
@@ -82,7 +82,7 @@ function bare(f, lv, f2) {
   ok(d0 > 0 && near(d1 / d0, 1.12, 0.001), 'Geschoss mit Waffen-Nachrüstung ' + d1.toFixed(1) + ' gegen ' + d0.toFixed(1));
   /* Spielstand: Nachrüstungen und laufende Nachrüstung bleiben erhalten */
   const c = X.addShip(g, 'hammer', 0, 1000, 1000 + y.def.r + 60, 0); X.execCmd(g, { t: 'refit', p: 0, u: [c.id], id: 'drive' }); step(g, 3);
-  const L = require('./harness.js').loadSim(['save.js']);
+  const L = X;
   const sv = JSON.parse(JSON.stringify(vm.runInContext('saveGame', L.ctx)(g)));
   const g2 = vm.runInContext('loadGame', L.ctx)(sv);
   if (g2) { g2.sites.length = 0; g2.gates.length = 0; }   /* wie im Original leer geräumt */

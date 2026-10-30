@@ -66,7 +66,7 @@ function loadGame(d) {
   if (d.wave) { g.wave = dec(d.wave); g.threat = d.threat; }
   if (d.mis) g.mis = dec(d.mis);
   if (d.fort) g.fort = dec(d.fort);
-  g.rng.st.a = d.rng >>> 0; g.tick = d.tick; g.time = d.time; g.nextId = d.nextId; g.over = d.over; g.winner = d.winner; g.winTeam = d.winTeam; g.visStamp = d.visStamp || 1;
+  g.rng.st.a = d.rng | 0; /* Fassung 22: wie core.js mit Vorzeichen, sonst weicht die Prüfsumme nach dem Laden ab */ g.tick = d.tick; g.time = d.time; g.nextId = d.nextId; g.over = d.over; g.winner = d.winner; g.winTeam = d.winTeam; g.visStamp = d.visStamp || 1;
   g.ev.length = 0;
   updateVision(g);
   for (const p of g.players) if (p.alive) { recalcPower(g, p.id); recalcCp(g, p.id); p.tech = p.tech || {}; recalcTech(g, p); }
