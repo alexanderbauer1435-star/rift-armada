@@ -28,9 +28,11 @@ const MAPS = {
   pinwheel: { name: 'Pinwheel', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np] + 200, desc: 'Gekrümmte Felswände drehen sich wie ein Windrad aus der Mitte. Jede Basis liegt am Ende ihres Arms; Nachbarn erreicht man durch eine Lücke in der Wand oder über die Mitte.' },
   archipelago: { name: 'Archipelago', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np] + 200, desc: 'Viele kleine Asteroideninseln mit Vorkommen und Ruinen, jede mit drei Durchfahrten. Kleine Schiffe schlüpfen durch die Gürtel, große müssen die Kanäle nehmen.' },
   storm: { name: 'Ion Storm', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np], desc: 'Ein breiter Ionensturm umschließt die Mitte: Schilde aus, Sicht nur aus der Nähe, darin Aschenester. Wer hindurch will, fliegt blind – Hinterhalte sind hier die Regel.' },
+  /* Fassung 22: Zufallskarte aus einem Startwert (opts.mseed, sonst opts.seed), symmetrisch für 2–8 Spieler (terrain.js) */
+  random: { name: 'Zufallskarte', np: [2, 3, 4, 5, 6, 7, 8], dim: np => RING_DIM[np] + 200, desc: 'Jedes Mal eine neue Karte aus einem Startwert: symmetrisch gedreht oder gespiegelt, gleiche Vorkommen für jeden Start, Engstellen und offene Flächen. »Neu würfeln« zieht eine andere.', rand: true },
   quarantine: { name: 'Quarantine Line', np: [1, 2, 3, 4], w: 3800, h: 3800, desc: 'Das Siegel in der Mitte, die Basen im Ring darum, Risse am Rand. Nur für Wellen.', waves: true }
 };
-const MAP_ORDER = ['haven', 'twingates', 'ashfall', 'shattered', 'crown', 'narrows', 'arena', 'expanse', 'bastions', 'maelstrom', 'keep', 'pinwheel', 'archipelago', 'storm'];
+const MAP_ORDER = ['haven', 'twingates', 'ashfall', 'shattered', 'crown', 'narrows', 'arena', 'expanse', 'bastions', 'maelstrom', 'keep', 'pinwheel', 'archipelago', 'storm', 'random'];   /* Fassung 22: + Zufallskarte */
 /* Ringkarten wachsen mit der Spielerzahl (Kantenlänge je Spielerzahl) */
 const RING_DIM = [0, 3600, 4000, 4600, 5000, 5600, 6000, 6400, 6800];
 const RING_STYLE = { expanse: 'expanse', bastions: 'bastions', maelstrom: 'maelstrom', keep: 'keep', pinwheel: 'spiral', archipelago: 'archipelago', storm: 'storm' };
@@ -62,7 +64,7 @@ function farFrom(list, x, y, d) { for (const o of list) if (hyp(o.x - x, o.y - y
 /* Kartengröße: klein, normal, groß – die Karte wird nach dem Aufbau gestreckt (Lagen, Gürtel- und Nebelradien), Felsen,
    Vorkommen, Stätten und Tore behalten ihre Größe. So bleiben Taschen und Korridore erhalten, nur die Wege werden länger. */
 const MAP_SIZES = { small: 0.85, normal: 1, large: 1.3 };
-function generateMap(id, np, seed, size, layout) {
+function generateMap(id, np, seed, size, layout, mseed) {
   const def = MAPS[id] || MAPS.haven, rng = makeRng((seed || 1) * 2654435761 + hashStr(id));
   /* KARTENEDITOR: eigene Karte aus dem Layout (opts.custom oder dem eingetragenen MAPS-Eintrag), Größenwahl gilt hier nicht */
   const lay = layout || def.layout || (def.custom ? customDefault(np) : null);
@@ -78,11 +80,13 @@ function generateMap(id, np, seed, size, layout) {
   else if (id === 'test') { map.starts = [{ x: 400, y: 2800, ang: -Math.PI / 4 }, { x: 2800, y: 400, ang: Math.PI * 0.75 }]; iceMoon(map, 700, 2800, rng); iceMoon(map, 2500, 400, rng); site(map, 'ruin', 1200, 1200); site(map, 'ruin', 2000, 2000); site(map, 'archive', 1000, 2200); site(map, 'citadel', 2200, 1300); gatePair(map, 900, 600, 2600, 2600, 'dead'); }
   else if (id === 'arena') genArena(map, np, rng);
   else if (RING_STYLE[id]) genRing(map, np, rng, RING_STYLE[id]);
+  else if (id === 'random') { map.mseed = (mseed || seed || 1) >>> 0; genRandom(map, np, makeRng(map.mseed * 2654435761 + hashStr('random'))); }   /* Fassung 22 */
   else genHaven(map, rng);
+  if (id !== 'test' && id !== 'quarantine') terrainGen(map, id, np, seed);   /* Fassung 22: Trümmerfelder, neutrale Stationen, sprengbare Felsen */
   const k = MAP_SIZES[size] || 1;
   if (k !== 1 && id !== 'test') {
     map.w = Math.round(W0 * k); map.h = Math.round(H0 * k);
-    for (const key of ['starts', 'nodes', 'rocks', 'fields', 'nebs', 'sites', 'gates', 'rifts']) for (const o of map[key] || []) { o.x *= k; o.y *= k; if (key === 'fields' || key === 'nebs') o.r *= k; else if (key === 'rocks') o.r *= Math.sqrt(k); }
+    for (const key of ['starts', 'nodes', 'rocks', 'fields', 'nebs', 'sites', 'gates', 'rifts', 'debris']) for (const o of map[key] || []) { o.x *= k; o.y *= k; if (key === 'fields' || key === 'nebs' || key === 'debris') o.r *= k; else if (key === 'rocks') o.r *= Math.sqrt(k); }
     if (map.fort) { map.fort.x *= k; map.fort.y *= k; }
   }
   buildNav(map);
@@ -496,8 +500,10 @@ function genRing(map, np, rng, style) {
       const s = map.starts[i], base = axis(i) + Math.PI;
       /* undurchdringlicher Ring: Gürtel plus Felswand auf derselben Linie, eine schmale Lücke zur Mitte */
       const pts = []; for (let k = 0; k <= 40; k++) { const a = base + k / 40 * TAU; pts.push([s.x + Math.cos(a) * Rp, s.y + Math.sin(a) * Rp]); }
-      belt(map, pts, 140, rng, [[0, 230], [1, 230]], 0.45);
-      wall(map, pts, rng, [[0, 200], [1, 200]], 24);
+      /* Fassung 22: zweiter, mit sprengbaren Felsen verstopfter Ausgang zur Seite */
+      belt(map, pts, 140, rng, [[0, 230], [1, 230], [0.25, 270]], 0.45);
+      wall(map, pts, rng, [[0, 200], [1, 200], [0.25, 220]], 24);
+      plugGap(map, pts, 0.25, 210, rng);
       /* vor dem Tor: Ausbau */
       const rOut = R0 - Rp - 260;
       let p = at(i, rOut, 330); iceMoon(map, p.x, p.y, rng);
@@ -545,7 +551,10 @@ function genRing(map, np, rng, style) {
       const b = half, pts = [];
       for (let r = r0; r <= rEdge; r += 90) { const p = Q(i, r, b); pts.push([p.x, p.y]); }
       const L = pathLen(pts), rg = (r0 + R0) / 2, gt = (rg - r0) / (rEdge - r0);
-      wall(map, pts, rng, [[gt, 230]], 26); belt(map, pts.slice(0, Math.ceil((R0 + 300 - r0) / 90)), 120, rng, [[gt * L / pathLen(pts.slice(0, Math.ceil((R0 + 300 - r0) / 90))), 270]], 0.45);
+      /* Fassung 22: zweite Lücke weiter außen, mit sprengbaren Felsen verstopft */
+      const gt2 = (R0 - r0) * 0.85 / (rEdge - r0), bp = pts.slice(0, Math.ceil((R0 + 300 - r0) / 90)), Lb = pathLen(bp);
+      wall(map, pts, rng, [[gt, 230], [gt2, 230]], 26); belt(map, bp, 120, rng, [[gt * L / Lb, 270], [gt2 * L / Lb, 270]], 0.45);
+      plugGap(map, pts, gt2, 210, rng);
       let p = Q(i, R0 * 0.66, 0.22 * half); iceMoon(map, p.x, p.y, rng);
       p = Q(i, R0 * 0.62, -0.3 * half); oreCluster(map, p.x, p.y, rng, 3);
       p = Q(i, R0 * 0.42, 0); oreCluster(map, p.x, p.y, rng, 2);
@@ -595,8 +604,10 @@ function genRing(map, np, rng, style) {
       const s = map.starts[i], base = axis(i) + Math.PI;
       /* Trennwand zum Nachbarn: von der Mitte bis zum Rand, ohne Lücke */
       const b = axis(i) + half;
-      wall(map, [[cx + Math.cos(b) * rIn, cy + Math.sin(b) * rIn], [cx + Math.cos(b) * rEdge, cy + Math.sin(b) * rEdge]], rng, null, 28);
-      belt(map, [[cx + Math.cos(b) * (rIn + 150), cy + Math.sin(b) * (rIn + 150)], [cx + Math.cos(b) * (R0 + 500), cy + Math.sin(b) * (R0 + 500)]], 160, rng, null, 0.6);
+      /* Fassung 22: eine Lücke in der Wand, mit sprengbaren Felsen verstopft – wer sie sprengt, hat eine Abkürzung zum Nachbarn */
+      const rp = rIn + (R0 - rIn) * 0.55, wp = [[cx + Math.cos(b) * rIn, cy + Math.sin(b) * rIn], [cx + Math.cos(b) * rEdge, cy + Math.sin(b) * rEdge]], wt = (rp - rIn) / (rEdge - rIn);
+      wall(map, wp, rng, [[wt, 230]], 28); plugGap(map, wp, wt, 220, rng);
+      belt(map, [[cx + Math.cos(b) * (rIn + 150), cy + Math.sin(b) * (rIn + 150)], [cx + Math.cos(b) * (R0 + 500), cy + Math.sin(b) * (R0 + 500)]], 160, rng, [[(rp - rIn - 150) / (R0 + 350 - rIn), 290]], 0.6);
       /* kleine Tasche, zwei Zugänge Richtung Mitte */
       pocket(map, s, 600, base + 1.7, base - 1.7, rng, [[base + 0.55, 220], [base - 0.55, 220]], 130);
       /* auf dem Weg zur Mitte */
@@ -642,7 +653,7 @@ function buildNav(map) {
     }
   };
   for (let c = 0; c < 3; c++) {
-    for (const o of map.rocks) stamp(o, pad[c], c, 1);
+    for (const o of map.rocks) if (!o.gone) stamp(o, pad[c], c, 1);
     for (const o of map.nodes) stamp(o, pad[c] + 4, c, 8);
     for (const o of map.sites) stamp(o, pad[c] + 4, c, 8);
     if (c > 0) for (const o of map.fields) stamp(o, 0, c, 1);
@@ -660,6 +671,7 @@ function buildNav(map) {
     const v = o.kind === 'ash' ? 2 : 1, x0 = Math.max(0, ((o.x - o.r) / NAV) | 0), x1 = Math.min(gw - 1, ((o.x + o.r) / NAV) | 0), y0 = Math.max(0, ((o.y - o.r) / NAV) | 0), y1 = Math.min(gh - 1, ((o.y + o.r) / NAV) | 0);
     for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) { const dx = (cx + 0.5) * NAV - o.x, dy = (cy + 0.5) * NAV - o.y; if (dx * dx + dy * dy <= o.r * o.r) { const i = cy * gw + cx; map.nebG[i] = Math.max(map.nebG[i], v); for (let c = 0; c < 3; c++) map.nav[c][i] |= v === 2 ? 4 : 16; } }
   }
+  debrisGrid(map);   /* Fassung 22: Trümmerfelder (Deckung) */
 }
 /* Gebäude ins Raster eintragen (val 2) oder austragen; mit Rand, damit Schiffe nicht an der Hülle entlangschaben */
 function navBlock(map, x, y, r, on) {

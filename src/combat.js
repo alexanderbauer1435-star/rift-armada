@@ -44,7 +44,7 @@ function acquire(g, s, r, fn) {
   }
   return best;
 }
-function lostTgt(g, s, t) { return !t || t.dead || t.k === 3 || !canSee(g, s.owner, t); }
+function lostTgt(g, s, t) { if (t && t.k === 6) return t.dead; return !t || t.dead || t.k === 3 || !canSee(g, s.owner, t); }   /* Fassung 22: Felsen bleiben Ziel */
 
 /* ------------------------------------------------------------------ Bewegung */
 /* Weg zum Ziel folgen: liefert den nächsten Zwischenpunkt (oder null, wenn kein Weg) */
@@ -78,7 +78,7 @@ function steer(g, u, px, py, dt, arrive, spCap) {
   const want = d > 1 ? datan2(dy, dx) : u.ang;
   u.ang = turnTo(u.ang, want, def.turn * tf.turn * dt * (1 - Math.min(0.5, u.v / Math.max(1, def.speed) * 0.45)));
   const diff = Math.abs(angDiff(want, u.ang));
-  let top = def.speed * tf.speed * (u.cls === 0 && inField(g.map, u.x, u.y) ? 0.5 : 1) * (0.3 + 0.7 * u.sub.drive) * (u.abT.grush > 0 || u.abT.lunge > 0 ? 2 : 1) * (u.sprint > 0 ? 1.6 : 1) * (u.frenzy > 0 ? 1.4 : 1) * (u.crus > 0 ? 1.3 : 1) * (u.pull ? 0.5 : 1) * (u.rfS || 1) * fcMul(g, u, 'speed');
+  let top = def.speed * tf.speed * (u.cls === 0 && inField(g.map, u.x, u.y) ? 0.5 : 1) * (0.3 + 0.7 * u.sub.drive) * (u.abT.grush > 0 || u.abT.lunge > 0 ? 2 : 1) * (u.sprint > 0 ? 1.6 : 1) * (u.frenzy > 0 ? 1.4 : 1) * (u.crus > 0 ? 1.3 : 1) * (u.pull ? 0.5 : 1) * (u.rfS || 1) * fcMul(g, u, 'speed') * (u.cov ? COVER_SLOW : 1);   /* Fassung 22: Trümmerfeld bremst */
   if (u.jamT > g.time) top *= u.jamK;   // Fassung 22: Störsender
   if (spCap) top = Math.min(top, spCap);
   let goal = diff < 1.1 ? top * (1 - diff * 0.45) : top * 0.25;
@@ -292,7 +292,7 @@ function updateShip(g, u, dt) {
     case 'attack': {
       const t = g.byId.get(o.tid);
       /* Artillerie: eine bekannte Station bleibt Ziel, auch wenn sie gerade nicht in Sicht ist */
-      if (def.art && t && !t.dead && (t.k === 2 ? artKnown(g, u.owner, t) : t.k === 1 && canSee(g, u.owner, t))) { u.tgt = 0; o.x = t.x; o.y = t.y; artMove(g, u, t, dt); break; }
+      if (def.art && t && !t.dead && (t.k === 2 ? artKnown(g, u.owner, t) : t.k === 6 || t.k === 1 && canSee(g, u.owner, t))) { u.tgt = 0; o.x = t.x; o.y = t.y; artMove(g, u, t, dt); break; }
       if (lostTgt(g, u, t)) {
         if (o.back) { u.o = o.back; u.path = null; u.tgt = 0; }
         else if (o.guard) { setIdle(u); }
@@ -476,7 +476,7 @@ function separate(g) {
       const cx = (u.x / NAV) | 0, cy = (u.y / NAV) | 0;
       if (cx < 0 || cy < 0 || cx >= g.map.gw || cy >= g.map.gh) continue;
       const v = g.map.nav[0][cy * g.map.gw + cx];
-      if (v & 1) for (const o of rocks) { const dx = u.x - o.x, dy = u.y - o.y, d = hyp(dx, dy), need = o.r + u.def.r * 0.7; if (d < need && d > 0) { u.x += dx / d * (need - d); u.y += dy / d * (need - d); } }
+      if (v & 1) for (const o of rocks) { if (o.gone) continue; const dx = u.x - o.x, dy = u.y - o.y, d = hyp(dx, dy), need = o.r + u.def.r * 0.7; if (d < need && d > 0) { u.x += dx / d * (need - d); u.y += dy / d * (need - d); } }
       if (v & 8) { for (const o of nodes) { const dx = u.x - o.x, dy = u.y - o.y, d = hyp(dx, dy), need = o.r + u.def.r * 0.7; if (d < need && d > 0) { u.x += dx / d * (need - d); u.y += dy / d * (need - d); } } for (const o of g.sites) { const dx = u.x - o.x, dy = u.y - o.y, d = hyp(dx, dy), need = o.r + u.def.r * 0.7; if (d < need && d > 0) { u.x += dx / d * (need - d); u.y += dy / d * (need - d); } } }
     }
   }
@@ -525,7 +525,7 @@ function fireAll(g, s, dt) {
     }
     const bs = s.k === 1 && s.abT.broadside > 0, rng = s.k === 1 && s.jamT > g.time ? w.range * s.jamR : w.range;   // Fassung 22: Störsender
     let t = s.tgt ? g.byId.get(s.tgt) : null;
-    if (t && (t.dead || t.k === 3 || !foes(g, s.owner, t.owner) || tdist(s, t) > rng || !(bs || inArc(s, w, t)) || !canSee(g, s.owner, t))) t = null;
+    if (t && (t.dead || t.k === 3 || !(foes(g, s.owner, t.owner) || t.k === 6) || tdist(s, t) > rng || !(bs || inArc(s, w, t)) || !canSee(g, s.owner, t))) t = null;
     if (!t) {
       if ((g.tick + s.id + i) % 3) continue;
       t = acquire(g, s, rng, e => (bs || inArc(s, w, e)) && (!w.minR || tdist(s, e) >= w.minR * 0.9));
@@ -546,6 +546,7 @@ function artTarget(g, s, w) {
   const ok = b => b && !b.dead && b.k === 2 && foes(g, s.owner, b.owner) && !g.players[b.owner].neutral && (() => { const d = tdist(s, b); return d <= w.range && d >= w.minR * 0.9; })() && artKnown(g, s.owner, b);
   const o = s.o && s.o.t === 'attack' ? g.byId.get(s.o.tid) : null;
   if (ok(o)) return o;
+  if (o && o.k === 6 && !o.dead) { const d = tdist(s, o); if (d <= w.range && d >= w.minR * 0.9) return o; }   /* Fassung 22: befohlener Fels */
   if (o && o.k === 1 && !o.dead && canSee(g, s.owner, o) && foes(g, s.owner, o.owner)) { const d = tdist(s, o); if (d <= w.range && d >= w.minR * 0.9) return o; }
   const cur = s.artT ? g.byId.get(s.artT) : null; if (ok(cur)) return cur;
   let best = null, bs = 1e9;
@@ -673,6 +674,7 @@ function updateProj(g, dt) {
       const src = g.byId.get(q.sid) || null, R0 = q.splash;
       for (const b of g.bldgs) { if (b.dead || !foes(g, q.owner, b.owner)) continue; const dd = hyp(b.x - q.x, b.y - q.y); if (dd > R0 + b.def.r) continue; damage(g, b, q.dmg * (dd < b.def.r ? 1 : 0.5), 'art', src, q.owner, q.x, q.y); }
       nearShips(g, q.x, q.y, R0 + 20, e => { if (!e.dead && foes(g, q.owner, e.owner)) { const dd = hyp(e.x - q.x, e.y - q.y); if (dd < R0 + e.def.r * 0.5) damage(g, e, q.dmg * (dd < e.def.r + 25 ? 1 : 0.5), 'art', src, q.owner, q.x, q.y); } return false; });
+      if (g.rocks && g.rocks.length) rocksSplash(g, q.x, q.y, R0, q.dmg, q.owner);   /* Fassung 22 */
       ev(g, 'hit', { x: q.x, y: q.y, kind: 'torp', art: 1 });
       continue;
     }
@@ -715,7 +717,7 @@ function updateProj(g, dt) {
     /* Felsen schlucken Geschosse */
     const cx = (q.x / NAV) | 0, cy = (q.y / NAV) | 0;
     /* Felsen schlucken Geschosse (Eismonde und Erzbrocken nicht: Vorkommen sollen keine Deckung sein, sonst leidet die kinetische Fraktion) */
-    if (cx >= 0 && cy >= 0 && cx < g.map.gw && cy < g.map.gh && (g.map.nav[0][cy * g.map.gw + cx] & 1)) { for (const o of g.map.rocks) if (hyp(o.x - q.x, o.y - q.y) < o.r * 0.85) { ev(g, 'hit', { x: q.x, y: q.y, kind: 'rock' }); hitAny = true; break; } }
+    if (cx >= 0 && cy >= 0 && cx < g.map.gw && cy < g.map.gh && (g.map.nav[0][cy * g.map.gw + cx] & 1)) { for (const o of g.map.rocks) if (!o.gone && hyp(o.x - q.x, o.y - q.y) < o.r * 0.85) { rockStruck(g, o, q); ev(g, 'hit', { x: q.x, y: q.y, kind: 'rock' }); hitAny = true; break; } }   /* Fassung 22: sprengbare Felsen nehmen Schaden */
     if (hitAny) continue;
     if (q.x < 0 || q.y < 0 || q.x > g.map.w || q.y > g.map.h) continue;
     P[w++] = q;
@@ -735,6 +737,8 @@ function segCircle(x0, y0, x1, y1, cx, cy, r) {
    Bulwark im Umkreis übernimmt 40 % des Schadens, solange sein Schild steht. */
 function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   if (t.dead || amt <= 0) return;
+  if (t.k === 6) { rockHit(g, t, amt, kind, owner); return; }   /* Fassung 22: Fels */
+  if (t.cov && t.k === 1 && src !== null && !bypass && COVER_KIND[kind]) amt *= COVER_DMG;   /* Fassung 22: Deckung im Trümmerfeld */
   const lv = t.k === 2 ? lvOf(t) : t.def, p = g.players[t.owner];
   t.sT = 0;
   if (t.k === 1) t.hitT = g.time;   /* Fassung 22: außer Gefecht erst 10 s nach dem letzten Treffer */

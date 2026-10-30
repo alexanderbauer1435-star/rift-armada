@@ -265,6 +265,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 #secMap { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 0.35em 0.9em; align-items: start; }
 #secMap > .secH { grid-column: 1 / -1; }
 #secMap > #rowPrev { grid-row: 2 / span 4; grid-column: 2; margin: 0; justify-content: center; }
+#secMap > #rowHaz, #secMap > #rowRand, #secMap > #mapDesc, #secMap > #mapLegend { grid-column: 1 / -1; }   /* Fassung 22: volle Breite unter der Vorschau */
 #mapPrev { width: min(300px, 44vw); max-width: 100%; height: auto; max-height: 46vh; aspect-ratio: 1; border-radius: 10px; background: #070b18; border: 1px solid var(--line); box-shadow: 0 0 18px rgba(143,227,255,0.12); }
 @media (max-width: 640px) { #secMap { grid-template-columns: 1fr; } #secMap > #rowPrev { grid-row: auto; grid-column: 1; } #mapPrev { width: min(300px, 78vw); } }
 #setup .row { justify-content: flex-start; }
@@ -656,6 +657,8 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
         <p class="fine" id="startNote"></p>
         <div class="row" id="rowSize"><span class="lbl">Größe</span><div class="seg" id="sizeSeg"></div></div>
         <div class="row" id="rowPace"><span class="lbl">Kampftempo</span><div class="seg" id="paceSeg"></div></div>
+        <div class="row" id="rowHaz"><span class="lbl">Wandernde Gefahren</span><div class="seg" id="hazSeg"></div><span class="fine" id="hazInfo"></span></div>
+        <div class="row" id="rowRand" hidden><span class="lbl">Zufallskarte</span><span class="fine" id="randInfo"></span><button class="key" id="randRoll">Neu würfeln</button></div>
         <p class="fine" id="mapDesc"></p>
         <p class="fine" id="mapLegend" style="opacity:.8"></p>
       </section>
@@ -740,6 +743,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
           <div class="row" id="mpSizeRow"><span class="lbl">Größe</span><div class="seg" id="mpSize"></div></div>
           <div class="row"><span class="lbl">Kampftempo</span><div class="seg" id="mpPace"></div></div>
           <div class="row" id="mpResRow"><span class="lbl">Startmittel</span><div class="seg" id="mpRes"></div></div>
+          <div class="row" id="mpHazRow"><span class="lbl">Wandernde Gefahren</span><div class="seg" id="mpHaz"></div></div>
         </div>
         <div>
           <canvas id="mpPrev" width="220" height="220"></canvas>

@@ -734,9 +734,11 @@ function frame2D(alpha, dt) {
       ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(cx, cy, rr, 0, TAU); ctx.fill();
     }
   }
+  terrBack2D(ctx, g, inV, lowZ);   /* Fassung 22: Trümmerfelder, wandernde Gefahren */
   /* Felder: dichter Bereich als weiche Fläche, darin die Felsen */
   for (const f of m.fields) if (inV(f.x, f.y, f.r)) { const gr = ctx.createRadialGradient(f.x, f.y, f.r * 0.2, f.x, f.y, f.r); gr.addColorStop(0, 'rgba(90,80,70,0.22)'); gr.addColorStop(1, 'rgba(90,80,70,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill(); }
-  for (const o of m.rocks) if (inV(o.x, o.y, o.r)) drawRock(ctx, o, 'rock');
+  for (const o of m.rocks) if (!o.gone && inV(o.x, o.y, o.r)) drawRock(ctx, o, 'rock');
+  terrRocks2D(ctx, g, inV);   /* Fassung 22: Risse in sprengbaren Felsen */
   for (const n of g.nodes) if (inV(n.x, n.y, n.r)) { drawRock(ctx, n, n.kind, n.amount > 0 ? 1 : 0.45); if (n.miners && R.visible(n)) { ctx.strokeStyle = n.kind === 'ice' ? 'rgba(143,227,255,0.35)' : 'rgba(255,184,107,0.35)'; ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([4, 6]); ctx.lineDashOffset = -R.time * 30; ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 10, 0, TAU); ctx.stroke(); ctx.setLineDash([]); } }
   /* Stätten und Tore */
   for (const st of g.sites) if (inV(st.x, st.y, st.r + 40) && R.seen(st.x, st.y)) { if (R.detail > 1 && cam.z > 0.35) glowAt(ctx, st.x + st.r * 0.1, st.y + st.r * 0.14, st.r * 1.5, '#000000', 0.45); ctx.save(); ctx.translate(st.x, st.y); drawSite(ctx, st, R.time, R.visible(st)); ctx.restore(); if (st.prog > 0 && !st.done) { ctx.strokeStyle = st.by >= 0 ? pcol(st.by) : '#fff'; ctx.lineWidth = 3 / cam.z; ctx.beginPath(); ctx.arc(st.x, st.y, st.r + 10, -Math.PI / 2, -Math.PI / 2 + TAU * st.prog); ctx.stroke(); } if (st.owner >= 0 && st.kind !== 'ruin') { ctx.strokeStyle = pcol(st.owner); ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([6 / cam.z, 6 / cam.z]); ctx.beginPath(); ctx.arc(st.x, st.y, st.r + 6, 0, TAU); ctx.stroke(); ctx.setLineDash([]); } }
@@ -769,6 +771,7 @@ function frame2D(alpha, dt) {
   }
   /* Wracks */
   for (const w of g.wrecks) if (w.ruin) { if (inV(w.x, w.y, w.r + 40) && R.seen(w.x, w.y)) drawRuin2D(ctx, w, g); } /* Fassung 22: Ruinen */
+  else if (w.rock) { if (inV(w.x, w.y, 60) && R.seen(w.x, w.y)) terrRubble2D(ctx, w, g); } /* Fassung 22: Felsschutt */
   else if (inV(w.x, w.y, 60) && R.seen(w.x, w.y)) { const left = w.until - g.time; ctx.save(); ctx.globalAlpha = clamp(left / 20, 0, 0.55); ctx.translate(w.x, w.y); ctx.rotate(w.ang + Math.sin(w.id) * 0.3); const s = sprScale(), c = shipSprite(w.type, SHIPS[w.type].f, 'wreck', s), ww = c.width / s; ctx.drawImage(c, -ww / 2, -ww / 2, ww, ww); ctx.restore(); }
   /* Stationen */
   for (const b of g.bldgs) {
@@ -1061,6 +1064,7 @@ function healBeams2D(ctx, g, u, cam) {
 function drawOverlay3D(g, inV, lowZ, vp) {
   const ring = (x, y, r, col, w, o) => RA3D.ring(x, y, r, col, w || 1, o), line = (x0, y0, x1, y1, col, w, o) => RA3D.line(x0, y0, x1, y1, col, w || 1, o), disc = (x, y, r, col, a) => RA3D.disc(x, y, r, col, a);
   const hud = R.hud, GREEN = '#8cffaa', m = g.map;
+  terrOverlay3D(g, inV, lowZ);   /* Fassung 22: Gefahren, Risse, Erzbrocken, umkämpfte Stationen */
   /* Bauschiff am Werk, Frachter beim Abbau, Sporen-Auren, Zusatzschild */
   for (const u of g.ships) if (!u.dead && R.visible(u) && inV(u.x, u.y, 120)) {
     if (u.o.t === 'build') { const b = g.byId.get(u.o.bid); if (b && !b.done && hyp(u.x - b.x, u.y - b.y) < b.def.r + u.def.r + 70) line(u.x, u.y, b.x, b.y, '#b4ffdc', 1.5, { alpha: 0.55 }); }
@@ -1171,13 +1175,15 @@ R.drawMini = function () {
     x.strokeStyle = 'rgba(120,40,20,0.8)'; x.lineWidth = Math.max(2, EDGE * sx); x.strokeRect(0, 0, W, H);
     for (const n of m.nebs || []) { x.fillStyle = n.kind === 'ash' ? 'rgba(255,90,60,0.4)' : 'rgba(120,110,255,0.35)'; x.beginPath(); x.arc(n.x * sx, n.y * sy, n.r * sx, 0, TAU); x.fill(); }
     for (const f of m.fields) { x.fillStyle = 'rgba(110,100,90,0.35)'; x.beginPath(); x.arc(f.x * sx, f.y * sy, f.r * sx, 0, TAU); x.fill(); }
-    for (const o of m.rocks) { x.fillStyle = '#5a554f'; x.beginPath(); x.arc(o.x * sx, o.y * sy, Math.max(1, o.r * sx), 0, TAU); x.fill(); }
+    terrMiniBase(x, m, sx, sy);   /* Fassung 22 */
+    for (const o of m.rocks) { if (o.gone) continue; x.fillStyle = '#5a554f'; x.beginPath(); x.arc(o.x * sx, o.y * sy, Math.max(1, o.r * sx), 0, TAU); x.fill(); }
     R.miniBase = b;
   }
   ctx.drawImage(R.miniBase, 0, 0);
   for (const n of g.nodes) { ctx.fillStyle = n.amount > 0 ? (n.kind === 'ice' ? '#8fc3e6' : '#c89050') : '#555'; ctx.beginPath(); ctx.arc(n.x * sx, n.y * sy, Math.max(1.5, n.r * sx), 0, TAU); ctx.fill(); }
   const vp = R.vp;
   for (const st of g.sites) { if (vp >= 0 && !R.seen(st.x, st.y)) continue; ctx.strokeStyle = st.kind === 'ruin' ? (st.scanned ? '#556' : '#9ff0c0') : st.owner >= 0 ? pcol(st.owner) : '#9ff0c0'; ctx.lineWidth = 1; const r = st.kind === 'ruin' ? 2.5 : 4; ctx.beginPath(); ctx.arc(st.x * sx, st.y * sy, r, 0, TAU); ctx.stroke(); }
+  terrMini(ctx, g, sx, sy);   /* Fassung 22: wandernde Gefahren */
   for (const gt of g.gates) { if (vp >= 0 && !R.seen(gt.x, gt.y)) continue; ctx.strokeStyle = gt.owner >= 0 ? pcol(gt.owner) : gt.state === 'flicker' ? '#9ff0c0' : '#667'; ctx.lineWidth = 1.5; const r = 4; ctx.beginPath(); ctx.moveTo(gt.x * sx - r, gt.y * sy); ctx.lineTo(gt.x * sx, gt.y * sy - r); ctx.lineTo(gt.x * sx + r, gt.y * sy); ctx.lineTo(gt.x * sx, gt.y * sy + r); ctx.closePath(); ctx.stroke(); }
   for (const b of g.bldgs) { if (b.dead || (vp >= 0 && !R.seen(b.x, b.y))) continue; ctx.fillStyle = pcol(b.owner); const r = Math.max(2, b.def.r * sx * 0.9); ctx.fillRect(b.x * sx - r, b.y * sy - r, r * 2, r * 2); }
   for (const u of g.ships) { if (u.dead || u.def.role === 'fighter' || (vp >= 0 && !R.visible(u))) continue; ctx.fillStyle = pcol(u.owner); const r = Math.max(1.2, u.def.r * sx * 0.8); ctx.fillRect(u.x * sx - r, u.y * sy - r, r * 2, r * 2); }

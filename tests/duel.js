@@ -2,7 +2,7 @@
 /* Zweikampf-Test: n Schiffe des Typs A gegen n des Typs B auf freier Fläche; Überlebende und Restzustand */
 const { loadSim } = require('./harness');
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const src = ['core.js', 'data.js', 'i18n.js', 'map.js', 'sim.js', 'combat.js', 'ai.js', 'waves.js', 'mission.js', 'missions.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
+const src = ['core.js', 'data.js', 'i18n.js', 'map.js', 'terrain.js', 'sim.js', 'combat.js', 'ai.js', 'waves.js', 'mission.js', 'missions.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
 const ctx = { console, Math }; vm.createContext(ctx);
 vm.runInContext(src + '\nthis.X = { createGame, stepGame, addShip, cmdMove, SHIPS, STEP };', ctx);
 const X = ctx.X;

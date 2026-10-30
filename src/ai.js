@@ -252,6 +252,7 @@ function aiThink(g, pi) {
     const hunters = fleet.filter(u => !u.def.art && (u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am)) && !(A.atk && A.atk.ids.indexOf(u.id) >= 0)).sort((a, b) => b.def.speed - a.def.speed).slice(0, 4);
     if (hunters.length) { if (tg) execCmd(g, { t: 'attack', p: pi, u: hunters.map(u => u.id), e: tg.id }); else cmdMove(g, hunters, p.artX, p.artY, true, 'wedge'); }
   }
+  if (!hurt && fleet.length && !g.wave) aiTerrain(g, pi, fleet, anchor, toward);   /* Fassung 22: Pfropfen sprengen, Stationen nehmen */
   if (hurt && fleet.length) {
     /* Verteidigung: alle, die nicht gerade weit weg angreifen */
     const def = fleet.filter(u => !A.atk || hyp(u.x - p.hurtX, u.y - p.hurtY) < 1500 || u.o.t === 'idle');

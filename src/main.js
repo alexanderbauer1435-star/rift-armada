@@ -75,7 +75,8 @@ function startSkirmish() {
   players.forEach((q, i) => { q.start = order[i]; });
   const res = MENU.res === 'low' ? { ice: 700, ore: 300 } : MENU.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
   /* KARTENEDITOR: eigene Karte – das Layout reist in opts mit (Spielstand) */
-  beginGame({ map, size: MENU.size || 'normal', seed: 1 + ((Math.random() * 1e6) | 0), players, res, pace: MENU.pace || 'tactical', custom: edLayoutOf(map) }, 'skirmish');
+  /* Fassung 22: Zufallskarte (mseed) und wandernde Gefahren reisen in opts mit (Spielstand, Wiederholung) */
+  beginGame({ map, size: MENU.size || 'normal', seed: 1 + ((Math.random() * 1e6) | 0), players, res, pace: MENU.pace || 'tactical', custom: edLayoutOf(map), mseed: map === 'random' ? randSeedMenu() : undefined, hazards: hazOn(map, MENU.haz) }, 'skirmish');
 }
 /* Übungsplatz: Testkarte, alles freigeschaltet, reiche Mittel, Zielscheiben des Gegners ohne eigene KI */
 function startSandbox() {
