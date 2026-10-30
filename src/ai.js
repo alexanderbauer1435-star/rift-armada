@@ -69,7 +69,7 @@ function aiThink(g, pi) {
   A.doleT = t;
   /* Schiffe mit Sonderauftrag (u.task, etwa Wache an einer Kolonie) führt die KI nicht */
   const ships = g.ships.filter(u => !u.dead && !u.derelict && u.owner === pi && u.def.role !== 'fighter' && !u.task && !u.gar);
-  const builders = ships.filter(u => u.def.build), tankers = ships.filter(u => u.def.cargo), fleet = ships.filter(u => armed(u) && !u.retreat);
+  const builders = ships.filter(u => u.def.build), tankers = ships.filter(u => u.def.cargo), fleet = ships.filter(u => armed(u) && !u.retreat && !u.rfq);
   /* Gefecht (Mittel, Schwer): angeschlagene Schiffe ab Fregatte ziehen sich zur Werft zurück und kommen repariert wieder */
   /* (nicht die Legion: ihre Helden fallen als ruhende Wracks und werden vom Restorer geweckt – Rückzug kostete sie Partien) */
   if (A.lvl >= 2 && AI_OPT.caut && f !== 'legion') for (const u of fleet) if (u.stance === 0 && (u.def.cls !== 's' || u.def.cp >= 2)) u.stance = 3;
@@ -210,6 +210,8 @@ function aiThink(g, pi) {
     }
     for (const y of yards) if (!y.rally) cmdRally(g, pi, y.id, anchor.x + dcos(dirA) * 300, anchor.y + dsin(dirA) * 300);
   }
+  /* Fassung 22: Mittel und Schwer rüsten große Schiffe an der Werft nach, wenn genug Rohstoffe da sind */
+  if (A.lvl >= 2 && t > 300) aiRefit(g, pi, ships);
   /* Nexus: Splitter und Prismen verschmelzen, wenn drei beisammen sind */
   if (f === 'nexus' && t > 120) {
     for (const type of ['shard', 'prism', 'monolith']) {
@@ -445,5 +447,20 @@ function aiSuper(g, pi, sup, fleet) {
       if (sc > bs) { bs = sc; best = b; }
     }
     if (best) cmdSuper(g, pi, best.x, best.y);
+  }
+}
+/* Fassung 22: Nachrüsten – ein großes Kampfschiff nahe der Werft, kein Feind in der Nähe, Rücklage bleibt; höchstens eines je Denkpause */
+function aiRefit(g, pi, ships) {
+  const p = g.players[pi], bio = !!p.F.bio;
+  if (bio ? p.ice < 2600 : p.ice < 1800 || p.ore < 900) return;
+  for (const u of ships) {
+    if (u.def.cls !== 'l' || u.def.role !== 'war' || u.rfq || (u.rf && u.rf.length >= REFIT_MAX) || u.o.t === 'attack') continue;
+    if (nearFoes(g, u, 700).length) continue;
+    for (const id of ['wpn', 'armor', 'drive', 'sensor']) {
+      if (refitReq(g, u, id)) continue;
+      const c = refitCost(p, u, id);
+      if (p.ice - c.ice < (bio ? 1600 : 1000) || (!bio && p.ore - c.ore < 500)) continue;
+      if (!execCmd(g, { t: 'refit', p: pi, u: [u.id], id })) return;
+    }
   }
 }

@@ -88,7 +88,7 @@ const ship = (g, type, pi, x, y, ang) => X.addShip(g, type, pi, x, y, ang || 0);
   ok(!X.trainReq(g, 0, 'archipelago'), 'Archipelago baubar: ' + X.trainReq(g, 0, 'archipelago'));
   const fs = ship(g, 'archipelago', 0, cx(g), cy(g), 0); fs.auto = false;
   ok(X.trainReq(g, 0, 'archipelago') === 'Nur ein Flaggschiff', 'Zweites Flaggschiff gesperrt');
-  ok(X.shipAbils(g, fs).length === 2, 'Flaggschiff ohne Doktrin: 2 Fähigkeiten');
+  ok(X.shipAbils(g, fs).length === 3, 'Flaggschiff ohne Doktrin: 3 Fähigkeiten (Fassung 22: mit Flottenbefehl)');
   base.lv = 2; X.finishUpgrade && 0;
   ok(X.cmdDoctrine(g, 0, 'hardline') === null && g.players[0].doctrine === 'hardline', 'Doktrin Hardliners gewählt');
   ok(X.cmdDoctrine(g, 0, 'charter') === 'Doktrin schon gewählt', 'Doktrin endgültig');

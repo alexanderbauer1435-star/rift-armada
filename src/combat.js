@@ -77,7 +77,7 @@ function steer(g, u, px, py, dt, arrive, spCap) {
   const want = d > 1 ? datan2(dy, dx) : u.ang;
   u.ang = turnTo(u.ang, want, def.turn * tf.turn * dt * (1 - Math.min(0.5, u.v / Math.max(1, def.speed) * 0.45)));
   const diff = Math.abs(angDiff(want, u.ang));
-  let top = def.speed * tf.speed * (u.cls === 0 && inField(g.map, u.x, u.y) ? 0.5 : 1) * (0.3 + 0.7 * u.sub.drive) * (u.abT.grush > 0 || u.abT.lunge > 0 ? 2 : 1) * (u.sprint > 0 ? 1.6 : 1) * (u.frenzy > 0 ? 1.4 : 1) * (u.crus > 0 ? 1.3 : 1) * (u.pull ? 0.5 : 1);
+  let top = def.speed * tf.speed * (u.cls === 0 && inField(g.map, u.x, u.y) ? 0.5 : 1) * (0.3 + 0.7 * u.sub.drive) * (u.abT.grush > 0 || u.abT.lunge > 0 ? 2 : 1) * (u.sprint > 0 ? 1.6 : 1) * (u.frenzy > 0 ? 1.4 : 1) * (u.crus > 0 ? 1.3 : 1) * (u.pull ? 0.5 : 1) * (u.rfS || 1) * fcMul(g, u, 'speed');
   if (spCap) top = Math.min(top, spCap);
   let goal = diff < 1.1 ? top * (1 - diff * 0.45) : top * 0.25;
   if (arrive) goal = Math.min(goal, Math.sqrt(2 * def.accel * Math.max(0, d - 2)) + 4);
@@ -210,7 +210,7 @@ function updateShip(g, u, dt) {
   /* Aschenebel: Schild aus, Hülle brennt */
   if (inAsh(m, u.x, u.y)) { u.shield = 0; u.sT = 0; u.hull -= u.hullMax * ASH_DMG * dt; if (u.hull <= 0) { kill(g, u, null, -1); return; } }
   else if (u.ion) { u.shield = 0; u.sT = 0; }
-  else if (u.shieldMax && u.shield < u.shieldMax) { u.sT += dt; if (u.sT > p.tfx.sdelay) u.shield = Math.min(u.shieldMax, u.shield + def.sreg * p.tfx.sreg * g.pace.regen * (1 + 0.1 * u.rank) * dt); }
+  else if (u.shieldMax && u.shield < u.shieldMax) { u.sT += dt; if (u.sT > p.tfx.sdelay) u.shield = Math.min(u.shieldMax, u.shield + def.sreg * p.tfx.sreg * g.pace.regen * (1 + 0.1 * u.rank) * fcMul(g, u, 'sreg') * dt); }
   if (u.beams) { let any = false; for (let i = 0; i < u.beams.length; i++) { const b = u.beams[i]; if (b) { b.t -= dt; if (b.t <= 0) u.beams[i] = null; else any = true; } } if (!any) u.beams = null; }
   if (u.hangar) updateHangar(g, u, dt);
   if (def.role === 'fighter') { fighterStep(g, u, dt); return; }
@@ -255,7 +255,7 @@ function updateShip(g, u, dt) {
     case 'idle': case 'hold': {
       if (warship && u.stance !== 2) {
         /* wachen: Feinde in Sensorreichweite angreifen, dem Ziel aber nicht beliebig weit folgen */
-        const t = acquire(g, u, o.t === 'hold' ? maxRange(def) : def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor));
+        const t = acquire(g, u, o.t === 'hold' ? maxRange(def) : def.sensor * p.tfx.sensor * (u.rfV || 1) * (0.4 + 0.6 * u.sub.sensor));
         if (t) { if (o.t === 'hold') u.tgt = t.id; else { u.o = { t: 'attack', tid: t.id, guard: 1 }; u.tgt = t.id; break; } }
         else u.tgt = 0;
       }
@@ -281,7 +281,7 @@ function updateShip(g, u, dt) {
         if (u.artStop) { const b = g.byId.get(u.artStop); if (b && !b.dead) { brake(u, dt); face(u, datan2(b.y - u.y, b.x - u.x), dt); break; } u.artStop = 0; }
       }
       if (o.t === 'amove' && warship && !def.art && u.stance !== 2 && (g.tick + u.id) % 5 === 0) {
-        const t = acquire(g, u, def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor));
+        const t = acquire(g, u, def.sensor * p.tfx.sensor * (u.rfV || 1) * (0.4 + 0.6 * u.sub.sensor));
         if (t) { u.o = { t: 'attack', tid: t.id, back: o }; u.tgt = t.id; break; }
       }
       if (goTo(g, u, o.x, o.y, dt, 12 + def.r * 0.3, o.sp)) setIdle(u);
@@ -477,6 +477,15 @@ const RANK_DMG = 0.1, RANK_ACC = 0.15, RANK_RELOAD = 0.05, RANK_REGEN = 0.05;
 function rankBonus(r) { return { dmg: Math.round(RANK_DMG * r * 100), acc: Math.round(RANK_ACC * r * 100), reload: Math.round(RANK_RELOAD * r * 100), regen: Math.round(RANK_REGEN * r * 100) }; }
 function rankAcc(s) { return s.k === 1 && s.rank ? 1 - RANK_ACC * s.rank : 1; }
 function rankRel(s) { return s.k === 1 && s.rank ? 1 - RANK_RELOAD * s.rank : 1; }
+/* Fassung 22: Flottenbefehl (u.fc, Restzeit u.fcT) und Flaggschiff-Aura (u.fa bis u.faT) – Faktor für eine Wirkung */
+function fcMul(g, u, key) {
+  let m = 1;
+  if (u.fcT > 0) { const c = FCMD[u.fc]; if (c && c.cmd[key]) m *= c.cmd[key]; }
+  if (u.faT > g.time) { const a = FCMD[u.fa]; if (a && a.aura[key]) m *= a.aura[key]; }
+  return m;
+}
+/* Fassung 22: Schadensfaktor eines Schiffs aus Nachrüstung, Flottenbefehl und Aura */
+function shipMul22(g, s, w) { return (s.rfD || 1) * fcMul(g, s, 'dmg') * (w.kind === 'beam' ? fcMul(g, s, 'beam') : w.kind === 'kin' || w.kind === 'rail' ? fcMul(g, s, 'kin') : 1); }
 function dmgMul(s) { return s.k === 1 ? (1 + 0.1 * s.rank) * (s.crus > 0 ? 1.25 : 1) * (s.blessT > FX_TIME(s) ? 1.12 : 1) : 1; }
 function FX_TIME(s) { return CUR_G ? CUR_G.time : 0; }
 let CUR_G = null;
@@ -539,7 +548,7 @@ function fireArt(g, s, w, t) {
   s.fireT = g.time;
   const sp = (22 + tdist(s, t) * 0.03) * rankAcc(s), a0 = g.rng() * TAU, r0 = g.rng() * sp, tx = t.x + dcos(a0) * r0, ty = t.y + dsin(a0) * r0;
   const a = datan2(ty - s.y, tx - s.x), d = hyp(tx - s.x, ty - s.y);
-  g.proj.push({ kind: 'art', x: s.x, y: s.y, ang: a, sp: w.speed, dmg: w.dmg * dmgMul(s), owner: s.owner, sid: s.id, tid: t.id, tx, ty, d0: d, left: d, splash: w.splash, life: d / w.speed + 1, col: w.col, r: 5 });
+  g.proj.push({ kind: 'art', x: s.x, y: s.y, ang: a, sp: w.speed, dmg: w.dmg * dmgMul(s) * (s.k === 1 ? shipMul22(g, s, w) : 1), owner: s.owner, sid: s.id, tid: t.id, tx, ty, d0: d, left: d, splash: w.splash, life: d / w.speed + 1, col: w.col, r: 5 });
   ev(g, 'shot', { x: s.x, y: s.y, kind: 'kin', owner: s.owner, snd: w.snd, ang: a, big: true });
   /* Mündungsfeuer verrät die Stellung: der Beschossene sieht die Artillerie 5 s lang */
   if (t.owner >= 0) {
@@ -550,7 +559,7 @@ function fireArt(g, s, w, t) {
 function fireWeapon(g, s, i, w, t) {
   if (s.k === 1 && s.abT.cloak > 0) { s.abT.cloak = 0; ev(g, 'decloak', { x: s.x, y: s.y, owner: s.owner, id: s.id }); }
   if (s.k === 1) s.fireT = g.time;
-  const mul = dmgMul(s) * techMul(g, s, w) * (s.k === 1 && s.abT.overload > 0 && w.kind === 'beam' ? 1.4 : 1);
+  const mul = dmgMul(s) * techMul(g, s, w) * (s.k === 1 && s.abT.overload > 0 && w.kind === 'beam' ? 1.4 : 1) * (s.k === 1 ? shipMul22(g, s, w) : 1);
   if (w.kind === 'beam') {
     if (!s.beams) s.beams = [];
     const was = s.beams[i];
@@ -725,7 +734,19 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
     nearShips(g, t.x, t.y, 150, u => { if (u.type === 'bulwark' && u.owner === t.owner && u.shield > 0) { const d = hyp(u.x - t.x, u.y - t.y); if (d <= SHIPS.bulwark.link && d < bd) { bd = d; bw = u; } } return false; });
     if (bw) { bw.linkSkip = 1; damage(g, bw, amt * 0.4, kind, src, owner, sx, sy); bw.linkSkip = 0; amt *= 0.6; }
   }
+  /* Fassung 22: »Formation halten« – ein Teil jedes Treffers geht auf bis zu vier Nachbarn im selben Befehl (ohne erneute Konter) */
+  if (t.k === 1 && t.fcT > 0 && t.fc === 'alliance' && !t.linkSkip && !bypass && t.def.role !== 'fighter') {
+    const mates = [];
+    nearShips(g, t.x, t.y, 260, u => { if (u !== t && !u.dead && !u.derelict && u.owner === t.owner && u.fcT > 0 && u.fc === 'alliance' && u.def.role !== 'fighter') mates.push(u); return mates.length >= 4; });
+    if (mates.length) { const sh = FCMD.alliance.cmd.share, part = amt * sh / mates.length; for (const u of mates) { u.linkSkip = 1; damage(g, u, part, kind, null, owner, sx, sy); u.linkSkip = 0; } amt *= 1 - sh; }
+  }
   const mS = DMG_VS_SHIELD[kind] || 1, mH = DMG_VS_HULL[kind] || 1;
+  /* Fassung 22: »Gleichtakt« – reicht der eigene Schild nicht, springen Nachbarn im selben Befehl mit einem Teil ihres Schilds ein */
+  if (t.k === 1 && t.fcT > 0 && t.fc === 'nexus' && !bypass && t.shieldMax) {
+    const need = amt * mS - t.shield; let got = 0;
+    if (need > 0) nearShips(g, t.x, t.y, 260, u => { if (u !== t && !u.dead && u.owner === t.owner && u.fcT > 0 && u.fc === 'nexus' && u.shield > 0) { const give = Math.min(u.shield * FCMD.nexus.cmd.sshare, need - got); u.shield -= give; got += give; } return got >= need; });
+    if (got > 0) t.shield += got;
+  }
   if (bypass) { /* direkt auf die Hülle */ }
   else if (t.k === 2 && t.give > 0) { const d = amt * mS; if (d <= t.give) { t.give -= d; shieldHit(g, t, sx, sy); return; } amt -= t.give / mS; t.give = 0; }
   if (!bypass && t.shield > 0) { const d = amt * mS; if (d <= t.shield) { t.shield -= d; shieldHit(g, t, sx, sy); return; } amt -= t.shield / mS; t.shield = 0; ev(g, 'shdown', { x: t.x, y: t.y, r: t.def.r }); }
@@ -734,6 +755,8 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   if (t.k === 1) d = subDamage(g, t, d, src);
   t.hull -= d;
   t.hitT = g.time;
+  /* Fassung 22: »Heilige Lanze« – Heldenschiffe fallen einige Sekunden lang nicht unter 1 Hülle */
+  if (t.k === 1 && t.fcG > g.time && t.hull < 1) t.hull = 1;
   /* Missionen: Hüllen-Untergrenze (das Schiff wird gestellt, nicht zerstört) */
   if (t.minHull && t.hull < t.minHull) t.hull = t.minHull;
   if (t.k === 2 && p && g.time - p.hurtT > 12 && owner >= 0 && owner !== t.owner && !g.players[owner].pirate) { p.hurtT = g.time; p.hurtX = t.x; p.hurtY = t.y; ev(g, 'attack', { owner: t.owner, x: t.x, y: t.y }); }
@@ -770,8 +793,13 @@ function shipUpkeep(g, u, dt) {
   if (u.sprint > 0) u.sprint -= dt;
   if (u.frenzy > 0) u.frenzy -= dt;
   if (u.dome > 0) u.dome -= dt;
+  /* Fassung 22: Flottenbefehl läuft ab, Flaggschiff-Aura erneuern, Nachrüstung an der Werft */
+  if (u.fcT > 0) { u.fcT -= dt; if (u.fcT <= 0) { u.fcT = 0; u.fc = ''; } }
+  if (u.def.flag && FCMD[u.def.f] && (g.tick + u.id) % 15 === 0) { const f = u.def.f; nearShips(g, u.x, u.y, FCMD_AURA, e => { if (e.owner === u.owner && !e.derelict && e.def.role !== 'fighter') { e.fa = f; e.faT = g.time + 0.6; } return false; }); }
+  if (u.rfq) refitStep(g, u, dt);
   if ((g.tick + u.id) % 10) return;
   const step = dt * 10;
+  if (u.fcT > 0 || u.faT > g.time) { const rg = (u.fcT > 0 && FCMD[u.fc] ? FCMD[u.fc].cmd.regen || 0 : 0) + (u.faT > g.time && FCMD[u.fa] ? FCMD[u.fa].aura.regen || 0 : 0); if (rg && u.hull < u.hullMax) u.hull = Math.min(u.hullMax, u.hull + u.hullMax * rg * step); }
   /* Selbstreparatur der Subsysteme, an Werft oder Basis fünfmal so schnell */
   const yard = nearOwnYard(g, u, 160), rate = SUB_REPAIR * (yard ? 5 : 1) * step;
   for (const id of SUBS) if (u.sub[id] < 1) u.sub[id] = Math.min(1, u.sub[id] + rate);
@@ -879,6 +907,13 @@ function abilityUse(g, u, id, t) {
     }
     /* Fassung 22: Minenfeld an der eigenen Position */
     case 'mines': if (!layMines(g, u)) return false; break;
+    /* Fassung 22: Flottenbefehle der Flaggschiffe – eigene Schiffe im Umkreis */
+    case 'fcHold': case 'fcBroad': case 'fcLance': case 'fcSync': case 'fcBlood': {
+      const f = A.fc, al = nearAllies(g, u, A.r, e => e.owner === u.owner); al.push(u);
+      for (const e of al) { e.fc = f; e.fcT = A.dur; if (f === 'legion' && e.def.hero) e.fcG = g.time + FCMD.legion.cmd.guard; }
+      u.abT[id] = A.dur;
+      break;
+    }
     case 'netpulse': { for (const b of g.bldgs) if (!b.dead && b.owner === u.owner && hyp(b.x - u.x, b.y - u.y) <= A.r + b.def.r) { b.hull = Math.min(b.hullMax, b.hull + b.hullMax * 0.25); b.forceNet = g.time + 30; if (b.off) { b.off = false; } ev(g, 'heal', { x: b.x, y: b.y, r: b.def.r, owner: u.owner }); } recalcPower(g, u.owner); recalcCp(g, u.owner); break; }
     default: ok = false;
   }
@@ -946,6 +981,7 @@ function abilityAuto(g, u) {
       case 'mutSwarm': case 'mutSpit': case 'mutRav': case 'mutLeech': case 'mutMaw': break;
       /* Fassung 22: Minen, wenn Feinde nahen und hier noch kein eigenes Feld liegt */
       case 'mines': go = (o.t === 'idle' || o.t === 'hold' || o.t === 'attack') && nearFoes(g, u, 500).length > 0; break;
+      case 'fcHold': case 'fcBroad': case 'fcLance': case 'fcSync': case 'fcBlood': go = (fighting || nearFoes(g, u, maxRange(u.def) + 250).length > 0) && nearAllies(g, u, ABIL[id].r, e => e.owner === u.owner && armed(e)).length >= 5; break;
       case 'netpulse': go = g.bldgs.some(b => !b.dead && b.owner === u.owner && (b.off || b.hull < b.hullMax * 0.5) && hyp(b.x - u.x, b.y - u.y) <= ABIL.netpulse.r); break;
     }
     if (go) abilityUse(g, u, id, t);

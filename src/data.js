@@ -419,6 +419,38 @@ const ABIL = {
 for (const id in ABIL) ABIL[id].id = id;
 SHIPS.wren.ab = 'pulse'; SHIPS.lancer.ab = 'overload'; SHIPS.bulwark.ab = 'surge'; SHIPS.haven.ab = 'resupply'; SHIPS.pathfinder.ab = 'repair';
 SHIPS.needle.ab = 'grush'; SHIPS.hedgehog.ab = 'flak'; SHIPS.spear.ab = 'pierce'; SHIPS.hammer.ab = 'broadside'; SHIPS.prospector.ab = 'repair';
+/* ------------------------------------------------------------------ Fassung 22: Nachrüsten an der Werft
+   Ein eigenes Schiff nahe (REFIT_R ab Werftrand) einer fertigen eigenen Werft lässt sich nachrüsten, höchstens REFIT_MAX-mal,
+   jede Art einmal. cost: Anteil der Schiffskosten; yard: nötige Werftstufe; fx: Wirkung (Wirkung in sim.js applyRefit). */
+const REFIT = {
+  armor: { name: 'Panzerung', icon: '⛨', yard: 2, cost: 0.22, fx: { hull: 1.15, armor: 1 }, desc: 'Hülle +15 % und Panzerung +1.' },
+  wpn: { name: 'Waffen', icon: '✶', yard: 2, cost: 0.25, fx: { dmg: 1.12 }, desc: 'Alle Waffen des Schiffs +12 % Schaden.' },
+  drive: { name: 'Antrieb', icon: '»', yard: 1, cost: 0.2, fx: { speed: 1.12 }, desc: 'Höchstgeschwindigkeit +12 %.' },
+  sensor: { name: 'Sensoren', icon: '◎', yard: 1, cost: 0.2, fx: { sensor: 1.2 }, desc: 'Sensorreichweite +20 %.' }
+};
+const REFIT_IDS = ['armor', 'wpn', 'drive', 'sensor'];
+const REFIT_MAX = 2, REFIT_R = 200;
+/* Dauer einer Nachrüstung: die halbe Bauzeit, 12 bis 30 Sekunden */
+function refitTime(def) { return Math.round(clamp(def.time * 0.5, 12, 30)); }
+/* ------------------------------------------------------------------ Fassung 22: Flottenbefehle der Flaggschiffe
+   Jedes Flaggschiff bekommt einen aktiven Flottenbefehl (Umkreis FCMD_R, eigene Schiffe, Wirkung cmd) und eine ständige
+   schwächere Aura (Umkreis FCMD_AURA, solange das Flaggschiff lebt, Wirkung aura). Schlüssel: sreg Schildladung, share
+   Anteil jedes Treffers, der auf Nachbarn im Verband geht, kin/beam Schaden der Waffenart, guard Sekunden, in denen
+   Heldenschiffe nicht unter 1 Hülle fallen, sshare Anteil der Nachbarschilde, der einspringt, speed, dmg, regen (Hülle je s). */
+const FCMD = {
+  alliance: { ab: 'fcHold', col: '#8fe3ff', cmd: { sreg: 2, share: 0.3 }, aura: { sreg: 1.25 } },
+  mars: { ab: 'fcBroad', col: '#ffb070', cmd: { kin: 1.2 }, aura: { kin: 1.06 } },
+  legion: { ab: 'fcLance', col: '#f2c14e', cmd: { beam: 1.25, guard: 5 }, aura: { beam: 1.06 } },
+  nexus: { ab: 'fcSync', col: '#c9a0ff', cmd: { beam: 1.2, sshare: 0.25 }, aura: { beam: 1.06 } },
+  brood: { ab: 'fcBlood', col: '#b4ff3c', cmd: { speed: 1.2, dmg: 1.15, regen: 0.01 }, aura: { regen: 0.003 } }
+};
+const FCMD_R = 700, FCMD_AURA = 400;
+ABIL.fcHold = { name: 'Formation halten', short: 'Formation', cd: 90, dur: 15, r: FCMD_R, icon: '⬢', desc: 'Flottenbefehl: Eigene Schiffe im Umkreis laden 15 Sekunden lang ihre Schilde doppelt so schnell und verteilen 30 % jedes Treffers auf Nachbarn im Verband. Ständige Aura (Umkreis 400): Schilde laden 25 % schneller.' };
+ABIL.fcBroad = { name: 'Breitseite', short: 'Salve', cd: 90, dur: 15, r: FCMD_R, icon: '☰', desc: 'Flottenbefehl: Eigene Schiffe im Umkreis machen 15 Sekunden lang +20 % Schaden mit Kanonen und Railguns. Ständige Aura (Umkreis 400): +6 %.' };
+ABIL.fcLance = { name: 'Heilige Lanze', short: 'Hl. Lanze', cd: 90, dur: 15, r: FCMD_R, icon: '†', desc: 'Flottenbefehl: Eigene Schiffe im Umkreis machen 15 Sekunden lang +25 % Lanzenschaden, Heldenschiffe fallen 5 Sekunden lang nicht unter 1 Hülle. Ständige Aura (Umkreis 400): Lanzen +6 %.' };
+ABIL.fcSync = { name: 'Gleichtakt', short: 'Gleichtakt', cd: 90, dur: 15, r: FCMD_R, icon: '⟐', desc: 'Flottenbefehl: Eigene Schiffe im Umkreis machen 15 Sekunden lang +20 % Strahlschaden und teilen ihre Schilde: Bricht ein Schild, springen die Nachbarn ein. Ständige Aura (Umkreis 400): Strahlen +6 %.' };
+ABIL.fcBlood = { name: 'Blutrausch', short: 'Blutrausch', cd: 90, dur: 15, r: FCMD_R, icon: '✹', desc: 'Flottenbefehl: Eigene Schiffe im Umkreis sind 15 Sekunden lang 20 % schneller, machen 15 % mehr Schaden und heilen 1 % je Sekunde. Ständige Aura (Umkreis 400): heilen 0,3 % je Sekunde.' };
+for (const f in FCMD) { const A = ABIL[FCMD[f].ab]; A.id = FCMD[f].ab; A.fc = f; for (const id in SHIPS) { const d = SHIPS[id]; if (d.flag && d.f === f && d.abs && d.abs.indexOf(A.id) < 0) d.abs.push(A.id); } }
 /* ------------------------------------------------------------------ Doktrinen
    Wahl ab Kommandobasis Stufe 2, endgültig. fx wie bei der Forschung; ship exklusives Schiff; flagAb vierte
    Flaggschiff-Fähigkeit; strong/weak für die Karte; fit Spielweise; rec: Gegnerfraktion, bei der die Karte »Empfohlen« zeigt */
