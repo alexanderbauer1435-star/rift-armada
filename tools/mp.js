@@ -67,6 +67,9 @@ const OUT = path.resolve(__dirname, 'shots');
   const sa = await A.evaluate(() => ({ me: RA.UI.me, n: RA.UI.g.players.filter(p => !p.neutral).length, team: RA.UI.P.team, teams: RA.UI.g.players.map(p => p.team) }));
   const sb = await B.evaluate(() => ({ me: RA.UI.me, team: RA.UI.P.team, f: RA.UI.P.faction }));
   check('[1] four players, host and guest on different seats and teams (' + JSON.stringify(sa) + ' / ' + JSON.stringify(sb) + ')', sa.n === 4 && sa.me !== sb.me && sa.team !== sb.team && sb.f === 'brood');
+  /* Fassung 22: keine Pause mit Befehlen und keine Zeitlupe im Mehrspieler (Taste Q wirkt nicht, Menütaste bleibt ❚❚) */
+  await B.keyboard.press('q'); await B.waitForTimeout(100);
+  check('[1] no active pause or slow motion in multiplayer', await B.evaluate(() => document.getElementById('bQPause').hidden && !RA.UI.apause && !plApOk() && !plSlowOk() && (RA.UI.slowmo || 1) === 1 && document.getElementById('bPause').textContent === '❚❚'));
   check('[1] roster and signal button shown in game', await B.evaluate(() => !document.getElementById('mpRoster').hidden && !document.getElementById('mpSig').hidden && document.getElementById('mpRoster').children.length === 1));
   /* Befehl auf B: Kampfschiff zur Mitte; Befehl auf A: Werft bauen */
   const target = await B.evaluate(() => { const g = RA.UI.g, u = g.ships.find(s => s.owner === RA.UI.me && s.def.wpn.length); RA.issue({ t: 'move', u: [u.id], x: g.map.w / 2, y: g.map.h / 2 }); return u.id; });
