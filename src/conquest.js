@@ -713,9 +713,12 @@ function cqBattleResult(g) {
   const M = g.mis, pi = g.human, vets = [];
   for (const u of g.ships) {
     if (u.dead || u.derelict || u.owner !== pi || u.cqFlag || u.def.role !== 'war' || !u.def.wpn || !u.def.wpn.length) continue;
-    if (u.cqv || u.rank >= 1 || u.hero) vets.push({ t: u.type, k: Math.round(u.kills || 0), h: u.hero || '' });
+    /* Fassung 22: Veteranen behalten Rang und Erfahrung genau (eine Nachkommastelle, nie unter der Schwelle ihres Rangs);
+       auch Schiffe mit erster Erfahrung (ab einem Abschuss) ziehen weiter, Ränge haben bei den acht Plätzen Vorrang */
+    const k = Math.max(Math.round((u.kills || 0) * 10) / 10, u.rank ? XP_RANKS[u.rank - 1] : 0);
+    if (u.cqv || u.rank >= 1 || u.hero || k >= 1) vets.push({ t: u.type, k, h: u.hero || '' });
   }
-  vets.sort((a, b) => b.k - a.k);
+  vets.sort((a, b) => b.k - a.k || (a.t < b.t ? -1 : a.t > b.t ? 1 : 0));
   const fl = g.byId.get(M.f.flag);
   return { win: M.res === 1, vets: vets.slice(0, 8), flagKills: Math.round(M.f.fk || 0), flagAlive: !!(fl && !fl.dead), nemDead: !!M.f.nemDead };
 }

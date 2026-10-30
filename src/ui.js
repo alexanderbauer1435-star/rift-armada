@@ -9,7 +9,7 @@ const UI = {
   g: null, me: -1, P: null, sel: new Set(), selB: 0, mode: 'normal', place: null, box: null, boxMode: false, keys: {}, paused: false, endShown: false, attract: true, kind: '', opts: null,
   speed: 1, tab: 'eco', showRange: false, showAll: false, mark: null, mouse: false, cx: 0, cy: 0, hx: 0, hy: 0, onView: false, rect: null, form: 'wedge', lastTap: 0, lastTapId: 0, hovT: 0, tipT: 0, saveAt: 0, alertT: -99, alertPos: null, camTravel: 0, fsOff: false, fsPause: false, mPage: 'home', items: []
 };
-const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d' };
+const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d', dmgIcons: true };   /* Fassung 22: dmgIcons – Schadenssymbole */
 const MENU = { faction: 'alliance', map: 'haven', opp: 1, lvl: 2, res: 'normal', oppF: 'random', mode: 'skirmish', allies: 1, allyLvl: 2 };
 const SCALES = [0.9, 1, 1.15, 1.3], SPEEDS = [0.75, 1, 1.5, 2];
 const $ = id => document.getElementById(id);
@@ -83,6 +83,8 @@ function tap(sx, sy) {
   if (UI.mode === 'amove') { orderMove(selShips(), wx, wy, true); endMode(); return; }
   if (UI.mode === 'rally') { const b = g.byId.get(UI.selB); if (b) { issue({ t: 'rally', b: b.id, x: wx, y: wy }); mark(wx, wy); SND.play('order'); } endMode(); return; }
   if (UI.mode === 'board') { const hit = pickAt(wx, wy); if (hit && (hit.k === 1 || hit.k === 2) && (isFoe(hit.owner) || hit.derelict)) { const r = issue({ t: 'board', u: ids(selShips().filter(u => u.def.marines)), e: hit.id }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { mark(hit.x, hit.y, '#ffb86b'); SND.play('order'); } endMode(); hudCmds(); } else showInfo(L('Entern: feindliches Schiff antippen'), 1500); return; }
+  /* Fassung 22: Begleiten – eigenes Schiff oder eigene Station antippen */
+  if (UI.mode === 'escort') { const hit = pickAt(wx, wy); if (hit && (hit.k === 1 || hit.k === 2) && hit.owner === UI.me && !hit.derelict && hit.def.role !== 'fighter') { const r = issue({ t: 'escort', u: ids(selShips().filter(u => u.id !== hit.id)), e: hit.id }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { mark(hit.x, hit.y, '#8fe3ff'); SND.play('order'); showInfo(L('Begleitet {0}', L(hit.def.name)), 2000); } endMode(); hudCmds(); } else showInfo(L('Begleiten: eigenes Schiff oder eigene Station antippen'), 1500); return; }
   if (UI.mode === 'super') { UI.superTgt = { x: wx, y: wy }; mark(wx, wy, '#ffb86b'); SND.play('click'); hudCmds(true); return; }
   if (UI.mode === 'abt') { const hit = pickAt(wx, wy); if (hit && (hit.k === 1 || hit.k === 2) && isFoe(hit.owner)) { const r = issue({ t: 'ab', u: ids(selShips()), id: UI.abId, e: hit.id }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { mark(hit.x, hit.y, '#c9a0ff'); SND.play('order'); } endMode(); hudCmds(); } else showInfo(L('Feindliches Ziel antippen'), 1500); return; }
   const hit = pickAt(wx, wy), us = selShips();
@@ -361,7 +363,18 @@ function doStop() { const us = selShips(); if (us.length) { issue({ t: 'stop', u
 function toggleHold() { const us = selShips(); if (!us.length) return; const on = !us.every(u => u.hold); issue({ t: 'hold', u: ids(us), on }); toast(L(on ? 'Stellung halten: Die Auswahl bleibt stehen' : 'Stellung aufgehoben')); SND.play('order'); hudCmds(); }
 const STANCES = ['Offensiv', 'Defensiv', 'Feuer halten', 'Vorsichtig'], STANCE_HINT = ['Schießt auf jeden Feind in Sicht und verfolgt ihn', 'Schießt nur in Reichweite, verfolgt nicht', 'Schießt nicht', 'Kämpft wie Offensiv, fliegt unter 30 % Hülle zur Werft und kehrt repariert zurück'];
 function cycleStance() { const us = selShips(); if (!us.length) return; const v = ((us[0].stance | 0) + 1) % 4; issue({ t: 'stance', u: ids(us), v }); toast(L(STANCES[v]) + ': ' + L(STANCE_HINT[v])); SND.play('click'); hudCmds(); }
-function cycleForm() { UI.form = UI.form === 'wedge' ? 'line' : 'wedge'; toast(L(UI.form === 'wedge' ? 'Formation: Keil' : 'Formation: Linie')); SND.play('click'); hudCmds(); }
+/* Fassung 22: dritte Formation »Rollen« (sim.js roleSlots) */
+const FORMS = { wedge: ['⋀', 'Keil', 'Formation: Keil'], line: ['≡', 'Linie', 'Formation: Linie'], roles: ['▦', 'Rollen', 'Formation: Rollen – Schwere vorn, Artillerie und Träger hinten, Schnelle an den Flanken'] };
+function cycleForm() { UI.form = UI.form === 'wedge' ? 'line' : UI.form === 'line' ? 'roles' : 'wedge'; toast(L(FORMS[UI.form][2])); SND.play('click'); hudCmds(); }
+/* Fassung 22: Begleiten (dann Ziel antippen) und Rückzug bei Schaden je Schiff */
+function startEscort() { const us = selShips(); if (!us.length) return; if (UI.mode === 'escort') { endMode(); hudCmds(); return; } UI.mode = 'escort'; showInfo(L('Begleiten: eigenes Schiff oder eigene Station antippen'), 3000); hudCmds(); SND.play('click'); }
+function toggleAutoRet() { const us = selShips().filter(u => armed(u)); if (!us.length) return; const on = !us.every(u => u.autoRet); issue({ t: 'autoRet', u: ids(us), on }); toast(L(on ? 'Rückzug bei Schaden: an – unter 30 % Hülle zur Werft, repariert zurück' : 'Rückzug bei Schaden: aus')); SND.play('click'); hudCmds(); }
+/* Fassung 22: Rangboni als Text (Auswahlkarte und Hinweis) */
+function rankTxt(u) {
+  if (!u.rank) { const nx = XP_RANKS[0]; return u.def.wpn.length && u.def.role !== 'fighter' ? L('Erfahrung {0}/{1} Abschüsse bis {2}', Math.floor(u.kills * 10) / 10, nx, L(RANK_NAMES[1])) : ''; }
+  const b = rankBonus(u.rank), nx = XP_RANKS[u.rank];
+  return '★'.repeat(u.rank) + ' ' + L(RANK_NAMES[u.rank]) + ': ' + L('+{0} % Schaden, Hülle, Schild · −{1} % Streuung · −{2} % Nachladezeit · {3} % Hülle/min außer Gefecht', b.dmg, b.acc, b.reload, b.regen) + (nx ? ' · ' + L('{0}/{1} Abschüsse bis {2}', Math.floor(u.kills * 10) / 10, nx, L(RANK_NAMES[u.rank + 1])) : '');
+}
 function startAmove() { const us = selShips().filter(u => armed(u)); if (!us.length) { toast(L('Erst Kampfschiffe wählen')); return; } UI.mode = 'amove'; showInfo(L('Angriffsmarsch: Ziel antippen'), 3000); hudCmds(); }
 function toggleRange() { UI.showRange = !UI.showRange; $('bRange').classList.toggle('on', UI.showRange); SND.play('click'); }
 function toggleBox() { UI.boxMode = !UI.boxMode; if (UI.boxMode) showInfo(L('Auswahl: Rahmen über Schiffe ziehen'), 2500); hudCmds(); SND.play('click'); }
@@ -468,7 +481,7 @@ function hudCmds(force) {
   const us = selShips(), b = UI.selB ? UI.g.byId.get(UI.selB) : null;
   /* nur neu aufbauen, wenn sich etwas ändert: Ein laufender Fingerdruck soll seine Taste behalten */
   const abs = selAbils(us), so = UI.selS ? UI.g.byId.get(UI.selS) : null;
-  const sig = [UI.mode, so ? so.id + ':' + so.owner + ':' + (so.mode || '') + ':' + (so.state || '') : '', UI.boxMode, UI.form, us.length, us.length ? us[0].stance : '', us.every(u => u.hold), us.some(u => armed(u)), b ? b.id + ':' + b.lv + ':' + (b.upg ? 1 : 0) + ':' + b.done + ':' + (b.done && b.lv < 3 && canPay(UI.P, b.def.lv[b.lv].cost)) + ':' + (b.role === 'super' ? (b.charge >= 1 ? 1 : 0) : '') + ':' + (b.role === 'base' && UI.P.docAsk && !UI.P.doctrine ? 1 : 0) : '', UI.place ? UI.place.ok : '', UI.subAim, abs.map(a => a.id + (a.ready ? 1 : 0) + Math.round(a.cd * 2)).join(','), us.length ? us.every(u => u.auto) : '', UI.superTgt ? 1 : 0].join('|');
+  const sig = [UI.mode, so ? so.id + ':' + so.owner + ':' + (so.mode || '') + ':' + (so.state || '') : '', UI.boxMode, UI.form, us.length, us.length ? us[0].stance : '', us.every(u => u.hold), us.some(u => armed(u)), b ? b.id + ':' + b.lv + ':' + (b.upg ? 1 : 0) + ':' + b.done + ':' + (b.done && b.lv < 3 && canPay(UI.P, b.def.lv[b.lv].cost)) + ':' + (b.role === 'super' ? (b.charge >= 1 ? 1 : 0) : '') + ':' + (b.role === 'base' && UI.P.docAsk && !UI.P.doctrine ? 1 : 0) : '', UI.place ? UI.place.ok : '', UI.subAim, abs.map(a => a.id + (a.ready ? 1 : 0) + Math.round(a.cd * 2)).join(','), us.length ? us.every(u => u.auto) : '', UI.superTgt ? 1 : 0, us.length ? us.every(u => u.autoRet) : ''].join('|');
   if (!force && box._sig === sig) return;
   box._sig = sig;
   box.textContent = '';
@@ -492,7 +505,9 @@ function hudCmds(force) {
     if (us.some(canExplore)) box.appendChild(cmdBtn('◎', 'Erkunden', doExplore, 'Erkunden: fliegt selbständig unerkundete Gebiete ab, mehrere Erkunder teilen sich die Karte auf; bei schwerem Schaden zurück zur Basis', us.every(u => !canExplore(u) || u.o.t === 'explore') ? 'on' : ''));
     box.appendChild(cmdBtn('⌂', 'Stellung', toggleHold, 'Stellung halten: bleibt stehen, schießt nur in Reichweite', us.every(u => u.hold) ? 'on' : ''));
     if (war) box.appendChild(cmdBtn(['⚔', '🛡', '✋', '↩'][us[0].stance | 0], STANCES[us[0].stance | 0], cycleStance, 'Haltung wechseln: Offensiv, Defensiv, Feuer halten, Vorsichtig (Rückzug zur Reparatur)'));
-    if (us.length > 1) box.appendChild(cmdBtn(UI.form === 'wedge' ? '⋀' : '≡', UI.form === 'wedge' ? 'Keil' : 'Linie', cycleForm, 'Formation für Bewegungsbefehle'));
+    if (war) box.appendChild(cmdBtn('↶', 'Rückzug', toggleAutoRet, 'Rückzug bei Schaden (je Schiff, unabhängig von der Haltung): unter 30 % Hülle zur nächsten Werft, nach der Reparatur zurück', 'ret' + (us.every(u => !armed(u) || u.autoRet) ? ' on' : '')));
+    box.appendChild(cmdBtn('⛨', 'Begleiten', startEscort, 'Begleiten: dann ein eigenes Schiff oder eine Station antippen. Die Auswahl folgt in lockerem Ring und wehrt Feinde in seiner Nähe ab.', UI.mode === 'escort' ? 'on' : ''));
+    if (us.length > 1) box.appendChild(cmdBtn(FORMS[UI.form][0], FORMS[UI.form][1], cycleForm, 'Formation für Bewegungsbefehle: Keil, Linie oder Rollen'));
     if (war) box.appendChild(cmdBtn(UI.subAim ? SUB_ICON[UI.subAim] : '◌', UI.subAim ? SUB_NAMES[UI.subAim] : 'Ziel', cycleSub, 'Subsystem anvisieren: Der nächste Angriffsbefehl beschießt gezielt Antrieb, Waffen, Schilde, Sensoren oder Lebenserhaltung des Ziels. Hüllenschaden sinkt dabei.', 'sub' + (UI.subAim ? ' on' : '')));
     for (const a of abs) {
       const A = ABIL[a.id], cdw = a.cd > 0 ? Math.round((1 - a.cd / A.cd) * 100) : 100;
@@ -556,7 +571,7 @@ function objTip(o) {
   const g = UI.g, who = o.owner >= 0 && g.players[o.owner] ? (o.owner === UI.me ? L('Du') : pname(o.owner) + (isFoe(o.owner) ? ' · ' + L('Feind') : ' · ' + L('Verbündet'))) : '';
   const col = o.owner >= 0 && g.players[o.owner] ? pcolor(g.players[o.owner]) : '#9ff0c0', hp = e => L('Hülle') + ' ' + Math.round(e.hull) + ' / ' + Math.round(e.hullMax) + (e.shieldMax ? ' · ' + L('Schild') + ' ' + Math.round(e.shield) + ' / ' + Math.round(e.shieldMax) : '');
   if (o.k === 2) { const lv = o.def.lv[o.lv - 1]; return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + ' · ' + L('Stufe {0}', ROMAN[o.lv]) + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + (o.done ? hp(o) : L('Im Bau') + ' ' + Math.round(o.prog * 100) + ' %') + (lv.energy ? ' · ' + L('Energie') + ' ' + (lv.energy > 0 ? '+' : '') + lv.energy : '') + (lv.wpn.length ? ' · ' + lv.wpn.length + ' ' + L(lv.wpn.length > 1 ? 'Waffen' : 'Waffe') : '') + '</p>'; }
-  if (o.k === 1) return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + hp(o) + (counterTxt(o.def) ? '<br>' + counterTxt(o.def) : '') + '</p>';
+  if (o.k === 1) return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + (o.rank ? ' · ' + esc(L(RANK_NAMES[o.rank])) : '') + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + hp(o) + (counterTxt(o.def) ? '<br>' + counterTxt(o.def) : '') + (o.rank ? '<br>' + esc(rankTxt(o)) : '') + '</p>';
   if (o.k === 3) return '<h4>' + L(o.kind === 'ice' ? 'Eis' : 'Erz') + '</h4><p>' + L('Vorrat') + ' ' + Math.round(o.amount) + ' / ' + Math.round(o.max) + '</p>';
   if (o.k === 5) return '<h4 style="color:#9ff0c0">' + L('Sprungtor') + '</h4><p>' + L({ dead: 'Erloschen – ein Bauschiff kann es mit Relikten wecken.', flicker: 'Flackert: öffnet sich alle 50 Sekunden kurz.', active: 'Aktiv' }[o.state] || '') + '</p>';
   if (o.kind && SITE_DEF[o.kind]) return '<h4 style="color:#9ff0c0">' + esc(L(SITE_DEF[o.kind].name)) + '</h4><p>' + esc(L(SITE_DEF[o.kind].desc)) + '</p>';
@@ -663,16 +678,19 @@ function hudSel() {
   } else if (us.length === 1) {
     const u = us[0], d = u.def;
     h += '<h3><span>' + esc(L(d.name)) + (u.rank ? ' · ' + L(RANK_NAMES[u.rank]) : '') + '</span><span>' + d.cp + ' ★</span></h3>';
+    if (u.owner === UI.me && rankTxt(u)) h += (u.rank ? '<div class="sub rank on">' : '<div class="sub rank">') + esc(rankTxt(u)) + '</div>';   /* Fassung 22 */
     h += '<div class="bar"><i style="width:' + Math.round(u.hull / u.hullMax * 100) + '%"></i></div><div class="sub">' + L('Hülle') + ' ' + Math.round(u.hull) + ' / ' + Math.round(u.hullMax) + (d.armor ? ' · ' + L('Panzerung') + ' ' + d.armor : '') + '</div>';
     if (u.shieldMax) h += '<div class="bar sh"><i style="width:' + Math.round(u.shield / u.shieldMax * 100) + '%"></i></div><div class="sub">' + L('Schild') + ' ' + Math.round(u.shield) + ' / ' + Math.round(u.shieldMax) + '</div>';
     if (d.cargo) { const cap = Math.round(d.cargo * UI.P.tfx.cargo); h += '<div class="bar prog"><i style="width:' + Math.round(u.cargo / cap * 100) + '%"></i></div><div class="sub">' + L('Fracht') + ' ' + Math.round(u.cargo) + ' / ' + cap + (u.ckind ? ' ' + (u.ckind === 'ore' ? L('Erz') : L('Eis')) : '') + '</div>'; }
-    const O = { idle: 'Wartet', hold: 'Hält Stellung', move: 'Fliegt', amove: 'Angriffsmarsch', attack: 'Greift an', harvest: 'Baut ab', return: 'Liefert', build: 'Baut', board: 'Entert', explore: 'Erkundet', salvage: 'Birgt ein Wrack' };
+    const O = { escort: 'Begleitet', idle: 'Wartet', hold: 'Hält Stellung', move: 'Fliegt', amove: 'Angriffsmarsch', attack: 'Greift an', harvest: 'Baut ab', return: 'Liefert', build: 'Baut', board: 'Entert', explore: 'Erkundet', salvage: 'Birgt ein Wrack' };
     if (d.cmdr) h += '<div class="cmdr">★ ' + esc(L(d.cmdr)) + '</div>';
     else if (u.hero) h += '<div class="cmdr">' + esc(qt(L(u.hero))) + '</div>';
     if (u.ion) h += '<div class="sub" style="color:var(--acc2)">' + L('Im Ionennebel: Schilde aus, Sicht nur im Nahbereich – für Feinde erst aus der Nähe zu sehen.') + '</div>';
     else if (inAsh(UI.g.map, u.x, u.y)) h += '<div class="sub" style="color:var(--bad)">' + L('Im Aschenebel: Schilde aus, die Hülle nimmt Schaden.') + '</div>';
     if (u.abT.cloak > 0) h += '<div class="sub" style="color:var(--acc2)">' + L('Getarnt: noch {0} s. Ein Angriff hebt die Tarnung auf.', Math.ceil(u.abT.cloak)) + '</div>';
     if (u.retreat) h += '<div class="sub" style="color:var(--acc2)">' + L('Rückzug zur Werft: kehrt nach der Reparatur zurück.') + '</div>';
+    else if (u.autoRet && u.stance !== 3 && u.owner === UI.me) h += '<div class="sub">⛑ ' + L('Rückzug bei Schaden an') + '</div>';   /* Fassung 22 */
+    if (u.o.t === 'escort') { const e = UI.g.byId.get(u.o.tid); if (e) h += '<div class="sub">⛨ ' + L('Begleitet {0}', L(e.def.name)) + (u.o.eid ? ' · ' + L('wehrt Feind ab') : '') + '</div>'; }
     if (u.dormant) h += '<div class="sub" style="color:var(--acc2)">' + L('Ruht. Ein Restorer daneben erweckt das Schiff mit allem Rang.') + '</div>';
     if (u.derelict) h += '<div class="sub" style="color:var(--bad)">' + L('Wrack ohne Crew. Ein Bauschiff in der Nähe besetzt es neu.') + '</div>';
     else h += '<div class="sub">' + L(O[u.o.t] || u.o.t) + (u.o.t === 'attack' && u.o.sub ? ' → ' + L(SUB_NAMES[u.o.sub]) : '') + (d.wpn.length ? ' · ' + L(STANCES[u.stance | 0]) : '') + (u.kills ? ' · ' + u.kills + ' ' + L('Abschüsse') : '') + '</div>';
@@ -847,6 +865,7 @@ function initSettings() {
     segInit('sVoice', [[true, 'An'], [false, 'Aus']], () => SET.voice !== false, v => { SET.voice = v; savePrefs(); if (v) VOX.test(); else VOX.stop(); });   /* Runde 18 */
     segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
     segInit('sQual', [['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); });
+    segInit('sDmg', [[true, 'An'], [false, 'Aus']], () => SET.dmgIcons !== false, v => { SET.dmgIcons = v; savePrefs(); });   /* Fassung 22: Schadenssymbole */
     segInit('sLang', [['de', 'Deutsch'], ['en', 'English']], () => SET.lang, v => { SET.lang = v; savePrefs(); setLang(v); langRefresh(); seg(); });
   };
   seg();
