@@ -1131,3 +1131,62 @@ SHIP_DRAW.ballista = siegeDraw('paladin', 1.1, -6, 32, 4);
 SHIP_DRAW.lodestar = siegeDraw('prism', 1.0, -8, 30, 4.2);
 SHIP_DRAW.boomer = (ctx, C) => { ctx.save(); ctx.scale(1.3, 1.3); SHIP_DRAW.spitter(ctx, C); ctx.restore(); circ(ctx, -4, 0, 7.5); ctx.fillStyle = C.flesh || C.hull; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 0.8; ctx.stroke(); circ(ctx, -4, 0, 4); ctx.fillStyle = C.glow; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1; light(ctx, -4, 0, 2, C.glow); };
 Object.assign(ENGINES, { catapult: [[-21, -10, 0.8], [-21, 10, 0.8]], mortar: [[-21, 0, 1.2]], ballista: [[-20, -9, 0.7], [-20, 9, 0.7]], lodestar: [[-22, 0, 0.8]], boomer: [] });
+/* Fassung 22: Unterstützer – Rumpf eines verwandten Schiffs (vergrößert), dazu je Rolle ein Aufbau:
+   Minenleger: Minenschienen am Heck mit Minen in Reihe · Reparaturschiff: zwei Kranarme mit Schweißköpfen und ein
+   Reparaturkreuz · Truppentransporter: Truppenkapseln an beiden Flanken und eine Rampe am Bug. Brood: Eiersäcke, Fühler, Kapsel. */
+function supMineRack(ctx, C, x0, n, dy, r) {
+  for (const s of [-1, 1]) {
+    rrect(ctx, x0 - 2, s * dy - r * 1.1, n * r * 2.4 + 2, r * 2.2, r * 0.6); ctx.fillStyle = C.dark; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 0.7; ctx.stroke();
+    for (let i = 0; i < n; i++) { const x = x0 + r + i * r * 2.4; circ(ctx, x, s * dy, r); ctx.fillStyle = C.lo; ctx.fill(); ctx.strokeStyle = C.hi; ctx.lineWidth = 0.6; ctx.stroke(); circ(ctx, x, s * dy, r * 0.42); ctx.fillStyle = i === 0 ? C.trim : C.trim2; ctx.fill(); }
+  }
+}
+function supArms(ctx, C, x, dy, len) {
+  for (const s of [-1, 1]) {
+    ctx.save(); ctx.translate(x, s * dy); ctx.rotate(s * -0.45);
+    rrect(ctx, 0, -1.4, len, 2.8, 1); ctx.fillStyle = C.dark; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 0.6; ctx.stroke();
+    circ(ctx, 0, 0, 2.6); ctx.fillStyle = C.lo; ctx.fill(); ctx.stroke();
+    ctx.translate(len, 0); ctx.rotate(s * 0.9); rrect(ctx, 0, -1.1, len * 0.6, 2.2, 1); ctx.fillStyle = C.hull; ctx.fill(); ctx.stroke();
+    light(ctx, len * 0.6 + 1, 0, 1.3, '#9fffcf');
+    ctx.restore();
+  }
+}
+function supCross(ctx, C, x, y, s) { ctx.fillStyle = '#ffffff'; ctx.fillRect(x - s, y - s * 0.35, s * 2, s * 0.7); ctx.fillRect(x - s * 0.35, y - s, s * 0.7, s * 2); ctx.fillStyle = C.trim; ctx.fillRect(x - s * 0.7, y - s * 0.18, s * 1.4, s * 0.36); ctx.fillRect(x - s * 0.18, y - s * 0.7, s * 0.36, s * 1.4); }
+function supPods(ctx, C, x0, n, dy, w) {
+  for (const s of [-1, 1]) for (let i = 0; i < n; i++) {
+    const x = x0 + i * (w + 2.5);
+    rrect(ctx, x, s * dy - 3.4, w, 6.8, 2.2); hull(ctx, C, 3.4, s * dy);
+    ctx.fillStyle = C.trim; ctx.fillRect(x + w * 0.3, s * dy - 0.8, w * 0.4, 1.6);
+  }
+}
+function supRamp(ctx, C, x, w) { poly(ctx, [x, -w, x + 7, -w * 0.6, x + 7, w * 0.6, x, w]); ctx.fillStyle = C.dark; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 0.8; ctx.stroke(); for (let i = 0; i < 3; i++) panel(ctx, C, x + 2 + i * 1.8, -w * 0.7, x + 2 + i * 1.8, w * 0.7); }
+function supDraw(base, k, extra) { return (ctx, C) => { ctx.save(); ctx.scale(k, k); SHIP_DRAW[base](ctx, C); ctx.restore(); extra(ctx, C); }; }
+/* Minenleger */
+SHIP_DRAW.tripwire = supDraw('lancer', 1.12, (ctx, C) => { supMineRack(ctx, C, -22, 3, 9, 2.4); light(ctx, -8, 0, 1.4, C.glow); });
+SHIP_DRAW.caltrop = supDraw('hedgehog', 1.1, (ctx, C) => { supMineRack(ctx, C, -24, 3, 10, 2.6); ctx.fillStyle = C.trim; ctx.fillRect(-4, -1.2, 10, 2.4); });
+SHIP_DRAW.censer = supDraw('paladin', 1.05, (ctx, C) => { supMineRack(ctx, C, -22, 3, 9.5, 2.4); arch(ctx, C, -2, 0, 7, 10); ctx.fillStyle = C.gold || C.trim; ctx.fill(); light(ctx, -2, -1, 1.5, C.glow); });
+SHIP_DRAW.geode = supDraw('prism', 1.0, (ctx, C) => { for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { const x = -20 + i * 6, y = s * 10; facet(ctx, C, [x - 2.6, y, x, y - 2.8 * s, x + 2.6, y, x, y + 2.8 * s], i === 1); } core(ctx, C, -6, 0, 1.6); });
+SHIP_DRAW.clutch = supDraw('spitter', 1.35, (ctx, C) => { for (const s of [-1, 1]) for (let i = 0; i < 3; i++) sac(ctx, C, -20 + i * 6.5, s * (8 + (i % 2) * 1.5), 3.1); eye(ctx, C, 8, 0, 1.4); });
+/* Reparaturschiffe */
+SHIP_DRAW.mender = supDraw('pathfinder', 1.3, (ctx, C) => { supArms(ctx, C, 6, 6, 10); supCross(ctx, C, -8, 0, 4); });
+SHIP_DRAW.anvil = supDraw('prospector', 1.3, (ctx, C) => { supArms(ctx, C, 6, 7, 11); supCross(ctx, C, -9, 0, 4); });
+SHIP_DRAW.hospitaller = supDraw('restorer', 1.32, (ctx, C) => { supArms(ctx, C, 5, 6, 10); ctx.strokeStyle = C.gold || C.trim; ctx.lineWidth = 1.6; circ(ctx, -8, 0, 6); ctx.stroke(); supCross(ctx, C, -8, 0, 3.6); });
+SHIP_DRAW.lumen = supDraw('seed', 1.38, (ctx, C) => { for (const s of [-1, 1]) facet(ctx, C, [2, s * 6, 14, s * 13, 16, s * 10, 6, s * 4], true); core(ctx, C, -6, 0, 2.6); light(ctx, 16, 11.5, 1.2, '#9fffcf'); light(ctx, 16, -11.5, 1.2, '#9fffcf'); });
+SHIP_DRAW.nurse = supDraw('grazer', 1.4, (ctx, C) => { for (const s of [-1, 1]) tendril(ctx, C, 8, s * 5, 16, s * 0.55, 2.4, 0.4); sac(ctx, C, -8, 0, 5.2); eye(ctx, C, 12, 0, 1.4); });
+/* Truppentransporter */
+SHIP_DRAW.envoy = supDraw('hauler', 1.45, (ctx, C) => { supPods(ctx, C, -14, 3, 12, 6.5); supRamp(ctx, C, 19, 5); });
+SHIP_DRAW.breacher = supDraw('boarder', 1.32, (ctx, C) => { supPods(ctx, C, -16, 3, 12.5, 6.5); for (const s of [-1, 1]) { poly(ctx, [18, s * 3, 27, s * 1.2, 18, s * 6]); ctx.fillStyle = C.hi; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 0.7; ctx.stroke(); } });
+SHIP_DRAW.templar = supDraw('herald', 1.55, (ctx, C) => { supPods(ctx, C, -14, 3, 12, 6.2); spire(ctx, C, 18, 0, 9, 4); ctx.fillStyle = C.gold || C.trim; ctx.fillRect(-4, -1, 8, 2); ctx.fillRect(-1, -4, 2, 8); });
+SHIP_DRAW.assimilator = supDraw('binder', 1.12, (ctx, C) => { for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { const x = -16 + i * 7, y = s * 12; facet(ctx, C, [x - 3, y, x, y - 3.4 * s, x + 3, y, x, y + 3.4 * s], i % 2 === 0); light(ctx, x, y, 0.8, C.glow); } });
+SHIP_DRAW.parasitepod = supDraw('leech', 1.42, (ctx, C) => { sac(ctx, C, -6, 0, 7); for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { circ(ctx, -12 + i * 6, s * 7.5, 1.6); ctx.fillStyle = '#ff9ad6'; ctx.fill(); } });
+Object.assign(ENGINES, { tripwire: [[-20, -9, 0.9], [-20, 9, 0.9]], caltrop: [[-21, 0, 1.3]], censer: [[-19, -8, 0.8], [-19, 8, 0.8]], geode: [[-22, 0, 0.8]], clutch: [[-19, 0, 0.6]],
+  mender: [[-22, 0, 1]], anvil: [[-21, 0, 1.2]], hospitaller: [[-21, 0, 1]], lumen: [[-21, 0, 0.7]], nurse: [[-20, 0, 0.6]],
+  envoy: [[-22, 0, 1]], breacher: [[-21, 0, 1.4]], templar: [[-20, -8, 0.8], [-20, 8, 0.8]], assimilator: [[-22, 0, 0.8]], parasitepod: [[-21, 0, 0.5]] });
+/* Mine je Fraktion (Ursprung Mitte, Weltmaßstab, Radius etwa 6): armed = geschärft (Warnlicht blinkt) */
+function drawMine(ctx, f, col, t, armed) {
+  const C = shipCols(f, col), bl = armed ? 0.55 + 0.45 * Math.sin(t * 4) : 0.15;
+  if (f === 'brood') { sac(ctx, C, 0, 0, 5.2); circ(ctx, 0, 0, 2); ctx.fillStyle = C.trim; ctx.fill(); }
+  else if (f === 'nexus') { facet(ctx, C, [-6, 0, 0, -6, 6, 0, 0, 6], true); facet(ctx, C, [-3, 0, 0, -3, 3, 0, 0, 3], false); }
+  else if (f === 'legion') { for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; poly(ctx, [Math.cos(a) * 7, Math.sin(a) * 7, Math.cos(a + 0.3) * 3.5, Math.sin(a + 0.3) * 3.5, Math.cos(a - 0.3) * 3.5, Math.sin(a - 0.3) * 3.5]); ctx.fillStyle = C.gold; ctx.fill(); } circ(ctx, 0, 0, 3.8); hull(ctx, C, 3.8); }
+  else { const spikes = f === 'mars' ? 8 : 4; ctx.strokeStyle = C.line; ctx.lineWidth = 1.6; for (let i = 0; i < spikes; i++) { const a = i / spikes * TAU + 0.4; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 4, Math.sin(a) * 4); ctx.lineTo(Math.cos(a) * 7.5, Math.sin(a) * 7.5); ctx.stroke(); } circ(ctx, 0, 0, 5); hull(ctx, C, 5); ctx.strokeStyle = C.trim; ctx.lineWidth = 1.2; circ(ctx, 0, 0, 3.3); ctx.stroke(); }
+  if (bl > 0.5) light(ctx, 0, 0, 1.3, f === 'brood' ? '#d6ff6a' : '#ff5b47');
+}
