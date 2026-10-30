@@ -379,7 +379,8 @@ R.consume = function (evs) {
       case 'ability': { const A = ABIL[e.id]; fxRing(e.x, e.y, e.r ? Math.min(e.r, 320) : 40, e.r ? 0.9 : 0.5, '#ffb86b', 2); if (e.owner === R.vp) fxText(e.x, e.y - 34, A ? L(A.name) : e.id, '#ffb86b'); R.lastAct = { x: e.x, y: e.y, t: R.time }; break; }
       case 'abfx': fxFlash(e.x, e.y, 16, 0.2, '#dff4ff'); break;
       case 'lance': fxLine(e.x, e.y, e.tx, e.ty, 0.45, 'rgba(255,255,255,0.95)', 5); fxLine(e.x, e.y, e.tx, e.ty, 0.6, 'rgba(143,227,255,0.6)', 14); fxFlash(e.tx, e.ty, 40, 0.4, '#dff4ff'); fxSpark(e.tx, e.ty, 20, 200, '#bfe9ff', 0.6); if (R.inView(e.tx, e.ty, 300)) R.shake = Math.max(R.shake, 5); break;
-      case 'board': fxLine(e.fx, e.fy, e.x, e.y, 0.5, 'rgba(255,184,107,0.8)', 2); fxSpark(e.x, e.y, 10, 60, '#ffd27a', 0.6); fxText(e.x, e.y - 24, L('+{0} Marines', Math.round(e.n)), '#ffb86b'); break;
+      case 'board': { const bf = g.players[e.owner] ? g.players[e.owner].faction : ''; fxLine(e.fx, e.fy, e.x, e.y, 0.5, 'rgba(255,184,107,0.8)', 2); fxSpark(e.x, e.y, 10, 60, bf === 'brood' ? '#ff9ad6' : '#ffd27a', 0.6); fxText(e.x, e.y - 24, L(bf === 'brood' ? '+{0} Parasiten' : bf === 'nexus' ? '+{0} Drohnen' : '+{0} Marines', Math.round(e.n)), '#ffb86b'); break; }   /* Fassung 22: je Fraktion */
+      case 'mineboom': fxRing(e.x, e.y, e.r, 0.6, '#ffb060', 3); fxFlash(e.x, e.y, e.r * 0.6, 0.3, '#ffe0a0'); fxDebris(e.x, e.y, 8, 120, '#c9b9a0'); break;   /* Fassung 22 */
       case 'captured': fxRing(e.x, e.y, 50, 1, pcol(e.to), 3); fxText(e.x, e.y - 30, L('Geentert'), pcol(e.to)); fxSpark(e.x, e.y, 14, 90, '#ffffff', 0.6); break;
       case 'derelict': fxSmoke(e.x, e.y, 6, 12, 2); fxSpark(e.x, e.y, 8, 50, '#ffd27a', 0.5); break;
       case 'recrew': fxRing(e.x, e.y, 30, 0.6, '#7ddc6b', 2); break;
@@ -738,6 +739,14 @@ function frame2D(alpha, dt) {
   for (const sp of g.spores) if (inV(sp.x, sp.y, sp.r + 40)) { const k = Math.min(1, sp.t / 5); const gr = ctx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, sp.r); gr.addColorStop(0, 'rgba(180,255,60,' + (0.22 * k) + ')'); gr.addColorStop(0.7, 'rgba(140,224,74,' + (0.14 * k) + ')'); gr.addColorStop(1, 'rgba(140,224,74,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.r, 0, TAU); ctx.fill(); if (R.detail > 1 && Math.random() < 0.5) { const a = Math.random() * TAU, d = Math.random() * sp.r; fxSpark(sp.x + Math.cos(a) * d, sp.y + Math.sin(a) * d, 1, 12, '#d6ff6a', 0.5); } }
   for (const b of g.bldgs) if (!b.dead && b.role === 'spore' && b.done && inV(b.x, b.y, 400) && R.visible(b)) { const r = lvOf(b).aura; const gr = ctx.createRadialGradient(b.x, b.y, b.def.r, b.x, b.y, r); gr.addColorStop(0, 'rgba(180,255,60,0.16)'); gr.addColorStop(1, 'rgba(140,224,74,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(180,255,60,0.25)'; ctx.lineWidth = 1 / cam.z; ctx.setLineDash([4 / cam.z, 6 / cam.z]); ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
   for (const f of g.flares) if (inV(f.x, f.y, f.r + 60)) { const k = f.t / f.t0; ctx.globalCompositeOperation = 'lighter'; const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r); gr.addColorStop(0, 'rgba(255,255,230,' + (0.6 * k) + ')'); gr.addColorStop(0.5, 'rgba(255,170,70,' + (0.45 * k) + ')'); gr.addColorStop(1, 'rgba(255,90,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; if (R.detail > 1) { for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, d = Math.random() * f.r; fxSpark(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, 1, 60, '#ffd27a', 0.4); } } }
+  /* Fassung 22: Minen – eigene (Team) immer, feindliche nur entdeckt (Nahsicht, Impuls), dann mit Warnkreis */
+  if (g.mines.length) for (const mn of g.mines) {
+    if (!inV(mn.x, mn.y, 40) || (vp >= 0 && !mineSeen(g, vp, mn))) continue;
+    const own = vp < 0 || g.tm[mn.owner] === g.tm[vp];
+    ctx.save(); ctx.translate(mn.x, mn.y); ctx.rotate(mn.id * 0.7 + R.time * 0.3); drawMine(ctx, g.players[mn.owner].faction, pcol(mn.owner), R.time + mn.id, mn.arm <= 0); ctx.restore();
+    ctx.strokeStyle = own ? 'rgba(200,220,255,0.25)' : 'rgba(255,91,71,' + (0.45 + 0.3 * Math.sin(R.time * 6)) + ')'; ctx.lineWidth = 1.2 / cam.z;
+    if (own) ctx.setLineDash([3 / cam.z, 4 / cam.z]); ctx.beginPath(); ctx.arc(mn.x, mn.y, own ? MINE.trig + 6 : MINE.r * 0.6, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+  }
   /* Wracks */
   for (const w of g.wrecks) if (w.ruin) { if (inV(w.x, w.y, w.r + 40) && R.seen(w.x, w.y)) drawRuin2D(ctx, w, g); } /* Fassung 22: Ruinen */
   else if (inV(w.x, w.y, 60) && R.seen(w.x, w.y)) { const left = w.until - g.time; ctx.save(); ctx.globalAlpha = clamp(left / 20, 0, 0.55); ctx.translate(w.x, w.y); ctx.rotate(w.ang + Math.sin(w.id) * 0.3); const s = sprScale(), c = shipSprite(w.type, SHIPS[w.type].f, 'wreck', s), ww = c.width / s; ctx.drawImage(c, -ww / 2, -ww / 2, ww, ww); ctx.restore(); }
@@ -811,6 +820,8 @@ function frame2D(alpha, dt) {
       if (R.detail > 1 && Math.random() < 0.4) fxSpark(tx, ty, 1, 60, col, 0.25);
     }
   }
+  /* Fassung 22: Reparaturstrahlen der Reparaturschiffe */
+  for (const u of g.ships) if (!u.dead && u.heals && u.heals.length && inV(u.x, u.y, 320) && R.visible(u)) healBeams2D(ctx, g, u, cam);
   /* Geschosse */
   for (const q of g.proj) {
     if (!inV(q.x, q.y, 80) || (vp >= 0 && !visAt(g, vp, q.x, q.y))) continue;
@@ -956,7 +967,7 @@ R.frame = function (alpha, dt) {
   const inV = (x, y, m) => R.inView(x, y, m), lowZ = cam.z < 0.45;
   R.hud = [];
   drawOverlay3D(g, inV, lowZ, vp);
-  RA3D.frame(g, dt, R.time, { vp, seen: R.seen, visible: R.visible, pcol, fog: vp >= 0 ? R.fogCv : null, detail: R.detail, shake: R.shake });
+  RA3D.frame(g, dt, R.time, { vp, seen: R.seen, visible: R.visible, mineSeen: m => vp < 0 || mineSeen(g, vp, m), pcol, fog: vp >= 0 ? R.fogCv : null, detail: R.detail, shake: R.shake });
   /* 2D-Leinwand: nur Bildschirm-Überlagerungen */
   ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, R.W, R.H);
   if (g.flareOn) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = 'rgba(255,170,80,' + (0.08 + 0.05 * Math.sin(R.time * 9)) + ')'; ctx.fillRect(0, 0, R.W, R.H); ctx.globalCompositeOperation = 'source-over'; }
@@ -985,6 +996,20 @@ function bars3D(ctx, e, q, w) {
   if (two) { const sm = (e.shieldMax || 0) + (e.givep || 0), sv = (e.shield || 0) + (e.give || 0); ctx.fillStyle = '#8fe3ff'; ctx.fillRect(x, y, W * clamp(sm ? sv / sm : 0, 0, 1), h); }
 }
 /* Überlagerungen am Boden (3D): dieselben Inhalte wie drawOverlay2D, als Kreise/Linien für RA3D und HUD-Einträge */
+/* Fassung 22: Reparaturstrahl in Fraktionsfarbe, ein wandernder Lichtpunkt je Ziel */
+const HEAL_COL = { alliance: 'rgb(140,255,200)', mars: 'rgb(255,200,112)', legion: 'rgb(255,230,160)', nexus: 'rgb(234,220,255)', brood: 'rgb(214,255,106)' };
+function healBeams2D(ctx, g, u, cam) {
+  const col = HEAL_COL[g.players[u.owner].faction] || 'rgb(140,255,200)';
+  ctx.lineCap = 'round'; ctx.globalCompositeOperation = 'lighter';
+  for (const id of u.heals) {
+    const t = g.byId.get(id); if (!t || t.dead) continue;
+    const k = (R.time * 1.3 + id * 0.37) % 1, px = u.x + (t.x - u.x) * k, py = u.y + (t.y - u.y) * k;
+    ctx.globalAlpha = 0.22; ctx.strokeStyle = col; ctx.lineWidth = 5 / Math.max(0.5, cam.z) + 2; ctx.beginPath(); ctx.moveTo(u.x, u.y); ctx.lineTo(t.x, t.y); ctx.stroke();
+    ctx.globalAlpha = 0.7; ctx.lineWidth = 1.4; ctx.setLineDash([6, 5]); ctx.lineDashOffset = -R.time * 40; ctx.beginPath(); ctx.moveTo(u.x, u.y); ctx.lineTo(t.x, t.y); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
+    ctx.globalAlpha = 1; glowAt(ctx, px, py, 7, col, 0.9); glowAt(ctx, t.x, t.y, (t.k === 2 ? t.def.r * 0.5 : t.def.r) + 6, col, 0.35 + 0.15 * Math.sin(R.time * 5 + id));
+  }
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.lineCap = 'butt';
+}
 function drawOverlay3D(g, inV, lowZ, vp) {
   const ring = (x, y, r, col, w, o) => RA3D.ring(x, y, r, col, w || 1, o), line = (x0, y0, x1, y1, col, w, o) => RA3D.line(x0, y0, x1, y1, col, w || 1, o), disc = (x, y, r, col, a) => RA3D.disc(x, y, r, col, a);
   const hud = R.hud, GREEN = '#8cffaa', m = g.map;
@@ -1001,6 +1026,8 @@ function drawOverlay3D(g, inV, lowZ, vp) {
     if (b.off && !lowZ && (R.frameN % 60) < 40) hud.push({ k: 'text', x: b.x, y: b.y, txt: L('Kein Netz'), col: '#ff5b47', dy: b.def.r * 0.6 + 14 });
   }
   for (const sp of g.spores) if (inV(sp.x, sp.y, sp.r + 40)) disc(sp.x, sp.y, sp.r, '#b4ff3c', 0.16 * Math.min(1, sp.t / 5));
+  /* Fassung 22: Minen – eigene mit feinem Kreis, entdeckte feindliche mit rotem Warnkreis */
+  if (g.mines.length) for (const mn of g.mines) { if (!inV(mn.x, mn.y, 120) || (vp >= 0 && !mineSeen(g, vp, mn))) continue; const own = vp < 0 || g.tm[mn.owner] === g.tm[vp]; if (own) ring(mn.x, mn.y, MINE.trig + 6, '#c8dcff', 1, { dash: 1, alpha: 0.3 }); else { ring(mn.x, mn.y, MINE.r * 0.6, '#ff5b47', 1.5, { dash: 1, alpha: 0.5 + 0.3 * Math.sin(R.time * 6) }); disc(mn.x, mn.y, MINE.r * 0.6, '#ff5b47', 0.06); } }
   /* Bergung: lohnende Wracks markieren, solange Frachter gewählt sind; getarnte eigene Schiffe */
   if (R.wantSalvage()) for (const w of g.wrecks) if (w.sal > 0 && inV(w.x, w.y, 60) && R.seen(w.x, w.y)) { ring(w.x, w.y, 34, '#ffd36b', 1.5, { dash: 1, alpha: 0.6 }); if (!lowZ) hud.push({ k: 'text', x: w.x, y: w.y, txt: Math.round(w.sal) + '', col: '#ffd36b', size: 12, dy: -30 }); }
   if (vp >= 0) for (const u of g.ships) if (!u.dead && u.abT.cloak > 0 && g.tm[u.owner] === g.tm[vp] && inV(u.x, u.y, 80)) ring(u.x, u.y, u.def.r + 12, '#8fe3ff', 1.2, { dash: 1, alpha: 0.45 });

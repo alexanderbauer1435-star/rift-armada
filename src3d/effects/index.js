@@ -43,6 +43,7 @@ export function init(scene, THREE, kitMats, d) {
   B.chunk = new ChunkBuf(CAP[3] + 60, 'debris', 0);
   B.rock = new ChunkBuf(40, 'rock', 0);
   B.caps = new ChunkBuf(160, 'capsule', 0);
+  B.mine = new ChunkBuf(200, 'rock', 0);   /* Fassung 22: Minen */
   B.disc = new DiscBuf(CAP[6] + 80, 5);
   B.ring = new RingBuf(CAP[4] + 40, 6);
   B.quad = new QuadBuf(CAP[2] + 700, 10);
@@ -254,6 +255,7 @@ export function event(e, g, view) {
     case 'breach': { const r = e.r || 40; ring(e.x, e.y, r * 2.4, '#ff5b47', 1.1, 4); ring(e.x, e.y, r * 1.4, '#ffffff', 0.7, 2); flash(e.x, e.y, r * 1.5, '#ffd0c0', 0.5, H.proj + 4, TILE.glow, 1.1); spark(e.x, e.y, 26, 220, '#ff9a7a', 0.8, H.proj, 1.3, 1.5); shake(7); break; }
     case 'gateDark': ring(e.x, e.y, 160, '#9ff0c0', 1.4, 3); smoke(e.x, e.y, 60, 10, 2.5, H.proj, 10); break;
     case 'eat': if (detail > 1) spark(e.x + rnd(-0.5, 0.5) * (e.r || 10), e.y + rnd(-0.5, 0.5) * (e.r || 10), 2, 30, '#b4ff3c', 0.4, H.proj + 2); break;
+    case 'mineboom': ring(e.x, e.y, e.r || 110, '#ffb060', 0.6, 3); break;   /* Fassung 22 */
     case 'morph': ring(e.x, e.y, (e.r || 14) * 2.2, '#d6ff6a', 0.8, 3); spark(e.x, e.y, 14, 100, '#b4ff3c', 0.6, H.proj); break;
     /* rank, deliver, relics, netoff, attack, flareStart: Texte und Pings macht die 2D-Überlagerung */
   }
@@ -274,6 +276,8 @@ export function frame(g, dt, time, view, cam) {
     if (g.strikes) strikes(g, dt, time);
     if (g.flares) flares(g, dt, time);
     if (g.spores) spores(g, dt, time, view);
+    if (g.mines && g.mines.length) mines(g, time, view);   /* Fassung 22 */
+    heals(g, time, view);
     if (g.wave && g.wave.open) rifts(g, dt, time);
   }
   for (const k in B) B[k].flush();
@@ -390,6 +394,35 @@ function spores(g, dt, time, view) {
     const k = Math.min(1, sp.t / 5);
     B.disc.write(sp.x, H.disc, sp.y, sp.r, sp.r, 0, DMODE.spores, k, sp.x * 0.013 + sp.y * 0.007, 1, 1, 1, 0.9);
     if (detail > 0) { const n = Math.min(3, Math.round(sp.r * 0.12 * dt * K * 6)); for (let i = 0; i < n; i++) { const a = Math.random() * TAU, dd = Math.sqrt(Math.random()) * sp.r; spr(P.spr, sp.x + Math.cos(a) * dd, H.ground + rnd(0, 4), sp.y + Math.sin(a) * dd, rnd(-5, 5), rnd(3, 9), rnd(-5, 5), rnd(1.5, 3), 2.2, 1.2, col('#d6ff6a'), 0.75 * k, TILE.ember, CM.fixed, 0.2, 1, 0, 0.8); } }
+  }
+}
+
+/* Fassung 22: Minen – kleiner Brocken in Spielerfarbe knapp über dem Boden, geschärft mit blinkendem Warnlicht.
+   Sichtbarkeit nach view.mineSeen (eigene immer, feindliche nur entdeckt). */
+const MINE_LIGHT = { brood: '#d6ff6a' };
+function mines(g, time, view) {
+  for (const m of g.mines) {
+    if (view && view.vp >= 0 && view.mineSeen && !view.mineSeen(m)) continue;
+    const p = g.players[m.owner], c = col((view && view.pcol && view.pcol(m.owner)) || (p && p.color) || '#d8d0bd'), h = H.ground + 2.2 + 0.6 * Math.sin(time * 2 + m.id);
+    B.mine.write(m.x, h, m.y, time * 0.6 + m.id, m.id * 0.9, time * 0.4, 2.4, 2.4, 2.4, 0.25, c[0] * 0.8, c[1] * 0.8, c[2] * 0.8);
+    if (m.arm <= 0 && Math.sin(time * 4 + m.id) > 0) { const w = col(MINE_LIGHT[p && p.faction] || '#ff5b47'); B.spr.write(m.x, h + 2.6, m.y, 7, 0, TILE.glow, w[0], w[1], w[2], 0.9); B.spr.write(m.x, h + 2.6, m.y, 2.2, 0, TILE.dot, 1.6, 1.6, 1.6, 0.9); }
+  }
+}
+/* Fassung 22: Reparaturstrahl – breite Hülle und dünner Kern in Fraktionsfarbe, ein wandernder Lichtpunkt je Ziel */
+const HEAL_COL = { alliance: '#8cffc8', mars: '#ffc870', legion: '#ffe6a0', nexus: '#eadcff', brood: '#d6ff6a' };
+function heals(g, time, view) {
+  for (const u of g.ships) {
+    if (u.dead || !u.heals || !u.heals.length) continue;
+    if (view && view.vp >= 0 && !view.visible(u)) continue;
+    const p = g.players[u.owner], c = col(HEAL_COL[p && p.faction] || '#8cffc8');
+    for (const id of u.heals) {
+      const t = g.byId.get(id); if (!t || t.dead) continue;
+      const h1 = H.beam + (t.k === 2 ? 4 : 0), k = (time * 1.3 + id * 0.37) % 1;
+      B.quad.write(u.x, H.beam, u.y, t.x, h1, t.y, 7, QMODE.flat, c[0], c[1], c[2], 0.14);
+      B.quad.write(u.x, H.beam, u.y, t.x, h1, t.y, 1.4, QMODE.flat, c[0], c[1], c[2], 0.7);
+      B.spr.write(u.x + (t.x - u.x) * k, H.beam + (h1 - H.beam) * k, u.y + (t.y - u.y) * k, 9, 0, TILE.glow, c[0], c[1], c[2], 0.9);
+      B.spr.write(t.x, h1, t.y, (t.k === 2 ? t.def.r * 0.6 : t.def.r) + 8, time, TILE.glow, c[0], c[1], c[2], 0.25 + 0.1 * Math.sin(time * 5 + id));
+    }
   }
 }
 

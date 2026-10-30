@@ -41,7 +41,7 @@ function createGame(opts) {
   const map = opts.mis ? misMap(opts.mis.id, opts.seed || 1, opts.mis) : generateMap(mapId, np, opts.seed || 1, opts.size, opts.custom);
   const g = {
     map, rng: makeRng((opts.seed || 1) * 7919 + 13), tick: 0, time: 0, players: [], ships: [], bldgs: [], nodes: [], proj: [], wrecks: [], ev: [],
-    byId: new Map(), nextId: 1, over: false, winner: -1, winTeam: -1, opts, human: -1, tm: [], deadFlag: false, bDied: false, reveals: [], strikes: [], flares: [], sites: [], gates: [], events: [], neutral: -1, spores: [], threat: -1, wave: null, found: [],
+    byId: new Map(), nextId: 1, over: false, winner: -1, winTeam: -1, opts, human: -1, tm: [], deadFlag: false, bDied: false, reveals: [], strikes: [], flares: [], sites: [], gates: [], events: [], neutral: -1, spores: [], mines: [], threat: -1, wave: null, found: [],
     gw2: Math.ceil(map.w / CELL), gh2: Math.ceil(map.h / CELL), cells: null, cellsUsed: [], visStamp: 1, vw: Math.ceil(map.w / VIS), vh: Math.ceil(map.h / VIS), teamVis: {}, log: []
   };
   g.cells = new Array(g.gw2 * g.gh2);
@@ -915,6 +915,8 @@ function stateHash(g) {
   if (g.mis) { for (const q of g.mis.goals) { h = hmix(h, q.st); h = hmix(h, q.v); } h = hmix(h, g.mis.res); }
   for (const b of g.bldgs) if (!b.dead) { h = hmix(h, b.id); h = hmix(h, b.hull); h = hmix(h, b.prog); h = hmix(h, b.q.length); }
   for (const n of g.nodes) h = hmix(h, n.amount);
+  /* Fassung 22: Minen */
+  h = hmix(h, g.mines.length); for (const m of g.mines) { h = hmix(h, m.id); h = hmix(h, m.t); }
   return h >>> 0;
 }
 function stepGame(g) {
@@ -940,6 +942,7 @@ function stepGame(g) {
   updateProj(g, dt);
   if (g.strikes.length) updateStrikes(g, dt);
   if (g.flares.length) updateFlares(g, dt);
+  if (g.mines.length) updateMines(g, dt);
   if (g.tick % 5 === 3) updateDots(g, dt * 5);
   if (g.wave) updateWaves(g, dt);
   if (g.mis && g.tick % 15 === 5) misStep(g);
@@ -1376,4 +1379,54 @@ function updateDots(g, dt) {
     nearShips(g, s.x, s.y, s.r, e => { if (e.dead || e.derelict || e.def.role === 'fighter') return false; if (g.tm[e.owner] === tm) { if (e.def.regen) e.hull = Math.min(e.hullMax, e.hull + e.hullMax * (s.heal || 0.02) * dt * g.pace.regen); } else damage(g, e, e.hullMax * (s.hurt || 0.015) * dt * g.pace.dmg, 'acid', null, s.owner, s.x, s.y, null, true); return false; });
     for (const b of g.bldgs) if (!b.dead && g.tm[b.owner] !== tm && hyp(b.x - s.x, b.y - s.y) <= s.r + b.def.r * 0.5) damage(g, b, b.hullMax * 0.004 * dt, 'acid', null, s.owner, s.x, s.y, null, true);
   }
+}
+
+/* ------------------------------------------------------------------ Fassung 22: Minenfelder
+   Minen sind eigene Objekte in g.mines (nicht in byId): { id, x, y, owner, t Restzeit, arm Schärfzeit, hp }. Feinde sehen
+   sie nur über die Nahsicht ihres Teams (visN: Schiffe 150 Einheiten, Sensorimpulse, Geschütze in Waffenreichweite). */
+function mineSeen(g, pi, m) {
+  if (pi < 0 || g.tm[m.owner] === g.tm[pi]) return true;
+  const p = g.players[pi]; if (!p || !p.visN) return false;
+  return p.visN[clamp((m.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((m.x / VIS) | 0, 0, g.vw - 1)] === g.visStamp;
+}
+function layMines(g, u) {
+  /* kein zweites Feld auf demselben Fleck */
+  let near = 0; for (const m of g.mines) if (m.owner === u.owner && hyp(m.x - u.x, m.y - u.y) < MINE.spread) near++;
+  if (near >= MINE.n) return false;
+  const a0 = g.rng() * TAU;
+  for (let i = 0; i < MINE.n; i++) {
+    const a = a0 + i / MINE.n * TAU + (g.rng() - 0.5) * 0.5, r = MINE.spread * (0.55 + 0.45 * g.rng());
+    const x = clamp(u.x + dcos(a) * r, EDGE, g.map.w - EDGE), y = clamp(u.y + dsin(a) * r, EDGE, g.map.h - EDGE);
+    g.mines.push({ id: g.nextId++, x, y, owner: u.owner, t: MINE.life, arm: MINE.arm, hp: MINE.hp });
+  }
+  /* höchstens MINE.max je Spieler: die ältesten verfallen */
+  let n = 0; for (const m of g.mines) if (m.owner === u.owner) n++;
+  for (let i = 0; i < g.mines.length && n > MINE.max; i++) if (g.mines[i].owner === u.owner) { g.mines.splice(i, 1); i--; n--; }
+  ev(g, 'mines', { x: u.x, y: u.y, owner: u.owner, r: MINE.spread });
+  return true;
+}
+function mineBoom(g, m) {
+  const R0 = MINE.r;
+  nearShips(g, m.x, m.y, R0 + 40, e => {
+    if (e.dead || !foes(g, m.owner, e.owner)) return false;
+    const d = hyp(e.x - m.x, e.y - m.y); if (d > R0 + e.def.r * 0.5) return false;
+    const k = d < R0 * 0.35 ? 1 : Math.max(0.5, 1 - 0.5 * (d - R0 * 0.35) / (R0 * 0.65));
+    damage(g, e, MINE.dmg * k * (COUNTER.mine[e.def.cls] || 1), 'mine', null, m.owner, m.x, m.y);
+    return false;
+  });
+  ev(g, 'hit', { x: m.x, y: m.y, kind: 'torp', mine: 1 });
+  ev(g, 'mineboom', { x: m.x, y: m.y, owner: m.owner, r: R0 });
+}
+function updateMines(g, dt) {
+  let w = 0;
+  for (let i = 0; i < g.mines.length; i++) {
+    const m = g.mines[i];
+    m.t -= dt; if (m.arm > 0) m.arm -= dt;
+    if (m.t <= 0 || m.hp <= 0 || !g.players[m.owner].alive) continue;
+    let hit = null;
+    if (m.arm <= 0) nearShips(g, m.x, m.y, MINE.trig + 40, e => { if (e.dead || e.derelict || e.def.role === 'fighter' || !foes(g, m.owner, e.owner)) return false; if (hyp(e.x - m.x, e.y - m.y) <= MINE.trig + e.def.r * 0.6) { hit = e; return true; } return false; });
+    if (hit) { mineBoom(g, m); continue; }
+    g.mines[w++] = m;
+  }
+  g.mines.length = w;
 }

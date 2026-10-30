@@ -181,7 +181,7 @@ function aiThink(g, pi) {
   /* ---- Flotte bauen ---- (ausgehungert: erst sparen, bis die neue Raffinerie steht) */
   if (yards.length && (tankers.length >= Math.min(2, wantT) || t > 200) && !(starving && p.ice < 700 && !building.some(b => b.role === 'refinery'))) {
     const labL = labLevel(g, pi), yardL = Math.max(...yards.map(b => b.lv));
-    const pool = Object.values(SHIPS).filter(d => d.f === f && (d.role === 'war' || d.role === 'carrier')).filter(d => !d.hidden && d.tier - 1 <= labL && d.yard <= yardL && !d.flag && (!d.doc || d.doc === p.doctrine) && d.wpn.length && d.id !== 'larva' && !d.art);
+    const pool = Object.values(SHIPS).filter(d => d.f === f && (d.role === 'war' || d.role === 'carrier')).filter(d => !d.hidden && d.tier - 1 <= labL && d.yard <= yardL && !d.flag && (!d.doc || d.doc === p.doctrine) && d.wpn.length && d.id !== 'larva' && !d.art && !d.mines && !d.heal && !d.troop);
     const flag = Object.values(SHIPS).find(d => d.f === f && d.flag);
     if (flag && t > 420 && ore > flag.cost.ore + 300 && !trainReq(g, pi, flag.id)) aiTrain(g, pi, flag.id);
     const cheap = pool.filter(d => d.cls === 's'), mid = pool.filter(d => d.cls === 'm'), big = pool.filter(d => d.cls === 'l');
@@ -218,6 +218,8 @@ function aiThink(g, pi) {
       if (list.length >= 3 && nx && (!nx.doc || p.doctrine === nx.doc)) { const a = list[0], near = list.filter(u => hyp(u.x - a.x, u.y - a.y) < 180); if (near.length >= 3) cmdMerge(g, pi, near.slice(0, 3).map(u => u.id)); else cmdMove(g, list.slice(0, 3), a.x, a.y, false, 'block'); }
     }
   }
+  /* Fassung 22: Minenleger, Reparaturschiffe, Truppentransporter */
+  aiSupport(g, pi, ships, fleet, yards, anchor, dirA);
   /* ---- Flotte führen ---- */
   const cpF = fleet.reduce((s, u) => s + u.def.cp, 0);
   const hurt = t - p.hurtT < 20;
@@ -342,6 +344,67 @@ function aiRaid(g, pi, fleet, anchor, rp) {
   cmdMove(g, fast, best.x, best.y, true, 'wedge'); A.raid = { ids: fast.map(u => u.id), t0: t, tid: best.id };
 }
 
+/* Fassung 22: Unterstützer. Bau: ein Reparaturschiff je zehn Kampfschiffe; Minenleger (Mittel, Schwer) einer, später
+   zwei; Truppentransporter (Mittel, Schwer) erst, wenn angeschlagene Großschiffe des Gegners gesichtet wurden, höchstens
+   einer. Führung: Reparaturschiffe folgen dem Schwerpunkt der Flotte, Minenleger verminen abwechselnd die Zugänge der
+   Raffinerien und die Front vor der Basis, Transporter entern angeschlagene mittlere und große Schiffe in der Nähe. */
+function aiSupport(g, pi, ships, fleet, yards, anchor, dirA) {
+  const p = g.players[pi], A = p.ai, f = p.faction, t = g.time;
+  const rp = { x: anchor.x + dcos(dirA) * 260, y: anchor.y + dsin(dirA) * 260 };
+  const defs = Object.values(SHIPS).filter(d => d.f === f && !d.hidden), dHeal = defs.find(d => d.heal), dMine = defs.find(d => d.mines), dTroop = defs.find(d => d.troop);
+  const heals = ships.filter(u => u.def.heal), layers = ships.filter(u => u.def.mines), troops = ships.filter(u => u.def.troop);
+  /* Beute: sichtbare, angeschlagene mittlere/große Feindschiffe mit Crew */
+  let prey = null, pd = 1e9;
+  if ((g.tick + pi * 5) % 4 === 0 || troops.length) for (const e of g.ships) { if (e.dead || e.derelict || !foes(g, pi, e.owner) || g.players[e.owner].neutral || (e.def.cls !== 'l' && e.def.cls !== 'm') || !e.crewMax || e.hull > e.hullMax * 0.5 || e.def.flag || !canSee(g, pi, e)) continue; const d = hyp(e.x - anchor.x, e.y - anchor.y) - (e.def.cls === 'l' ? 600 : 0); if (d < pd) { pd = d; prey = e; } }
+  if (prey) A.preyT = t;
+  if (yards.length && t - (A.supT || 0) > 8) {
+    A.supT = t;
+    const yardL = Math.max(...yards.map(b => b.lv)), queued = id => yards.reduce((n, y) => n + y.q.filter(q => q.id === id).length, 0);
+    const can = d => d && yardL >= d.yard && !trainReq(g, pi, d.id) && canPay(p, shipCost(p, d)) && p.cpUse + p.queued + d.cp <= p.cpMax;
+    if (can(dHeal) && heals.length + queued(dHeal.id) < Math.floor(fleet.length / 10)) aiTrain(g, pi, dHeal.id);
+    else if (A.lvl >= 2 && t > 300 && can(dMine) && p.ice > 900 && layers.length + queued(dMine.id) < (A.lvl >= 3 && t > 900 ? 2 : 1)) aiTrain(g, pi, dMine.id);
+    else if (A.lvl >= 2 && t > 480 && can(dTroop) && p.ice > 1300 && A.preyT && t - A.preyT < 120 && troops.length + queued(dTroop.id) < 1) aiTrain(g, pi, dTroop.id);
+  }
+  /* Reparaturschiffe: zum Schwerpunkt der Angriffsflotte (oder der Flotte am Sammelpunkt), etwas dahinter */
+  if (heals.length && t - (A.healT || -99) > 4) {
+    A.healT = t;
+    const grp = A.atk ? fleet.filter(u => A.atk.ids.indexOf(u.id) >= 0) : fleet.filter(u => hyp(u.x - rp.x, u.y - rp.y) < 900);
+    let cx = rp.x, cy = rp.y; if (grp.length) { cx = 0; cy = 0; for (const u of grp) { cx += u.x; cy += u.y; } cx /= grp.length; cy /= grp.length; }
+    const back = A.atk && grp.length ? datan2(anchor.y - cy, anchor.x - cx) : dirA + Math.PI;
+    const tx = cx + dcos(back) * 90, ty = cy + dsin(back) * 90;
+    const go = heals.filter(u => (u.o.t === 'idle' || u.o.t === 'move') && hyp(u.x - tx, u.y - ty) > 140);
+    if (go.length) cmdMove(g, go, tx, ty, false, 'block');
+  }
+  /* Minenleger (Mittel, Schwer): ein Auftrag zugleich */
+  if (A.lvl >= 2 && layers.length) {
+    const job = A.mj, u = job ? g.byId.get(job.id) : null;
+    if (job && (!u || u.dead || u.derelict || u.owner !== pi || t - job.t0 > 70)) { A.mj = null; A.mjT = t; }
+    else if (job) {
+      if (hyp(u.x - job.x, u.y - job.y) < 70) { execCmd(g, { t: 'ab', p: pi, u: [u.id], id: 'mines' }); A.mj = null; A.mjT = t; cmdMove(g, [u], rp.x - dcos(dirA) * 120, rp.y - dsin(dirA) * 120, false); }
+      else if (u.o.t === 'idle') cmdMove(g, [u], job.x, job.y, false);
+    } else if (t - (A.mjT || -999) > 75) {
+      const lay = layers.find(q => !(q.abcd.mines > 0) && (q.o.t === 'idle' || q.o.t === 'move'));
+      const spots = [];
+      for (const b of g.bldgs) if (!b.dead && b.done && b.owner === pi && b.role === 'refinery') spots.push({ x: b.x + dcos(dirA) * (b.def.r + 170), y: b.y + dsin(dirA) * (b.def.r + 170) });
+      spots.push({ x: anchor.x + dcos(dirA) * 520, y: anchor.y + dsin(dirA) * 520 });
+      if (lay) for (let k = 0; k < spots.length; k++) {
+        const s0 = spots[((A.mjN || 0) + k) % spots.length]; let n = 0;
+        for (const m of g.mines) if (m.owner === pi && hyp(m.x - s0.x, m.y - s0.y) < 160) n++;
+        if (n >= MINE.n || inAsh(g.map, s0.x, s0.y)) continue;
+        A.mjN = (A.mjN || 0) + k + 1; A.mj = { id: lay.id, x: s0.x, y: s0.y, t0: t }; cmdMove(g, [lay], s0.x, s0.y, false); break;
+      }
+      if (!A.mj) A.mjT = t;
+    }
+  }
+  /* Truppentransporter: angeschlagene mittlere und große Schiffe in Reichweite entern, sonst am Sammelpunkt warten */
+  for (const u of troops) {
+    if (u.o.t === 'board') continue;
+    let best = null, bd = 1600;
+    if (u.marines >= u.def.marines * 0.6) for (const e of g.ships) { if (e.dead || e.derelict || !foes(g, pi, e.owner) || g.players[e.owner].neutral || (e.def.cls !== 'l' && e.def.cls !== 'm') || !e.crewMax || e.def.flag || e.hull > e.hullMax * 0.5 || e.crew > u.marines * 1.6 || !canSee(g, pi, e)) continue; const d = hyp(e.x - u.x, e.y - u.y); if (d < bd) { bd = d; best = e; } }
+    if (best) execCmd(g, { t: 'board', p: pi, u: [u.id], e: best.id });
+    else if (u.o.t === 'idle' && hyp(u.x - rp.x, u.y - rp.y) > 300) cmdMove(g, [u], rp.x - dcos(dirA) * 100, rp.y - dsin(dirA) * 100, false);
+  }
+}
 function artKnownAi(g, pi, b) { const p = g.players[pi]; return !!p.explored[clamp((b.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((b.x / VIS) | 0, 0, g.vw - 1)]; }
 /* Belagerung im Angriff: die Artillerie der Angriffsflotte nimmt das nächste bekannte Geschütz in Zielnähe unter Beschuss */
 function aiSiege(g, pi, alive) {
