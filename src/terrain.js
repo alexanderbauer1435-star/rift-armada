@@ -214,8 +214,8 @@ function terrainStep(g, dt) {
   if (g.hazards && g.hazards.length) updateHazards(g, dt);
 }
 function terrHash(g, h) {
-  for (const e of g.rocks || []) if (e.hitT > 0) { h = hmix(h, e.id); h = hmix(h, e.hp); }
-  return h;
+  for (const e of g.rocks || []) if (!e.dead && e.hitT > 0) { h = hmix(h, e.id); h = hmix(h, e.hp); }
+  return hmix(h, g.rockN || 0);
 }
 function terrSave(g) { return { rk: (g.rocks || []).map(e => e.dead ? -1 : e.hp), hw: g.hazWarn || {} }; }
 function terrLoad(g, d) {
@@ -356,18 +356,19 @@ function genRandomTry(map, np, rng, simple) {
   const R0 = (w / 2 - 640) / cmax, rEdge = w / 2 * 1.5;
   const P = (i, r, d) => ({ x: cx + dcos(axis(i) + d) * r, y: cy + dsin(axis(i) + d) * r });
   const at = (i, r, side) => P(i, r, side / Math.max(r, 1));
-  const each = fn => { for (let i = 0; i < np; i++) fn(i); };
   for (let i = 0; i < np; i++) { const p = P(i, R0, 0); map.starts.push({ x: p.x, y: p.y, ang: axis(i) + Math.PI }); }
   const mir = rng() < 0.5;
   map.rand = { mir, np };
-  /* Heimvorkommen wie auf den Ringkarten */
-  each(i => { let p = at(i, R0 - 60, 330); iceMoon(map, p.x, p.y, rng); p = at(i, R0 - 60, -330); oreCluster(map, p.x, p.y, rng, 3); });
-  /* Gedrehte Kopie von Linien-Inhalt (Felsen, Felder) aus Sektor 0 */
+  /* Gedrehte Kopie: alles, was für Sektor 0 entstanden ist, exakt in die anderen Sektoren drehen (Vorkommen, Felsen,
+     Felder, Nebel, Stätten, Trümmerfelder) – so ist die Karte genau drehsymmetrisch und jeder Start bekommt dasselbe */
+  const KEYS = ['nodes', 'rocks', 'fields', 'nebs', 'sites', 'debris'];
   const rot = (o, k) => { const a = k * TAU / np, c = dcos(a), s = dsin(a), dx = o.x - cx, dy = o.y - cy; return { x: cx + dx * c - dy * s, y: cy + dx * s + dy * c }; };
+  const mark = () => { const m = {}; for (const key of KEYS) m[key] = (map[key] || []).length; return m; };
   const copyLines = (mk) => {
-    for (const key of ['rocks', 'fields']) { const arr = map[key], n = arr.length; for (let k = 1; k < np; k++) for (let j = mk[key]; j < n; j++) { const o = arr[j], q = rot(o, k); arr.push(Object.assign({}, o, q, { seed: ((o.seed || 0) * 7 + 13 * k) % 1000003, ang: (o.ang || 0) + k * TAU / np })); } }
+    for (const key of KEYS) { const arr = map[key] || (map[key] = []), n = arr.length; for (let k = 1; k < np; k++) for (let j = mk[key]; j < n; j++) { const o = arr[j], q = rot(o, k); arr.push(Object.assign({}, o, q, o.seed !== undefined ? { seed: ((o.seed || 0) * 7 + 13 * k) % 1000003 } : {}, o.ang !== undefined ? { ang: o.ang + k * TAU / np } : {})); } }
   };
-  const mark = () => ({ rocks: map.rocks.length, fields: map.fields.length });
+  /* Heimvorkommen wie auf den Ringkarten */
+  { const mk = mark(); let p = at(0, R0 - 60, 330); iceMoon(map, p.x, p.y, rng); p = at(0, R0 - 60, -330); oreCluster(map, p.x, p.y, rng, 3); copyLines(mk); }
   /* frei für alle Kopien? (Punkt im Sektor 0, Radius rad) */
   const clear = (r, d, rad) => {
     const ds = mir && Math.abs(Math.abs(d) - half) > 0.02 && Math.abs(d) > 0.03 ? [d, -d] : [d];
@@ -381,7 +382,7 @@ function genRandomTry(map, np, rng, simple) {
     return true;
   };
   /* Punkt-Inhalt in alle Sektoren (bei Spiegelung auch gespiegelt, außer auf der Achse und auf der Grenze) */
-  const put = (r, d, fn) => { const ds = mir && Math.abs(Math.abs(d) - half) > 0.02 && Math.abs(d) > 0.03 ? [d, -d] : [d]; for (const dd of ds) each(i => fn(P(i, r, dd))); };
+  const put = (r, d, fn) => { const ds = mir && Math.abs(Math.abs(d) - half) > 0.02 && Math.abs(d) > 0.03 ? [d, -d] : [d], mk = mark(); for (const dd of ds) fn(P(0, r, dd)); copyLines(mk); };
   const pick = (rad, rlo, rhi, dlo, dhi, tries) => { for (let k = 0; k < (tries || 14); k++) { const r = R0 * (rlo + rng() * (rhi - rlo)), d = half * (dlo + rng() * (dhi - dlo)) * (mir ? 1 : (rng() < 0.5 ? -1 : 1)); if (clear(r, d, rad)) return [r, d]; } return null; };
   /* Mitte: große Stätte, Schmiede oder offenes Feld mit Vorkommen */
   const center = rng();
