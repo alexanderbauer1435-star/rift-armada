@@ -102,6 +102,9 @@ button { font: inherit; color: inherit; }
 .crew { color: var(--dim); font-size: 0.9em; display: flex; justify-content: space-between; }
 .crew b { color: var(--txt); font-weight: 600; }
 .cmdr { color: var(--acc2); font-size: 0.9em; }
+/* Fassung 22: Rangboni auf der Auswahlkarte */
+#selCard .sub.rank { color: #c9b98a; font-size: 0.82em; line-height: 1.3; }
+#selCard .sub.rank.on { color: #ffd27a; }
 /* ---------- Doktrin ---------- */
 #doctrine .win { max-width: min(96vw, 52em); padding: 0.8em 1em; }
 .dcards { display: flex; gap: 0.6em; justify-content: center; flex-wrap: wrap; }
@@ -846,6 +849,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     <div class="row"><span class="lbl">Balken</span><div class="seg" id="sBars"></div></div>
     <div class="row"><span class="lbl">Grafik</span><div class="seg" id="sGfx"></div></div>
     <div class="row"><span class="lbl">Qualität</span><div class="seg" id="sQual"></div></div>
+    <div class="row"><span class="lbl">Schadenssymbole</span><div class="seg" id="sDmg"></div></div><!-- Fassung 22 -->
     <div class="row"><span class="lbl">Sprache · Language</span><div class="seg" id="sLang"></div></div>
     <div class="row"><button class="key arm" id="sClose">Schließen</button></div>
   </div></div>
@@ -865,6 +869,8 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     <p><b>Flanke und Heck:</b> Treffer von der Seite machen 10 %, von hinten 25 % mehr Schaden. Große Schiffe drehen langsam – kleine Schiffe umkreisen sie von selbst, bis sie im Heck stehen.</p>
     <p><b>Bergung:</b> Zerstörte Schiffe hinterlassen Wracks. Frachter wählen und ein Wrack antippen: sie zerlegen es und bringen ein Viertel der Baukosten als Erz heim (die Brood als Biomasse).</p>
     <p><b>Haltung »Vorsichtig«:</b> kämpft wie »Offensiv«, fliegt aber unter 30 % Hülle zur nächsten Werft, lässt sich reparieren und kehrt zurück.</p>
+    <p><b>Begleiten, Rückzug, Formation:</b> »Begleiten« und dann ein eigenes Schiff oder eine Station antippen: Die Auswahl folgt in lockerem Ring und greift Feinde an, die ihm nahe kommen. »Rückzug« schaltet je Schiff den Rückzug zur Werft unter 30 % Hülle ein, unabhängig von der Haltung. Die Formation »Rollen« stellt Schwere nach vorn, Artillerie, Träger und Unterstützer nach hinten und schnelle Schiffe an die Flanken.</p>
+    <p><b>Ränge:</b> Ab 3, 8 und 15 Abschüssen wird ein Schiff Veteran, Elite und Ass. Je Rang: +10 % Schaden, Hülle und Schild, −15 % Streuung, −5 % Nachladezeit, außer Gefecht repariert es 5 % Hülle je Minute. Symbole über beschädigten Schiffen zeigen getroffene Subsysteme: ⚙ Antrieb, ✶ Waffen, ◯ Schilde, ◎ Sensoren (gelb unter 60 %, rot unter 30 %).</p>
     <p><b>Tarnung:</b> Wren, Boarder, Herald, Shard und Leech können sich tarnen. Getarnte Schiffe sieht der Feind nur aus nächster Nähe, in der Waffenreichweite seiner Geschütze und Basen oder mit einem Sensorimpuls. Ein Angriff hebt die Tarnung auf.</p>
     <p><b>Subsysteme und Crew:</b> Jedes Schiff hat Antrieb, Waffen, Schilde, Sensoren und Lebenserhaltung. Treffer auf die Hülle schwächen sie; mit der Taste »Ziel« wählst du ein Subsystem, das deine Schiffe beim nächsten Angriff gezielt beschießen. Ohne Lebenserhaltung schwindet die Crew; ohne Crew treibt ein Schiff als Wrack. Eigene Wracks besetzt ein Bauschiff in der Nähe neu, fremde lassen sich entern.</p>
     <p><b>Entern:</b> Boarder und Dropship setzen Marines auf ein Ziel über (Taste »Entern«, dann Ziel antippen). Ist die Crew besiegt, gehört das Schiff dir. Erst die Crew schwächen, dann entern.</p>

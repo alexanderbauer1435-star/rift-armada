@@ -237,7 +237,7 @@ function aiThink(g, pi) {
     const free = fleet.filter(u => u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am));
     if (pg.k === 'help' && free.length && !pg.done) { pg.done = 1; cmdMove(g, free.slice(0, Math.ceil(free.length * 2 / 3)), pg.x, pg.y, true, 'wedge'); }
     else if (pg.k === 'go' && free.length && !pg.done) { pg.done = 1; cmdMove(g, free, pg.x, pg.y, false, 'wedge'); }
-    else if (pg.k === 'atk' && !A.atk && !pg.done && cpF >= cfg.army * 0.5) { pg.done = 1; cmdMove(g, fleet, pg.x, pg.y, true, 'wedge'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: 0 }; ev(g, 'aiattack', { owner: pi }); }
+    else if (pg.k === 'atk' && !A.atk && !pg.done && cpF >= cfg.army * 0.5) { pg.done = 1; cmdMove(g, fleet, pg.x, pg.y, true, 'roles'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: 0 }; ev(g, 'aiattack', { owner: pi }); }
   }
   /* Artillerie beschießt uns: schnelle Schiffe jagen die Stellung (Mündungsfeuer macht sie sichtbar) */
   if (p.artT && t - p.artT < 8 && fleet.length && t - (A.artHuntT || -99) > 10) {
@@ -264,7 +264,7 @@ function aiThink(g, pi) {
       if (t - A.atk.t0 > 14) {
       const tg = aiTarget(g, pi, alive[0].x, alive[0].y);
       if (!tg) { A.atk = null; }
-      else { const idle = alive.filter(u => u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am)); if (idle.length) cmdMove(g, idle, tg.x, tg.y, true, 'wedge'); A.atk.t0 = t; A.atk.tid = tg.id || 0; }
+      else { const idle = alive.filter(u => u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am)); if (idle.length) cmdMove(g, idle, tg.x, tg.y, true, 'roles'); A.atk.t0 = t; A.atk.tid = tg.id || 0; }
       }
     }
   } else {
@@ -277,7 +277,7 @@ function aiThink(g, pi) {
     const ready = t > A.first && t - A.atkT > A.gap && (cpF >= cfg.army * A.armyK + Math.min(16, Math.floor(t / 150) * 2) || (weakFoe && cpF >= 4));
     if (ready) {
       const tg = aiTarget(g, pi, anchor.x, anchor.y);
-      if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'wedge'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; A.gap = (40 + g.rng() * 140) * A.gapK; ev(g, 'aiattack', { owner: pi }); }
+      if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'roles'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; A.gap = (40 + g.rng() * 140) * A.gapK; ev(g, 'aiattack', { owner: pi }); }
     } else {
       /* sammeln vor der Basis; Verwundete zur Werft */
       const rp = { x: anchor.x + dcos(dirA) * 300, y: anchor.y + dsin(dirA) * 300 };
@@ -347,6 +347,14 @@ function artKnownAi(g, pi, b) { const p = g.players[pi]; return !!p.explored[cla
 function aiSiege(g, pi, alive) {
   const A = g.players[pi].ai; if (g.time - (A.siegeT || 0) < 5) return; A.siegeT = g.time;
   const arts = alive.filter(u => u.def.art); if (!arts.length) return;
+  /* Fassung 22: je Artillerie zwei Begleiter aus der Angriffsflotte (die nächsten freien Kampfschiffe), solange genug da sind */
+  let free = alive.filter(u => !u.def.art && armed(u) && u.o.t !== 'escort' && !u.retreat);
+  for (const a of arts) {
+    if (free.length < 4) break;
+    const have = alive.filter(u => u.o.t === 'escort' && u.o.tid === a.id).length; if (have >= 2) continue;
+    const pick = free.slice().sort((p, q) => hyp(p.x - a.x, p.y - a.y) - hyp(q.x - a.x, q.y - a.y) || p.id - q.id).slice(0, 2 - have);
+    cmdEscort(g, pick, a, have); free = free.filter(u => pick.indexOf(u) < 0);
+  }
   const c = alive.find(u => !u.def.art) || arts[0];
   let best = null, bd = 1e9;
   for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || g.players[b.owner].neutral || !artKnownAi(g, pi, b)) continue; const d = hyp(b.x - c.x, b.y - c.y) - (b.role === 'turret' || b.role === 'flak' || b.role === 'spore' ? 500 : 0); if (d < bd) { bd = d; best = b; } }

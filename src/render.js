@@ -669,6 +669,23 @@ function drawChevrons(ctx, x, y, n, col) {
   ctx.strokeStyle = col; ctx.lineWidth = 2 / R.cam.z; ctx.lineCap = 'round';
   for (let i = 0; i < n; i++) { const yy = y - i * 5 / R.cam.z, s = 4 / R.cam.z; ctx.beginPath(); ctx.moveTo(x - s, yy + s * 0.6); ctx.lineTo(x, yy - s * 0.4); ctx.lineTo(x + s, yy + s * 0.6); ctx.stroke(); }
 }
+/* Fassung 22: Schadenssymbole – Subsysteme unter 60 % (gelb) bzw. 30 % (rot) als kleine Zeichen über dem Schiff:
+   ⚙ Antrieb, ✶ Waffen, ◯ Schilde, ◎ Sensoren. Einstellung »Schadenssymbole« (SET.dmgIcons, Vorgabe an). */
+const DMG_SUBS = ['drive', 'wpn', 'shield', 'sensor'];
+function dmgIconsOn() { return typeof SET === 'undefined' || SET.dmgIcons !== false; }
+function dmgIcons(u) {
+  if (u.derelict || !u.crewMax || u.def.role === 'fighter') return null;
+  let out = null;
+  for (const k of DMG_SUBS) { const v = u.sub[k]; if (v >= 0.6 || (k === 'shield' && !u.shieldMax) || (k === 'wpn' && !u.def.wpn.length)) continue; (out || (out = [])).push([SUB_ICON[k], v < 0.3 ? '#ff5b47' : '#ffc23e']); }
+  return out;
+}
+/* Zeichnet die Symbole mittig über (x, y) in Bildschirmgröße sz (Pixel); ctx in Bildschirm- oder Weltkoordinaten (k = Maßstab) */
+function drawDmgIcons(ctx, list, x, y, sz) {
+  const gap = sz * 1.15, x0 = x - (list.length - 1) * gap / 2;
+  ctx.font = '600 ' + sz + 'px ' + FONT; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.lineWidth = sz * 0.28; ctx.lineJoin = 'round'; ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+  for (let i = 0; i < list.length; i++) { ctx.fillStyle = list[i][1]; ctx.strokeText(list[i][0], x0 + i * gap, y); ctx.fillText(list[i][0], x0 + i * gap, y); }
+  ctx.textBaseline = 'alphabetic';
+}
 function wpnCol(owner) { return FACTIONS[R.g.players[owner].faction].wpn; }
 function frame2D(alpha, dt) {
   const g = R.g, ctx = R.ctx, cam = R.cam;
@@ -862,6 +879,7 @@ function drawOverlay2D(ctx, g, inV, lowZ, vp, dt) {
       if (R.hover === u.id && !sel) { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(u.x, u.y, u.def.r + 6, 0, TAU); ctx.stroke(); }
       if (!lowZ && u.def.role !== 'fighter' && (sel || u.hull < u.hullMax || u.shield < u.shieldMax || U.showAll)) drawBars(ctx, u, Math.max(18, u.def.r * 2.2));
       if (!lowZ && u.rank) drawChevrons(ctx, u.x + u.def.r + 6, u.y - u.def.r, u.rank, '#ffd27a');
+      if (!lowZ && dmgIconsOn()) { const di = dmgIcons(u); if (di) { const z = cam.z, sz = 10 * clamp(z, 0.7, 1.4) / z; drawDmgIcons(ctx, di, u.x, u.y - u.def.r - 10 / z - sz * 0.9, sz); } }   /* Fassung 22 */
     }
     for (const b of g.bldgs) {
       if (b.dead || !inV(b.x, b.y, 80) || !R.seen(b.x, b.y)) continue;
@@ -947,6 +965,7 @@ R.frame = function (alpha, dt) {
     const q = RA3D.project(h.x, h.y); if (!q) continue;
     if (h.k === 'bars') bars3D(ctx, h.e, q, h.w);
     else if (h.k === 'chev') { const sc = Math.min(1.4, Math.max(0.7, q.s)); ctx.strokeStyle = h.col; ctx.lineWidth = 2; ctx.lineCap = 'round'; for (let i = 0; i < h.n; i++) { const yy = q.y + h.dy * sc - i * 5 * sc, sz = 4 * sc; ctx.beginPath(); ctx.moveTo(q.x + h.dx * sc - sz, yy + sz * 0.6); ctx.lineTo(q.x + h.dx * sc, yy - sz * 0.4); ctx.lineTo(q.x + h.dx * sc + sz, yy + sz * 0.6); ctx.stroke(); } }
+    else if (h.k === 'dmg') { const di = dmgIcons(h.e), sc = Math.min(1.4, Math.max(0.7, q.s)); if (di) drawDmgIcons(ctx, di, q.x, q.y - h.e.def.r * Math.min(2, Math.max(0.6, q.s)) - 12 - 9 * sc, 10 * sc); }   /* Fassung 22 */
     else if (h.k === 'text') { ctx.fillStyle = h.col; ctx.font = (h.bold ? '600 ' : '') + (h.size || 13) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(h.txt, q.x, q.y + (h.dy || 0) * Math.min(1.4, Math.max(0.7, q.s))); }
   }
   /* Texte der Effekte (Treffer, Ränge, Lieferungen) */
@@ -1008,6 +1027,7 @@ function drawOverlay3D(g, inV, lowZ, vp) {
     if (R.hover === u.id && !sel) ring(u.x, u.y, u.def.r + 6, '#ffffff', 1, { alpha: 0.5 });
     if (!lowZ && u.def.role !== 'fighter' && (sel || u.hull < u.hullMax || u.shield < u.shieldMax || U.showAll)) hud.push({ k: 'bars', x: u.x, y: u.y, e: u, w: Math.max(18, u.def.r * 2.2) });
     if (!lowZ && u.rank) hud.push({ k: 'chev', x: u.x, y: u.y, n: u.rank, col: '#ffd27a', dx: u.def.r + 6, dy: -u.def.r });
+    if (!lowZ && dmgIconsOn() && dmgIcons(u)) hud.push({ k: 'dmg', x: u.x, y: u.y, e: u, dy: -u.def.r - 22 });   /* Fassung 22 */
   }
   for (const b of g.bldgs) {
     if (b.dead || !inV(b.x, b.y, 80) || !R.seen(b.x, b.y)) continue;

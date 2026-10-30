@@ -191,9 +191,9 @@ function cqPanel() {
   const tl = $('cqThreats');
   tl.innerHTML = C.threats.length ? '<div class="cqSec">' + L('Bedrohungen') + '</div><ul>' + C.threats.map(x => '<li data-s="' + x.sys + '"><b>⚠ ' + esc(L(C.sys[x.sys].name)) + '</b> ← ' + esc(cqFN(x.by)) + ' (' + x.pow.toFixed(1) + ')</li>').join('') + '</ul>' : '';
   tl.querySelectorAll('[data-s]').forEach(li => li.addEventListener('click', () => { CQS.sel = +li.dataset.s; cqPanel(); }));
-  /* Flotte */
+  /* Flotte (Fassung 22: Sterne je Rang der Veteranen – Rang und Erfahrung ziehen in die nächste Schlacht mit) */
   const fl = SHIPS[CQ_FLAG[C.fac]];
-  $('cqFleet').innerHTML = '<b>' + esc(fl ? L(fl.name) : '') + '</b> · ' + esc(L(RANK_NAMES[rank] || 'Rekrut')) + ' (' + C.flag.kills + ' ' + L('Abschüsse') + ')<br>' + (C.vets.length ? C.vets.map(v => esc(SHIPS[v.t] ? L(SHIPS[v.t].name) : v.t) + (v.h ? ' ' + esc(qt(L(v.h))) : '') + (XP_RANKS.filter(q => v.k >= q).length ? ' ★' : '')).join(', ') : L('Noch keine Veteranen')) + (C.nem && !C.nem.dead ? '<br><span style="color:var(--bad)">' + L('Erzfeind') + ': ' + esc(L(C.nem.name)) + ' (' + L('Stufe {0}', C.nem.lvl) + ')</span>' : '') + (C.etech ? '<br><span style="color:var(--acc)">' + esc(L(ETECH[C.etech].name)) + '</span>' : '');
+  $('cqFleet').innerHTML = '<b>' + esc(fl ? L(fl.name) : '') + '</b> · ' + esc(L(RANK_NAMES[rank] || 'Rekrut')) + ' (' + C.flag.kills + ' ' + L('Abschüsse') + ')<br>' + (C.vets.length ? C.vets.map(v => esc(SHIPS[v.t] ? L(SHIPS[v.t].name) : v.t) + (v.h ? ' ' + esc(qt(L(v.h))) : '') + (XP_RANKS.filter(q => v.k >= q).length ? ' ' + '★'.repeat(XP_RANKS.filter(q => v.k >= q).length) : '')).join(', ') : L('Noch keine Veteranen')) + (C.nem && !C.nem.dead ? '<br><span style="color:var(--bad)">' + L('Erzfeind') + ': ' + esc(L(C.nem.name)) + ' (' + L('Stufe {0}', C.nem.lvl) + ')</span>' : '') + (C.etech ? '<br><span style="color:var(--acc)">' + esc(L(ETECH[C.etech].name)) + '</span>' : '');
   setText('cqHint', C.over ? '' : L('System antippen · Ziele leuchten blau'));
 }
 function cqDefChance(C, th) { const s = C.sys[th.sys]; return clamp(cqSig((cqPower(C) * 0.7 + 1.2 + s.fort * 0.9 + (s.type === 'cap' ? 2.4 : 0) - th.pow * 0.75 - 1) / 1.2), 0.08, 0.95); }
