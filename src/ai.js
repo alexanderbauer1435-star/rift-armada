@@ -181,7 +181,7 @@ function aiThink(g, pi) {
   /* ---- Flotte bauen ---- (ausgehungert: erst sparen, bis die neue Raffinerie steht) */
   if (yards.length && (tankers.length >= Math.min(2, wantT) || t > 200) && !(starving && p.ice < 700 && !building.some(b => b.role === 'refinery'))) {
     const labL = labLevel(g, pi), yardL = Math.max(...yards.map(b => b.lv));
-    const pool = Object.values(SHIPS).filter(d => d.f === f && (d.role === 'war' || d.role === 'carrier')).filter(d => !d.hidden && d.tier - 1 <= labL && d.yard <= yardL && !d.flag && (!d.doc || d.doc === p.doctrine) && d.wpn.length && d.id !== 'larva');
+    const pool = Object.values(SHIPS).filter(d => d.f === f && (d.role === 'war' || d.role === 'carrier')).filter(d => !d.hidden && d.tier - 1 <= labL && d.yard <= yardL && !d.flag && (!d.doc || d.doc === p.doctrine) && d.wpn.length && d.id !== 'larva' && !d.art);
     const flag = Object.values(SHIPS).find(d => d.f === f && d.flag);
     if (flag && t > 420 && ore > flag.cost.ore + 300 && !trainReq(g, pi, flag.id)) aiTrain(g, pi, flag.id);
     const cheap = pool.filter(d => d.cls === 's'), mid = pool.filter(d => d.cls === 'm'), big = pool.filter(d => d.cls === 'l');
@@ -201,6 +201,13 @@ function aiThink(g, pi) {
       return corv.length ? wpick(corv) : cheap[0];
     };
     for (const y of yards) if (y.q.length < (cfg.exp >= 2 ? 2 : 1) && p.cpUse + p.queued < p.cpMax - 1) { const d = pick(); if (d && canPay(p, shipCost(p, d))) cmdTrain(g, pi, y.id, d.id); }
+    /* Belagerung (Mittel, Schwer): sieht die KI viele feindliche Türme, baut sie Artillerie (höchstens 2, später 3) */
+    const artD = Object.values(SHIPS).find(d => d.f === f && d.art);
+    if (artD && A.lvl >= 2 && yardL >= artD.yard && t > 360 && (g.tick + pi * 11) % 90 < 4) {
+      let towers = 0; for (const b of g.bldgs) if (!b.dead && (b.role === 'turret' || b.role === 'flak' || b.role === 'spore') && foes(g, pi, b.owner) && !g.players[b.owner].neutral && artKnownAi(g, pi, b)) towers++;
+      const have = ships.filter(u => u.def.art).length + yards.reduce((n, y) => n + y.q.filter(q => SHIPS[q.id].art).length, 0);
+      if (towers >= 3 && have < (t > 900 ? 3 : 2) && canPay(p, shipCost(p, artD)) && p.cpUse + p.queued + artD.cp <= p.cpMax) aiTrain(g, pi, artD.id);
+    }
     for (const y of yards) if (!y.rally) cmdRally(g, pi, y.id, anchor.x + dcos(dirA) * 300, anchor.y + dsin(dirA) * 300);
   }
   /* Nexus: Splitter und Prismen verschmelzen, wenn drei beisammen sind */
@@ -232,6 +239,13 @@ function aiThink(g, pi) {
     else if (pg.k === 'go' && free.length && !pg.done) { pg.done = 1; cmdMove(g, free, pg.x, pg.y, false, 'wedge'); }
     else if (pg.k === 'atk' && !A.atk && !pg.done && cpF >= cfg.army * 0.5) { pg.done = 1; cmdMove(g, fleet, pg.x, pg.y, true, 'wedge'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: 0 }; ev(g, 'aiattack', { owner: pi }); }
   }
+  /* Artillerie beschießt uns: schnelle Schiffe jagen die Stellung (Mündungsfeuer macht sie sichtbar) */
+  if (p.artT && t - p.artT < 8 && fleet.length && t - (A.artHuntT || -99) > 10) {
+    A.artHuntT = t; let tg = null, bd = 1e9;
+    for (const e of g.ships) { if (e.dead || !e.def.art || !foes(g, pi, e.owner) || !canSee(g, pi, e)) continue; const d = hyp(e.x - p.artX, e.y - p.artY); if (d < bd) { bd = d; tg = e; } }
+    const hunters = fleet.filter(u => !u.def.art && (u.o.t === 'idle' || (u.o.t === 'move' && !u.o.am)) && !(A.atk && A.atk.ids.indexOf(u.id) >= 0)).sort((a, b) => b.def.speed - a.def.speed).slice(0, 4);
+    if (hunters.length) { if (tg) execCmd(g, { t: 'attack', p: pi, u: hunters.map(u => u.id), e: tg.id }); else cmdMove(g, hunters, p.artX, p.artY, true, 'wedge'); }
+  }
   if (hurt && fleet.length) {
     /* Verteidigung: alle, die nicht gerade weit weg angreifen */
     const def = fleet.filter(u => !A.atk || hyp(u.x - p.hurtX, u.y - p.hurtY) < 1500 || u.o.t === 'idle');
@@ -246,6 +260,7 @@ function aiThink(g, pi) {
     if (!alive.length || cp < A.atk.cp * 0.35) { if (alive.length) cmdMove(g, alive, anchor.x + dcos(dirA) * 260, anchor.y + dsin(dirA) * 260, false, 'wedge'); A.atk = null; A.atkT = t; }
     else {
       if (A.lvl >= 2 && AI_OPT.focus) aiFocus(g, pi, alive);
+      aiSiege(g, pi, alive);
       if (t - A.atk.t0 > 14) {
       const tg = aiTarget(g, pi, alive[0].x, alive[0].y);
       if (!tg) { A.atk = null; }
@@ -327,6 +342,17 @@ function aiRaid(g, pi, fleet, anchor, rp) {
   cmdMove(g, fast, best.x, best.y, true, 'wedge'); A.raid = { ids: fast.map(u => u.id), t0: t, tid: best.id };
 }
 
+function artKnownAi(g, pi, b) { const p = g.players[pi]; return !!p.explored[clamp((b.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((b.x / VIS) | 0, 0, g.vw - 1)]; }
+/* Belagerung im Angriff: die Artillerie der Angriffsflotte nimmt das nächste bekannte Geschütz in Zielnähe unter Beschuss */
+function aiSiege(g, pi, alive) {
+  const A = g.players[pi].ai; if (g.time - (A.siegeT || 0) < 5) return; A.siegeT = g.time;
+  const arts = alive.filter(u => u.def.art); if (!arts.length) return;
+  const c = alive.find(u => !u.def.art) || arts[0];
+  let best = null, bd = 1e9;
+  for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || g.players[b.owner].neutral || !artKnownAi(g, pi, b)) continue; const d = hyp(b.x - c.x, b.y - c.y) - (b.role === 'turret' || b.role === 'flak' || b.role === 'spore' ? 500 : 0); if (d < bd) { bd = d; best = b; } }
+  if (!best) return;
+  const idle = arts.filter(u => !(u.o.t === 'attack' && u.o.tid === best.id)); if (idle.length) execCmd(g, { t: 'attack', p: pi, u: idle.map(u => u.id), e: best.id });
+}
 /* Superwaffe einsetzen: Exodus-Tor versetzt die gesammelte Flotte vor ein bekanntes Ziel; Massetreiber trifft die
    dichteste bekannte feindliche Stelle (Stationen bevorzugt) */
 function aiSuper(g, pi, sup, fleet) {

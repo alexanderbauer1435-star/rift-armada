@@ -518,5 +518,16 @@
  "Das Tor reagiert nicht! Der Festungskern schirmt es ab – erst muss der Kern fallen.": "The gate isn't responding! The fortress core is shielding it – the core has to fall first.",
  "Weitere Geister erwachen in ihren Hüllen. Sie folgen dem Ruf, Seraph.": "More spirits are waking in their hulls. They answer the call, Seraph.",
  "Noch eine Staffel. Die Legion vergisst ihre Toten nicht.": "Another squadron. The Legion does not forget its dead.",
- "Eine Kampfgruppe der Republik hält auf das Netz zu. Kristallwachen an die Knoten!": "A Republic battle group is heading for the network. Crystal guards to the nodes!"
+ "Eine Kampfgruppe der Republik hält auf das Netz zu. Kristallwachen an die Knoten!": "A Republic battle group is heading for the network. Crystal guards to the nodes!",
+ "Runde 19": "Round 19",
+ "Belagerungsartillerie. Feuert im Stand Granaten auf Stationen aus großer Entfernung, weit außerhalb der Turmreichweite. Trifft keine Schiffe und ist selbst kaum gepanzert – braucht Begleitschutz.": "Siege artillery. Fires shells at stations from long range while stationary, far outside turret range. Cannot hit ships and is barely armoured – needs an escort.",
+ "Belagerungsmörser. Schwere Granaten im Bogen auf Stationen aus großer Entfernung, nur im Stand. Gegen Schiffe wehrlos.": "Siege mortar. Lobs heavy shells at stations from long range, only while stationary. Defenceless against ships.",
+ "Lanzenwerfer. Schleudert gebündeltes Licht im Bogen auf Stationen jenseits der Turmreichweite. Kein Heldenschiff: fällt, wenn es fällt.": "Lance thrower. Hurls focused light in an arc at stations beyond turret range. Not a hero ship: when it falls, it is gone.",
+ "Kristallkatapult. Wirft verdichtete Kristallmasse auf Stationen aus großer Entfernung, nur im Stand. Zerbrechlich.": "Crystal catapult. Throws compressed crystal mass at stations from long range, only while stationary. Fragile.",
+ "Sporenmörser. Spuckt Säureblasen im hohen Bogen auf Stationen weit hinter der Turmlinie, nur im Stand. Gegen Schiffe wehrlos.": "Spore mortar. Spits acid blisters in a high arc at stations far behind the turret line, only while stationary. Defenceless against ships.",
+ "Catapult": "Catapult",
+ "Mortar": "Mortar",
+ "Ballista": "Ballista",
+ "Lodestar": "Lodestar",
+ "Boomer": "Boomer"
 }

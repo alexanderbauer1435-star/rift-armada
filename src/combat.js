@@ -230,7 +230,12 @@ function updateShip(g, u, dt) {
       break;
     }
     case 'move': case 'amove': {
-      if (o.t === 'amove' && warship && u.stance !== 2 && (g.tick + u.id) % 5 === 0) {
+      /* Artillerie im Angriffsmarsch: hält an, sobald eine bekannte Station in Reichweite liegt, und beschießt sie */
+      if (o.t === 'amove' && def.art) {
+        if ((g.tick + u.id) % 5 === 0) { const w = def.wpn[0]; let best = null, bd = 1e9; for (const b of g.bldgs) { if (b.dead || !foes(g, u.owner, b.owner) || g.players[b.owner].neutral) continue; const d = tdist(u, b); if (d > w.range * 0.95 || d < w.minR || d >= bd || !artKnown(g, u.owner, b)) continue; bd = d; best = b; } u.artStop = best ? best.id : 0; }
+        if (u.artStop) { const b = g.byId.get(u.artStop); if (b && !b.dead) { brake(u, dt); face(u, datan2(b.y - u.y, b.x - u.x), dt); break; } u.artStop = 0; }
+      }
+      if (o.t === 'amove' && warship && !def.art && u.stance !== 2 && (g.tick + u.id) % 5 === 0) {
         const t = acquire(g, u, def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor));
         if (t) { u.o = { t: 'attack', tid: t.id, back: o }; u.tgt = t.id; break; }
       }
@@ -239,6 +244,8 @@ function updateShip(g, u, dt) {
     }
     case 'attack': {
       const t = g.byId.get(o.tid);
+      /* Artillerie: eine bekannte Station bleibt Ziel, auch wenn sie gerade nicht in Sicht ist */
+      if (def.art && t && !t.dead && t.k === 2 && artKnown(g, u.owner, t)) { u.tgt = 0; o.x = t.x; o.y = t.y; artMove(g, u, t, dt); break; }
       if (lostTgt(g, u, t)) {
         if (o.back) { u.o = o.back; u.path = null; u.tgt = 0; }
         else if (o.guard) { setIdle(u); }
@@ -429,6 +436,7 @@ function fireAll(g, s, dt) {
     if (s.wcd[i] > 0) continue;
     const sub = s.k === 1 ? 1 + 2 * (1 - s.sub.wpn) : 1;
     if (w.kind === 'pd') { if (firePd(g, s, w, i)) s.wcd[i] = w.reload * slow * p.tfx.pdReload * sub * (s.k === 1 && s.abT.flak > 0 ? 0.34 : 1); continue; }
+    if (w.art) { const t = artTarget(g, s, w); if (!t) continue; s.wcd[i] = w.reload * sub; fireArt(g, s, w, t); continue; }
     const bs = s.k === 1 && s.abT.broadside > 0;
     let t = s.tgt ? g.byId.get(s.tgt) : null;
     if (t && (t.dead || t.k === 3 || !foes(g, s.owner, t.owner) || tdist(s, t) > w.range || !(bs || inArc(s, w, t)) || !canSee(g, s.owner, t))) t = null;
@@ -442,6 +450,36 @@ function fireAll(g, s, dt) {
     s.wcd[i] = bs ? 0.15 : w.reload * slow * sub * (w.kind === 'rail' ? p.tfx.railReload : 1) * (w.kind === 'kin' && s.k === 1 && s.abT.flak > 0 ? 0.75 : 1) * (s.k === 1 && s.frenzy > 0 ? 0.7 : 1);
     fireWeapon(g, s, i, w, t);
   }
+}
+/* Belagerungsartillerie: nur im Stand, nur auf Stationen, die auf der erkundeten Karte liegen (Stationen bewegen sich
+   nicht – wer das Gebiet einmal gesehen hat, kennt die Ziele), zwischen Mindestabstand und Reichweite. Befohlenes Ziel zuerst. */
+const ART_STILL = 14;
+function artKnown(g, pi, b) { if (canSee(g, pi, b)) return true; const p = g.players[pi], cx = clamp((b.x / VIS) | 0, 0, g.vw - 1), cy = clamp((b.y / VIS) | 0, 0, g.vh - 1); return !!p.explored[cy * g.vw + cx]; }
+function artTarget(g, s, w) {
+  if (s.k !== 1 || s.v > ART_STILL) return null;
+  const ok = b => b && !b.dead && b.k === 2 && foes(g, s.owner, b.owner) && !g.players[b.owner].neutral && (() => { const d = tdist(s, b); return d <= w.range && d >= w.minR * 0.9; })() && artKnown(g, s.owner, b);
+  const o = s.o && s.o.t === 'attack' ? g.byId.get(s.o.tid) : null;
+  if (ok(o)) return o;
+  const cur = s.artT ? g.byId.get(s.artT) : null; if (ok(cur)) return cur;
+  let best = null, bs = 1e9;
+  for (const b of g.bldgs) { if (!ok(b)) continue; const sc = tdist(s, b) - (b.role === 'turret' || b.role === 'flak' || b.role === 'spore' ? 400 : 0); if (sc < bs) { bs = sc; best = b; } }
+  s.artT = best ? best.id : 0; return best;
+}
+/* Anfahrt: bis knapp innerhalb der Reichweite heran (zu nah: zurück), dann stehen bleiben und feuern */
+function artMove(g, u, t, dt) {
+  const w = u.def.wpn[0], d = tdist(u, t), want = w.range * 0.9;
+  if (d > w.range * 0.97 || d < w.minR * 1.05) { const a = datan2(u.y - t.y, u.x - t.x), x = t.x + dcos(a) * want, y = t.y + dsin(a) * want; if (hyp((u.px || 0) - x, (u.py || 0) - y) > 80) { u.px = x; u.py = y; u.path = null; } goTo(g, u, u.px, u.py, dt, 30); }
+  else { brake(u, dt); face(u, datan2(t.y - u.y, t.x - u.x), dt); }
+}
+function fireArt(g, s, w, t) {
+  if (s.abT.cloak > 0) { s.abT.cloak = 0; ev(g, 'decloak', { x: s.x, y: s.y, owner: s.owner, id: s.id }); }
+  const sp = 22 + tdist(s, t) * 0.03, a0 = g.rng() * TAU, r0 = g.rng() * sp, tx = t.x + dcos(a0) * r0, ty = t.y + dsin(a0) * r0;
+  const a = datan2(ty - s.y, tx - s.x), d = hyp(tx - s.x, ty - s.y);
+  g.proj.push({ kind: 'art', x: s.x, y: s.y, ang: a, sp: w.speed, dmg: w.dmg * dmgMul(s), owner: s.owner, sid: s.id, tid: t.id, tx, ty, d0: d, left: d, splash: w.splash, life: d / w.speed + 1, col: w.col, r: 5 });
+  ev(g, 'shot', { x: s.x, y: s.y, kind: 'kin', owner: s.owner, snd: w.snd, ang: a, big: true });
+  /* Mündungsfeuer verrät die Stellung: der Beschossene sieht die Artillerie 5 s lang */
+  if (!(g.reveals.length > 200)) g.reveals.push({ x: s.x, y: s.y, r: 140, owner: t.owner, until: g.time + 5, art: 1 });
+  g.players[t.owner].artT = g.time; g.players[t.owner].artX = s.x; g.players[t.owner].artY = s.y;
 }
 function fireWeapon(g, s, i, w, t) {
   if (s.k === 1 && s.abT.cloak > 0) { s.abT.cloak = 0; ev(g, 'decloak', { x: s.x, y: s.y, owner: s.owner, id: s.id }); }
@@ -508,6 +546,17 @@ function updateProj(g, dt) {
     if (q.dead) continue;
     q.life -= dt;
     if (q.life <= 0) { if (q.kind === 'torp') ev(g, 'hit', { x: q.x, y: q.y, kind: 'torpdie' }); continue; }
+    /* Granate im Bogen: fliegt über alles hinweg und schlägt am Zielpunkt ein (Splitter treffen im Umkreis) */
+    if (q.kind === 'art') {
+      const st = q.sp * dt; q.left -= st; q.x += dcos(q.ang) * st; q.y += dsin(q.ang) * st;
+      if (q.left > 0) { P[w++] = q; continue; }
+      q.x = q.tx; q.y = q.ty;
+      const src = g.byId.get(q.sid) || null, R0 = q.splash;
+      for (const b of g.bldgs) { if (b.dead || !foes(g, q.owner, b.owner)) continue; const dd = hyp(b.x - q.x, b.y - q.y); if (dd > R0 + b.def.r) continue; damage(g, b, q.dmg * (dd < b.def.r ? 1 : 0.5), 'art', src, q.owner, q.x, q.y); }
+      nearShips(g, q.x, q.y, R0 + 20, e => { if (!e.dead && foes(g, q.owner, e.owner) && hyp(e.x - q.x, e.y - q.y) < R0 + e.def.r * 0.5) damage(g, e, q.dmg * 0.5, 'art', src, q.owner, q.x, q.y); return false; });
+      ev(g, 'hit', { x: q.x, y: q.y, kind: 'torp', art: 1 });
+      continue;
+    }
     if (q.kind === 'torp') {
       const t = g.byId.get(q.tid);
       if (t && !t.dead) { const want = datan2(t.y - q.y, t.x - q.x); q.ang = turnTo(q.ang, want, q.turn * dt); if (hyp(t.x - q.x, t.y - q.y) < (t.k === 2 ? t.def.r * 0.9 : t.def.r * 0.8) + 6) { damage(g, t, q.dmg, 'torp', g.byId.get(q.sid), q.owner, q.x, q.y); ev(g, 'hit', { x: q.x, y: q.y, kind: 'torp', ang: q.ang }); continue; } }

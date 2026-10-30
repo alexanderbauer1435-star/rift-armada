@@ -331,6 +331,12 @@ function projectiles(g, dt, time, view) {
       B.spr.write(q.x, h, q.y, 16, 0, TILE.glow, c[0], c[1], c[2], 0.8);
       B.spr.write(q.x + dx * 2, h, q.y + dy * 2, 5, 0, TILE.dot, 1.7, 1.7, 1.7, 0.9);
       if (detail > 0) { const sp = q.sp || 1600, n = Math.min(4, Math.ceil(sp * dt / 40)); for (let i = 0; i < n; i++) { const b = (i + Math.random()) / n * sp * dt; glow(q.x - dx * b, q.y - dy * b, h, 7, 2, '#bfe9ff', 0.35, 0.45, 1, TILE.ember, 1.3); } }
+    } else if (kind === 'art') {
+      /* Belagerungsgranate im Bogen: Höhe nach Flugfortschritt */
+      const c = col(q.col || '#ffb070'), k = 1 - q.left / Math.max(1, q.d0), hh = h + Math.sin(k * Math.PI) * Math.min(160, q.d0 * 0.22);
+      B.rock.write(q.x, hh, q.y, time * 3, q.ang, time * 2, 2.6, 2.6, 2.6, 1, 0.3, 0.26, 0.22);
+      B.spr.write(q.x, hh, q.y, 22, 0, TILE.glow, c[0], c[1], c[2], 0.9);
+      if (detail > 0 && Math.random() < 30 * dt) trail(q.x - dx * 4, q.y - dy * 4, hh, q.col || '#ff9a50', 5, 0.5, rnd(-6, 6), rnd(-2, 4), rnd(-6, 6), 0.8, TILE.glow);
     } else if (kind === 'rock') {
       const c = col('#ffb070');
       B.rock.write(q.x, h, q.y, time * 2.1, q.ang, time * 1.3, 4, 4, 4, 1, 0.3, 0.26, 0.22);

@@ -18,7 +18,7 @@ const DMG_VS_HULL = { beam: 0.78, kin: 1.25, torp: 1.0, pd: 0.5, rail: 1.3, acid
    gegen Kleine, Railguns gegen Mittlere. Stationen nehmen Torpedos und Railguns etwas stärker (BLD). */
 const COUNTER = {
   torp: { f: 0.5, s: 0.75, m: 1.15, l: 1.9, b: 1.15 }, rail: { f: 0.5, s: 0.8, m: 1.35, l: 1.1, b: 1.15 },
-  beam: { f: 1.15, s: 1.25, m: 1.0, l: 0.85, b: 0.9 }, kin: { f: 1.2, s: 1.2, m: 1.0, l: 0.85, b: 1.0 },
+  beam: { f: 1.15, s: 1.25, m: 1.0, l: 0.85, b: 0.9 }, art: { f: 0.15, s: 0.25, m: 0.3, l: 0.4, b: 2.2 }, kin: { f: 1.2, s: 1.2, m: 1.0, l: 0.85, b: 1.0 },
   acid: { f: 1, s: 0.9, m: 1.1, l: 1.2, b: 1.0 }, bite: { f: 1, s: 1.15, m: 1.0, l: 0.9, b: 0.9 }
 };
 /* Zielverfolgung: schwere Geschütze großer Schiffe folgen kleinen, wendigen Zielen schlecht (Schütze → Ziel) */
@@ -94,6 +94,10 @@ const W = {
   lanceX: { kind: 'beam', dmg: 14, range: 420, arc: 0.45, mount: 0, reload: 0.12, snd: 'beam', w: 3.4 },
   beamF: { kind: 'beam', dmg: 12, range: 380, arc: 0.9, mount: Math.PI / 2, reload: 0.12, snd: 'beam', w: 3.2 },
   beamFL: { kind: 'beam', dmg: 12, range: 380, arc: 0.9, mount: -Math.PI / 2, reload: 0.12, snd: 'beam', w: 3.2 },
+  /* Fassung 21: Belagerungsgranaten – Bogenschuss nur auf Stationen, weit über die Reichweite jedes Turms hinaus, nur im Stand */
+  shell: { kind: 'art', dmg: 300, range: 980, minR: 340, arc: Math.PI, mount: 0, reload: 6, speed: 300, splash: 70, art: 1, snd: 'cannon', col: '#ffb070' },
+  shellAcid: { kind: 'art', dmg: 270, range: 960, minR: 340, arc: Math.PI, mount: 0, reload: 5.5, speed: 280, splash: 80, art: 1, snd: 'cannon', col: '#b4ff3c' },
+  shellLance: { kind: 'art', dmg: 320, range: 1000, minR: 340, arc: Math.PI, mount: 0, reload: 6.5, speed: 320, splash: 60, art: 1, snd: 'cannon', col: '#d9b8ff' },
   railS: { kind: 'rail', dmg: 120, range: 520, minR: 100, arc: 0.15, mount: 0, reload: 4, speed: 1600, pierce: 2, snd: 'rail' },
   railF: { kind: 'rail', dmg: 200, range: 620, minR: 120, arc: 0.5, mount: Math.PI / 2, reload: 6, speed: 1600, pierce: 3, snd: 'rail' },
   railFL: { kind: 'rail', dmg: 200, range: 620, minR: 120, arc: 0.5, mount: -Math.PI / 2, reload: 6, speed: 1600, pierce: 3, snd: 'rail' },
@@ -277,6 +281,22 @@ const SHIPS = {
 };
 /* Crew je Größenklasse (ohne Angabe am Schiff) */
 const CREW_CLS = { f: 0, s: 30, m: 80, l: 160 };
+/* Fassung 21: Belagerungsartillerie je Fraktion – feuert im Stand Bogengranaten auf Stationen weit außerhalb der
+   Turmreichweite (980 gegen etwa 400), trifft keine Schiffe, ist selbst aber sehr verwundbar (wenig Hülle, kein Schild,
+   langsam, Mindestabstand 340). Gegenmittel: schnelle Schiffe, die hinter die Turmlinie stoßen. */
+const ART_SHIPS = {
+  catapult: { f: 'alliance', name: 'Catapult', role: 'war', cls: 'm', r: 16, len: 50, hull: 170, shield: 0, speed: 58, accel: 40, turn: 1.1, sensor: 420, cp: 3, cost: { ice: 460, ore: 260 }, time: 22, tier: 2, yard: 2, wpn: ['shell'], keep: 900, art: 1,
+    desc: 'Belagerungsartillerie. Feuert im Stand Granaten auf Stationen aus großer Entfernung, weit außerhalb der Turmreichweite. Trifft keine Schiffe und ist selbst kaum gepanzert – braucht Begleitschutz.' },
+  mortar: { f: 'mars', name: 'Mortar', role: 'war', cls: 'm', r: 16, len: 50, hull: 210, shield: 0, armor: 1, speed: 54, accel: 38, turn: 1.0, sensor: 420, cp: 3, cost: { ice: 440, ore: 280 }, time: 22, tier: 2, yard: 2, wpn: ['shell'], keep: 900, art: 1,
+    desc: 'Belagerungsmörser. Schwere Granaten im Bogen auf Stationen aus großer Entfernung, nur im Stand. Gegen Schiffe wehrlos.' },
+  ballista: { f: 'legion', name: 'Ballista', role: 'war', cls: 'm', r: 16, len: 50, hull: 150, shield: 80, sreg: 6, speed: 60, accel: 42, turn: 1.1, sensor: 440, cp: 3, cost: { ice: 470, ore: 260 }, time: 22, tier: 2, yard: 2, wpn: ['shellLance'], keep: 920, art: 1,
+    desc: 'Lanzenwerfer. Schleudert gebündeltes Licht im Bogen auf Stationen jenseits der Turmreichweite. Kein Heldenschiff: fällt, wenn es fällt.' },
+  lodestar: { f: 'nexus', name: 'Lodestar', role: 'war', cls: 'm', r: 16, len: 48, hull: 160, shield: 60, sreg: 8, speed: 56, accel: 40, turn: 1.1, sensor: 440, cp: 3, cost: { ice: 460, ore: 270 }, time: 22, tier: 2, yard: 2, wpn: ['shell'], keep: 900, art: 1,
+    desc: 'Kristallkatapult. Wirft verdichtete Kristallmasse auf Stationen aus großer Entfernung, nur im Stand. Zerbrechlich.' },
+  boomer: { f: 'brood', name: 'Boomer', role: 'war', cls: 'm', r: 15, len: 46, hull: 230, armor: 0, speed: 60, accel: 44, turn: 1.2, sensor: 420, cp: 3, cost: { ice: 640, ore: 0 }, time: 18, tier: 2, yard: 2, wpn: ['shellAcid'], regen: 0.01, crew: 0, keep: 880, art: 1,
+    desc: 'Sporenmörser. Spuckt Säureblasen im hohen Bogen auf Stationen weit hinter der Turmlinie, nur im Stand. Gegen Schiffe wehrlos.' }
+};
+Object.assign(SHIPS, ART_SHIPS);
 /* Subsysteme: Antrieb, Waffen, Schilde (Mars: Schadenskontrolle für die Panzerung), Sensoren, Lebenserhaltung */
 const SUBS = ['drive', 'wpn', 'shield', 'sensor', 'life'];
 const SUB_NAMES = { drive: 'Antrieb', wpn: 'Waffen', shield: 'Schilde', sensor: 'Sensoren', life: 'Lebenserhaltung' };

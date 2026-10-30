@@ -47,6 +47,15 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 21 (Runde 19, Belagerungsartillerie): je Fraktion ein Artillerieschiff (Catapult, Mortar, Ballista, Lodestar,
+  Boomer; Werft II): Bogengranaten (Waffenart art) nur auf Stationen, Reichweite 960–1000 gegen etwa 400 der Türme,
+  Mindestabstand 340, feuert nur im Stand, Splitter im Umkreis; Ziele sind alle Stationen auf der erkundeten Karte.
+  Sehr verwundbar (Hülle 150–230, kaum Schild, langsam): eine Needle erledigt eine Artillerie in etwa 10 s. Zwei
+  Artillerieschiffe brechen einen Turm Stufe II in etwa 20–25 s. Angriffsmarsch hält an, sobald eine Station in
+  Reichweite liegt; Mündungsfeuer zeigt dem Beschossenen die Stellung für 5 s. KI (Mittel, Schwer) baut bei drei und
+  mehr gesichteten Türmen bis zu zwei, später drei Artillerieschiffe, setzt sie im Angriff auf Geschütze an und jagt
+  feindliche Artillerie mit ihren schnellsten Schiffen. Bilder 2D und 3D (Mörser auf verwandtem Rumpf), Granaten im
+  Bogen. Tests: tests/artillery.js, tools/artshot.js.
 - Fassung 20 (Runde 18, Übersicht, Team, Wiederholung, Fortschritt): Partiedauer – jede KI würfelt eine Persönlichkeit
   (erster Angriff innerhalb eines Fensters je Stärke, Flottengröße, Pause zwischen Angriffen), Kommandobasen stärker.
   Befehlstasten als eine wischbare Reihe am unteren Rand; schmale Hochkant-Bildschirme: Kopfleiste mit Pause-Taste passt.

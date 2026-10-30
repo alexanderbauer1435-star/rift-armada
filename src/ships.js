@@ -1115,3 +1115,19 @@ function drawGate(ctx, gt, t, ownerCol) {
   for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; ctx.save(); ctx.rotate(a); rrect(ctx, r * 0.92, -r * 0.09, r * 0.22, r * 0.18, 3); hull(ctx, C, r * 0.09); ctx.restore(); light(ctx, Math.cos(a) * r * 1.08, Math.sin(a) * r * 1.08, 1.5, active ? ownerCol : open ? C.glow : C.lo); }
   if (active && gt.mode === 'lance') { ctx.strokeStyle = '#ff8a5a'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(0, 0, r * 1.2, -Math.PI / 2, -Math.PI / 2 + TAU * gt.charge); ctx.stroke(); }
 }
+/* Fassung 21: Belagerungsartillerie – Rumpf eines verwandten Schiffs, darüber ein schwerer Mörser mit langem Lauf */
+function siegeGun(ctx, C, x, len, w) {
+  circ(ctx, x, 0, w * 1.15); ctx.fillStyle = C.dark; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 0.9; ctx.stroke();
+  rrect(ctx, x, -w * 0.45, len, w * 0.9, w * 0.3); ctx.fillStyle = C.dark; ctx.fill(); ctx.strokeStyle = C.hi; ctx.lineWidth = 0.6; ctx.stroke();
+  rrect(ctx, x + len - 3, -w * 0.6, 4, w * 1.2, 1); ctx.fillStyle = C.lo; ctx.fill();
+  for (let k = 0; k < 3; k++) { ctx.fillStyle = k % 2 ? C.trim : C.trim2; ctx.fillRect(x + 4 + k * (len - 10) / 3, -w * 0.5, 2, w); }
+  circ(ctx, x, 0, w * 0.55); ctx.fillStyle = C.trim; ctx.fill();
+  light(ctx, x + len + 1, 0, 1, C.glow);
+}
+function siegeDraw(base, k, gx, glen, gw) { return (ctx, C) => { ctx.save(); ctx.scale(k, k); SHIP_DRAW[base](ctx, C); ctx.restore(); siegeGun(ctx, C, gx, glen, gw); }; }
+SHIP_DRAW.catapult = siegeDraw('lancer', 1.2, -6, 30, 4.2);
+SHIP_DRAW.mortar = siegeDraw('hedgehog', 1.15, -8, 26, 5);
+SHIP_DRAW.ballista = siegeDraw('paladin', 1.1, -6, 32, 4);
+SHIP_DRAW.lodestar = siegeDraw('prism', 1.0, -8, 30, 4.2);
+SHIP_DRAW.boomer = (ctx, C) => { ctx.save(); ctx.scale(1.3, 1.3); SHIP_DRAW.spitter(ctx, C); ctx.restore(); circ(ctx, -4, 0, 7.5); ctx.fillStyle = C.flesh || C.hull; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 0.8; ctx.stroke(); circ(ctx, -4, 0, 4); ctx.fillStyle = C.glow; ctx.globalAlpha = 0.8; ctx.fill(); ctx.globalAlpha = 1; light(ctx, -4, 0, 2, C.glow); };
+Object.assign(ENGINES, { catapult: [[-21, -10, 0.8], [-21, 10, 0.8]], mortar: [[-21, 0, 1.2]], ballista: [[-20, -9, 0.7], [-20, 9, 0.7]], lodestar: [[-22, 0, 0.8]], boomer: [] });
