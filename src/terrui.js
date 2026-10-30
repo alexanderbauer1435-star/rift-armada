@@ -26,7 +26,7 @@ function terrUiEvent(g, e, me, mine) {
       else if (e.prev === me) { toast(L('{0} verloren an {1}', L(e.name), pname(e.owner)), 'bad', 4000); R.ping(e.x, e.y); }
       else if (isFoe(e.owner)) { toast(L('{0} übernimmt {1}', pname(e.owner), L(e.name)), 'warn', 3500); R.ping(e.x, e.y); }
       hudSel(); break;
-    case 'rockGone': R.miniBase = null; if (visAt(g, me, e.x, e.y)) SND.play('bigboom', e.x, e.y); if (mine && e.plug) toast(L('Felspfropfen gesprengt: der Weg ist frei'), 'good', 3500); break;
+    case 'rockGone': R.miniBase = null; if (visAt(g, me, e.x, e.y)) SND.play('bigboom', e.x, e.y); if (mine && e.plug && performance.now() - (UI.plugT || 0) > 8000) { UI.plugT = performance.now(); toast(L('Felspfropfen gesprengt: der Weg ist frei'), 'good', 3500); } break;
   }
 }
 /* ---------- Auswahlkarte und Tipps ---------- */
@@ -110,6 +110,7 @@ function terrRocks2D(ctx, g, inV) {
     if (hint || e.plug && cam.z > 0.55) { ctx.strokeStyle = e.plug ? 'rgba(255,184,107,0.5)' : 'rgba(255,184,107,0.3)'; ctx.lineWidth = 1.2 / cam.z; ctx.setLineDash([4 / cam.z, 5 / cam.z]); ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 5, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
     if (k <= 0.02) continue;
     ctx.save(); ctx.translate(o.x, o.y); ctx.rotate(o.ang || 0);
+    ctx.beginPath(); ctx.arc(0, 0, o.r * 0.92, 0, TAU); ctx.clip();
     ctx.beginPath(); crackPath(ctx, o, k);
     ctx.strokeStyle = 'rgba(10,8,6,0.85)'; ctx.lineWidth = 2.2; ctx.stroke();
     if (k > 0.4) { ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = 'rgba(255,' + (150 - k * 80 | 0) + ',60,' + (0.3 + 0.5 * k) + ')'; ctx.lineWidth = 1.1; ctx.stroke(); ctx.globalCompositeOperation = 'source-over'; }

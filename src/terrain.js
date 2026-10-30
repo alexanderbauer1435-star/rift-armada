@@ -91,7 +91,7 @@ function rockStruck(g, o, q) {
 /* Vorgabe je Karte (Gefecht: Schalter »Karte«); sonst beide */
 const HAZ_MAPS = { expanse: 'both', storm: 'well', maelstrom: 'well', archipelago: 'storm', arena: 'storm', pinwheel: 'well', random: 'both' };
 const HAZ_DEF = { storm: { r: 330 }, well: { r: 420, core: 115, pull: 52, dmg: 0.035 } };
-const HAZ_WARN = 1050;                       // Abstand zur Basis, ab dem gewarnt wird
+const HAZ_WARN = 650;                        // Abstand (Rand der Gefahr) zu Basis, Werft oder Raffinerie, ab dem gewarnt wird
 function hazDefault(mapId) { return !!HAZ_MAPS[mapId]; }
 function hazSetup(g) {
   g.hazards = []; g.hazWarn = {};
