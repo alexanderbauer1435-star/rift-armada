@@ -566,18 +566,21 @@ function ruinSprite(f, role, lv) {
   const def = BLDG[f] && BLDG[f][role]; if (!def) return null;
   const S = 2, size = Math.ceil(def.r * 2.7 * S); c = document.createElement('canvas'); c.width = c.height = size;
   const x = c.getContext('2d'); x.setTransform(S, 0, 0, S, size / 2, size / 2); x.lineJoin = 'round';
-  try { drawBldg(x, role, f, lv, '#6b625a', 0, null); } catch (e) { /* Form fehlt */ }
+  try { drawBldg(x, role, f, lv, '#8d8176', 0, null); } catch (e) { /* Form fehlt */ }
   x.globalAlpha = 1; x.setTransform(1, 0, 0, 1, 0, 0);
-  x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(22,18,14,0.62)'; x.fillRect(0, 0, size, size);
+  x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(40,30,22,0.42)'; x.fillRect(0, 0, size, size);
   let sd = hashStr(key) >>> 0; const rnd = () => { sd = (sd * 1103515245 + 12345) >>> 0; return (sd >>> 8) / 16777216; };
   /* Brandflecken */
   for (let i = 0; i < 5; i++) { const a = rnd() * TAU, d = rnd() * def.r * S * 0.7, rr = (0.15 + rnd() * 0.25) * def.r * S, gx = size / 2 + Math.cos(a) * d, gy = size / 2 + Math.sin(a) * d, gr = x.createRadialGradient(gx, gy, 0, gx, gy, rr); gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(gx - rr, gy - rr, rr * 2, rr * 2); }
   /* Bruchkanten: Keile herausschneiden, Risse */
   x.globalCompositeOperation = 'destination-out';
-  for (let i = 0; i < 3; i++) { const a = rnd() * TAU, w = 0.25 + rnd() * 0.35; x.beginPath(); x.moveTo(size / 2 + Math.cos(a) * def.r * S * 0.55, size / 2 + Math.sin(a) * def.r * S * 0.55); x.lineTo(size / 2 + Math.cos(a - w) * size, size / 2 + Math.sin(a - w) * size); x.lineTo(size / 2 + Math.cos(a + w * 0.6) * size, size / 2 + Math.sin(a + w * 0.6) * size); x.closePath(); x.fill(); }
+  for (let i = 0; i < 2; i++) { const a = rnd() * TAU, w = 0.12 + rnd() * 0.18; x.beginPath(); x.moveTo(size / 2 + Math.cos(a) * def.r * S * 0.7, size / 2 + Math.sin(a) * def.r * S * 0.7); x.lineTo(size / 2 + Math.cos(a - w) * size, size / 2 + Math.sin(a - w) * size); x.lineTo(size / 2 + Math.cos(a + w * 0.6) * size, size / 2 + Math.sin(a + w * 0.6) * size); x.closePath(); x.fill(); }
   x.lineWidth = 1.6 * S; x.strokeStyle = '#000';
   for (let i = 0; i < 6; i++) { let px = size / 2 + (rnd() - 0.5) * def.r * S, py = size / 2 + (rnd() - 0.5) * def.r * S; x.beginPath(); x.moveTo(px, py); for (let k = 0; k < 3; k++) { px += (rnd() - 0.5) * def.r * S * 0.5; py += (rnd() - 0.5) * def.r * S * 0.5; x.lineTo(px, py); } x.stroke(); }
   x.globalCompositeOperation = 'source-over';
+  /* Trümmerteile rundum und Glutnester */
+  for (let i = 0; i < 12; i++) { const a = rnd() * TAU, d = def.r * S * (0.95 + rnd() * 0.3), rr = def.r * S * (0.04 + rnd() * 0.06), cx = size / 2 + Math.cos(a) * d, cy = size / 2 + Math.sin(a) * d; x.fillStyle = rnd() < 0.5 ? '#5d554e' : '#3e3832'; x.beginPath(); for (let k = 0; k < 4; k++) { const b = a + k * 1.57 + rnd() * 0.6; x.lineTo(cx + Math.cos(b) * rr, cy + Math.sin(b) * rr); } x.closePath(); x.fill(); }
+  for (let i = 0; i < 4; i++) { const a = rnd() * TAU, d = rnd() * def.r * S * 0.6, rr = def.r * S * (0.08 + rnd() * 0.08), gx = size / 2 + Math.cos(a) * d, gy = size / 2 + Math.sin(a) * d, gr = x.createRadialGradient(gx, gy, 0, gx, gy, rr); gr.addColorStop(0, 'rgba(255,150,60,0.75)'); gr.addColorStop(1, 'rgba(255,90,30,0)'); x.fillStyle = gr; x.fillRect(gx - rr, gy - rr, rr * 2, rr * 2); }
   RUIN_CV.set(key, c); return c;
 }
 function ruinFade(w, g) { return clamp((w.until - g.time) / 20, 0, 1) * clamp(0.35 + 0.65 * (w.sal0 ? w.sal / w.sal0 : 1), 0.35, 1); }
