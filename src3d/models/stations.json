@@ -1786,6 +1786,561 @@
      "regen": 0.008
     }
    ]
+  },
+  {
+   "id": "wall",
+   "f": "alliance",
+   "name": "Schildwall",
+   "r": 16,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Emitter für einen Schildwall zu einem eigenen Turm oder Emitter in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen. Braucht Energie; bricht das Feld zusammen, baut es sich nach einigen Sekunden neu auf.",
+   "lv": [
+    {
+     "hull": 650,
+     "shield": 150,
+     "armor": 0,
+     "energy": -6,
+     "wpn": [],
+     "field": 1500
+    },
+    {
+     "hull": 850,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "field": 2300
+    },
+    {
+     "hull": 1075,
+     "shield": 260,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "field": 3300
+    }
+   ]
+  },
+  {
+   "id": "radar",
+   "f": "alliance",
+   "name": "Frühwarnstation",
+   "r": 24,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Keine Waffen, aber sehr weite Sicht. Deckt getarnte Schiffe in der Nähe auf. Braucht Energie.",
+   "lv": [
+    {
+     "hull": 750,
+     "shield": 120,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "sensor": 1100,
+     "detect": 500
+    },
+    {
+     "hull": 1000,
+     "shield": 160,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "sensor": 1250,
+     "detect": 560
+    },
+    {
+     "hull": 1250,
+     "shield": 220,
+     "armor": 0,
+     "energy": -12,
+     "wpn": [],
+     "sensor": 1400,
+     "detect": 620
+    }
+   ]
+  },
+  {
+   "id": "dock",
+   "f": "alliance",
+   "name": "Reparaturdock",
+   "r": 34,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Repariert eigene Schiffe in der Nähe (Hülle und Subsysteme, schneller als die Selbstreparatur) und langsam eigene Stationen. Vorsichtige Schiffe ziehen sich auch hierher zurück.",
+   "lv": [
+    {
+     "hull": 1250,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "rep": 300
+    },
+    {
+     "hull": 1625,
+     "shield": 280,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "rep": 330
+    },
+    {
+     "hull": 2000,
+     "shield": 360,
+     "armor": 0,
+     "energy": -12,
+     "wpn": [],
+     "rep": 360
+    }
+   ]
+  },
+  {
+   "id": "wall",
+   "f": "mars",
+   "name": "Sperrwall",
+   "r": 16,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Emitter für ein Sperrfeld zu einem eigenen Turm oder Emitter in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen. Braucht Energie; bricht das Feld zusammen, baut es sich nach einigen Sekunden neu auf.",
+   "lv": [
+    {
+     "hull": 650,
+     "shield": 0,
+     "armor": 2,
+     "energy": -6,
+     "wpn": [],
+     "field": 1500
+    },
+    {
+     "hull": 850,
+     "shield": 0,
+     "armor": 2,
+     "energy": -8,
+     "wpn": [],
+     "field": 2300
+    },
+    {
+     "hull": 1075,
+     "shield": 0,
+     "armor": 3,
+     "energy": -10,
+     "wpn": [],
+     "field": 3300
+    }
+   ]
+  },
+  {
+   "id": "radar",
+   "f": "mars",
+   "name": "Frühwarnradar",
+   "r": 24,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Keine Waffen, aber sehr weite Sicht. Deckt getarnte Schiffe in der Nähe auf. Braucht Energie.",
+   "lv": [
+    {
+     "hull": 750,
+     "shield": 0,
+     "armor": 1,
+     "energy": -8,
+     "wpn": [],
+     "sensor": 1100,
+     "detect": 500
+    },
+    {
+     "hull": 1000,
+     "shield": 0,
+     "armor": 2,
+     "energy": -10,
+     "wpn": [],
+     "sensor": 1250,
+     "detect": 560
+    },
+    {
+     "hull": 1250,
+     "shield": 0,
+     "armor": 2,
+     "energy": -12,
+     "wpn": [],
+     "sensor": 1400,
+     "detect": 620
+    }
+   ]
+  },
+  {
+   "id": "dock",
+   "f": "mars",
+   "name": "Instandsetzungsdock",
+   "r": 34,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Repariert eigene Schiffe in der Nähe (Hülle und Subsysteme, schneller als die Selbstreparatur) und langsam eigene Stationen. Vorsichtige Schiffe ziehen sich auch hierher zurück.",
+   "lv": [
+    {
+     "hull": 1250,
+     "shield": 0,
+     "armor": 2,
+     "energy": -8,
+     "wpn": [],
+     "rep": 300
+    },
+    {
+     "hull": 1625,
+     "shield": 0,
+     "armor": 2,
+     "energy": -10,
+     "wpn": [],
+     "rep": 330
+    },
+    {
+     "hull": 2000,
+     "shield": 0,
+     "armor": 3,
+     "energy": -12,
+     "wpn": [],
+     "rep": 360
+    }
+   ]
+  },
+  {
+   "id": "wall",
+   "f": "legion",
+   "name": "Ägiswall",
+   "r": 16,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Emitter für einen Schildwall zu einem eigenen Turm oder Emitter in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen. Braucht Energie; bricht das Feld zusammen, baut es sich nach einigen Sekunden neu auf.",
+   "lv": [
+    {
+     "hull": 650,
+     "shield": 150,
+     "armor": 0,
+     "energy": -6,
+     "wpn": [],
+     "field": 1500
+    },
+    {
+     "hull": 850,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "field": 2300
+    },
+    {
+     "hull": 1075,
+     "shield": 260,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "field": 3300
+    }
+   ]
+  },
+  {
+   "id": "radar",
+   "f": "legion",
+   "name": "Seherturm",
+   "r": 24,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Keine Waffen, aber sehr weite Sicht. Deckt getarnte Schiffe in der Nähe auf. Braucht Energie.",
+   "lv": [
+    {
+     "hull": 750,
+     "shield": 120,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "sensor": 1100,
+     "detect": 500
+    },
+    {
+     "hull": 1000,
+     "shield": 160,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "sensor": 1250,
+     "detect": 560
+    },
+    {
+     "hull": 1250,
+     "shield": 220,
+     "armor": 0,
+     "energy": -12,
+     "wpn": [],
+     "sensor": 1400,
+     "detect": 620
+    }
+   ]
+  },
+  {
+   "id": "dock",
+   "f": "legion",
+   "name": "Restaurationsdock",
+   "r": 34,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Repariert eigene Schiffe in der Nähe (Hülle und Subsysteme, schneller als die Selbstreparatur) und langsam eigene Stationen. Vorsichtige Schiffe ziehen sich auch hierher zurück.",
+   "lv": [
+    {
+     "hull": 1250,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "rep": 300
+    },
+    {
+     "hull": 1625,
+     "shield": 280,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "rep": 330
+    },
+    {
+     "hull": 2000,
+     "shield": 360,
+     "armor": 0,
+     "energy": -12,
+     "wpn": [],
+     "rep": 360
+    }
+   ]
+  },
+  {
+   "id": "wall",
+   "f": "nexus",
+   "name": "Gitterwall",
+   "r": 16,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Emitter für einen Schildwall zu einem eigenen Turm oder Emitter in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen. Braucht Energie; bricht das Feld zusammen, baut es sich nach einigen Sekunden neu auf.",
+   "lv": [
+    {
+     "hull": 650,
+     "shield": 150,
+     "armor": 0,
+     "energy": -6,
+     "wpn": [],
+     "field": 1500
+    },
+    {
+     "hull": 850,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "field": 2300
+    },
+    {
+     "hull": 1075,
+     "shield": 260,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "field": 3300
+    }
+   ]
+  },
+  {
+   "id": "radar",
+   "f": "nexus",
+   "name": "Lauschkristall",
+   "r": 24,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Keine Waffen, aber sehr weite Sicht. Deckt getarnte Schiffe in der Nähe auf. Braucht Energie.",
+   "lv": [
+    {
+     "hull": 750,
+     "shield": 120,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "sensor": 1100,
+     "detect": 500
+    },
+    {
+     "hull": 1000,
+     "shield": 160,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "sensor": 1250,
+     "detect": 560
+    },
+    {
+     "hull": 1250,
+     "shield": 220,
+     "armor": 0,
+     "energy": -12,
+     "wpn": [],
+     "sensor": 1400,
+     "detect": 620
+    }
+   ]
+  },
+  {
+   "id": "dock",
+   "f": "nexus",
+   "name": "Heilkristall",
+   "r": 34,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Repariert eigene Schiffe in der Nähe (Hülle und Subsysteme, schneller als die Selbstreparatur) und langsam eigene Stationen. Vorsichtige Schiffe ziehen sich auch hierher zurück.",
+   "lv": [
+    {
+     "hull": 1250,
+     "shield": 200,
+     "armor": 0,
+     "energy": -8,
+     "wpn": [],
+     "rep": 300
+    },
+    {
+     "hull": 1625,
+     "shield": 280,
+     "armor": 0,
+     "energy": -10,
+     "wpn": [],
+     "rep": 330
+    },
+    {
+     "hull": 2000,
+     "shield": 360,
+     "armor": 0,
+     "energy": -12,
+     "wpn": [],
+     "rep": 360
+    }
+   ]
+  },
+  {
+   "id": "wall",
+   "f": "brood",
+   "name": "Membranwall",
+   "r": 16,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Spannt eine zähe Membran zu einem eigenen Säurekrater, Sporennest oder Membranknoten in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben in der Membran hängen. Braucht Nährsaft; reißt sie, wächst sie nach einigen Sekunden nach.",
+   "lv": [
+    {
+     "hull": 650,
+     "shield": 0,
+     "armor": 2,
+     "energy": -6,
+     "wpn": [],
+     "field": 1500
+    },
+    {
+     "hull": 850,
+     "shield": 0,
+     "armor": 2,
+     "energy": -8,
+     "wpn": [],
+     "field": 2300
+    },
+    {
+     "hull": 1075,
+     "shield": 0,
+     "armor": 3,
+     "energy": -10,
+     "wpn": [],
+     "field": 3300
+    }
+   ]
+  },
+  {
+   "id": "radar",
+   "f": "brood",
+   "name": "Sinnesknospe",
+   "r": 24,
+   "tab": "def",
+   "unique": false,
+   "hidden": false,
+   "desc": "Ein riesiges Auge ohne Waffen: sehr weite Sicht, spürt getarnte Schiffe in der Nähe auf. Braucht Nährsaft.",
+   "lv": [
+    {
+     "hull": 750,
+     "shield": 0,
+     "armor": 1,
+     "energy": -8,
+     "wpn": [],
+     "sensor": 1100,
+     "detect": 500
+    },
+    {
+     "hull": 1000,
+     "shield": 0,
+     "armor": 2,
+     "energy": -10,
+     "wpn": [],
+     "sensor": 1250,
+     "detect": 560
+    },
+    {
+     "hull": 1250,
+     "shield": 0,
+     "armor": 2,
+     "energy": -12,
+     "wpn": [],
+     "sensor": 1400,
+     "detect": 620
+    }
+   ]
+  },
+  {
+   "id": "dock",
+   "f": "brood",
+   "name": "Heilgrube",
+   "r": 34,
+   "tab": "mil",
+   "unique": false,
+   "hidden": false,
+   "desc": "Heilt eigene Brut in der Nähe (Hülle und Organe, schneller als die eigene Heilung) und langsam eigene Nester. Vorsichtige Brut zieht sich auch hierher zurück.",
+   "lv": [
+    {
+     "hull": 1250,
+     "shield": 0,
+     "armor": 2,
+     "energy": -8,
+     "wpn": [],
+     "rep": 300
+    },
+    {
+     "hull": 1625,
+     "shield": 0,
+     "armor": 2,
+     "energy": -10,
+     "wpn": [],
+     "rep": 330
+    },
+    {
+     "hull": 2000,
+     "shield": 0,
+     "armor": 3,
+     "energy": -12,
+     "wpn": [],
+     "rep": 360
+    }
+   ]
   }
  ],
  "fac": {}

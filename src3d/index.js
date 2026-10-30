@@ -12,7 +12,7 @@
    ===================================================================== */
 import * as THREE from 'three';
 import './models/factions/alliance.js'; import './models/factions/mars.js'; import './models/factions/legion.js'; import './models/factions/nexus.js'; import './models/factions/brood.js'; import './models/factions/guardian.js'; import './models/factions/siege.js'; import './models/factions/support.js';
-import './models/stations/alliance.js'; import './models/stations/mars.js'; import './models/stations/legion.js'; import './models/stations/nexus.js'; import './models/stations/brood.js'; import './models/stations/seal.js';
+import './models/stations/alliance.js'; import './models/stations/mars.js'; import './models/stations/legion.js'; import './models/stations/nexus.js'; import './models/stations/brood.js'; import './models/stations/seal.js'; import './models/stations/extra22.js';
 import './models/world/nature.js'; import './models/world/sites.js';
 import { mats, BUILD, BUILDB, BUILDW, bake, drawCount, farGeometry, keepFor } from './models/kit.js';
 import { S, supported, initScene, resize, setDetail, render, disposeScene, adapt, sceneChanged, setQuality, quality } from './scene.js';

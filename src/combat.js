@@ -61,9 +61,10 @@ function nextWp(g, u, tx, ty, skip) {
   /* Endanflug: nahe am Ziel direkt hin, auch wenn die Zielzelle im Raster gesperrt ist (Rand eines Vorkommens oder einer
      Station) – sonst steuert das Schiff die nächste freie Zelle an und kommt nie nah genug heran. Die Gerade muss aber
      an allen anderen Stationen und Vorkommen vorbeiführen, sonst verkeilt sich das Schiff zwischen ihnen. */
-  if (hyp(u.x - tx, u.y - ty) < 150 && navLosWorld(m, u.cls, u.x, u.y, tx, ty, true) && clearLine(g, u, tx, ty, skip)) { if (!u.path || u.path.tx !== tx || u.path.ty !== ty || u.path.pts.length !== 1) u.path = { pts: [{ x: tx, y: ty }], tx, ty }; u.pi = 0; return u.path.pts[0]; }
+  const tm = g.wallL.length ? g.tm[u.owner] : -1;   // Fassung 22: feindliche Schildwälle sperren
+  if (hyp(u.x - tx, u.y - ty) < 150 && navLosWorld(m, u.cls, u.x, u.y, tx, ty, true, tm) && clearLine(g, u, tx, ty, skip)) { if (!u.path || u.path.tx !== tx || u.path.ty !== ty || u.path.pts.length !== 1) u.path = { pts: [{ x: tx, y: ty }], tx, ty }; u.pi = 0; return u.path.pts[0]; }
   if (!u.path || hyp(u.path.tx - tx, u.path.ty - ty) > 40) {
-    const pts = findPath(m, u.cls, u.x, u.y, tx, ty);
+    const pts = findPath(m, u.cls, u.x, u.y, tx, ty, tm);
     if (pts) pts[pts.length - 1] = { x: tx, y: ty };
     u.path = { pts: pts || [{ x: tx, y: ty }], tx, ty }; u.pi = 0;
   }
@@ -78,6 +79,7 @@ function steer(g, u, px, py, dt, arrive, spCap) {
   u.ang = turnTo(u.ang, want, def.turn * tf.turn * dt * (1 - Math.min(0.5, u.v / Math.max(1, def.speed) * 0.45)));
   const diff = Math.abs(angDiff(want, u.ang));
   let top = def.speed * tf.speed * (u.cls === 0 && inField(g.map, u.x, u.y) ? 0.5 : 1) * (0.3 + 0.7 * u.sub.drive) * (u.abT.grush > 0 || u.abT.lunge > 0 ? 2 : 1) * (u.sprint > 0 ? 1.6 : 1) * (u.frenzy > 0 ? 1.4 : 1) * (u.crus > 0 ? 1.3 : 1) * (u.pull ? 0.5 : 1) * (u.rfS || 1) * fcMul(g, u, 'speed');
+  if (u.jamT > g.time) top *= u.jamK;   // Fassung 22: Störsender
   if (spCap) top = Math.min(top, spCap);
   let goal = diff < 1.1 ? top * (1 - diff * 0.45) : top * 0.25;
   if (arrive) goal = Math.min(goal, Math.sqrt(2 * def.accel * Math.max(0, d - 2)) + 4);
@@ -99,16 +101,16 @@ function chase(g, u, t, dt, keep) {
   const want = d - keep;
   if (want <= 0) return true;
   u.pt -= dt;
-  const direct = navLosWorld(g.map, u.cls, u.x, u.y, t.x, t.y);
+  const direct = navLosWorld(g.map, u.cls, u.x, u.y, t.x, t.y, false, g.wallL.length ? g.tm[u.owner] : -1);
   if (direct) { u.path = null; const r = hyp(t.x - u.x, t.y - u.y), k = want / Math.max(1, r); steer(g, u, u.x + (t.x - u.x) * k, u.y + (t.y - u.y) * k, dt, true); return false; }
   if (u.pt <= 0 || !u.path) { u.path = null; u.pt = 0.8; }
   goTo(g, u, t.x, t.y, dt, keep, 0);
   return false;
 }
-function navLosWorld(map, cls, x0, y0, x1, y1, soft) { return navLos(map, cls, clamp((x0 / NAV) | 0, 0, map.gw - 1), clamp((y0 / NAV) | 0, 0, map.gh - 1), clamp((x1 / NAV) | 0, 0, map.gw - 1), clamp((y1 / NAV) | 0, 0, map.gh - 1), soft); }
+function navLosWorld(map, cls, x0, y0, x1, y1, soft, tm) { return navLos(map, cls, clamp((x0 / NAV) | 0, 0, map.gw - 1), clamp((y0 / NAV) | 0, 0, map.gh - 1), clamp((x1 / NAV) | 0, 0, map.gw - 1), clamp((y1 / NAV) | 0, 0, map.gh - 1), soft, tm === undefined ? -1 : tm); }
 /* Kampfstellung: in Reichweite bleiben, Schussfeld auf das Ziel richten. Breitseitenschiffe drehen die Flanke. */
 function engage(g, u, t, dt) {
-  const def = u.def, keep = keepRange(def), minR = minRange(def), d = tdist(u, t);
+  const def = u.def, keep = keepRange(def) * (u.jamT > g.time ? u.jamR : 1), minR = minRange(def), d = tdist(u, t);
   const want = datan2(t.y - u.y, t.x - u.x);
   if (minR && d < minR * 1.05) {
     /* zu nah: rückwärts wegdrehen und Abstand gewinnen */
@@ -152,7 +154,7 @@ function cautious(g, u) {
   }
   if (u.hull >= u.hullMax * RETREAT_AT) return;
   let best = null, bd = 1e9;
-  for (const b of g.bldgs) if (!b.dead && b.done && b.owner === u.owner && b.role === 'yard') { const d = hyp(b.x - u.x, b.y - u.y); if (d < bd) { bd = d; best = b; } }
+  for (const b of g.bldgs) if (!b.dead && b.done && b.owner === u.owner && (b.role === 'yard' || b.role === 'dock')) { const d = hyp(b.x - u.x, b.y - u.y); if (d < bd) { bd = d; best = b; } }   // Fassung 22: auch zum Reparaturdock
   if (!best) return;
   u.retreat = 1; u.ryd = best.id; u.rx = u.x; u.ry = u.y; u.tgt = 0; u.hold = false;
   u.rO = u.o.t === 'escort' ? { t: 'escort', tid: u.o.tid, x: u.o.x, y: u.o.y, k: u.o.k, n: u.o.n, eid: 0 } : null;   /* Fassung 22: nach der Reparatur wieder begleiten */
@@ -451,6 +453,22 @@ function separate(g) {
     const rr = b.def.r + 6;
     nearShips(g, b.x, b.y, rr + 30, u => { const dx = u.x - b.x, dy = u.y - b.y, d = hyp(dx, dy), need = rr + u.def.r * 0.6; if (d < need && d > 0) { u.x += dx / d * (need - d); u.y += dy / d * (need - d); } return false; });
   }
+  /* Fassung 22: stehende Schildwälle schieben feindliche Schiffe auf die Seite zurück, von der sie kamen */
+  for (const b of g.wallL) {
+    if (b.dead || !b.up) continue;
+    const mx = (b.wx1 + b.wx2) / 2, my = (b.wy1 + b.wy2) / 2, half = hyp(b.wx2 - b.wx1, b.wy2 - b.wy1) / 2, sx = b.wx2 - b.wx1, sy = b.wy2 - b.wy1, l2 = sx * sx + sy * sy || 1;
+    nearShips(g, mx, my, half + 50, u => {
+      if (!foes(g, b.owner, u.owner)) return false;
+      const k = clamp(((u.x - b.wx1) * sx + (u.y - b.wy1) * sy) / l2, 0, 1), px = b.wx1 + sx * k, py = b.wy1 + sy * k, need = u.def.r * 0.7 + 6;
+      const dx = u.x - px, dy = u.y - py, d = hyp(dx, dy);
+      if (d >= need) return false;
+      /* Seite: wo das Schiff in der letzten Runde war (Kreuzprodukt), sonst wo es jetzt steht */
+      const ox = u.lx !== undefined ? u.lx : u.x, oy = u.ly !== undefined ? u.ly : u.y, side = (sx * (oy - b.wy1) - sy * (ox - b.wx1)) >= 0 ? 1 : -1, nl = Math.sqrt(l2);
+      const nx = -sy / nl * side, ny = sx / nl * side;
+      u.x = px + nx * need; u.y = py + ny * need; u.v *= 0.6;
+      return false;
+    });
+  }
   if (g.tick % 2 === 0) {
     const rocks = g.map.rocks, nodes = g.nodes;
     for (const u of g.ships) {
@@ -505,12 +523,12 @@ function fireAll(g, s, dt) {
       if (s.k === 1 && s.o.t === 'artpos') { if (s.v > ART_STILL) continue; const d = hyp(s.o.x - s.x, s.o.y - s.y); if (d > w.range || d < w.minR * 0.9) continue; s.wcd[i] = w.reload * sub * rankRel(s); fireArt(g, s, w, { x: s.o.x, y: s.o.y, id: 0, owner: -1, k: 0, def: { r: 0 } }); continue; }
       const t = artTarget(g, s, w); if (!t) continue; s.wcd[i] = w.reload * sub * rankRel(s); fireArt(g, s, w, t); continue;
     }
-    const bs = s.k === 1 && s.abT.broadside > 0;
+    const bs = s.k === 1 && s.abT.broadside > 0, rng = s.k === 1 && s.jamT > g.time ? w.range * s.jamR : w.range;   // Fassung 22: Störsender
     let t = s.tgt ? g.byId.get(s.tgt) : null;
-    if (t && (t.dead || t.k === 3 || !foes(g, s.owner, t.owner) || tdist(s, t) > w.range || !(bs || inArc(s, w, t)) || !canSee(g, s.owner, t))) t = null;
+    if (t && (t.dead || t.k === 3 || !foes(g, s.owner, t.owner) || tdist(s, t) > rng || !(bs || inArc(s, w, t)) || !canSee(g, s.owner, t))) t = null;
     if (!t) {
       if ((g.tick + s.id + i) % 3) continue;
-      t = acquire(g, s, w.range, e => (bs || inArc(s, w, e)) && (!w.minR || tdist(s, e) >= w.minR * 0.9));
+      t = acquire(g, s, rng, e => (bs || inArc(s, w, e)) && (!w.minR || tdist(s, e) >= w.minR * 0.9));
       if (!t) continue;
       if (s.k === 2) s.tgt = t.id;
     }
@@ -568,9 +586,13 @@ function fireWeapon(g, s, i, w, t) {
     if (w.ramp) { if (s.rampTid === t.id) s.rampT = Math.min(6, s.rampT + 0.12); else { s.rampTid = t.id; s.rampT = 0; } m2 *= 1 + (w.ramp - 1) * (s.rampT / 6); }
     const rec = { tid: t.id, t: 0.16, extra: null };
     /* gebrochener Strahl: weitere Ziele im Schussfeld mit halbem Schaden */
-    if (w.split > 1) { const ex = []; nearShips(g, s.x, s.y, w.range + 30, e => { if (e !== t && foes(g, s.owner, e.owner) && e.def.role !== 'fighter' && canSee(g, s.owner, e) && tdist(s, e) <= w.range && inArc(s, w, e)) ex.push(e); return ex.length >= w.split - 1; }); for (const e of ex) damage(g, e, w.dmg * m2 * 0.5, 'beam', s, s.owner, s.x, s.y, w); if (ex.length) rec.extra = ex.map(e => e.id); }
+    if (w.split > 1) { const ex = []; nearShips(g, s.x, s.y, w.range + 30, e => { if (e !== t && foes(g, s.owner, e.owner) && e.def.role !== 'fighter' && canSee(g, s.owner, e) && tdist(s, e) <= w.range && inArc(s, w, e)) ex.push(e); return ex.length >= w.split - 1; }); if (ex.length) rec.extra = ex.map(e => e.id); }
     s.beams[i] = rec;
     if (!was) ev(g, 'shot', { x: s.x, y: s.y, kind: 'beam', owner: s.owner, snd: w.snd });
+    /* Fassung 22: ein feindlicher Schildwall auf der Strecke fängt den Strahl ab (der Strahl endet am Feld) */
+    const wc = g.wallL.length ? wallCross(g, s.owner, s.x, s.y, t.x, t.y) : null;
+    if (wc) { rec.wx = wc.x; rec.wy = wc.y; rec.extra = null; wallHit(g, wc.b, w.dmg * m2, 'beam', s.owner, wc.x, wc.y); return; }
+    if (rec.extra) for (const id of rec.extra) { const e = g.byId.get(id); if (e) damage(g, e, w.dmg * m2 * 0.5, 'beam', s, s.owner, s.x, s.y, w); }
     damage(g, t, w.dmg * m2, 'beam', s, s.owner, s.x, s.y, w);
     return;
   }
@@ -592,7 +614,7 @@ function fireWeapon(g, s, i, w, t) {
   /* Brood: Bisse nach dem Sprung doppelt */
   if (w.bite && s.k === 1 && s.abT.lunge > 0) { dm *= 2; s.abT.lunge = 0; }
   const pk = rail ? 'rail' : w.acid ? 'acid' : w.bite ? 'bite' : 'kin';
-  g.proj.push({ kind: pk, x: sx + dcos(a) * r0, y: sy + dsin(a) * r0, ang: a, sp: w.speed, dmg: dm, owner: s.owner, sid: s.id, tid: t.id, life: (w.range * 1.3 + 60) / w.speed, pierce, hit: null, r: rail ? 6 : w.acid ? 4 : 3, col: w.col, para: w.para ? 1 : 0 });
+  g.proj.push({ kind: pk, x: sx + dcos(a) * r0, y: sy + dsin(a) * r0, ang: a, sp: w.speed, dmg: dm, owner: s.owner, sid: s.id, tid: t.id, life: (w.range * 1.3 + 60) / w.speed, pierce, hit: null, r: rail ? 6 : w.acid ? 4 : 3, col: w.col, para: w.para ? 1 : 0, aS: w.antiS || 0, aL: w.antiL || 0 });   /* Fassung 22: Konter der Turmzweige */
   ev(g, 'shot', { x: sx, y: sy, kind: pk, owner: s.owner, snd: w.snd, ang: a, big: w.dmg >= 20 });
 }
 /* Punktverteidigung: nächster feindlicher Torpedo oder Jäger in Reichweite */
@@ -657,7 +679,11 @@ function updateProj(g, dt) {
     if (q.kind === 'torp') {
       const t = g.byId.get(q.tid);
       if (t && !t.dead) { const want = datan2(t.y - q.y, t.x - q.x); q.ang = turnTo(q.ang, want, q.turn * dt); if (hyp(t.x - q.x, t.y - q.y) < (t.k === 2 ? t.def.r * 0.9 : t.def.r * 0.8) + 6) { damage(g, t, q.dmg, 'torp', g.byId.get(q.sid), q.owner, q.x, q.y); ev(g, 'hit', { x: q.x, y: q.y, kind: 'torp', ang: q.ang }); continue; } }
+      const tx0 = q.x, ty0 = q.y;
       q.x += dcos(q.ang) * q.sp * dt; q.y += dsin(q.ang) * q.sp * dt;
+      /* Fassung 22: Torpedo prallt auf einen feindlichen Schildwall */
+      const wct = g.wallL.length ? wallCross(g, q.owner, tx0, ty0, q.x, q.y) : null;
+      if (wct) { wallHit(g, wct.b, q.dmg, 'torp', q.owner, wct.x, wct.y); ev(g, 'hit', { x: wct.x, y: wct.y, kind: 'torp', ang: q.ang, sh: true }); continue; }
       if (q.x < 0 || q.y < 0 || q.x > g.map.w || q.y > g.map.h) continue;
       P[w++] = q; continue;
     }
@@ -670,8 +696,8 @@ function updateProj(g, dt) {
       if (q.hit && q.hit.indexOf(e.id) >= 0) return false;
       const rr = (e.k === 2 ? e.def.r * 0.85 : e.def.r * 0.75) + q.r;
       if (segCircle(x0, y0, q.x, q.y, e.x, e.y, rr)) {
-        damage(g, e, q.dmg, q.kind, g.byId.get(q.sid), q.owner, x0, y0);
-        if (q.kind === 'acid' && !e.dead) acidOn(g, e, q.dmg, q.owner);
+        damage(g, e, q.dmg, q.kind, g.byId.get(q.sid), q.owner, x0, y0, q.aS || q.aL ? { antiS: q.aS, antiL: q.aL } : undefined);
+        if (q.kind === 'acid' && !e.dead) acidOn(g, e, q.dmg * (e.k === 1 && (q.aS || q.aL) ? (e.def.cls === 'l' ? q.aL || 1 : e.def.cls === 's' || e.def.cls === 'f' ? q.aS || 1 : 1) : 1), q.owner);
         if (q.para && !e.dead) paraOn(g, e, q.owner);
         ev(g, 'hit', { x: e.x + (x0 - e.x) * 0.5, y: e.y + (y0 - e.y) * 0.5, kind: q.kind, ang: q.ang, sh: e.shield > 0 });
         if (q.kind === 'rail') { (q.hit || (q.hit = [])).push(e.id); q.pierce--; q.dmg *= 0.75; if (q.pierce <= 0) hitAny = true; return hitAny; }
@@ -679,7 +705,11 @@ function updateProj(g, dt) {
       }
       return false;
     };
+    /* Fassung 22: ein feindlicher Schildwall auf der Strecke dieser Runde schluckt das Geschoss (Ziele dahinter bleiben heil) */
+    const wcq = g.wallL.length ? wallCross(g, q.owner, x0, y0, q.x, q.y) : null;
+    if (wcq) { q.x = wcq.x; q.y = wcq.y; }
     nearShips(g, (x0 + q.x) / 2, (y0 + q.y) / 2, step / 2 + 60, test);
+    if (!hitAny && wcq) { wallHit(g, wcq.b, q.dmg, q.kind === 'rail' ? 'rail' : q.kind, q.owner, wcq.x, wcq.y); ev(g, 'hit', { x: wcq.x, y: wcq.y, kind: q.kind, ang: q.ang, sh: true }); continue; }
     if (!hitAny) for (const b of g.bldgs) { if (hyp(b.x - q.x, b.y - q.y) > step + b.def.r + 20) continue; if (test(b)) break; }
     if (hitAny) continue;
     /* Felsen schlucken Geschosse */
@@ -716,6 +746,7 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   /* nur Waffenfeuer (Schütze oder Geschoss); Flächenwirkungen wie Eruptionen und Säure übergeben src = null */
   const ck = COUNTER[kind]; if (ck && !bypass && src !== null) amt *= t.k === 1 ? (ck[t.def.cls] || 1) : t.k === 2 ? ck.b : 1;
   if (w && w.antiL && t.k === 1 && t.def.cls === 'l' && !bypass) amt *= w.antiL;
+  if (w && w.antiS && t.k === 1 && (t.def.cls === 's' || t.def.cls === 'f') && !bypass) amt *= w.antiS;   // Fassung 22: Flak/Schwergeschütz
   if (src && src.k === 1 && t.k === 1 && !bypass && kind !== 'torp') { const tr = TRACK[src.def.cls]; if (tr && tr[t.def.cls]) amt *= tr[t.def.cls] < 1 ? 1 - (1 - tr[t.def.cls]) * rankAcc(src) : tr[t.def.cls]; }
   if (t.k === 1 && !bypass && src !== null && sx !== undefined && t.def.role !== 'fighter' && (sx !== t.x || sy !== t.y)) {
     const rel = Math.abs(angDiff(datan2(sy - t.y, sx - t.x), t.ang));

@@ -12,7 +12,8 @@ const ASH_DMG = 0.016;                       // Hüllenverlust je Sekunde im Asc
 const YARD_REPAIR = 0.03;                    // Reparatur je Sekunde an der Werft (Anteil der Hülle)
 
 function ev(g, t, o) { o.t = t; g.ev.push(o); }
-function lvOf(b) { return b.def.lv[b.lv - 1]; }
+/* Fassung 22: spezialisierte Türme (b.spec) lesen ihre Stufen aus def.sp */
+function lvOf(b) { return b.spec && b.def.sp && b.def.sp[b.spec] ? b.def.sp[b.spec][b.lv - 1] : b.def.lv[b.lv - 1]; }
 function bdef(g, pi, role) { return BLDG[g.players[pi].faction][role]; }
 function cost(c) { return c || { ice: 0, ore: 0 }; }
 /* Baukosten einer Station für einen Spieler (Nexus-Knoten mit Doktrin billiger) */
@@ -42,7 +43,7 @@ function createGame(opts) {
   const g = {
     map, rng: makeRng((opts.seed || 1) * 7919 + 13), tick: 0, time: 0, players: [], ships: [], bldgs: [], nodes: [], proj: [], wrecks: [], ev: [],
     byId: new Map(), nextId: 1, over: false, winner: -1, winTeam: -1, opts, human: -1, tm: [], deadFlag: false, bDied: false, reveals: [], strikes: [], flares: [], sites: [], gates: [], events: [], neutral: -1, spores: [], mines: [], threat: -1, wave: null, found: [],
-    gw2: Math.ceil(map.w / CELL), gh2: Math.ceil(map.h / CELL), cells: null, cellsUsed: [], visStamp: 1, vw: Math.ceil(map.w / VIS), vh: Math.ceil(map.h / VIS), teamVis: {}, log: []
+    gw2: Math.ceil(map.w / CELL), gh2: Math.ceil(map.h / CELL), wallL: [], wallDirty: 0, cells: null, cellsUsed: [], visStamp: 1, vw: Math.ceil(map.w / VIS), vh: Math.ceil(map.h / VIS), teamVis: {}, log: []
   };
   g.cells = new Array(g.gw2 * g.gh2);
   for (let i = 0; i < g.cells.length; i++) g.cells[i] = [];
@@ -212,7 +213,7 @@ function updateVision(g) {
   /* Ionennebel: wer darin steht, sieht nur ION_SEE weit (u.ion) und wird selbst nur aus der Nähe gesehen (Nahsicht visN) */
   for (const u of g.ships) { if (u.dead) continue; const p = g.players[u.owner]; u.ion = inIon(g.map, u.x, u.y); let r = u.def.sensor * p.tfx.sensor * (u.rfV || 1) * (0.4 + 0.6 * u.sub.sensor); if (u.ion) r = Math.min(r, ION_SEE); markVis(p.vis, p.explored, vw, vh, st, u.x, u.y, r); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, u.x, u.y, ION_SEE); }
   for (let i = g.reveals.length - 1; i >= 0; i--) { const r = g.reveals[i]; if (g.time > r.until) { g.reveals.splice(i, 1); continue; } const p = g.players[r.owner]; markVis(p.vis, p.explored, vw, vh, st, r.x, r.y, r.r); if (p.visN && r.r < 3000) markVis(p.visN, p.explored, vw, vh, st, r.x, r.y, r.r); }
-  for (const b of g.bldgs) { if (b.dead) continue; const p = g.players[b.owner]; markVis(p.vis, p.explored, vw, vh, st, b.x, b.y, b.done ? (SENSOR_B[b.role] || 360) : 220); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, b.x, b.y, b.done && DETECT_B[b.role] ? Math.max(ION_SEE, maxRange(lvOf(b))) : ION_SEE); }
+  for (const b of g.bldgs) { if (b.dead) continue; const p = g.players[b.owner]; const bl = b.done ? lvOf(b) : null; markVis(p.vis, p.explored, vw, vh, st, b.x, b.y, b.done ? (bl.sensor || SENSOR_B[b.role] || 360) : 220); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, b.x, b.y, b.done && bl.detect && !b.off ? bl.detect : b.done && DETECT_B[b.role] ? Math.max(ION_SEE, maxRange(bl), bl.jam || 0) : ION_SEE); }
   /* Verbündete teilen Sicht: dieselbe Tabelle je Team; erkundet nachziehen */
   for (const p of g.players) for (const q of g.players) if (q !== p && q.team === p.team) { const e = p.explored, f = q.explored; for (let i = 0; i < e.length; i++) if (f[i]) e[i] = 1; }
 }
@@ -232,6 +233,7 @@ function recalcPower(g, pi) {
   gen = Math.round(gen * p.tfx.energy) + (p.forge ? 60 : 0);
   p.eGen = gen; p.eUse = use;
   const low = use > gen;
+  if (low !== p.lowPower) g.wallDirty = 1;   // Fassung 22: Schildwälle fallen bei Energiemangel aus
   if (low && !p.lowPower && g.time - p.lowT > 20) { p.lowT = g.time; ev(g, 'lowpower', { owner: pi }); }
   p.lowPower = low;
 }
@@ -254,8 +256,19 @@ function buildReq(g, pi, role) {
   if (lk && lk.bldgs && lk.bldgs.indexOf(role) < 0) return 'In dieser Mission nicht verfügbar';
   if (def.unique && hasBldg(g, pi, role, false)) return 'Nur einmal möglich';
   if (role !== 'base' && !hasBldg(g, pi, 'base', true)) return 'Benötigt Kommandobasis';
+  /* Fassung 22: höchstens WALL_CAP Schildwälle */
+  if (role === 'wall' && g.bldgs.filter(b => !b.dead && b.owner === pi && b.role === 'wall').length >= WALL_CAP) return 'Zu viele Schildwälle';
   if (def.req) { let b = null; for (const q of g.bldgs) if (!q.dead && q.owner === pi && q.role === 'base' && q.done && (!b || q.lv > b.lv)) b = q; if (def.req.base && (!b || b.lv < def.req.base)) return 'Benötigt Kommandobasis Stufe ' + ROMAN[def.req.base]; if (def.req.lab && labLevel(g, pi) < def.req.lab) return 'Benötigt Labor Stufe ' + ROMAN[def.req.lab]; }
   return null;
+}
+/* Fassung 22: Schildwall – Gegenstück (Anker) zum Emitter an (x, y): eigener Turm, Flak, Sporennest oder Emitter, dessen
+   Rand höchstens WALL_MAX vom Rand des Emitters entfernt ist; to wählt ihn ausdrücklich, sonst der nächste */
+function wallAnchor(g, pi, x, y, to) {
+  const r = bdef(g, pi, 'wall').r, ok = b => b && !b.dead && b.k === 2 && b.owner === pi && WALL_ANCHOR[b.role] && (() => { const d = hyp(b.x - x, b.y - y) - b.def.r - r; return d <= WALL_MAX && d >= WALL_MIN; })();
+  if (to) { const b = g.byId.get(to); return ok(b) ? b : null; }
+  let best = null, bd = 1e9;
+  for (const b of g.bldgs) { if (!ok(b)) continue; const d = hyp(b.x - x, b.y - y); if (d < bd) { bd = d; best = b; } }
+  return best;
 }
 /* Platzprüfung: nicht im Aschenebel, nicht auf Felsen, Feldern, Ressourcen oder Gebäuden; nahe an einem eigenen Gebäude */
 function canPlace(g, pi, role, x, y) {
@@ -273,16 +286,19 @@ function canPlace(g, pi, role, x, y) {
   const p = g.players[pi];
   /* Außenbasis: überall, unabhängig von Reichweite und Netz – so kommt man an entfernte Vorkommen */
   if (role === 'base') return null;
+  if (role === 'wall' && !wallAnchor(g, pi, x, y, 0)) return 'Kein Turm oder Emitter in Reichweite';
   if (p.faction === 'nexus') { if (!netCovered(g, pi, x, y, true)) return 'Außerhalb des Netzes'; return null; }
   let ok = false;
   for (const b of g.bldgs) { if (b.dead || b.owner !== pi || !b.done) continue; const d = hyp(b.x - x, b.y - y); if (d < (b.role === 'base' ? BUILD_RANGE_BASE : BUILD_RANGE)) { ok = true; break; } }
   if (!ok) return 'Zu weit von der Basis';
   return null;
 }
-function cmdBuild(g, pi, uids, role, x, y) {
+function cmdBuild(g, pi, uids, role, x, y, to) {
   const p = g.players[pi], def = bdef(g, pi, role);
   const why = buildReq(g, pi, role) || canPlace(g, pi, role, x, y);
   if (why) return why;
+  const anc = role === 'wall' ? wallAnchor(g, pi, x, y, to) : null;
+  if (role === 'wall' && !anc) return 'Kein Turm oder Emitter in Reichweite';
   if (!canPay(p, bcost(p, def))) return 'Nicht genug Rohstoffe';
   const us = uids.map(id => g.byId.get(id)).filter(u => u && !u.dead && u.owner === pi && u.def.build);
   if (!us.length) return 'Kein Bauschiff';
@@ -293,6 +309,7 @@ function cmdBuild(g, pi, uids, role, x, y) {
   /* Fassung 22: Fundament – dieselbe Rolle am Platz einer eben abgerissenen Station baut schneller */
   const fi = g.found ? g.found.findIndex(f => f.owner === pi && f.role === role && g.time <= f.until && hyp(f.x - x, f.y - y) <= FOUND_SNAP) : -1;
   if (fi >= 0) { b.fast = FOUND_RATE; g.found.splice(fi, 1); }
+  if (anc) { b.link = anc.id; b.fhp = 0; b.fhpMax = lvOf(b).field; b.fdown = 0; }
   for (const u of us) { u.o = { t: 'build', bid: b.id }; u.path = null; }
   ev(g, 'place', { x, y, owner: pi, id: b.id, fast: b.fast ? 1 : 0 });
   return null;
@@ -343,29 +360,34 @@ function cmdResume(g, pi, uids, bid) {
   for (const u of us) { u.o = { t: 'build', bid: b.id }; u.path = null; }
   return null;
 }
-function cmdUpgrade(g, pi, bid) {
+function cmdUpgrade(g, pi, bid, spec) {
   const b = g.byId.get(bid), p = g.players[pi];
   if (!b || b.dead || b.k !== 2 || b.owner !== pi) return 'Nicht möglich';
   if (!b.done) return 'Erst fertigstellen';
   if (b.upg) return 'Ausbau läuft schon';
   if (b.lv >= 3) return 'Höchste Stufe erreicht';
+  /* Fassung 22: Spezialisierung nur beim Ausbau eines Turms von I auf II (ohne Angabe: Standardturm) */
+  if (spec && (!b.def.sp || !b.def.sp[spec] || b.lv !== 1)) return 'Nicht möglich';
   const nxt = b.def.lv[b.lv];
   if (!canPay(p, nxt.cost)) return 'Nicht genug Rohstoffe';
   pay(p, nxt.cost);
   if (b.paid) { const c = cost(nxt.cost); b.paid.ice += c.ice; b.paid.ore += c.ore; } /* Fassung 22 */
   b.upg = { prog: 0, time: nxt.time };
+  if (spec) b.upg.spec = spec;
   return null;
 }
 function finishUpgrade(g, b) {
   const was = lvOf(b);
   b.lv++;
+  if (b.upg && b.upg.spec) b.spec = b.upg.spec;
   const lv = lvOf(b);
   b.hull = b.hull / was.hull * lv.hull; b.hullMax = lv.hull;
   const tf = g.players[b.owner].tfx.shield;
   b.shieldMax = lv.shield * tf; b.shield = Math.min(b.shieldMax, b.shield + (lv.shield - was.shield) * tf);
   b.wcd = lv.wpn.map(() => 0); b.upg = null;
+  if (b.role === 'wall') { const k = b.fhpMax ? b.fhp / b.fhpMax : 1; b.fhpMax = lv.field; b.fhp = b.fhpMax * k; }
   recalcPower(g, b.owner); recalcCp(g, b.owner);
-  ev(g, 'upgrade', { owner: b.owner, id: b.id, lv: b.lv, x: b.x, y: b.y });
+  ev(g, 'upgrade', { owner: b.owner, id: b.id, lv: b.lv, x: b.x, y: b.y, spec: b.spec || undefined });
   if (b.role === 'base' && b.lv >= 2) askDoctrine(g, b.owner);
 }
 function askDoctrine(g, pi) { const p = g.players[pi]; if (p.doctrine || p.docAsk || (p.lock && p.lock.noDoc)) return; p.docAsk = true; ev(g, 'doctrine', { owner: pi }); }
@@ -596,12 +618,12 @@ function execCmd(g, c) {
     case 'hold': cmdHold(g, shipsOf(g, pi, c.u), c.on); return null;
     case 'stance': cmdStance(g, shipsOf(g, pi, c.u), c.v); return null;
     case 'group': cmdGroup(g, shipsOf(g, pi, c.u), c.n); return null;
-    case 'build': return cmdBuild(g, pi, c.u, c.role, c.x, c.y);
+    case 'build': return cmdBuild(g, pi, c.u, c.role, c.x, c.y, c.to | 0);
     case 'buildrow': return cmdBuildRow(g, pi, c.u, c.role, c.pts); /* Fassung 22 */
     case 'resume': return cmdResume(g, pi, c.u, c.b);
     case 'train': return cmdTrain(g, pi, c.b, c.id);
     case 'cancel': return cmdCancel(g, pi, c.b, c.i | 0);
-    case 'upgrade': return cmdUpgrade(g, pi, c.b);
+    case 'upgrade': return cmdUpgrade(g, pi, c.b, typeof c.spec === 'string' ? c.spec : undefined);
     case 'rally': return cmdRally(g, pi, c.b, c.x, c.y);
     case 'grally': { const n = c.n | 0; if (n < 0 || n > 5) return 'Nicht möglich'; p.grally = n; return null; }   /* Fassung 22: neue Kampfschiffe sammeln bei Gruppe n (0 = aus) */
     case 'sell': return cmdSell(g, pi, c.b);
@@ -694,6 +716,7 @@ function grallyJoin(g, p, u) {
 }
 function completeBldg(g, b) {
   b.done = true; b.prog = 1; b.hull = b.hullMax; b.shield = b.shieldMax;
+  if (b.role === 'wall') { b.fhpMax = lvOf(b).field; b.fhp = b.fhpMax; b.fdown = 0; g.wallDirty = 1; }
   recalcPower(g, b.owner); recalcCp(g, b.owner);
   ev(g, 'built', { owner: b.owner, id: b.id, x: b.x, y: b.y, role: b.role });
   /* ein Bauschiff, das gebaut hat, wird frei */
@@ -735,6 +758,10 @@ function updateBldg(g, b, dt) {
   if (b.role === 'shield' && g.tick % 15 === 0) {
     for (const o of g.bldgs) { if (o.dead || o === b || o.owner !== b.owner || !o.done) continue; if (hyp(o.x - b.x, o.y - b.y) <= lv.aura) { if (o.givep < lv.give) o.givep = lv.give; if (o.give < o.givep) o.give = Math.min(o.givep, o.give + lv.give * 0.08); } }
   }
+  /* Fassung 22: Schildwall (Feld laden, nach dem Zusammenbruch neu starten), Reparaturdock, Störsender */
+  if (b.role === 'wall') wallStep(g, b, lv, p, dt);
+  if (b.role === 'dock' && g.tick % 6 === 0) dockStep(g, b, lv, p);
+  if (lv.jam && (g.tick + b.id) % 10 === 0) jamStep(g, b, lv);
   /* Schild laden */
   if (b.shieldMax && b.shield < b.shieldMax) { b.sT += dt; if (b.sT > p.tfx.sdelay) b.shield = Math.min(b.shieldMax, b.shield + lv.sreg * p.tfx.sreg * g.pace.regen * dt * (p.lowPower ? 0.5 : 1)); }
   /* Labor: Forschung läuft, solange ein fertiges Labor steht */
@@ -805,6 +832,91 @@ function updateStrikes(g, dt) {
     ev(g, 'strike', { x: s.x, y: s.y, r: s.r, owner: s.owner });
   }
 }
+/* ------------------------------------------------------------------ Fassung 22: Schildwall, Reparaturdock, Störsender
+   Ein Schildwall (Emitter b, Anker b.link) steht, solange beide fertig und unbeschädigt genug sind, die Partei Energie hat
+   und das Feld nicht zusammengebrochen ist (b.fdown). Stehende Wälle liegen in g.wallL mit ihrer Strecke (wx1 … wy2) und
+   sperren im Wegraster map.wallG für alle anderen Teams (Wert Team + 1, 255 bei Überschneidung). */
+function wallIsUp(g, b, a) { return !b.dead && b.done && !b.off && !g.players[b.owner].lowPower && b.fdown <= 0 && b.fhp > 0 && a && !a.dead && a.done && !a.off && a.owner === b.owner; }
+function wallStep(g, b, lv, p, dt) {
+  if (b.fdown > 0) { b.fdown -= dt; if (b.fdown <= 0) { b.fdown = 0; b.fhp = b.fhpMax * 0.3; g.wallDirty = 1; } return; }
+  /* lädt wie ein Schild erst SHIELD_DELAY s nach dem letzten Treffer */
+  if (b.fhp < b.fhpMax && !p.lowPower && !(g.time - (b.fhitT || -99) < SHIELD_DELAY)) b.fhp = Math.min(b.fhpMax, b.fhp + lv.freg * g.pace.regen * dt);
+}
+function wallsTick(g) {
+  let ch = g.wallDirty;
+  if (!ch) for (const b of g.bldgs) { if (b.dead || b.role !== 'wall') continue; const up = wallIsUp(g, b, b.link ? g.byId.get(b.link) : null) ? 1 : 0; if (up !== (b.up | 0) || (up && b.upTm !== g.tm[b.owner])) { ch = 1; break; } }
+  if (ch) wallsNav(g);
+}
+function wallsNav(g) {
+  const m = g.map, L = [], gw = m.gw, gh = m.gh;
+  g.wallDirty = 0;
+  if (!m.wallG) m.wallG = new Uint8Array(gw * gh); else m.wallG.fill(0);
+  for (const b of g.bldgs) {
+    if (b.dead || b.role !== 'wall') continue;
+    const a = b.link ? g.byId.get(b.link) : null;
+    b.up = wallIsUp(g, b, a) ? 1 : 0;
+    if (!b.up) continue;
+    const d = Math.max(1, hyp(a.x - b.x, a.y - b.y)), ux = (a.x - b.x) / d, uy = (a.y - b.y) / d, tm = g.tm[b.owner] + 1;
+    b.upTm = g.tm[b.owner]; b.ax = a.x; b.ay = a.y; b.ar = a.def.r;
+    b.wx1 = b.x + ux * b.def.r * 0.6; b.wy1 = b.y + uy * b.def.r * 0.6; b.wx2 = a.x - ux * a.def.r * 0.6; b.wy2 = a.y - uy * a.def.r * 0.6;
+    L.push(b);
+    const pad = 18, x0 = Math.max(0, ((Math.min(b.wx1, b.wx2) - pad) / NAV) | 0), x1 = Math.min(gw - 1, ((Math.max(b.wx1, b.wx2) + pad) / NAV) | 0), y0 = Math.max(0, ((Math.min(b.wy1, b.wy2) - pad) / NAV) | 0), y1 = Math.min(gh - 1, ((Math.max(b.wy1, b.wy2) + pad) / NAV) | 0);
+    for (let cy = y0; cy <= y1; cy++) for (let cx = x0; cx <= x1; cx++) {
+      if (!segCircle(b.wx1, b.wy1, b.wx2, b.wy2, (cx + 0.5) * NAV, (cy + 0.5) * NAV, pad)) continue;
+      const i = cy * gw + cx, v = m.wallG[i]; m.wallG[i] = v && v !== tm ? 255 : tm;
+    }
+  }
+  g.wallL = L;
+  /* Wege neu suchen: ein Wall ist auf- oder abgebaut */
+  for (const u of g.ships) u.path = null;
+}
+/* Treffer auf das Feld (Waffenfeuer quer durch einen feindlichen Wall); bricht es zusammen, startet es nach WALL_DOWN s neu */
+function wallHit(g, b, amt, kind, owner, x, y) {
+  if (b.dead || !b.up) return;
+  const d = amt * (g.pace ? g.pace.dmg : 1) * (DMG_VS_SHIELD[kind] || 1);
+  b.fhp -= d; b.fhitT = g.time;
+  if ((g.tick + b.id) % 3 === 0) ev(g, 'wallhit', { x, y, owner: b.owner, id: b.id });
+  if (b.fhp <= 0) { b.fhp = 0; b.fdown = WALL_DOWN; b.up = 0; g.wallDirty = 1; ev(g, 'wallDown', { x: (b.wx1 + b.wx2) / 2, y: (b.wy1 + b.wy2) / 2, owner: b.owner, id: b.id, by: owner }); }
+}
+/* Erster feindlicher (aus Sicht von owner) Wall, den die Strecke (x0,y0)→(x1,y1) kreuzt; Kreuzungen an den Endstationen
+   zählen nicht (Emitter und Anker selbst lassen sich beschießen). Liefert { b, x, y, t } oder null. */
+function wallCross(g, owner, x0, y0, x1, y1) {
+  const L = g.wallL; if (!L.length || owner < 0) return null;
+  let best = null, bt = 2;
+  for (let i = 0; i < L.length; i++) {
+    const b = L[i]; if (b.dead || !b.up || !foes(g, owner, b.owner)) continue;
+    const rx = x1 - x0, ry = y1 - y0, sx = b.wx2 - b.wx1, sy = b.wy2 - b.wy1, den = rx * sy - ry * sx;
+    if (Math.abs(den) < 1e-9) continue;
+    const qx = b.wx1 - x0, qy = b.wy1 - y0, t = (qx * sy - qy * sx) / den, u = (qx * ry - qy * rx) / den;
+    if (t < 0 || t > 1 || u < 0 || u > 1 || t >= bt) continue;
+    const px = x0 + rx * t, py = y0 + ry * t;
+    if (hyp(px - b.x, py - b.y) < b.def.r || hyp(px - b.ax, py - b.ay) < b.ar) continue;
+    bt = t; best = { b, x: px, y: py, t };
+  }
+  return best;
+}
+const DOCK_SUB = 0.06;   // Subsysteme je Sekunde am Reparaturdock
+function dockStep(g, b, lv, p) {
+  const k = STEP * 6 * (p.lowPower ? 0.5 : 1);
+  nearShips(g, b.x, b.y, lv.rep, u => {
+    if (u.owner !== b.owner || u.derelict || u.def.role === 'fighter') return false;
+    let any = false;
+    if (u.hull < u.hullMax) { u.hull = Math.min(u.hullMax, u.hull + u.hullMax * lv.hrate * (u.v < 20 ? 1 : 0.4) * k); any = true; }
+    for (const id of SUBS) if (u.sub[id] < 1) { u.sub[id] = Math.min(1, u.sub[id] + DOCK_SUB * k); any = true; }
+    if (any) u.fr = g.time;
+    return false;
+  });
+  if (g.tick % 30 === 0) for (const o of g.bldgs) if (!o.dead && o.done && o !== b && o.owner === b.owner && o.hull < o.hullMax && hyp(o.x - b.x, o.y - b.y) <= lv.brep) { o.hull = Math.min(o.hullMax, o.hull + o.hullMax * lv.brate * STEP * 30 * (p.lowPower ? 0.5 : 1)); o.fr = g.time; }
+}
+/* Störsender: feindliche Schiffe im Umkreis bekommen für eine halbe Sekunde jamT (Tempo × jamK, Reichweite × jamR) */
+function jamStep(g, b, lv) {
+  nearShips(g, b.x, b.y, lv.jam, u => {
+    if (!foes(g, b.owner, u.owner) || u.derelict) return false;
+    const on = u.jamT > g.time;
+    u.jamK = on ? Math.min(u.jamK, lv.jamSlow) : lv.jamSlow; u.jamR = lv.jamRange; u.jamT = g.time + 0.5;
+    return false;
+  });
+}
 /* Zusatzschilde verfallen, wenn kein Generator mehr in Reichweite ist (alle zwei Sekunden) */
 function checkAura(g) {
   for (const o of g.bldgs) {
@@ -820,6 +932,7 @@ function removeBldg(g, b) {
   if (b.dead) return;
   b.dead = true; g.deadFlag = true; g.bDied = true;
   navBlock(g.map, b.x, b.y, b.def.r, false);
+  if (b.role === 'wall' || WALL_ANCHOR[b.role]) g.wallDirty = 1;
   for (const it of b.q) refund(g.players[b.owner], it.c || SHIPS[it.id].cost, 0.5);
   b.q.length = 0;
   for (const u of g.ships) if (!u.dead && u.o.t === 'build' && u.o.bid === b.id) setIdle(u);
@@ -916,7 +1029,7 @@ function stateHash(g) {
   for (const p of g.players) h = hmix(h, p.doctrine ? hashStr(p.doctrine) : 0);
   if (g.wave) { h = hmix(h, g.wave.n); h = hmix(h, g.wave.phase === 'wave' ? 1 : 0); }
   if (g.mis) { for (const q of g.mis.goals) { h = hmix(h, q.st); h = hmix(h, q.v); } h = hmix(h, g.mis.res); }
-  for (const b of g.bldgs) if (!b.dead) { h = hmix(h, b.id); h = hmix(h, b.hull); h = hmix(h, b.prog); h = hmix(h, b.q.length); }
+  for (const b of g.bldgs) if (!b.dead) { h = hmix(h, b.id); h = hmix(h, b.hull); h = hmix(h, b.prog); h = hmix(h, b.q.length); if (b.fhpMax) h = hmix(h, b.fhp); }
   for (const n of g.nodes) h = hmix(h, n.amount);
   /* Fassung 22: Minen */
   h = hmix(h, g.mines.length); for (const m of g.mines) { h = hmix(h, m.id); h = hmix(h, m.t); }
@@ -939,6 +1052,7 @@ function stepGame(g) {
   const bl = g.bldgs, us = g.ships, rev = (g.tick & 1) === 1;
   if (rev) { for (let i = bl.length - 1; i >= 0; i--) if (!bl[i].dead) updateBldg(g, bl[i], dt); }
   else for (let i = 0; i < bl.length; i++) if (!bl[i].dead) updateBldg(g, bl[i], dt);
+  if (g.wallDirty || g.tick % 15 === 4) wallsTick(g);   // Fassung 22
   if (rev) { for (let i = us.length - 1; i >= 0; i--) if (!us[i].dead) updateShip(g, us[i], dt); }
   else for (let i = 0; i < us.length; i++) if (!us[i].dead) updateShip(g, us[i], dt);
   separate(g);

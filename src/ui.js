@@ -213,12 +213,12 @@ function checkPlace() {
     hudCmds(); return;
   }
   p.pts = null;
-  p.why = canPlace(UI.g, UI.me, p.role, p.x, p.y); p.ok = !p.why; const c = BLDG[UI.P.faction][p.role].lv[0].cost; if (p.ok && !canPay(UI.P, c)) { p.ok = false; p.why = 'Nicht genug Rohstoffe'; } hudCmds(); }
+  p.why = canPlace(UI.g, UI.me, p.role, p.x, p.y); p.ok = !p.why; if (p.role === 'wall') { const a = wallAnchor(UI.g, UI.me, p.x, p.y, 0); p.anc = a ? a.id : 0; }   /* Fassung 22: Anker des Schildwalls */ const c = BLDG[UI.P.faction][p.role].lv[0].cost; if (p.ok && !canPay(UI.P, c)) { p.ok = false; p.why = 'Nicht genug Rohstoffe'; } hudCmds(); }
 function confirmPlace() {
   const p = UI.place; if (!p) return;
   checkPlace();
   if (!p.ok) { toast(L(p.why), 'warn'); SND.play('err'); return; }
-  const r = p.row ? issue({ t: 'buildrow', u: p.u, role: p.role, pts: p.pts.filter(q => q.ok).map(q => [q.x, q.y]) }) : issue({ t: 'build', u: p.u, role: p.role, x: p.x, y: p.y });
+  const r = p.row ? issue({ t: 'buildrow', u: p.u, role: p.role, pts: p.pts.filter(q => q.ok).map(q => [q.x, q.y]) }) : issue(p.role === 'wall' && p.anc ? { t: 'build', u: p.u, role: p.role, x: p.x, y: p.y, to: p.anc } : { t: 'build', u: p.u, role: p.role, x: p.x, y: p.y });
   if (!r && p.row) toast(L('Reihe: {0} Stationen in der Bauliste', p.n), 'good', 2200);
   if (!r && p.fast) toast(L('Fundament: baut 50 % schneller'), 'good', 2200);
   if (r) { toast(L(r), 'warn'); SND.play('err'); return; }
@@ -568,15 +568,23 @@ function hudCmds(force) {
     }
     if (b.role === 'base' && b.done && UI.P.docAsk && !UI.P.doctrine) box.appendChild(cmdBtn('✦', 'Doktrin', openDoctrine, 'Doktrin wählen: dauerhafte Boni, ein Schiff und eine Flaggschiff-Fähigkeit', 'arm'));
     if (b.role === 'base' && b.done && UI.P.etechAsk) box.appendChild(cmdBtn('◈', 'Archiv', openEtech, 'Erbauer-Technologie aus dem Archiv wählen', 'arm'));
-    if (b.done && b.lv < 3) { const nx = b.def.lv[b.lv]; box.appendChild(cmdBtn('▲', 'Ausbau ' + ROMAN[b.lv + 1], () => { const r = issue({ t: 'upgrade', b: b.id }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { SND.play('click'); hudSel(); } }, () => '<h4>' + L('Ausbau auf Stufe') + ' ' + ROMAN[b.lv + 1] + '</h4><div class="cost">' + costTxt(nx.cost) + ' · ' + nx.time + ' s</div><p>' + esc(upgradeText(b)) + '</p>', b.upg ? 'off' : canPay(UI.P, nx.cost) ? 'arm' : '')); }
+    /* Fassung 22: Turm von I auf II – Zweig wählen (Flak, Schwergeschütz, Störsender) */
+    if (b.done && b.lv === 1 && b.def.sp && !b.upg) { const nx = b.def.lv[1]; for (const sp of TSPEC_ORDER) { const S = TSPEC[sp]; box.appendChild(cmdBtn(S.icon, S.name, () => { const r = issue({ t: 'upgrade', b: b.id, spec: sp }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { SND.play('click'); hudSel(); } }, () => '<h4>' + L('Ausbau auf Stufe') + ' ' + ROMAN[2] + ' · ' + esc(L(S.name)) + '</h4><div class="cost">' + costTxt(nx.cost) + ' · ' + nx.time + ' s</div><p>' + esc(L(S.desc)) + '</p><p class="fine">' + esc(specText(b, sp)) + '</p>', canPay(UI.P, nx.cost) ? 'arm' : '')); } }
+    else if (b.done && b.lv < 3) { const nx = b.def.lv[b.lv]; box.appendChild(cmdBtn('▲', 'Ausbau ' + ROMAN[b.lv + 1], () => { const r = issue({ t: 'upgrade', b: b.id }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { SND.play('click'); hudSel(); } }, () => '<h4>' + L('Ausbau auf Stufe') + ' ' + ROMAN[b.lv + 1] + '</h4><div class="cost">' + costTxt(nx.cost) + ' · ' + nx.time + ' s</div><p>' + esc(upgradeText(b)) + '</p>', b.upg ? 'off' : canPay(UI.P, nx.cost) ? 'arm' : '')); }
     if (b.role === 'yard' && b.done) box.appendChild(cmdBtn('⚑', 'Sammeln', () => { UI.mode = 'rally'; showInfo(L('Sammelpunkt: Ziel antippen'), 3000); hudCmds(); }, 'Neue Schiffe fliegen zum Sammelpunkt', UI.mode === 'rally' ? 'on' : ''));
     /* Fassung 22: Abreißen – zweimal tippen, die Hälfte von allem Bezahlten kommt zurück, ein Fundament bleibt */
     if (b.role !== 'base' && b.role !== 'seal') { const ask = UI.askSell === b.id && performance.now() - UI.askSellT < 4000, back = spentOn(b), f = b.done ? DEMOLISH : 0.8; box.appendChild(cmdBtn('⌫', ask ? 'Sicher?' : 'Abreißen', () => { if (UI.askSell === b.id && performance.now() - UI.askSellT < 4000) { const r = issue({ t: 'sell', b: b.id }); UI.askSell = 0; if (r) { toast(L(r), 'warn'); SND.play('err'); } else desel(); } else { UI.askSell = b.id; UI.askSellT = performance.now(); toast(L('Noch einmal tippen: abreißen, {0} zurück', costTxt({ ice: Math.floor(back.ice * f), ore: Math.floor(back.ore * f) })), 'warn', 2500); hudCmds(true); } }, 'Station abreißen: die Hälfte aller Kosten (alle Stufen) zurück. Am selben Platz baut dieselbe Station binnen 60 s um 50 % schneller.', ask ? 'arm' : 'warn')); }
   }
 }
+/* Fassung 22: was ein Turmzweig auf Stufe II bringt (Schaden je Sekunde, Reichweite, Störwirkung) */
+function specText(b, sp) {
+  const l = b.def.sp[sp][1], dps = l.wpn.filter(w => w.kind !== 'pd').reduce((s, w) => s + w.dmg / w.reload, 0), rg = Math.max(0, ...l.wpn.filter(w => w.kind !== 'pd').map(w => w.range));
+  if (l.jam) return L('Umkreis {0}, Tempo −{1} %, Reichweite −{2} %', l.jam, Math.round((1 - l.jamSlow) * 100), Math.round((1 - l.jamRange) * 100));
+  return L('Schaden {0}/s, Reichweite {1}', Math.round(dps), rg) + (l.wpn.some(w => w.kind === 'pd') ? ', ' + L('Punktverteidigung') : '');
+}
 /* Was die nächste Stufe bringt, in einem Satz */
 function upgradeText(b) {
-  const a = b.def.lv[b.lv - 1], n = b.def.lv[b.lv], out = [];
+  const a = lvOf(b), n = b.spec && b.def.sp ? b.def.sp[b.spec][b.lv] : b.def.lv[b.lv], out = [];
   const sg = v => (v > 0 ? '+' : '') + v;
   if (n.hull !== a.hull) out.push(L('Hülle {0} → {1}', a.hull, n.hull));
   if (n.shield !== a.shield && n.shield) out.push(L('Schild {0} → {1}', a.shield, n.shield));
@@ -613,7 +621,7 @@ function shipTip(def) {
 function objTip(o) {
   const g = UI.g, who = o.owner >= 0 && g.players[o.owner] ? (o.owner === UI.me ? L('Du') : pname(o.owner) + (isFoe(o.owner) ? ' · ' + L('Feind') : ' · ' + L('Verbündet'))) : '';
   const col = o.owner >= 0 && g.players[o.owner] ? pcolor(g.players[o.owner]) : '#9ff0c0', hp = e => L('Hülle') + ' ' + Math.round(e.hull) + ' / ' + Math.round(e.hullMax) + (e.shieldMax ? ' · ' + L('Schild') + ' ' + Math.round(e.shield) + ' / ' + Math.round(e.shieldMax) : '');
-  if (o.k === 2) { const lv = o.def.lv[o.lv - 1]; return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + ' · ' + L('Stufe {0}', ROMAN[o.lv]) + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + (o.done ? hp(o) : L('Im Bau') + ' ' + Math.round(o.prog * 100) + ' %') + (lv.energy ? ' · ' + L('Energie') + ' ' + (lv.energy > 0 ? '+' : '') + lv.energy : '') + (lv.wpn.length ? ' · ' + lv.wpn.length + ' ' + L(lv.wpn.length > 1 ? 'Waffen' : 'Waffe') : '') + '</p>'; }
+  if (o.k === 2) { const lv = lvOf(o); return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + (o.spec ? ' · ' + esc(L(TSPEC[o.spec].name)) : '') + ' · ' + L('Stufe {0}', ROMAN[o.lv]) + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + (o.done ? hp(o) : L('Im Bau') + ' ' + Math.round(o.prog * 100) + ' %') + (lv.energy ? ' · ' + L('Energie') + ' ' + (lv.energy > 0 ? '+' : '') + lv.energy : '') + (lv.wpn.length ? ' · ' + lv.wpn.length + ' ' + L(lv.wpn.length > 1 ? 'Waffen' : 'Waffe') : '') + '</p>'; }
   if (o.k === 1) return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + (o.rank ? ' · ' + esc(L(RANK_NAMES[o.rank])) : '') + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + hp(o) + (counterTxt(o.def) ? '<br>' + counterTxt(o.def) : '') + (o.rank ? '<br>' + esc(rankTxt(o)) : '') + '</p>';
   if (o.k === 3) return '<h4>' + L(o.kind === 'ice' ? 'Eis' : 'Erz') + '</h4><p>' + L('Vorrat') + ' ' + Math.round(o.amount) + ' / ' + Math.round(o.max) + '</p>';
   if (o.k === 5) return '<h4 style="color:#9ff0c0">' + L('Sprungtor') + '</h4><p>' + L({ dead: 'Erloschen – ein Bauschiff kann es mit Relikten wecken.', flicker: 'Flackert: öffnet sich alle 50 Sekunden kurz.', active: 'Aktiv' }[o.state] || '') + '</p>';
@@ -708,7 +716,9 @@ function hudSel() {
     }
   } else if (b) {
     const lv = lvOf(b);
-    h += '<h3><span>' + esc(L(b.def.name)) + ' ' + ROMAN[b.lv] + '</span><span>' + (b.owner === UI.me ? '' : esc(pname(b.owner))) + '</span></h3>';
+    h += '<h3><span>' + esc(L(b.def.name)) + (b.spec ? ' · ' + esc(L(TSPEC[b.spec].name)) : '') + ' ' + ROMAN[b.lv] + '</span><span>' + (b.owner === UI.me ? '' : esc(pname(b.owner))) + '</span></h3>';
+    /* Fassung 22: Feld des Schildwalls */
+    if (b.role === 'wall' && b.done) h += '<div class="bar sh"><i style="width:' + Math.round((b.fhpMax ? b.fhp / b.fhpMax : 0) * 100) + '%"></i></div><div class="sub">' + (b.up ? L('Feld') + ' ' + Math.round(b.fhp) + ' / ' + Math.round(b.fhpMax) : b.fdown > 0 ? L('Feld bricht neu auf in {0} s', Math.ceil(b.fdown)) : L('Feld aus (Energie oder Gegenstück fehlt)')) + '</div>';
     if (b.label) h += '<div class="sub" style="color:var(--acc2)">' + esc(L(b.label)) + '</div>';
     h += '<div class="bar"><i style="width:' + Math.round(b.hull / b.hullMax * 100) + '%"></i></div><div class="sub">' + L('Hülle') + ' ' + Math.round(b.hull) + ' / ' + Math.round(b.hullMax) + (lv.armor ? ' · ' + L('Panzerung') + ' ' + lv.armor : '') + '</div>';
     if (b.shieldMax || b.give) h += '<div class="bar sh"><i style="width:' + Math.round(((b.shield || 0) + (b.give || 0)) / ((b.shieldMax || 0) + (b.givep || 0)) * 100) + '%"></i></div><div class="sub">' + L('Schild') + ' ' + Math.round((b.shield || 0) + (b.give || 0)) + ' / ' + Math.round((b.shieldMax || 0) + (b.givep || 0)) + '</div>';
@@ -719,7 +729,7 @@ function hudSel() {
     if (b.role === 'lab' && b.done && UI.P.research && b.owner === UI.me) h += '<div class="bar prog"><i style="width:' + Math.round(UI.P.research.prog * 100) + '%"></i></div><div class="sub">' + L('Forscht') + ': ' + L(techDef(UI.P.faction, UI.P.research.id).name) + '</div>';
     if (b.role === 'super' && b.done) h += '<div class="bar charge"><i style="width:' + Math.round(b.charge * 100) + '%"></i></div><div class="sub">' + (b.charge >= 1 ? L('Bereit') : L('Lädt') + ' ' + Math.round(b.charge * 100) + ' %') + '</div>';
     if (b.boarding > 0) h += '<div class="sub" style="color:var(--bad)">' + L('Wird geentert') + ': ' + Math.round(b.boarding) + ' ' + L('Marines') + ' · ' + L('Crew') + ' ' + Math.round(b.crew) + '</div>';
-    if (b.done && b.owner === UI.me) h += '<div class="sub desc">' + esc(L(b.def.desc)) + '</div>';
+    if (b.done && b.owner === UI.me) h += '<div class="sub desc">' + esc(L(b.spec ? TSPEC[b.spec].desc : b.def.desc)) + '</div>';
   } else if (us.length === 1) {
     const u = us[0], d = u.def;
     h += '<h3><span>' + esc(L(d.name)) + (u.rank ? ' · ' + L(RANK_NAMES[u.rank]) : '') + refitMarks(u) + '</span><span>' + d.cp + ' ★</span></h3>';
@@ -828,6 +838,7 @@ UI.consume = function (evs) {
       case 'built': if (mine) { SND.play('built'); toast(L('{0} fertig', L(BLDG[g.players[me].faction][e.role].name)), 'good', 2200); hudSel(); } break;
       case 'ready': if (mine) { SND.play('ready'); hudBuild(); } break;
       case 'upgrade': if (mine) { SND.play('upgrade'); hudSel(); } break;
+      case 'wallDown': if (mine) toast(L('Ein Schildwall ist zusammengebrochen'), 'warn', 2500); break;   /* Fassung 22 */
       case 'research': if (mine) { SND.play('upgrade'); toast(L(e.free ? 'Geschenkt: {0}' : 'Erforscht: {0}', L(techDef(g.players[me].faction, e.id).name)), 'good', 4000); hudBuild(true); } break;
       case 'lowpower': if (mine) { SND.play('lowpower'); toast(L('Energiemangel: Reaktor bauen'), 'warn'); } break;
       case 'rank': if (mine) SND.play('rank', e.x, e.y); break;

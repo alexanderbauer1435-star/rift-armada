@@ -703,7 +703,10 @@ function nearestFree(map, cls, cx, cy) {
 }
 /* Sichtlinie im Raster (für das Glätten der Wege) */
 /* soft: nur Felsen sperren (Bit 1), nicht Stationen und Vorkommen-Ränder (Bit 2) – für den Endanflug an eine Station */
-function navLos(map, cls, x0, y0, x1, y1, soft) {
+/* Fassung 22: tm (Team des Schiffs, sonst −1) – feindliche Schildwälle (map.wallG, Team + 1) sperren wie Felsen */
+function wallBlk(wg, i, tm) { const w = wg[i]; return w !== 0 && w !== tm + 1; }
+function navLos(map, cls, x0, y0, x1, y1, soft, tm) {
+  const wg = tm >= 0 && map.wallG ? map.wallG : null;
   /* soft: Stationen und Vorkommen dürfen nur in den letzten zwei Zellen vor dem Ziel im Weg liegen (Rand des
      Ziels selbst); sonst würde der Endanflug zwischen fremden Stationen hindurch zielen und sich verkeilen */
   const nav = map.nav[cls], gw = map.gw, fg = map.fieldG;
@@ -714,6 +717,7 @@ function navLos(map, cls, x0, y0, x1, y1, soft) {
     if (!soft && (v & NAV_BLOCK)) return false;
     if (soft && (v & NAV_BLOCK) && Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0)) > 2) return false;
     if (cls === 0 && fg[y0 * gw + x0]) return false;           // durch ein Feld nicht abkürzen (die Suche hat es umgangen)
+    if (wg && wallBlk(wg, y0 * gw + x0, tm)) return false;
     if (v & 4) return false;
     if (x0 === x1 && y0 === y1) return true;
     const e2 = 2 * err;
@@ -724,8 +728,8 @@ function navLos(map, cls, x0, y0, x1, y1, soft) {
 const _nvG = new Float32Array(0), NAV_WORK = { g: null, from: null, closed: null, stamp: 0, size: 0 };
 /* A*-Wegsuche im Raster der Klasse cls von (x0,y0) nach (x1,y1), Weltkoordinaten. Liefert Wegpunkte (Welt) oder null.
    Das Ziel darf blockiert sein (nächste freie Zelle). Begrenzt auf 9000 ausgewertete Zellen. */
-function findPath(map, cls, x0, y0, x1, y1) {
-  const gw = map.gw, gh = map.gh, N = gw * gh, nav = map.nav[cls], fg = map.fieldG;
+function findPath(map, cls, x0, y0, x1, y1, tm) {
+  const gw = map.gw, gh = map.gh, N = gw * gh, nav = map.nav[cls], fg = map.fieldG, wg = tm >= 0 && map.wallG ? map.wallG : null;
   const Wk = NAV_WORK;
   if (Wk.size !== N) { Wk.g = new Float32Array(N); Wk.from = new Int32Array(N); Wk.closed = new Int32Array(N); Wk.size = N; Wk.stamp = 0; }
   const stamp = ++Wk.stamp, g = Wk.g, from = Wk.from, closed = Wk.closed;
@@ -753,6 +757,7 @@ function findPath(map, cls, x0, y0, x1, y1) {
       if (closed[ni] === stamp) continue;
       const c = navCost(nav, fg, ni, cls);
       if (!c) continue;
+      if (wg && (wallBlk(wg, ni, tm) || (d >= 4 && (wallBlk(wg, cy * gw + nx, tm) || wallBlk(wg, ny * gw + cx, tm))))) continue;
       /* diagonal nicht an Ecken vorbeischneiden */
       if (d >= 4 && ((nav[cy * gw + nx] & NAV_BLOCK) || (nav[ny * gw + cx] & NAV_BLOCK))) continue;
       const ng = seen.get(cur) + c * (d >= 4 ? 1.4142 : 1);
@@ -773,7 +778,7 @@ function findPath(map, cls, x0, y0, x1, y1) {
   while (k < cells.length - 1) {
     let j = cells.length - 1;
     const ax = cells[k] % gw, ay = (cells[k] / gw) | 0;
-    while (j > k + 1 && !navLos(map, cls, ax, ay, cells[j] % gw, (cells[j] / gw) | 0)) j--;
+    while (j > k + 1 && !navLos(map, cls, ax, ay, cells[j] % gw, (cells[j] / gw) | 0, false, wg ? tm : -1)) j--;
     out.push({ x: (cells[j] % gw + 0.5) * NAV, y: (((cells[j] / gw) | 0) + 0.5) * NAV });
     k = j;
   }

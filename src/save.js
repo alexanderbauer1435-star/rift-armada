@@ -71,6 +71,7 @@ function loadGame(d) {
   g.ev.length = 0;
   updateVision(g);
   for (const p of g.players) if (p.alive) { recalcPower(g, p.id); recalcCp(g, p.id); p.tech = p.tech || {}; recalcTech(g, p); }
+  wallsNav(g);   // Fassung 22: Schildwälle ins Wegraster
   return g;
 }
 function saveNow() {
