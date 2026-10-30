@@ -517,11 +517,12 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 #bQPause.on { color: #000; background: var(--acc); border-color: var(--acc); }
 #bQPause.on i:first-child { width: 0; height: 0; background: none; border-radius: 0; border-left: 0.7em solid currentColor; border-top: 0.45em solid transparent; border-bottom: 0.45em solid transparent; }
 #bQPause.on i:last-child { display: none; }
-#slowTag { position: absolute; right: 10.6em; top: calc(2.5em + env(safe-area-inset-top)); font-size: 0.8em; font-weight: 600; letter-spacing: 0.08em; color: #8fe3ff; background: rgba(5,7,15,0.75); border: 1px solid rgba(143,227,255,0.5); border-radius: 999px; padding: 0.1em 0.6em; pointer-events: none; }
+#slowTag { position: absolute; right: calc(var(--ui) * 10.6); top: calc(var(--ui) * 2.55 + env(safe-area-inset-top)); font-size: 0.8em; font-weight: 600; letter-spacing: 0.08em; color: #8fe3ff; background: rgba(5,7,15,0.75); border: 1px solid rgba(143,227,255,0.5); border-radius: 999px; padding: 0.1em 0.6em; pointer-events: none; }
 #apBanner { position: absolute; left: 50%; top: calc(2.6em + env(safe-area-inset-top)); transform: translateX(-50%); background: rgba(5,7,15,0.85); border: 1px solid var(--acc); color: var(--acc); border-radius: 999px; padding: 0.2em 0.9em; font-size: 0.9em; font-weight: 600; white-space: nowrap; cursor: pointer; animation: apb 2s ease-in-out infinite; }
 @keyframes apb { 50% { border-color: rgba(143,227,255,0.35); } }
 #hud.ap #toasts { top: calc(4.8em + env(safe-area-inset-top)); }
-#idle { position: absolute; right: 0.5em; top: calc(14.9em + env(safe-area-inset-top)); max-width: min(17em, 46vw); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.25em; font-size: 0.8em; }
+#idle { position: absolute; right: 0.5em; top: calc(14.9em + env(safe-area-inset-top)); max-width: min(14em, 46vw); display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 0.25em; }
+#idle > * { font-size: 0.8em; }
 #idle .idL { opacity: 0.6; margin-right: 0.1em; }
 #idle .idC { background: rgba(5,7,15,0.75); border: 1px solid rgba(255,210,122,0.55); color: #ffd27a; border-radius: 999px; font: inherit; padding: 0.15em 0.6em; min-height: 2em; cursor: pointer; }
 #idle .idC b { font-weight: 700; margin-right: 0.25em; }

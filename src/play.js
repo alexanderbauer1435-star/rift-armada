@@ -76,6 +76,8 @@ function plQpUpdate() {
   const ok = plApOk(), b = $('bQPause');
   if (!ok && UI.apause) UI.apause = false;
   b.hidden = !ok; b.classList.toggle('on', !!UI.apause);
+  /* mit Schnellpause daneben zeigt die Menütaste ein Menüzeichen statt eines zweiten Pausezeichens */
+  setText('bPause', ok ? '☰' : '❚❚');
   $('apBanner').hidden = !UI.apause;
   $('hud').classList.toggle('ap', !!UI.apause);
 }
