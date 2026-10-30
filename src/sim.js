@@ -41,7 +41,7 @@ function createGame(opts) {
   const map = opts.mis ? misMap(opts.mis.id, opts.seed || 1, opts.mis) : generateMap(mapId, np, opts.seed || 1, opts.size, opts.custom);
   const g = {
     map, rng: makeRng((opts.seed || 1) * 7919 + 13), tick: 0, time: 0, players: [], ships: [], bldgs: [], nodes: [], proj: [], wrecks: [], ev: [],
-    byId: new Map(), nextId: 1, over: false, winner: -1, winTeam: -1, opts, human: -1, tm: [], deadFlag: false, bDied: false, reveals: [], strikes: [], flares: [], sites: [], gates: [], events: [], neutral: -1, spores: [], threat: -1, wave: null,
+    byId: new Map(), nextId: 1, over: false, winner: -1, winTeam: -1, opts, human: -1, tm: [], deadFlag: false, bDied: false, reveals: [], strikes: [], flares: [], sites: [], gates: [], events: [], neutral: -1, spores: [], threat: -1, wave: null, found: [],
     gw2: Math.ceil(map.w / CELL), gh2: Math.ceil(map.h / CELL), cells: null, cellsUsed: [], visStamp: 1, vw: Math.ceil(map.w / VIS), vh: Math.ceil(map.h / VIS), teamVis: {}, log: []
   };
   g.cells = new Array(g.gw2 * g.gh2);
@@ -167,7 +167,8 @@ function addBldg(g, role, owner, x, y, instant) {
   const def = bdef(g, owner, role), lv = def.lv[0];
   const b = {
     k: 2, id: g.nextId++, def, role, owner, x, y, ang: 0, lv: 1, hull: instant ? lv.hull : lv.hull * 0.08, hullMax: lv.hull, shield: instant ? lv.shield * g.players[owner].tfx.shield : 0, shieldMax: lv.shield * g.players[owner].tfx.shield, sT: 99,
-    done: !!instant, prog: instant ? 1 : 0, upg: null, q: [], qp: 0, rally: null, wcd: lv.wpn.map(() => 0), tgt: 0, dead: false, bld: 0, give: 0, givep: 0, bT: 0, beams: null, docks: 0, crew: 60 + def.r, crewMax: 60 + def.r, boarding: 0, boardBy: -1, charge: 0, marked: 0
+    done: !!instant, prog: instant ? 1 : 0, upg: null, q: [], qp: 0, rally: null, wcd: lv.wpn.map(() => 0), tgt: 0, dead: false, bld: 0, give: 0, givep: 0, bT: 0, beams: null, docks: 0, crew: 60 + def.r, crewMax: 60 + def.r, boarding: 0, boardBy: -1, charge: 0, marked: 0,
+    paid: Object.assign({ ice: 0, ore: 0 }, cost(lv.cost)) /* Fassung 22: bezahlte Kosten aller Stufen (Abriss) */
   };
   g.bldgs.push(b); g.byId.set(b.id, b);
   navBlock(g.map, x, y, def.r, true);
@@ -266,6 +267,8 @@ function canPlace(g, pi, role, x, y) {
   for (const b of g.bldgs) if (!b.dead && hyp(b.x - x, b.y - y) < b.def.r + r + 14) return 'Zu nahe an einer Station';
   for (const o of g.sites) if (hyp(o.x - x, o.y - y) < o.r + r + 20) return 'Zu nahe an einer Stätte';
   for (const o of g.gates) if (hyp(o.x - x, o.y - y) < o.r + r + 40) return 'Zu nahe am Tor';
+  /* Fassung 22: Ruinen zerstörter Stationen blockieren den Platz, bis Frachter sie geborgen haben */
+  for (const w of g.wrecks) if (w.ruin && w.sal > 0 && hyp(w.x - x, w.y - y) < w.r + r + 10) return 'Hier liegt eine Ruine';
   const p = g.players[pi];
   /* Außenbasis: überall, unabhängig von Reichweite und Netz – so kommt man an entfernte Vorkommen */
   if (role === 'base') return null;
@@ -282,11 +285,53 @@ function cmdBuild(g, pi, uids, role, x, y) {
   if (!canPay(p, bcost(p, def))) return 'Nicht genug Rohstoffe';
   const us = uids.map(id => g.byId.get(id)).filter(u => u && !u.dead && u.owner === pi && u.def.build);
   if (!us.length) return 'Kein Bauschiff';
-  pay(p, bcost(p, def));
+  const c = bcost(p, def);
+  pay(p, c);
   const b = addBldg(g, role, pi, x, y, false);
+  b.paid = { ice: c.ice, ore: c.ore };
+  /* Fassung 22: Fundament – dieselbe Rolle am Platz einer eben abgerissenen Station baut schneller */
+  const fi = g.found ? g.found.findIndex(f => f.owner === pi && f.role === role && g.time <= f.until && hyp(f.x - x, f.y - y) <= FOUND_SNAP) : -1;
+  if (fi >= 0) { b.fast = FOUND_RATE; g.found.splice(fi, 1); }
   for (const u of us) { u.o = { t: 'build', bid: b.id }; u.path = null; }
-  ev(g, 'place', { x, y, owner: pi, id: b.id });
+  ev(g, 'place', { x, y, owner: pi, id: b.id, fast: b.fast ? 1 : 0 });
   return null;
+}
+/* Fassung 22: Bauketten – ein Bauschiff baut Stationen der Reihe nach (u.bq = [{ r, x, y }]). Ein Platz, an dem schon
+   eine eigene unfertige Station derselben Rolle steht, wird mitgebaut (mehrere Bauschiffe teilen sich die Reihe);
+   ein Platz, der nicht mehr geht, wird übersprungen; fehlen Rohstoffe, wartet das Bauschiff. */
+function cmdBuildRow(g, pi, uids, role, pts) {
+  if (!Array.isArray(pts) || !pts.length) return 'Nicht möglich';
+  const def = bdef(g, pi, role); if (!def) return 'Nicht möglich';
+  const why = buildReq(g, pi, role); if (why) return why;
+  const us = (uids || []).map(id => g.byId.get(id)).filter(u => u && !u.dead && u.owner === pi && u.def.build);
+  if (!us.length) return 'Kein Bauschiff';
+  const q = [];
+  for (const pt of pts.slice(0, BQ_MAX)) { const x = +(pt && pt[0]), y = +(pt && pt[1]); if (Number.isFinite(x) && Number.isFinite(y)) q.push({ r: role, x, y }); }
+  if (!q.length) return 'Nicht möglich';
+  /* der erste Platz muss sofort gehen (sonst Rückmeldung wie beim Einzelbau) */
+  const first = canPlace(g, pi, role, q[0].x, q[0].y) || (canPay(g.players[pi], bcost(g.players[pi], def)) ? null : 'Nicht genug Rohstoffe');
+  if (first) return first;
+  for (const u of us) { u.bq = q.map(o => ({ r: o.r, x: o.x, y: o.y })); u.bqW = 0; }
+  for (const u of us) bqNext(g, u);
+  return null;
+}
+function bqNext(g, u) {
+  const pi = u.owner;
+  while (u.bq && u.bq.length) {
+    const it = u.bq[0];
+    let mate = null;
+    for (const b of g.bldgs) if (!b.dead && b.owner === pi && !b.done && b.role === it.r && hyp(b.x - it.x, b.y - it.y) < 4) { mate = b; break; }
+    if (mate) { u.bq.shift(); u.o = { t: 'build', bid: mate.id }; u.path = null; return true; }
+    const why = buildReq(g, pi, it.r) || canPlace(g, pi, it.r, it.x, it.y);
+    if (!why) {
+      if (!canPay(g.players[pi], bcost(g.players[pi], bdef(g, pi, it.r)))) { u.bqW = 1; return false; }
+      cmdBuild(g, pi, [u.id], it.r, it.x, it.y); u.bq.shift(); u.bqW = 0; return true;
+    }
+    u.bq.shift();
+    ev(g, 'bqskip', { owner: pi, x: it.x, y: it.y, why });
+  }
+  u.bq = null; u.bqW = 0;
+  return false;
 }
 /* Bauschiff an eine unfertige Station schicken (weiterbauen) */
 function cmdResume(g, pi, uids, bid) {
@@ -306,6 +351,7 @@ function cmdUpgrade(g, pi, bid) {
   const nxt = b.def.lv[b.lv];
   if (!canPay(p, nxt.cost)) return 'Nicht genug Rohstoffe';
   pay(p, nxt.cost);
+  if (b.paid) { const c = cost(nxt.cost); b.paid.ice += c.ice; b.paid.ore += c.ore; } /* Fassung 22 */
   b.upg = { prog: 0, time: nxt.time };
   return null;
 }
@@ -374,14 +420,25 @@ function cmdRally(g, pi, bid, x, y) {
   b.rally = { x, y };
   return null;
 }
+/* Fassung 22: Abriss (früher »Verkauf«) – erstattet die Hälfte von allem, was die Station gekostet hat (alle Stufen, auch
+   ein laufender Ausbau), eine unfertige 80 %. Zurück bleibt ein Fundament: dieselbe Rolle am selben Platz binnen 60 s baut
+   50 % schneller. */
+function spentOn(b) {
+  if (b.paid) return { ice: b.paid.ice, ore: b.paid.ore };
+  const c = { ice: 0, ore: 0 }, n = b.lv + (b.upg ? 1 : 0);
+  for (let i = 0; i < n && i < b.def.lv.length; i++) { const q = cost(b.def.lv[i].cost); c.ice += q.ice; c.ore += q.ore; }
+  return c;
+}
 function cmdSell(g, pi, bid) {
   const b = g.byId.get(bid), p = g.players[pi];
-  if (!b || b.dead || b.owner !== pi || b.role === 'base' || b.role === 'seal') return 'Nicht möglich';
-  let c = { ice: 0, ore: 0 };
-  for (let i = 0; i < b.lv; i++) { const q = cost(b.def.lv[i].cost); c.ice += q.ice; c.ore += q.ore; }
-  refund(p, c, b.done ? 0.5 : 0.8);
+  if (!b || b.dead || b.k !== 2 || b.owner !== pi || b.role === 'base' || b.role === 'seal') return 'Nicht möglich';
+  const c = spentOn(b), f = b.done ? DEMOLISH : 0.8, ice0 = p.ice, ore0 = p.ore;
+  refund(p, c, f);
   removeBldg(g, b);
-  ev(g, 'sold', { owner: pi, x: b.x, y: b.y });
+  if (!g.found) g.found = [];
+  for (let i = g.found.length - 1; i >= 0; i--) if (g.found[i].until < g.time || hyp(g.found[i].x - b.x, g.found[i].y - b.y) < 4) g.found.splice(i, 1);
+  g.found.push({ owner: pi, role: b.role, x: b.x, y: b.y, r: b.def.r, until: g.time + FOUND_T });
+  ev(g, 'sold', { owner: pi, x: b.x, y: b.y, role: b.role, ice: Math.round(p.ice - ice0), ore: Math.round(p.ore - ore0) });
   return null;
 }
 
@@ -486,6 +543,8 @@ function cmdHarvest(g, us, node) {
 function execCmd(g, c) {
   const pi = c.p, p = g.players[pi];
   if (!p || !p.alive || g.over) return 'Nicht möglich';
+  /* Fassung 22: ein neuer Befehl an ein Bauschiff beendet seine Baukette */
+  if (Array.isArray(c.u) && c.t !== 'buildrow' && c.t !== 'group' && c.t !== 'stance' && c.t !== 'auto') for (const id of c.u) { const u = g.byId.get(id); if (u && u.k === 1 && u.owner === pi && u.bq) { u.bq = null; u.bqW = 0; } }
   switch (c.t) {
     case 'move': { const us = shipsOf(g, pi, c.u); if (!us.length) return 'Nicht möglich'; cmdMove(g, us, c.x, c.y, !!c.am, c.form); return null; }
     case 'attack': { const t = g.byId.get(c.e); if (!t || t.dead || t.k === 3) return 'Nicht möglich'; const us = shipsOf(g, pi, c.u); if (!us.length) return 'Nicht möglich'; cmdAttack(g, us, t, c.sub); return null; }
@@ -496,6 +555,7 @@ function execCmd(g, c) {
     case 'stance': cmdStance(g, shipsOf(g, pi, c.u), c.v); return null;
     case 'group': cmdGroup(g, shipsOf(g, pi, c.u), c.n); return null;
     case 'build': return cmdBuild(g, pi, c.u, c.role, c.x, c.y);
+    case 'buildrow': return cmdBuildRow(g, pi, c.u, c.role, c.pts); /* Fassung 22 */
     case 'resume': return cmdResume(g, pi, c.u, c.b);
     case 'train': return cmdTrain(g, pi, c.b, c.id);
     case 'cancel': return cmdCancel(g, pi, c.b, c.i | 0);
@@ -574,7 +634,7 @@ function completeBldg(g, b) {
   recalcPower(g, b.owner); recalcCp(g, b.owner);
   ev(g, 'built', { owner: b.owner, id: b.id, x: b.x, y: b.y, role: b.role });
   /* ein Bauschiff, das gebaut hat, wird frei */
-  for (const u of g.ships) if (!u.dead && u.o.t === 'build' && u.o.bid === b.id) setIdle(u);
+  for (const u of g.ships) if (!u.dead && u.o.t === 'build' && u.o.bid === b.id) { setIdle(u); if (u.bq) bqNext(g, u); } /* Fassung 22: Baukette */
 }
 function updateBldg(g, b, dt) {
   const p = g.players[b.owner], lv = lvOf(b);
@@ -584,7 +644,7 @@ function updateBldg(g, b, dt) {
     for (const u of g.ships) if (!u.dead && u.owner === b.owner && u.def.build && u.o.t === 'build' && u.o.bid === b.id && hyp(u.x - b.x, u.y - b.y) < b.def.r + u.def.r + 60) n++;
     b.bld = n;
     if (n) {
-      b.prog = Math.min(1, b.prog + dt / lv.time * (1 + 0.5 * (n - 1)));
+      b.prog = Math.min(1, b.prog + dt / lv.time * (1 + 0.5 * (n - 1)) * (b.fast || 1)); /* Fassung 22: Fundament */
       b.hull = Math.max(b.hull, lv.hull * (0.08 + 0.92 * b.prog));
       if (b.prog >= 1) completeBldg(g, b);
     }
@@ -723,7 +783,7 @@ function kill(g, t, src, owner) {
     if (t.def.burst) { nearShips(g, t.x, t.y, 130, e => { if (!e.dead && foes(g, t.owner, e.owner)) { damage(g, e, 120, 'acid', null, t.owner, t.x, t.y); acidOn(g, e, 90, t.owner); } return false; }); ev(g, 'burst', { x: t.x, y: t.y, r: 130, owner: t.owner }); }
     /* Matriarch wächst mit jedem Abschuss */
     if (src && !src.dead && src.k === 1 && src.def.grow && t.def.role !== 'fighter' && owner !== t.owner) { const cap = src.def.hull * g.players[src.owner].tfx.hull * 2; if (src.hullMax < cap) { const add = src.def.hull * 0.05; src.hullMax = Math.min(cap, src.hullMax + add); src.hull = Math.min(src.hullMax, src.hull + add); src.hmul = src.hullMax / (src.def.hull * g.players[src.owner].tfx.hull * (1 + 0.1 * src.rank)); } }
-    if (t.def.role !== 'fighter') { p.stats.lost++; g.wrecks.push({ x: t.x, y: t.y, ang: t.ang, type: t.type, owner: t.owner, until: g.time + 120, id: t.id, sal: Math.round(SALVAGE * (((t.def.cost || {}).ice || 0) + ((t.def.cost || {}).ore || 0))) }); if (g.wrecks.length > 60) g.wrecks.shift(); }
+    if (t.def.role !== 'fighter') { p.stats.lost++; g.wrecks.push({ x: t.x, y: t.y, ang: t.ang, type: t.type, owner: t.owner, until: g.time + 120, id: t.id, sal: Math.round(SALVAGE * (((t.def.cost || {}).ice || 0) + ((t.def.cost || {}).ore || 0))) }); if (g.wrecks.length > 60) { const i = g.wrecks.findIndex(q => !q.ruin); g.wrecks.splice(i < 0 ? 0 : i, 1); } }
     ev(g, 'die', { x: t.x, y: t.y, r: t.def.r, owner: t.owner, big: t.def.cls === 'l' || t.def.cls === 'm', type: t.type, id: t.id, ang: t.ang, vx: t.vx || 0, vy: t.vy || 0 });
     if (owner >= 0 && owner !== t.owner && t.def.role !== 'fighter') {
       g.players[owner].stats.kills++;
@@ -735,11 +795,20 @@ function kill(g, t, src, owner) {
   } else if (t.k === 2) {
     if (g.fort && t.id === g.fort.core && owner >= 0) g.fort.by = owner;
     removeBldg(g, t);
+    addRuin(g, t);
     p.stats.bLost++;
     if (owner >= 0 && owner !== t.owner) g.players[owner].stats.razed++;
     ev(g, 'bdie', { x: t.x, y: t.y, r: t.def.r, owner: t.owner, role: t.role, id: t.id });
     recalcPower(g, t.owner); recalcCp(g, t.owner);
   }
+}
+/* Fassung 22: Ruine einer zerstörten Station – liegt in g.wrecks (ruin: 1), Frachter bergen 30 % der Baukosten als Erz
+   (Brood: Biomasse), blockiert den Bauplatz, verfällt nach 8 Minuten */
+function addRuin(g, b) {
+  if (b.role === 'seal' || !b.def || b.owner < 0) return;
+  const c = spentOn(b), sal = Math.round(RUIN_VAL * (c.ice + c.ore)) || Math.round(RUIN_VAL * 500);
+  if (sal < 20) return;
+  g.wrecks.push({ ruin: 1, x: b.x, y: b.y, ang: (b.id % 7) * 0.9, role: b.role, f: g.players[b.owner].faction, lv: b.lv, r: b.def.r, owner: b.owner, until: g.time + RUIN_T, id: b.id, sal, sal0: sal });
 }
 function gainXp(g, u, v) {
   u.kills += v * g.players[u.owner].tfx.xp;
@@ -822,6 +891,8 @@ function stepGame(g) {
   if (g.tick % 30 === 11) for (const n of g.nodes) if (n.max && n.amount < n.max * NODE_REGROW_CAP) n.amount = Math.min(n.max * NODE_REGROW_CAP, n.amount + n.max * NODE_REGROW * 30 * STEP);
   if (g.opts.sandbox && g.tick % 1800 === 900) sandboxSpawn(g);
   if (g.tick % 60 === 30) checkAura(g);
+  /* Fassung 22: wartende Bauketten (Rohstoffe fehlten, Station zerstört) weiterführen; Fundamente verfallen */
+  if (g.tick % 30 === 20) { for (const u of g.ships) if (!u.dead && u.bq && u.o.t === 'idle') bqNext(g, u); if (g.found && g.found.length) for (let i = g.found.length - 1; i >= 0; i--) if (g.found[i].until < g.time) g.found.splice(i, 1); }
   for (let i = g.wrecks.length - 1; i >= 0; i--) if (g.time > g.wrecks[i].until) g.wrecks.splice(i, 1);
   if (g.deadFlag) {
     g.deadFlag = false;
