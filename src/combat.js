@@ -229,6 +229,8 @@ function updateShip(g, u, dt) {
       if (goTo(g, u, o.x, o.y, dt, 40)) { o.x = undefined; }
       break;
     }
+    /* Fassung 22: Feuer auf Stelle – in Reichweite fahren, stehen bleiben, die Stelle beschießen bis zum nächsten Befehl */
+    case 'artpos': { if (!def.art) { setIdle(u); break; } artMove(g, u, { x: o.x, y: o.y, k: 0, def: { r: 0 } }, dt); break; }
     case 'move': case 'amove': {
       /* Artillerie im Angriffsmarsch: hält an, sobald eine bekannte Station in Reichweite liegt, und beschießt sie */
       if (o.t === 'amove' && def.art) {
@@ -436,7 +438,11 @@ function fireAll(g, s, dt) {
     if (s.wcd[i] > 0) continue;
     const sub = s.k === 1 ? 1 + 2 * (1 - s.sub.wpn) : 1;
     if (w.kind === 'pd') { if (firePd(g, s, w, i)) s.wcd[i] = w.reload * slow * p.tfx.pdReload * sub * (s.k === 1 && s.abT.flak > 0 ? 0.34 : 1); continue; }
-    if (w.art) { const t = artTarget(g, s, w); if (!t) continue; s.wcd[i] = w.reload * sub; fireArt(g, s, w, t); continue; }
+    if (w.art) {
+      /* Feuer auf Stelle hat Vorrang */
+      if (s.k === 1 && s.o.t === 'artpos') { if (s.v > ART_STILL) continue; const d = hyp(s.o.x - s.x, s.o.y - s.y); if (d > w.range || d < w.minR * 0.9) continue; s.wcd[i] = w.reload * sub; fireArt(g, s, w, { x: s.o.x, y: s.o.y, id: 0, owner: -1, k: 0, def: { r: 0 } }); continue; }
+      const t = artTarget(g, s, w); if (!t) continue; s.wcd[i] = w.reload * sub; fireArt(g, s, w, t); continue;
+    }
     const bs = s.k === 1 && s.abT.broadside > 0;
     let t = s.tgt ? g.byId.get(s.tgt) : null;
     if (t && (t.dead || t.k === 3 || !foes(g, s.owner, t.owner) || tdist(s, t) > w.range || !(bs || inArc(s, w, t)) || !canSee(g, s.owner, t))) t = null;
@@ -482,8 +488,10 @@ function fireArt(g, s, w, t) {
   g.proj.push({ kind: 'art', x: s.x, y: s.y, ang: a, sp: w.speed, dmg: w.dmg * dmgMul(s), owner: s.owner, sid: s.id, tid: t.id, tx, ty, d0: d, left: d, splash: w.splash, life: d / w.speed + 1, col: w.col, r: 5 });
   ev(g, 'shot', { x: s.x, y: s.y, kind: 'kin', owner: s.owner, snd: w.snd, ang: a, big: true });
   /* Mündungsfeuer verrät die Stellung: der Beschossene sieht die Artillerie 5 s lang */
-  if (!(g.reveals.length > 200)) g.reveals.push({ x: s.x, y: s.y, r: 140, owner: t.owner, until: g.time + 5, art: 1 });
-  g.players[t.owner].artT = g.time; g.players[t.owner].artX = s.x; g.players[t.owner].artY = s.y;
+  if (t.owner >= 0) {
+    if (!(g.reveals.length > 200)) g.reveals.push({ x: s.x, y: s.y, r: 140, owner: t.owner, until: g.time + 5, art: 1 });
+    g.players[t.owner].artT = g.time; g.players[t.owner].artX = s.x; g.players[t.owner].artY = s.y;
+  }
 }
 function fireWeapon(g, s, i, w, t) {
   if (s.k === 1 && s.abT.cloak > 0) { s.abT.cloak = 0; ev(g, 'decloak', { x: s.x, y: s.y, owner: s.owner, id: s.id }); }

@@ -81,6 +81,8 @@ function tap(sx, sy) {
   const g = UI.g, w = R.s2w(sx, sy), wx = w.x, wy = w.y;
   if (UI.mode === 'place') { movePlace(sx, sy); return; }
   if (UI.mode === 'amove') { orderMove(selShips(), wx, wy, true); endMode(); return; }
+  /* Fassung 22: Artillerie – Feuer auf Stelle (nur erkundetes Gebiet) */
+  if (UI.mode === 'artpos') { const r = issue({ t: 'artpos', u: ids(selShips().filter(u => u.def.art)), x: wx, y: wy }); if (r) toast(L(r), 'bad'); else { mark(wx, wy, '#ff5b47'); SND.play('order'); } endMode(); hudCmds(); return; }
   if (UI.mode === 'rally') { const b = g.byId.get(UI.selB); if (b) { issue({ t: 'rally', b: b.id, x: wx, y: wy }); mark(wx, wy); SND.play('order'); } endMode(); return; }
   if (UI.mode === 'board') { const hit = pickAt(wx, wy); if (hit && (hit.k === 1 || hit.k === 2) && (isFoe(hit.owner) || hit.derelict)) { const r = issue({ t: 'board', u: ids(selShips().filter(u => u.def.marines)), e: hit.id }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { mark(hit.x, hit.y, '#ffb86b'); SND.play('order'); } endMode(); hudCmds(); } else showInfo(L('Entern: feindliches Schiff antippen'), 1500); return; }
   if (UI.mode === 'super') { UI.superTgt = { x: wx, y: wy }; mark(wx, wy, '#ffb86b'); SND.play('click'); hudCmds(true); return; }
@@ -210,7 +212,7 @@ function hoverAt(sx, sy) {
   const w = R.s2w(sx, sy), hit = pickAt(w.x, w.y);
   R.hover = hit && (hit.k === 1 || hit.k === 2) ? hit.id : 0;
   const v = $('view');
-  v.style.cursor = UI.mode === 'place' ? 'crosshair' : UI.mode === 'amove' || UI.mode === 'rally' ? 'crosshair' : hit && hit.owner === UI.me ? 'pointer' : 'default';
+  v.style.cursor = UI.mode === 'place' ? 'crosshair' : UI.mode === 'amove' || UI.mode === 'rally' || UI.mode === 'artpos' ? 'crosshair' : hit && hit.owner === UI.me ? 'pointer' : 'default';
 }
 function initInput() {
   const cv = $('view');
@@ -488,6 +490,7 @@ function hudCmds(force) {
   if (us.length) {
     const war = us.some(u => armed(u));
     if (war) box.appendChild(cmdBtn('➶', 'Vorstoß', startAmove, 'Angriffsmarsch: fliegt zum Ziel und greift alles auf dem Weg an', UI.mode === 'amove' ? 'on' : ''));
+    if (us.some(u => u.def.art)) box.appendChild(cmdBtn('✹', 'Feuer auf Stelle', () => { if (UI.mode === 'artpos') { endMode(); hudCmds(); return; } UI.mode = 'artpos'; showInfo(L('Feuer auf Stelle: Punkt auf der erkundeten Karte antippen'), 3000); hudCmds(); }, 'Artillerie beschießt eine Stelle auf der erkundeten Karte, auch ohne Sicht – bis zum nächsten Befehl', UI.mode === 'artpos' ? 'on' : ''));
     box.appendChild(cmdBtn('■', 'Halt', doStop, 'Anhalten und Befehl aufheben'));
     if (us.some(canExplore)) box.appendChild(cmdBtn('◎', 'Erkunden', doExplore, 'Erkunden: fliegt selbständig unerkundete Gebiete ab, mehrere Erkunder teilen sich die Karte auf; bei schwerem Schaden zurück zur Basis', us.every(u => !canExplore(u) || u.o.t === 'explore') ? 'on' : ''));
     box.appendChild(cmdBtn('⌂', 'Stellung', toggleHold, 'Stellung halten: bleibt stehen, schießt nur in Reichweite', us.every(u => u.hold) ? 'on' : ''));

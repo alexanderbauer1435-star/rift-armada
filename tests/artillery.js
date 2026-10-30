@@ -28,6 +28,16 @@ for (const moving of [false, true]) {
   const lost = h0 - (e.hull + e.shield);
   ok(shots >= 5 && (moving ? lost < h0 * 0.12 : lost > h0 * 0.25), (moving ? 'fahrendes' : 'stehendes') + ' Schiff: ' + shots + ' Schüsse, Verlust ' + Math.round(lost) + ' von ' + Math.round(h0));
 }
+/* Feuer auf Stelle: nur erkundetes Gebiet, trifft dort stehende Ziele auch ohne Sicht */
+{ const g = X.createGame({ map: 'test', seed: 3, pace: 'tactical', players: [{ faction: 'mars', ai: 0 }, { faction: 'brood', ai: 0 }] });
+  for (const u of g.ships.slice()) C.removeShip(g, u); g.sites.length = 0; g.gates.length = 0; for (const p of g.players) p.nob = true;
+  const m = X.addShip(g, 'mortar', 0, 1000, 1600, 0), e = X.addShip(g, 'ravager', 1, 1850, 1600, Math.PI); e.stance = 2; const h0 = e.hull;
+  const P = g.players[0]; P.explored.fill(0);
+  ok(X.execCmd(g, { t: 'artpos', p: 0, u: [m.id], x: 1850, y: 1600 }) === 'Nur auf erkundetes Gebiet', 'Feuer auf Stelle nur auf erkundetes Gebiet');
+  P.explored.fill(1);
+  ok(X.execCmd(g, { t: 'artpos', p: 0, u: [m.id], x: 1850, y: 1600 }) == null && m.o.t === 'artpos', 'Befehl angenommen');
+  let shots = 0; const end = g.time + 45; while (g.time < end && !g.over) { X.stepGame(g); for (const q of g.ev) if (q.t === 'shot' && q.owner === 0) shots++; g.ev.length = 0; }
+  ok(shots >= 5 && e.hull < h0 * 0.8 && !C.canSee(g, 0, e), 'beschießt die Stelle ohne Sicht: ' + shots + ' Schüsse, Ravager ' + Math.round(e.hull) + '/' + h0); }
 const h = () => { const g = X.createGame({ map: 'keep', seed: 8, players: [{ faction: 'legion', ai: 3 }, { faction: 'brood', ai: 3 }, { faction: 'mars', ai: 3 }] }); step(g, 600); return X.stateHash(g); };
 ok(h() === h(), 'deterministisch');
 console.log(fail ? fail + ' FAILS' : 'ALL OK'); process.exit(fail ? 1 : 0);
