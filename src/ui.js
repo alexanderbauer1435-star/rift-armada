@@ -656,7 +656,9 @@ function hudSel() {
     }
   } else if (b) {
     const lv = lvOf(b);
-    h += '<h3><span>' + esc(L(b.def.name)) + ' ' + ROMAN[b.lv] + '</span><span>' + (b.owner === UI.me ? '' : esc(pname(b.owner))) + '</span></h3>';
+    h += '<h3><span>' + esc(L(b.def.name)) + (b.spec ? ' · ' + esc(L(TSPEC[b.spec].name)) : '') + ' ' + ROMAN[b.lv] + '</span><span>' + (b.owner === UI.me ? '' : esc(pname(b.owner))) + '</span></h3>';
+    /* Fassung 22: Feld des Schildwalls */
+    if (b.role === 'wall' && b.done) h += '<div class="bar sh"><i style="width:' + Math.round((b.fhpMax ? b.fhp / b.fhpMax : 0) * 100) + '%"></i></div><div class="sub">' + (b.up ? L('Feld') + ' ' + Math.round(b.fhp) + ' / ' + Math.round(b.fhpMax) : b.fdown > 0 ? L('Feld bricht neu auf in {0} s', Math.ceil(b.fdown)) : L('Feld aus (Energie oder Gegenstück fehlt)')) + '</div>';
     if (b.label) h += '<div class="sub" style="color:var(--acc2)">' + esc(L(b.label)) + '</div>';
     h += '<div class="bar"><i style="width:' + Math.round(b.hull / b.hullMax * 100) + '%"></i></div><div class="sub">' + L('Hülle') + ' ' + Math.round(b.hull) + ' / ' + Math.round(b.hullMax) + (lv.armor ? ' · ' + L('Panzerung') + ' ' + lv.armor : '') + '</div>';
     if (b.shieldMax || b.give) h += '<div class="bar sh"><i style="width:' + Math.round(((b.shield || 0) + (b.give || 0)) / ((b.shieldMax || 0) + (b.givep || 0)) * 100) + '%"></i></div><div class="sub">' + L('Schild') + ' ' + Math.round((b.shield || 0) + (b.give || 0)) + ' / ' + Math.round((b.shieldMax || 0) + (b.givep || 0)) + '</div>';
@@ -667,7 +669,7 @@ function hudSel() {
     if (b.role === 'lab' && b.done && UI.P.research && b.owner === UI.me) h += '<div class="bar prog"><i style="width:' + Math.round(UI.P.research.prog * 100) + '%"></i></div><div class="sub">' + L('Forscht') + ': ' + L(techDef(UI.P.faction, UI.P.research.id).name) + '</div>';
     if (b.role === 'super' && b.done) h += '<div class="bar charge"><i style="width:' + Math.round(b.charge * 100) + '%"></i></div><div class="sub">' + (b.charge >= 1 ? L('Bereit') : L('Lädt') + ' ' + Math.round(b.charge * 100) + ' %') + '</div>';
     if (b.boarding > 0) h += '<div class="sub" style="color:var(--bad)">' + L('Wird geentert') + ': ' + Math.round(b.boarding) + ' ' + L('Marines') + ' · ' + L('Crew') + ' ' + Math.round(b.crew) + '</div>';
-    if (b.done && b.owner === UI.me) h += '<div class="sub desc">' + esc(L(b.def.desc)) + '</div>';
+    if (b.done && b.owner === UI.me) h += '<div class="sub desc">' + esc(L(b.spec ? TSPEC[b.spec].desc : b.def.desc)) + '</div>';
   } else if (us.length === 1) {
     const u = us[0], d = u.def;
     h += '<h3><span>' + esc(L(d.name)) + (u.rank ? ' · ' + L(RANK_NAMES[u.rank]) : '') + '</span><span>' + d.cp + ' ★</span></h3>';

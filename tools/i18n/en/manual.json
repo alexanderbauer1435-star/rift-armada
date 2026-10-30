@@ -563,5 +563,8 @@
  "Kein Turm oder Emitter in Reichweite": "No tower or emitter in range",
  "Umkreis {0}, Tempo −{1} %, Reichweite −{2} %": "Radius {0}, speed −{1} %, range −{2} %",
  "Schaden {0}/s, Reichweite {1}": "Damage {0}/s, range {1}",
- "Ein Schildwall ist zusammengebrochen": "A shield wall has collapsed"
+ "Ein Schildwall ist zusammengebrochen": "A shield wall has collapsed",
+ "Feld": "Field",
+ "Feld bricht neu auf in {0} s": "Field restarts in {0} s",
+ "Feld aus (Energie oder Gegenstück fehlt)": "Field off (no energy or counterpart)"
 }
