@@ -370,10 +370,10 @@ function cycleForm() { UI.form = UI.form === 'wedge' ? 'line' : UI.form === 'lin
 function startEscort() { const us = selShips(); if (!us.length) return; if (UI.mode === 'escort') { endMode(); hudCmds(); return; } UI.mode = 'escort'; showInfo(L('Begleiten: eigenes Schiff oder eigene Station antippen'), 3000); hudCmds(); SND.play('click'); }
 function toggleAutoRet() { const us = selShips().filter(u => armed(u)); if (!us.length) return; const on = !us.every(u => u.autoRet); issue({ t: 'autoRet', u: ids(us), on }); toast(L(on ? 'Rückzug bei Schaden: an – unter 30 % Hülle zur Werft, repariert zurück' : 'Rückzug bei Schaden: aus')); SND.play('click'); hudCmds(); }
 /* Fassung 22: Rangboni als Text (Auswahlkarte und Hinweis) */
-function rankTxt(u) {
+function rankTxt(u, short) {
   if (!u.rank) { const nx = XP_RANKS[0]; return u.def.wpn.length && u.def.role !== 'fighter' ? L('Erfahrung {0}/{1} Abschüsse bis {2}', Math.floor(u.kills * 10) / 10, nx, L(RANK_NAMES[1])) : ''; }
   const b = rankBonus(u.rank), nx = XP_RANKS[u.rank];
-  return '★'.repeat(u.rank) + ' ' + L(RANK_NAMES[u.rank]) + ': ' + L('+{0} % Schaden, Hülle, Schild · −{1} % Streuung · −{2} % Nachladezeit · {3} % Hülle/min außer Gefecht', b.dmg, b.acc, b.reload, b.regen) + (nx ? ' · ' + L('{0}/{1} Abschüsse bis {2}', Math.floor(u.kills * 10) / 10, nx, L(RANK_NAMES[u.rank + 1])) : '');
+  return (short ? '★'.repeat(u.rank) + ' ' : '★'.repeat(u.rank) + ' ' + L(RANK_NAMES[u.rank]) + ': ') + L('+{0} % Schaden/Hülle/Schild · −{1} % Streuung · −{2} % Nachladen · {3} % Hülle/min außer Gefecht', b.dmg, b.acc, b.reload, b.regen) + (nx ? ' · ' + L('{0}/{1} Abschüsse bis {2}', Math.floor(u.kills * 10) / 10, nx, L(RANK_NAMES[u.rank + 1])) : '');
 }
 function startAmove() { const us = selShips().filter(u => armed(u)); if (!us.length) { toast(L('Erst Kampfschiffe wählen')); return; } UI.mode = 'amove'; showInfo(L('Angriffsmarsch: Ziel antippen'), 3000); hudCmds(); }
 function toggleRange() { UI.showRange = !UI.showRange; $('bRange').classList.toggle('on', UI.showRange); SND.play('click'); }
@@ -678,7 +678,7 @@ function hudSel() {
   } else if (us.length === 1) {
     const u = us[0], d = u.def;
     h += '<h3><span>' + esc(L(d.name)) + (u.rank ? ' · ' + L(RANK_NAMES[u.rank]) : '') + '</span><span>' + d.cp + ' ★</span></h3>';
-    if (u.owner === UI.me && rankTxt(u)) h += (u.rank ? '<div class="sub rank on">' : '<div class="sub rank">') + esc(rankTxt(u)) + '</div>';   /* Fassung 22 */
+    if (u.owner === UI.me && rankTxt(u)) h += (u.rank ? '<div class="sub rank on">' : '<div class="sub rank">') + esc(rankTxt(u, true)) + '</div>';   /* Fassung 22 */
     h += '<div class="bar"><i style="width:' + Math.round(u.hull / u.hullMax * 100) + '%"></i></div><div class="sub">' + L('Hülle') + ' ' + Math.round(u.hull) + ' / ' + Math.round(u.hullMax) + (d.armor ? ' · ' + L('Panzerung') + ' ' + d.armor : '') + '</div>';
     if (u.shieldMax) h += '<div class="bar sh"><i style="width:' + Math.round(u.shield / u.shieldMax * 100) + '%"></i></div><div class="sub">' + L('Schild') + ' ' + Math.round(u.shield) + ' / ' + Math.round(u.shieldMax) + '</div>';
     if (d.cargo) { const cap = Math.round(d.cargo * UI.P.tfx.cargo); h += '<div class="bar prog"><i style="width:' + Math.round(u.cargo / cap * 100) + '%"></i></div><div class="sub">' + L('Fracht') + ' ' + Math.round(u.cargo) + ' / ' + cap + (u.ckind ? ' ' + (u.ckind === 'ore' ? L('Erz') : L('Eis')) : '') + '</div>'; }
@@ -689,7 +689,7 @@ function hudSel() {
     else if (inAsh(UI.g.map, u.x, u.y)) h += '<div class="sub" style="color:var(--bad)">' + L('Im Aschenebel: Schilde aus, die Hülle nimmt Schaden.') + '</div>';
     if (u.abT.cloak > 0) h += '<div class="sub" style="color:var(--acc2)">' + L('Getarnt: noch {0} s. Ein Angriff hebt die Tarnung auf.', Math.ceil(u.abT.cloak)) + '</div>';
     if (u.retreat) h += '<div class="sub" style="color:var(--acc2)">' + L('Rückzug zur Werft: kehrt nach der Reparatur zurück.') + '</div>';
-    else if (u.autoRet && u.stance !== 3 && u.owner === UI.me) h += '<div class="sub">⛑ ' + L('Rückzug bei Schaden an') + '</div>';   /* Fassung 22 */
+    else if (u.autoRet && u.stance !== 3 && u.owner === UI.me) h += '<div class="sub">↶ ' + L('Rückzug bei Schaden an') + '</div>';   /* Fassung 22 */
     if (u.o.t === 'escort') { const e = UI.g.byId.get(u.o.tid); if (e) h += '<div class="sub">⛨ ' + L('Begleitet {0}', L(e.def.name)) + (u.o.eid ? ' · ' + L('wehrt Feind ab') : '') + '</div>'; }
     if (u.dormant) h += '<div class="sub" style="color:var(--acc2)">' + L('Ruht. Ein Restorer daneben erweckt das Schiff mit allem Rang.') + '</div>';
     if (u.derelict) h += '<div class="sub" style="color:var(--bad)">' + L('Wrack ohne Crew. Ein Bauschiff in der Nähe besetzt es neu.') + '</div>';

@@ -538,7 +538,7 @@
  "Rückzug bei Schaden: an – unter 30 % Hülle zur Werft, repariert zurück": "Retreat when damaged: on – below 30% hull to the shipyard, returns repaired",
  "Rückzug bei Schaden: aus": "Retreat when damaged: off",
  "Erfahrung {0}/{1} Abschüsse bis {2}": "Experience {0}/{1} kills to {2}",
- "+{0} % Schaden, Hülle, Schild · −{1} % Streuung · −{2} % Nachladezeit · {3} % Hülle/min außer Gefecht": "+{0}% damage, hull, shield · −{1}% spread · −{2}% reload time · {3}% hull/min out of combat",
+ "+{0} % Schaden/Hülle/Schild · −{1} % Streuung · −{2} % Nachladen · {3} % Hülle/min außer Gefecht": "+{0}% damage/hull/shield · −{1}% spread · −{2}% reload · {3}% hull/min out of combat",
  "{0}/{1} Abschüsse bis {2}": "{0}/{1} kills to {2}",
  "Rückzug bei Schaden (je Schiff, unabhängig von der Haltung): unter 30 % Hülle zur nächsten Werft, nach der Reparatur zurück": "Retreat when damaged (per ship, independent of stance): below 30% hull to the nearest shipyard, back after repairs",
  "Begleiten": "Escort",

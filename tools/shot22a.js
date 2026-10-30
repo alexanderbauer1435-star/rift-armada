@@ -18,7 +18,7 @@ const F = path.resolve(process.argv[2] || 'build/rift-armada.html'), OUT = path.
     await p.goto('file://' + F, { timeout: 120000 }); await p.waitForTimeout(1500);
     await p.evaluate(() => beginGame({ map: 'test', seed: 4, pace: 'tactical', players: [{ faction: 'mars', human: true, team: 0 }, { faction: 'alliance', ai: 0, team: 1 }] }, 'skirmish'));
     await p.waitForTimeout(1200);
-    const shot = async n => { await p.waitForTimeout(300); await p.screenshot({ path: path.join(OUT, n + '-' + gfx + '.png') }); console.log('shot', n + '-' + gfx); };
+    const shot = async n => { await p.waitForTimeout(300); await p.screenshot({ path: path.join(OUT, n + '-' + gfx + '.png'), timeout: 120000 }); console.log('shot', n + '-' + gfx); };
     await p.evaluate(() => {
       UI.speed = 0.001;
       const g = UI.g; for (const u of g.ships.slice()) removeShip(g, u);
@@ -57,7 +57,7 @@ const F = path.resolve(process.argv[2] || 'build/rift-armada.html'), OUT = path.
     /* Auswahlkarte mit Rangboni */
     await p.evaluate(() => { setSel([UI.g.byId.get(window.__t.v)]); hudSel(); RA.step(1); });
     const rk = await p.evaluate(() => { const el = document.querySelector('#selCard .sub.rank'); return el ? el.textContent : ''; });
-    check(gfx + ': Rangboni auf der Auswahlkarte: ' + rk, /Elite/.test(rk) && /Nachladezeit/.test(rk) && /Streuung/.test(rk));
+    check(gfx + ': Rangboni auf der Auswahlkarte: ' + rk, /★★/.test(rk) && /Nachladen/.test(rk) && /Streuung/.test(rk));
     await p.evaluate(() => { R.cam.z = 1.1; const v = UI.g.byId.get(window.__t.v); R.center(v.x + 40, v.y + 40); });
     await shot('221-rank-escort');
     if (gfx === '2d') {
@@ -74,7 +74,7 @@ const F = path.resolve(process.argv[2] || 'build/rift-armada.html'), OUT = path.
       /* Englisch */
       await p.evaluate(() => { setLang('en'); langRefresh(); setSel([UI.g.byId.get(window.__t.v)]); hudSel(); hudCmds(true); RA.step(1); });
       const en = await p.evaluate(() => document.querySelector('#selCard .sub.rank').textContent + ' | ' + [...document.querySelectorAll('#cmds small')].map(s => s.textContent).join(','));
-      check('Englisch: ' + en, /reload time/.test(en) && /Escort/.test(en) && /Retreat/.test(en));
+      check('Englisch: ' + en, /reload/.test(en) && /Escort/.test(en) && /Retreat/.test(en));
       await shot('223-english');
       await p.evaluate(() => { setLang('de'); langRefresh(); });
     }
