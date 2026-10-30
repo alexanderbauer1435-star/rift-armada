@@ -376,7 +376,7 @@ R.consume = function (evs) {
       case 'deliver': if (R.detail > 1 && R.cam.z > 0.5) fxText(e.x + (Math.random() - 0.5) * 30, e.y - 30, '+' + e.amt, e.kind === 'ore' ? '#ffb86b' : '#8fe3ff'); break;
       case 'attack': if (R.vp >= 0 && e.owner === R.vp) R.ping(e.x, e.y, '#ff5b47'); break;
       case 'place': fxRing(e.x, e.y, 40, 0.5, '#ffffff', 1.5); break;
-      case 'ability': { const A = ABIL[e.id]; fxRing(e.x, e.y, e.r ? Math.min(e.r, 320) : 40, e.r ? 0.9 : 0.5, '#ffb86b', 2); if (e.owner === R.vp) fxText(e.x, e.y - 34, A ? L(A.name) : e.id, '#ffb86b'); R.lastAct = { x: e.x, y: e.y, t: R.time }; break; }
+      case 'ability': { const A = ABIL[e.id]; if (A && A.fc) { const c = FCMD[A.fc].col; fxRing(e.x, e.y, e.r, 1.3, c, 4); fxRing(e.x, e.y, e.r * 0.55, 1, c, 2); fxFlash(e.x, e.y, 90, 0.4, c); } else fxRing(e.x, e.y, e.r ? Math.min(e.r, 320) : 40, e.r ? 0.9 : 0.5, '#ffb86b', 2); if (e.owner === R.vp) fxText(e.x, e.y - 34, A ? L(A.name) : e.id, '#ffb86b'); R.lastAct = { x: e.x, y: e.y, t: R.time }; break; }
       case 'abfx': fxFlash(e.x, e.y, 16, 0.2, '#dff4ff'); break;
       case 'lance': fxLine(e.x, e.y, e.tx, e.ty, 0.45, 'rgba(255,255,255,0.95)', 5); fxLine(e.x, e.y, e.tx, e.ty, 0.6, 'rgba(143,227,255,0.6)', 14); fxFlash(e.tx, e.ty, 40, 0.4, '#dff4ff'); fxSpark(e.tx, e.ty, 20, 200, '#bfe9ff', 0.6); if (R.inView(e.tx, e.ty, 300)) R.shake = Math.max(R.shake, 5); break;
       case 'board': fxLine(e.fx, e.fy, e.x, e.y, 0.5, 'rgba(255,184,107,0.8)', 2); fxSpark(e.x, e.y, 10, 60, '#ffd27a', 0.6); fxText(e.x, e.y - 24, L('+{0} Marines', Math.round(e.n)), '#ffb86b'); break;
@@ -736,6 +736,17 @@ function drawOverlay2D(ctx, g, inV, lowZ, vp, dt) {
     const px = st.sx + (st.x - st.sx) * k, py = st.sy + (st.y - st.sy) * k - Math.sin(k * Math.PI) * 220;
     if (inV(px, py, 100)) { glowAt(ctx, px, py, 26, '#ffb070', 0.9); ctx.fillStyle = '#fff4d0'; ctx.beginPath(); ctx.arc(px, py, 6, 0, TAU); ctx.fill(); if (R.detail > 1) { fxTrail(px, py, '#ff9a50'); fxSpark(px, py, 1, 40, '#ffd27a', 0.3); } }
   }
+  /* Fassung 22: Flottenbefehl (pulsierender Ring im Umkreis, Schimmer um gepufferte Schiffe) und Flaggschiff-Aura */
+  for (const u of g.ships) {
+    if (u.dead || !R.visible(u)) continue;
+    if (u.def.flag && FCMD[u.def.f] && !u.derelict && inV(u.x, u.y, FCMD_R)) {
+      const F = FCMD[u.def.f], on = u.abT[F.ab] > 0;
+      ctx.strokeStyle = F.col; ctx.globalAlpha = 0.16; ctx.lineWidth = 1.2 / cam.z; ctx.setLineDash([6 / cam.z, 10 / cam.z]); ctx.lineDashOffset = -R.time * 12; ctx.beginPath(); ctx.arc(u.x, u.y, FCMD_AURA, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+      if (on) { ctx.globalAlpha = 0.35 + 0.25 * Math.sin(R.time * 4); ctx.lineWidth = 2.5 / cam.z; ctx.beginPath(); ctx.arc(u.x, u.y, FCMD_R, 0, TAU); ctx.stroke(); ctx.globalAlpha = 0.05; ctx.fillStyle = F.col; ctx.fill(); }
+      ctx.globalAlpha = 1;
+    }
+    if (u.fcT > 0 && FCMD[u.fc] && inV(u.x, u.y, 60)) { ctx.strokeStyle = FCMD[u.fc].col; ctx.globalAlpha = 0.3 + 0.2 * Math.sin(R.time * 6 + u.id); ctx.lineWidth = 1.5 / cam.z; ctx.beginPath(); ctx.arc(u.x, u.y, u.def.r + 9, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1; }
+  }
   /* Aufdeckungen des eigenen Teams */
   if (vp >= 0) for (const rv of g.reveals) if (g.tm[rv.owner] === g.tm[vp] && rv.r < 3000 && inV(rv.x, rv.y, rv.r)) { ctx.strokeStyle = 'rgba(143,227,255,0.25)'; ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([6 / cam.z, 8 / cam.z]); ctx.lineDashOffset = R.time * 20; ctx.beginPath(); ctx.arc(rv.x, rv.y, rv.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
   /* Bergung und Tarnung (wie in 3D) */
@@ -866,6 +877,12 @@ function drawOverlay3D(g, inV, lowZ, vp) {
   /* Bergung: lohnende Wracks markieren, solange Frachter gewählt sind; getarnte eigene Schiffe */
   if (R.wantSalvage()) for (const w of g.wrecks) if (w.sal > 0 && inV(w.x, w.y, 60) && R.seen(w.x, w.y)) { ring(w.x, w.y, 34, '#ffd36b', 1.5, { dash: 1, alpha: 0.6 }); if (!lowZ) hud.push({ k: 'text', x: w.x, y: w.y, txt: Math.round(w.sal) + '', col: '#ffd36b', size: 12, dy: -30 }); }
   if (vp >= 0) for (const u of g.ships) if (!u.dead && u.abT.cloak > 0 && g.tm[u.owner] === g.tm[vp] && inV(u.x, u.y, 80)) ring(u.x, u.y, u.def.r + 12, '#8fe3ff', 1.2, { dash: 1, alpha: 0.45 });
+  /* Fassung 22: Flottenbefehl und Flaggschiff-Aura */
+  for (const u of g.ships) {
+    if (u.dead || !R.visible(u)) continue;
+    if (u.def.flag && FCMD[u.def.f] && !u.derelict && inV(u.x, u.y, FCMD_R)) { const F = FCMD[u.def.f]; ring(u.x, u.y, FCMD_AURA, F.col, 1.2, { dash: 1, alpha: 0.18 }); if (u.abT[F.ab] > 0) { ring(u.x, u.y, FCMD_R, F.col, 2.5, { alpha: 0.35 + 0.25 * Math.sin(R.time * 4) }); disc(u.x, u.y, FCMD_R, F.col, 0.05); } }
+    if (u.fcT > 0 && FCMD[u.fc] && inV(u.x, u.y, 60)) ring(u.x, u.y, u.def.r + 9, FCMD[u.fc].col, 1.5, { alpha: 0.3 + 0.2 * Math.sin(R.time * 6 + u.id) });
+  }
   /* Massetreiber: Warnkreis am Ziel, Masse im Flug */
   for (const st of g.strikes) {
     const k = 1 - st.t / 3.5;

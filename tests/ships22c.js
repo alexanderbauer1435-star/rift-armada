@@ -75,27 +75,30 @@ function bare(f, lv, f2) {
   p.tech.hull = 1; X.recalcTech(g, p);
   ok(near(a.hullMax, a.def.hull * 1.15 * 1.15, 1e-6), 'Hüllenforschung danach: ×1,15 × 1,15 = ' + Math.round(a.hullMax));
   /* Waffenschaden messen: gleicher Schuss mit und ohne Nachrüstung */
-  const tgt = (id) => { const e = X.addShip(g, 'olympus', 1, 3000, 3000, 0); e.armorPlus = 0; return e; };
-  const shot = (s) => { const e = tgt(); const h = e.hull; const w = s.def.wpn.find(q => q.kind === 'kin' && !q.art); const i = s.def.wpn.indexOf(w); s.x = e.x - 150; s.y = e.y; C.fireWeapon(g, s, i, w, e); for (let k = 0; k < 60; k++) C.updateProj(g, 1 / 30); const d = h - e.hull; C.removeShip(g, e); return d; };
+  /* Waffenschaden messen: der Schaden, den fireWeapon an damage() übergibt (Projektile tragen ihn mit) */
+  const shot = (s) => { const e = X.addShip(g, 'olympus', 1, 3000, 3000, 0); const w = s.def.wpn.find(q => q.kind === 'kin' && !q.art), i = s.def.wpn.indexOf(w); s.x = e.x - 150; s.y = e.y; const n0 = g.proj.length; C.fireWeapon(g, s, i, w, e); const d = g.proj.slice(n0).reduce((a, q) => a + q.dmg, 0); g.proj.length = n0; C.removeShip(g, e); return d; };
   const plain = X.addShip(g, 'hammer', 0, 500, 500, 0);
   const d1 = shot(b), d0 = shot(plain);
-  ok(d0 > 0 && near(d1 / d0, 1.12, 0.03), 'Treffer mit Waffen-Nachrüstung ' + d1.toFixed(1) + ' gegen ' + d0.toFixed(1));
+  ok(d0 > 0 && near(d1 / d0, 1.12, 0.001), 'Geschoss mit Waffen-Nachrüstung ' + d1.toFixed(1) + ' gegen ' + d0.toFixed(1));
   /* Spielstand: Nachrüstungen und laufende Nachrüstung bleiben erhalten */
   const c = X.addShip(g, 'hammer', 0, 1000, 1000 + y.def.r + 60, 0); X.execCmd(g, { t: 'refit', p: 0, u: [c.id], id: 'drive' }); step(g, 3);
   const L = require('./harness.js').loadSim(['save.js']);
   const sv = JSON.parse(JSON.stringify(vm.runInContext('saveGame', L.ctx)(g)));
   const g2 = vm.runInContext('loadGame', L.ctx)(sv);
+  if (g2) { g2.sites.length = 0; g2.gates.length = 0; }   /* wie im Original leer geräumt */
+  ok(g2 && X.stateHash(g) === L.stateHash(g2), 'Laden: Prüfsumme gleich');
   const a2 = g2 && g2.byId.get(a.id), b2 = g2 && g2.byId.get(b.id), c2 = g2 && g2.byId.get(c.id);
   ok(a2 && a2.rf.join() === 'armor' && near(a2.hullMax, a.hullMax) && a2.armorPlus === a.armorPlus, 'Laden: Panzerung erhalten');
   ok(b2 && near(b2.rfD, 1.12) && c2 && c2.rfq && near(c2.rfq.prog, c.rfq.prog), 'Laden: Waffen und laufende Nachrüstung erhalten');
-  for (let i = 0; i < 300; i++) { X.stepGame(g); g.ev.length = 0; L.stepGame(g2); g2.ev.length = 0; }
-  ok(X.stateHash(g) === L.stateHash(g2) && !c2.rfq && c2.rf[0] === 'drive', 'Laden: läuft gleich weiter, Nachrüstung wird fertig');
+  for (let i = 0; i < 30 * (C.refitTime(c.def) + 1); i++) { X.stepGame(g); g.ev.length = 0; L.stepGame(g2); g2.ev.length = 0; }
+  ok(X.stateHash(g) === L.stateHash(g2), 'Laden: läuft gleich weiter (Prüfsumme gleich)');
+  ok(!c2.rfq && c2.rf && c2.rf[0] === 'drive' && !c.rfq, 'Laden: Nachrüstung wird fertig');
 }
 /* ---------- 3. Flottenbefehle */
 const FLAG = {}; for (const id in X.SHIPS) { const d = X.SHIPS[id]; if (d.flag) FLAG[d.f] = id; }
 for (const f of ['alliance', 'mars', 'legion', 'nexus', 'brood']) {
   const { g, p } = bare(f, 1);
-  const ab = FCMD[f].ab, fl = X.addShip(g, FLAG[f], 0, 1500, 1500, 0);
+  const ab = FCMD[f].ab, fl = X.addShip(g, FLAG[f], 0, 1500, 1500, 0); fl.auto = false;
   ok(X.shipAbils(g, fl).indexOf(ab) >= 0, f + ': Flaggschiff hat ' + X.ABIL[ab].name);
   const war = Object.values(X.SHIPS).filter(d => d.f === f && d.role === 'war' && !d.flag && !d.hidden && !d.doc && d.wpn.length && !d.art);
   const fleet = []; for (let i = 0; i < 6; i++) fleet.push(X.addShip(g, war[i % war.length].id, 0, 1500 + 120 * Math.cos(i), 1500 + 300 + 60 * i, 0));

@@ -468,7 +468,7 @@ function hudCmds(force) {
   const us = selShips(), b = UI.selB ? UI.g.byId.get(UI.selB) : null;
   /* nur neu aufbauen, wenn sich etwas ändert: Ein laufender Fingerdruck soll seine Taste behalten */
   const abs = selAbils(us), so = UI.selS ? UI.g.byId.get(UI.selS) : null;
-  const sig = [UI.mode, so ? so.id + ':' + so.owner + ':' + (so.mode || '') + ':' + (so.state || '') : '', UI.boxMode, UI.form, us.length, us.length ? us[0].stance : '', us.every(u => u.hold), us.some(u => armed(u)), b ? b.id + ':' + b.lv + ':' + (b.upg ? 1 : 0) + ':' + b.done + ':' + (b.done && b.lv < 3 && canPay(UI.P, b.def.lv[b.lv].cost)) + ':' + (b.role === 'super' ? (b.charge >= 1 ? 1 : 0) : '') + ':' + (b.role === 'base' && UI.P.docAsk && !UI.P.doctrine ? 1 : 0) : '', UI.place ? UI.place.ok : '', UI.subAim, abs.map(a => a.id + (a.ready ? 1 : 0) + Math.round(a.cd * 2)).join(','), us.length ? us.every(u => u.auto) : '', UI.superTgt ? 1 : 0].join('|');
+  const sig = [UI.mode, so ? so.id + ':' + so.owner + ':' + (so.mode || '') + ':' + (so.state || '') : '', UI.boxMode, UI.form, us.length, us.length ? us[0].stance : '', us.every(u => u.hold), us.some(u => armed(u)), b ? b.id + ':' + b.lv + ':' + (b.upg ? 1 : 0) + ':' + b.done + ':' + (b.done && b.lv < 3 && canPay(UI.P, b.def.lv[b.lv].cost)) + ':' + (b.role === 'super' ? (b.charge >= 1 ? 1 : 0) : '') + ':' + (b.role === 'base' && UI.P.docAsk && !UI.P.doctrine ? 1 : 0) : '', UI.place ? UI.place.ok : '', UI.subAim, abs.map(a => a.id + (a.ready ? 1 : 0) + Math.round(a.cd * 2)).join(','), us.length ? us.every(u => u.auto) : '', UI.superTgt ? 1 : 0, refitSig(us)].join('|');
   if (!force && box._sig === sig) return;
   box._sig = sig;
   box.textContent = '';
@@ -485,6 +485,8 @@ function hudCmds(force) {
       box.appendChild(cmdBtn(ic, nm, () => { const r = issue({ t: 'gate', id: so.id, mode: m }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { SND.play('click'); hudSel(); } }, tip, so.mode === m ? 'on' : ''));
     return;
   }
+  /* Fassung 22: Untermenü Nachrüsten */
+  if (us.length && UI.mode === 'refit') { refitBtns(box, us, true); return; }
   if (us.length) {
     const war = us.some(u => armed(u));
     if (war) box.appendChild(cmdBtn('➶', 'Vorstoß', startAmove, 'Angriffsmarsch: fliegt zum Ziel und greift alles auf dem Weg an', UI.mode === 'amove' ? 'on' : ''));
@@ -502,6 +504,7 @@ function hudCmds(force) {
       box.appendChild(el);
     }
     if (abs.length) box.appendChild(cmdBtn('A', 'Auto', toggleAuto, 'Auto: Das Schiff setzt seine Fähigkeiten selbst ein, wenn es sich lohnt', us.every(u => u.auto) ? 'on' : ''));
+    refitBtns(box, us);
   } else if (b && b.owner === UI.me) {
     if (b.role === 'super' && b.done) {
       if (UI.mode === 'super') {
@@ -662,8 +665,9 @@ function hudSel() {
     if (b.done && b.owner === UI.me) h += '<div class="sub desc">' + esc(L(b.def.desc)) + '</div>';
   } else if (us.length === 1) {
     const u = us[0], d = u.def;
-    h += '<h3><span>' + esc(L(d.name)) + (u.rank ? ' · ' + L(RANK_NAMES[u.rank]) : '') + '</span><span>' + d.cp + ' ★</span></h3>';
-    h += '<div class="bar"><i style="width:' + Math.round(u.hull / u.hullMax * 100) + '%"></i></div><div class="sub">' + L('Hülle') + ' ' + Math.round(u.hull) + ' / ' + Math.round(u.hullMax) + (d.armor ? ' · ' + L('Panzerung') + ' ' + d.armor : '') + '</div>';
+    h += '<h3><span>' + esc(L(d.name)) + (u.rank ? ' · ' + L(RANK_NAMES[u.rank]) : '') + refitMarks(u) + '</span><span>' + d.cp + ' ★</span></h3>';
+    h += '<div class="bar"><i style="width:' + Math.round(u.hull / u.hullMax * 100) + '%"></i></div><div class="sub">' + L('Hülle') + ' ' + Math.round(u.hull) + ' / ' + Math.round(u.hullMax) + (d.armor || u.armorPlus ? ' · ' + L('Panzerung') + ' ' + (d.armor + (u.armorPlus || 0)) : '') + '</div>';
+    h += refitCard(u);
     if (u.shieldMax) h += '<div class="bar sh"><i style="width:' + Math.round(u.shield / u.shieldMax * 100) + '%"></i></div><div class="sub">' + L('Schild') + ' ' + Math.round(u.shield) + ' / ' + Math.round(u.shieldMax) + '</div>';
     if (d.cargo) { const cap = Math.round(d.cargo * UI.P.tfx.cargo); h += '<div class="bar prog"><i style="width:' + Math.round(u.cargo / cap * 100) + '%"></i></div><div class="sub">' + L('Fracht') + ' ' + Math.round(u.cargo) + ' / ' + cap + (u.ckind ? ' ' + (u.ckind === 'ore' ? L('Erz') : L('Eis')) : '') + '</div>'; }
     const O = { idle: 'Wartet', hold: 'Hält Stellung', move: 'Fliegt', amove: 'Angriffsmarsch', attack: 'Greift an', harvest: 'Baut ab', return: 'Liefert', build: 'Baut', board: 'Entert', explore: 'Erkundet', salvage: 'Birgt ein Wrack' };
@@ -682,6 +686,8 @@ function hudSel() {
     if (u.adapt && Object.keys(u.adapt).length) h += '<div class="sub">' + L('Anpassung') + ': ' + Object.keys(u.adapt).map(k => ({ beam: 'Strahl', kin: 'Kanone', rail: 'Railgun', torp: 'Torpedo', pd: 'Abwehr' }[k] || k) + ' −' + Math.round(Math.min(0.5, u.adapt[k] * 0.012) * 100) + ' %').join(', ') + '</div>';
     if (u.abT.overload > 0 || u.abT.grush > 0 || u.abT.flak > 0 || u.abT.broadside > 0 || u.abT.invuln > 0 || u.dome > 0 || u.sprint > 0) h += '<div class="sub" style="color:var(--acc2)">' + L('Fähigkeit aktiv') + '</div>';
     else if (u.dis > 0) h += '<div class="sub" style="color:var(--warn)">' + L('Waffen aus') + ' ' + Math.ceil(u.dis) + ' s</div>';
+    if (u.fcT > 0 && FCMD[u.fc]) h += FC_SUB[u.fc] + L('Flottenbefehl') + ': ' + esc(L(ABIL[FCMD[u.fc].ab].name)) + ' · ' + Math.ceil(u.fcT) + ' s</div>';
+    else if (u.faT > UI.g.time && !d.flag) h += '<div class="sub" style="color:var(--acc2)">' + L('Im Umkreis des Flaggschiffs') + '</div>';
   } else {
     const by = new Map();
     for (const u of us) { const e = by.get(u.type) || { n: 0, hurt: 0, def: u.def }; e.n++; if (u.hull < u.hullMax * 0.6) e.hurt++; by.set(u.type, e); }
@@ -694,6 +700,33 @@ function hudSel() {
   if (card._h !== h) { card.innerHTML = h; card._h = h; }
   card.querySelectorAll('.sellist button').forEach(el => el.addEventListener('click', () => { const t = el.dataset.t; setSel(selShips().filter(u => u.type === t)); SND.play('click'); }));
   hudCmds(); hudBuild();
+}
+/* ------------------------------------------------------------------ Fassung 22: Nachrüsten an der Werft (Tasten, Karte) */
+function refitMarks(u) { return u.rf && u.rf.length ? ' <b class="rfm">' + u.rf.map(k => REFIT[k].icon).join('') + '</b>' : ''; }
+/* Zeile in der Farbe des Flottenbefehls (ganze Tags, damit die Übersetzung sie nicht als Text sammelt) */
+const FC_SUB = { alliance: '<div class="sub" style="color:#8fe3ff">', mars: '<div class="sub" style="color:#ffb070">', legion: '<div class="sub" style="color:#f2c14e">', nexus: '<div class="sub" style="color:#c9a0ff">', brood: '<div class="sub" style="color:#b4ff3c">' };
+function refitCard(u) {
+  let h = '';
+  if (u.rf && u.rf.length) h += '<div class="sub">' + L('Nachgerüstet') + ': ' + u.rf.map(k => REFIT[k].icon + ' ' + esc(L(REFIT[k].name))).join(', ') + ' (' + u.rf.length + '/' + REFIT_MAX + ')</div>';
+  if (u.rfq) h += '<div class="bar prog"><i style="width:' + Math.round(u.rfq.prog * 100) + '%"></i></div>' + (u.rfq.away ? '<div class="sub" style="color:var(--warn)">' : '<div class="sub">') + L('Nachrüstung') + ': ' + esc(L(REFIT[u.rfq.id].name)) + ' ' + Math.round(u.rfq.prog * 100) + ' %' + (u.rfq.away ? ' · ' + L('zu weit von der Werft') : '') + '</div>';
+  return h;
+}
+function refitSel(us) { const g = UI.g; return us.filter(u => u.owner === UI.me && !u.derelict && u.def.role !== 'fighter' && refitYard(g, u, 1)); }
+function refitSig(us) { if (!us.length || !UI.g) return ''; return refitSel(us).map(u => u.id + ':' + (u.rf ? u.rf.join('') : '') + (u.rfq ? 'q' : '')).join(','); }
+function refitBtns(box, us, sub) {
+  const g = UI.g, near = refitSel(us);
+  if (!near.length) { if (sub) { endMode(); hudCmds(true); } return; }
+  if (!sub) { const any = near.some(u => REFIT_IDS.some(k => !refitReq(g, u, k))); box.appendChild(cmdBtn('⚒', 'Nachrüsten', () => { UI.mode = 'refit'; SND.play('click'); hudCmds(true); }, 'Nachrüsten an der Werft: Panzerung, Waffen, Antrieb oder Sensoren verbessern (höchstens zwei je Schiff)', 'rf' + (any ? ' arm' : near.some(u => u.rfq) ? ' on' : ''))); return; }
+  box.appendChild(cmdBtn('‹', 'Zurück', () => { endMode(); hudCmds(true); }, 'Zurück zu den Befehlen'));
+  for (const k of REFIT_IDS) {
+    const R0 = REFIT[k], can = near.filter(u => !refitReq(g, u, k));
+    const why = can.length ? null : refitReq(g, near[0], k);
+    const c = can.length ? refitCost(UI.P, can[0], k) : refitCost(UI.P, near[0], k);
+    const el = cmdBtn(R0.icon, R0.name, () => {}, null, 'rf' + (can.length && canPay(UI.P, c) ? ' arm' : ' off'));
+    bindHold(el, () => { const r = issue({ t: 'refit', u: ids(near), id: k }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { SND.play('upgrade'); hudSel(); hudCmds(true); } }, () => '<h4>' + R0.icon + ' ' + L('Nachrüsten') + ': ' + esc(L(R0.name)) + '</h4><div class="cost">' + costTxt(c) + (can.length > 1 ? ' × ' + can.length : '') + ' · ' + refitTime((can[0] || near[0]).def) + ' s</div><p>' + esc(L(R0.desc)) + '</p><p>' + esc(L('Das Schiff muss so lange an der Werft bleiben. Höchstens zwei Nachrüstungen je Schiff, jede Art einmal.')) + '</p>' + (why ? '<p class="req">' + esc(L(why)) + '</p>' : ''));
+    box.appendChild(el);
+  }
+  if (near.some(u => u.rfq)) box.appendChild(cmdBtn('✕', 'Abbruch', () => { issue({ t: 'refitCancel', u: ids(near) }); SND.play('click'); hudSel(); hudCmds(true); }, 'Nachrüstung abbrechen (volle Erstattung)', 'warn'));
 }
 function pname(pi) { const p = UI.g.players[pi]; if (p.name) return L(p.name); return L(p.F.name) + (p.ai ? ' (' + L('KI') + ')' : ''); }
 function hudGroups() { const g = UI.g; if (!g) return; document.querySelectorAll('.grp').forEach(el => { const i = +el.dataset.g; el.classList.toggle('has', g.ships.some(u => !u.dead && u.owner === UI.me && u.grp === i)); }); }
@@ -758,6 +791,8 @@ UI.consume = function (evs) {
       case 'dormant': if (mine) { toast(L('{0} »{1}« ruht als Wrack. Restorer hinschicken!', L(e.name), e.hero || ''), 'warn', 4000); R.ping(e.x, e.y, '#f2c14e'); } break;
       case 'resurrect': if (mine) { toast(L('Der Last Sovereign steht wieder auf'), 'good', 4000); SND.play('upgrade'); } break;
       case 'merge': if (mine) SND.play('upgrade'); hudSel(); break;
+      /* Fassung 22: Nachrüsten */
+      case 'refit': if (mine && e.st === 1) { SND.play('upgrade'); const u = g.byId.get(e.id); toast(L('Nachrüstung fertig: {0} – {1}', u ? L(u.def.name) : '', L(REFIT[e.k].name)), 'good', 3500); } else if (mine && e.st === -1) toast(L('Nachrüstung abgebrochen: keine Werft mehr'), 'warn'); if (mine) hudCmds(true); break;
       case 'bound': if (mine) { SND.play('rank', e.x, e.y); } else if (isFoe(e.owner)) { toast(L('Der Nexus hat ein Schiff übernommen'), 'bad'); } hudSel(); break;
       case 'netoff': if (mine) { toast(L('Station vom Netz getrennt: Knoten bauen oder reparieren'), 'warn', 4000); R.ping(e.x, e.y, '#ff5b47'); } break;
       case 'relics': if (mine) { toast(L('+{0} Relikte: {1}', e.n, L(e.why)), 'good', 3500); SND.play('ready'); } break;

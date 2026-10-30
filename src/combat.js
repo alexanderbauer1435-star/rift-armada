@@ -488,7 +488,7 @@ function fireArt(g, s, w, t) {
   if (s.abT.cloak > 0) { s.abT.cloak = 0; ev(g, 'decloak', { x: s.x, y: s.y, owner: s.owner, id: s.id }); }
   const sp = 22 + tdist(s, t) * 0.03, a0 = g.rng() * TAU, r0 = g.rng() * sp, tx = t.x + dcos(a0) * r0, ty = t.y + dsin(a0) * r0;
   const a = datan2(ty - s.y, tx - s.x), d = hyp(tx - s.x, ty - s.y);
-  g.proj.push({ kind: 'art', x: s.x, y: s.y, ang: a, sp: w.speed, dmg: w.dmg * dmgMul(s), owner: s.owner, sid: s.id, tid: t.id, tx, ty, d0: d, left: d, splash: w.splash, life: d / w.speed + 1, col: w.col, r: 5 });
+  g.proj.push({ kind: 'art', x: s.x, y: s.y, ang: a, sp: w.speed, dmg: w.dmg * dmgMul(s) * (s.k === 1 ? shipMul22(g, s, w) : 1), owner: s.owner, sid: s.id, tid: t.id, tx, ty, d0: d, left: d, splash: w.splash, life: d / w.speed + 1, col: w.col, r: 5 });
   ev(g, 'shot', { x: s.x, y: s.y, kind: 'kin', owner: s.owner, snd: w.snd, ang: a, big: true });
   /* Mündungsfeuer verrät die Stellung: der Beschossene sieht die Artillerie 5 s lang */
   if (!(g.reveals.length > 200)) g.reveals.push({ x: s.x, y: s.y, r: 140, owner: t.owner, until: g.time + 5, art: 1 });
