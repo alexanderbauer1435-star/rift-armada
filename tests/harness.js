@@ -1,7 +1,7 @@
 /* Testumgebung ohne Bildschirm: lädt die Simulationsmodule in einen eigenen Kontext und liefert createGame/stepGame */
 'use strict';
 const fs = require('fs'), path = require('path'), vm = require('vm');
-const SIM_MODULES = ['core.js', 'data.js', 'i18n.js', 'i18n_en.js', 'map.js', 'mapview.js', 'sim.js', 'combat.js', 'ai.js', 'waves.js', 'mission.js', 'missions.js', 'conquest.js'];
+const SIM_MODULES = ['core.js', 'data.js', 'i18n.js', 'i18n_en.js', 'map.js', 'terrain.js', 'mapview.js', 'sim.js', 'combat.js', 'ai.js', 'waves.js', 'mission.js', 'missions.js', 'conquest.js'];
 function loadSim(extra) {
   const src = (extra ? SIM_MODULES.concat(extra) : SIM_MODULES).map(f => fs.readFileSync(path.join(__dirname, '..', 'src', f), 'utf8')).join('\n');
   const ctx = { console, Math, performance: { now: () => Date.now() } };

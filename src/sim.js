@@ -38,7 +38,7 @@ function foes(g, a, b) { return a >= 0 && b >= 0 && g.tm[a] !== g.tm[b]; }
 function createGame(opts) {
   /* KARTENEDITOR: opts.custom trägt das Layout einer eigenen Karte (Spielstand und Mehrspieler bauen sie daraus identisch nach) */
   const np = opts.players.length, mapId = opts.mis ? 'mission' : opts.custom ? 'custom' : mapFor(opts.map || 'haven', np);
-  const map = opts.mis ? misMap(opts.mis.id, opts.seed || 1, opts.mis) : generateMap(mapId, np, opts.seed || 1, opts.size, opts.custom);
+  const map = opts.mis ? misMap(opts.mis.id, opts.seed || 1, opts.mis) : generateMap(mapId, np, opts.seed || 1, opts.size, opts.custom, opts.mseed);   /* Fassung 22: mseed = Startwert der Zufallskarte */
   const g = {
     map, rng: makeRng((opts.seed || 1) * 7919 + 13), tick: 0, time: 0, players: [], ships: [], bldgs: [], nodes: [], proj: [], wrecks: [], ev: [],
     byId: new Map(), nextId: 1, over: false, winner: -1, winTeam: -1, opts, human: -1, tm: [], deadFlag: false, bDied: false, reveals: [], strikes: [], flares: [], sites: [], gates: [], events: [], neutral: -1, spores: [], threat: -1, wave: null,
@@ -87,6 +87,7 @@ function createGame(opts) {
     if (st.kind === 'warden') { const u = addShip(g, 'warden', g.neutral, st.x, st.y, 0); u.stance = 2; u.o = { t: 'hold' }; u.hold = true; u.asleep = 1; st.guard.push(u.id); }
   }
   if (map.fort) fortSetup(g);
+  terrainInit(g);   /* Fassung 22: sprengbare Felsen, wandernde Gefahren (terrain.js) */
   /* Sonneneruptionen auf den größeren Karten */
   if (mapId !== 'haven' && mapId !== 'test' && mapId !== 'mission') g.events.push({ kind: 'flare', at: 420 + Math.floor(g.rng() * 180), state: 0 });
   /* Startaufstellung: Kommandobasis, Raffinerie am Eismond, zwei Frachter, ein Bauschiff, eine Korvette */
@@ -208,16 +209,17 @@ function updateVision(g) {
   g.visStamp++;
   const st = g.visStamp, vw = g.vw, vh = g.vh;
   /* Ionennebel: wer darin steht, sieht nur ION_SEE weit (u.ion) und wird selbst nur aus der Nähe gesehen (Nahsicht visN) */
-  for (const u of g.ships) { if (u.dead) continue; const p = g.players[u.owner]; u.ion = inIon(g.map, u.x, u.y); let r = u.def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor); if (u.ion) r = Math.min(r, ION_SEE); markVis(p.vis, p.explored, vw, vh, st, u.x, u.y, r); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, u.x, u.y, ION_SEE); }
+  for (const u of g.ships) { if (u.dead) continue; const p = g.players[u.owner]; u.ion = inIon(g.map, u.x, u.y) || (g.hazards && g.hazards.length > 0 && inStorm(g, u.x, u.y)); let r = u.def.sensor * p.tfx.sensor * (0.4 + 0.6 * u.sub.sensor); if (u.ion) r = Math.min(r, ION_SEE); markVis(p.vis, p.explored, vw, vh, st, u.x, u.y, r); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, u.x, u.y, ION_SEE); }
   for (let i = g.reveals.length - 1; i >= 0; i--) { const r = g.reveals[i]; if (g.time > r.until) { g.reveals.splice(i, 1); continue; } const p = g.players[r.owner]; markVis(p.vis, p.explored, vw, vh, st, r.x, r.y, r.r); if (p.visN && r.r < 3000) markVis(p.visN, p.explored, vw, vh, st, r.x, r.y, r.r); }
   for (const b of g.bldgs) { if (b.dead) continue; const p = g.players[b.owner]; markVis(p.vis, p.explored, vw, vh, st, b.x, b.y, b.done ? (SENSOR_B[b.role] || 360) : 220); if (!p.visN) p.visN = g.teamVisN[p.team] || (g.teamVisN[p.team] = new Int32Array(vw * vh)); markVis(p.visN, p.explored, vw, vh, st, b.x, b.y, b.done && DETECT_B[b.role] ? Math.max(ION_SEE, maxRange(lvOf(b))) : ION_SEE); }
+  terrVision(g, st);   /* Fassung 22: Deckung in Trümmerfeldern, Sicht neutraler Stationen */
   /* Verbündete teilen Sicht: dieselbe Tabelle je Team; erkundet nachziehen */
   for (const p of g.players) for (const q of g.players) if (q !== p && q.team === p.team) { const e = p.explored, f = q.explored; for (let i = 0; i < e.length; i++) if (f[i]) e[i] = 1; }
 }
 function canSee(g, pi, e) {
   if (pi < 0) return true;
   if (e.k !== 3 && e.owner >= 0 && g.tm[e.owner] === g.tm[pi]) return true;
-  const p = g.players[pi], vis = e.k === 1 && (e.ion || e.abT.cloak > 0) ? p.visN : p.vis, cx = clamp((e.x / VIS) | 0, 0, g.vw - 1), cy = clamp((e.y / VIS) | 0, 0, g.vh - 1);
+  const p = g.players[pi], vis = e.k === 1 && (e.ion || e.abT.cloak > 0) ? p.visN : e.k === 1 && e.cov && p.visC ? p.visC : p.vis, cx = clamp((e.x / VIS) | 0, 0, g.vw - 1), cy = clamp((e.y / VIS) | 0, 0, g.vh - 1);
   return vis[cy * g.vw + cx] === g.visStamp;
 }
 function visAt(g, pi, x, y) { const vis = g.players[pi].vis, cx = clamp((x / VIS) | 0, 0, g.vw - 1), cy = clamp((y / VIS) | 0, 0, g.vh - 1); return vis[cy * g.vw + cx] === g.visStamp; }
@@ -259,7 +261,7 @@ function buildReq(g, pi, role) {
 function canPlace(g, pi, role, x, y) {
   const def = bdef(g, pi, role), r = def.r, m = g.map;
   if (x - r < EDGE || y - r < EDGE || x + r > m.w - EDGE || y + r > m.h - EDGE) return 'Zu nahe am Aschenebel';
-  for (const o of m.rocks) if (hyp(o.x - x, o.y - y) < o.r + r + 6) return 'Hier ist ein Asteroid im Weg';
+  for (const o of m.rocks) if (!o.gone && hyp(o.x - x, o.y - y) < o.r + r + 6) return 'Hier ist ein Asteroid im Weg';
   for (const o of m.fields) if (hyp(o.x - x, o.y - y) < o.r + r * 0.5) return 'Nicht im Asteroidenfeld';
   for (const o of m.nebs || []) if (hyp(o.x - x, o.y - y) < o.r + r * 0.5) return 'Nicht im Nebel';
   for (const o of g.nodes) if (hyp(o.x - x, o.y - y) < o.r + r + 30) return 'Zu nahe am Vorkommen';
@@ -269,9 +271,10 @@ function canPlace(g, pi, role, x, y) {
   const p = g.players[pi];
   /* Außenbasis: überall, unabhängig von Reichweite und Netz – so kommt man an entfernte Vorkommen */
   if (role === 'base') return null;
-  if (p.faction === 'nexus') { if (!netCovered(g, pi, x, y, true)) return 'Außerhalb des Netzes'; return null; }
+  if (p.faction === 'nexus') { if (!netCovered(g, pi, x, y, true) && !outpostBuild(g, pi, x, y)) return 'Außerhalb des Netzes'; return null; }
   let ok = false;
   for (const b of g.bldgs) { if (b.dead || b.owner !== pi || !b.done) continue; const d = hyp(b.x - x, b.y - y); if (d < (b.role === 'base' ? BUILD_RANGE_BASE : BUILD_RANGE)) { ok = true; break; } }
+  if (!ok && outpostBuild(g, pi, x, y)) ok = true;   /* Fassung 22: Bauradius eigener Relaisstationen */
   if (!ok) return 'Zu weit von der Basis';
   return null;
 }
@@ -786,6 +789,7 @@ function stateHash(g) {
   if (g.mis) { for (const q of g.mis.goals) { h = hmix(h, q.st); h = hmix(h, q.v); } h = hmix(h, g.mis.res); }
   for (const b of g.bldgs) if (!b.dead) { h = hmix(h, b.id); h = hmix(h, b.hull); h = hmix(h, b.prog); h = hmix(h, b.q.length); }
   for (const n of g.nodes) h = hmix(h, n.amount);
+  h = terrHash(g, h);   /* Fassung 22 */
   return h >>> 0;
 }
 function stepGame(g) {
@@ -817,6 +821,7 @@ function stepGame(g) {
   if (g.tick % 30 === 7) for (const p of g.players) if (p.alive && p.faction === 'nexus') updateNet(g, p);
   if (g.tick % 300 === 150) for (const u of g.ships) if (!u.dead) { u.snapH = u.hull; u.snapS = u.shield; }
   updateSites(g, dt);
+  terrainStep(g, dt);   /* Fassung 22: wandernde Gefahren */
   updateFort(g);
   /* Vorkommen wachsen langsam nach (Eis kondensiert, Erz sammelt sich aus Staub): bis 60 % des Anfangswerts, 0,05 % je s */
   if (g.tick % 30 === 11) for (const n of g.nodes) if (n.max && n.amount < n.max * NODE_REGROW_CAP) n.amount = Math.min(n.max * NODE_REGROW_CAP, n.amount + n.max * NODE_REGROW * 30 * STEP);
@@ -1047,6 +1052,7 @@ function updateSites(g, dt) {
   const step = dt * 5;
   for (const st of g.sites) {
     if (st.done) continue;
+    if (OUTPOST[st.kind]) { outpostStep(g, st, step); continue; }   /* Fassung 22: neutrale Stationen */
     if (st.kind === 'ruin') {
       if (st.scanned) continue;
       const pr = presence(g, st.x, st.y, st.r + 110);
@@ -1178,7 +1184,7 @@ function inShadow(g, e) {
   for (const b of g.bldgs) if (!b.dead && hyp(b.x - e.x, b.y - e.y) < b.def.r + 110) return true;
   const m = g.map, cx = (e.x / NAV) | 0, cy = (e.y / NAV) | 0;
   if (cx >= 0 && cy >= 0 && cx < m.gw && cy < m.gh && (m.nav[0][cy * m.gw + cx] & 1)) return true;
-  for (const o of m.rocks) if (hyp(o.x - e.x, o.y - e.y) < o.r + 60) return true;
+  for (const o of m.rocks) if (!o.gone && hyp(o.x - e.x, o.y - e.y) < o.r + 60) return true;
   return false;
 }
 function updateEvents(g, step) {

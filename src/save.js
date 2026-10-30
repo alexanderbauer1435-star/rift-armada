@@ -29,7 +29,7 @@ function saveGame(g) {
     v: SAVE_V, opts: g.opts, rng: g.rng.st.a, tick: g.tick, time: g.time, nextId: g.nextId, over: g.over, winner: g.winner, winTeam: g.winTeam, visStamp: g.visStamp,
     players: g.players.map(p => { const o = enc(p); o.ex = rleEnc(p.explored, v => v); return o; }),
     ships: g.ships.filter(e => !e.dead).map(enc), bldgs: g.bldgs.filter(e => !e.dead).map(enc), nodes: g.nodes.map(n => [n.amount, n.miners]), proj: enc(g.proj), wrecks: enc(g.wrecks), reveals: enc(g.reveals), strikes: enc(g.strikes), log: g.log,
-    sites: enc(g.sites), gates: enc(g.gates), events: enc(g.events), flares: enc(g.flares), flareOn: !!g.flareOn, spores: enc(g.spores), wave: enc(g.wave), threat: g.threat, mis: enc(g.mis), fort: enc(g.fort)
+    sites: enc(g.sites), gates: enc(g.gates), events: enc(g.events), flares: enc(g.flares), flareOn: !!g.flareOn, spores: enc(g.spores), wave: enc(g.wave), threat: g.threat, mis: enc(g.mis), fort: enc(g.fort), terr: terrSave(g)   /* Fassung 22 */
   };
 }
 function loadGame(d) {
@@ -51,6 +51,7 @@ function loadGame(d) {
   for (const b of g.bldgs) navBlock(g.map, b.x, b.y, b.def.r, false);
   g.byId = new Map();
   for (const n of g.nodes) g.byId.set(n.id, n);
+  terrLoad(g, d.terr);   /* Fassung 22: Felsen (Hülle, gesprengt), Warnungen */
   g.ships = d.ships.map(dec); g.bldgs = d.bldgs.map(dec);
   for (const u of g.ships) { if (!u.def) return null; u.path = null; u.beams = null; g.byId.set(u.id, u); }
   for (const b of g.bldgs) { if (!b.def) return null; b.beams = null; g.byId.set(b.id, b); navBlock(g.map, b.x, b.y, b.def.r, true); }
