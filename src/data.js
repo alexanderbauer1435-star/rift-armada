@@ -674,7 +674,7 @@ for (const f in BLDG) {
   for (const sp of TSPEC_ORDER) d.sp[sp] = d.lv.map((l, i) => {
     if (i === 0) return l;
     const o = Object.assign({}, l), main = l.wpn.filter(w => w.kind !== 'pd');
-    if (sp === 'flak') o.wpn = main.map(w => Object.assign({}, w, { id: w.id + ':flak', dmg: +(w.dmg * 0.5).toFixed(2), reload: +(w.reload * 0.5).toFixed(3), range: Math.round(w.range * 0.95), antiS: 1.6, antiL: 0.6, spread: w.spread ? w.spread * 1.4 : w.spread, speed: w.speed ? w.speed * 1.15 : w.speed })).concat(i === 1 ? [W.pdH] : [W.pdH, W.pdH]);
+    if (sp === 'flak') o.wpn = main.map(w => Object.assign({}, w, { id: w.id + ':flak', dmg: +(w.dmg * 0.5).toFixed(2), reload: +(w.reload * 0.5).toFixed(3), range: Math.round(w.range * 0.95), antiS: 1.6, antiL: 0.6, spread: w.spread ? w.spread * 0.6 : w.spread, speed: w.speed ? w.speed * 1.15 : w.speed })).concat(i === 1 ? [W.pdH] : [W.pdH, W.pdH]);
     else if (sp === 'heavy') o.wpn = main.map(w => Object.assign({}, w, { id: w.id + ':heavy', dmg: +(w.dmg * 2.3).toFixed(2), reload: +(w.reload * 2).toFixed(3), range: Math.round(w.range * 1.15), antiL: 1.6, antiS: 0.5, speed: w.speed ? w.speed * 0.75 : w.speed, spread: w.spread ? w.spread * 0.5 : w.spread, w: w.w ? w.w * 1.5 : w.w }));
     else { let r = 0; for (const w of main) r = Math.max(r, w.range); o.wpn = []; o.jam = Math.round(r * (i === 1 ? 1.05 : 1.2)); o.jamSlow = i === 1 ? 0.7 : 0.62; o.jamRange = 0.8; }
     return o;

@@ -716,7 +716,8 @@ function updateStrikes(g, dt) {
 function wallIsUp(g, b, a) { return !b.dead && b.done && !b.off && !g.players[b.owner].lowPower && b.fdown <= 0 && b.fhp > 0 && a && !a.dead && a.done && !a.off && a.owner === b.owner; }
 function wallStep(g, b, lv, p, dt) {
   if (b.fdown > 0) { b.fdown -= dt; if (b.fdown <= 0) { b.fdown = 0; b.fhp = b.fhpMax * 0.3; g.wallDirty = 1; } return; }
-  if (b.fhp < b.fhpMax && !p.lowPower) b.fhp = Math.min(b.fhpMax, b.fhp + lv.freg * g.pace.regen * dt);
+  /* lädt wie ein Schild erst SHIELD_DELAY s nach dem letzten Treffer */
+  if (b.fhp < b.fhpMax && !p.lowPower && !(g.time - (b.fhitT || -99) < SHIELD_DELAY)) b.fhp = Math.min(b.fhpMax, b.fhp + lv.freg * g.pace.regen * dt);
 }
 function wallsTick(g) {
   let ch = g.wallDirty;

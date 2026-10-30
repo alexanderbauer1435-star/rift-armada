@@ -542,7 +542,7 @@ function fireWeapon(g, s, i, w, t) {
   /* Brood: Bisse nach dem Sprung doppelt */
   if (w.bite && s.k === 1 && s.abT.lunge > 0) { dm *= 2; s.abT.lunge = 0; }
   const pk = rail ? 'rail' : w.acid ? 'acid' : w.bite ? 'bite' : 'kin';
-  g.proj.push({ kind: pk, x: sx + dcos(a) * r0, y: sy + dsin(a) * r0, ang: a, sp: w.speed, dmg: dm, owner: s.owner, sid: s.id, tid: t.id, life: (w.range * 1.3 + 60) / w.speed, pierce, hit: null, r: rail ? 6 : w.acid ? 4 : 3, col: w.col, para: w.para ? 1 : 0 });
+  g.proj.push({ kind: pk, x: sx + dcos(a) * r0, y: sy + dsin(a) * r0, ang: a, sp: w.speed, dmg: dm, owner: s.owner, sid: s.id, tid: t.id, life: (w.range * 1.3 + 60) / w.speed, pierce, hit: null, r: rail ? 6 : w.acid ? 4 : 3, col: w.col, para: w.para ? 1 : 0, aS: w.antiS || 0, aL: w.antiL || 0 });   /* Fassung 22: Konter der Turmzweige */
   ev(g, 'shot', { x: sx, y: sy, kind: pk, owner: s.owner, snd: w.snd, ang: a, big: w.dmg >= 20 });
 }
 /* Punktverteidigung: nächster feindlicher Torpedo oder Jäger in Reichweite */
@@ -603,8 +603,8 @@ function updateProj(g, dt) {
       if (q.hit && q.hit.indexOf(e.id) >= 0) return false;
       const rr = (e.k === 2 ? e.def.r * 0.85 : e.def.r * 0.75) + q.r;
       if (segCircle(x0, y0, q.x, q.y, e.x, e.y, rr)) {
-        damage(g, e, q.dmg, q.kind, g.byId.get(q.sid), q.owner, x0, y0);
-        if (q.kind === 'acid' && !e.dead) acidOn(g, e, q.dmg, q.owner);
+        damage(g, e, q.dmg, q.kind, g.byId.get(q.sid), q.owner, x0, y0, q.aS || q.aL ? { antiS: q.aS, antiL: q.aL } : undefined);
+        if (q.kind === 'acid' && !e.dead) acidOn(g, e, q.dmg * (e.k === 1 && (q.aS || q.aL) ? (e.def.cls === 'l' ? q.aL || 1 : e.def.cls === 's' || e.def.cls === 'f' ? q.aS || 1 : 1) : 1), q.owner);
         if (q.para && !e.dead) paraOn(g, e, q.owner);
         ev(g, 'hit', { x: e.x + (x0 - e.x) * 0.5, y: e.y + (y0 - e.y) * 0.5, kind: q.kind, ang: q.ang, sh: e.shield > 0 });
         if (q.kind === 'rail') { (q.hit || (q.hit = [])).push(e.id); q.pierce--; q.dmg *= 0.75; if (q.pierce <= 0) hitAny = true; return hitAny; }
