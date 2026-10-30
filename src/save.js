@@ -29,7 +29,7 @@ function saveGame(g) {
     v: SAVE_V, opts: g.opts, rng: g.rng.st.a, tick: g.tick, time: g.time, nextId: g.nextId, over: g.over, winner: g.winner, winTeam: g.winTeam, visStamp: g.visStamp,
     players: g.players.map(p => { const o = enc(p); o.ex = rleEnc(p.explored, v => v); return o; }),
     ships: g.ships.filter(e => !e.dead).map(enc), bldgs: g.bldgs.filter(e => !e.dead).map(enc), nodes: g.nodes.map(n => [n.amount, n.miners]), proj: enc(g.proj), wrecks: enc(g.wrecks), reveals: enc(g.reveals), strikes: enc(g.strikes), log: g.log,
-    sites: enc(g.sites), gates: enc(g.gates), events: enc(g.events), flares: enc(g.flares), flareOn: !!g.flareOn, spores: enc(g.spores), wave: enc(g.wave), threat: g.threat, mis: enc(g.mis), fort: enc(g.fort)
+    sites: enc(g.sites), gates: enc(g.gates), events: enc(g.events), flares: enc(g.flares), flareOn: !!g.flareOn, spores: enc(g.spores), wave: enc(g.wave), threat: g.threat, mis: enc(g.mis), fort: enc(g.fort), found: enc(g.found || []) /* Fassung 22: Fundamente */
   };
 }
 function loadGame(d) {
@@ -66,6 +66,7 @@ function loadGame(d) {
   if (d.wave) { g.wave = dec(d.wave); g.threat = d.threat; }
   if (d.mis) g.mis = dec(d.mis);
   if (d.fort) g.fort = dec(d.fort);
+  g.found = dec(d.found || []); /* Fassung 22 */
   g.rng.st.a = d.rng >>> 0; g.tick = d.tick; g.time = d.time; g.nextId = d.nextId; g.over = d.over; g.winner = d.winner; g.winTeam = d.winTeam; g.visStamp = d.visStamp || 1;
   g.ev.length = 0;
   updateVision(g);

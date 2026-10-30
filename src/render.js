@@ -558,6 +558,104 @@ function drawBldgAt(ctx, b, alpha) {
   drawBldg(ctx, b.role, f, b.lv, col, R.time, b);
   ctx.restore();
 }
+/* ------------------------------------------------------------------ Fassung 22: Ruinen, Andocklichter, Verbindungen
+   Ruine (2D): die Station abgedunkelt, mit Rissen und Brandflecken, einmal je Fraktion/Rolle/Stufe gezeichnet und gemerkt. */
+const RUIN_CV = new Map();
+function ruinSprite(f, role, lv) {
+  const key = f + '|' + role + '|' + lv; let c = RUIN_CV.get(key); if (c) return c;
+  const def = BLDG[f] && BLDG[f][role]; if (!def) return null;
+  const S = 2, size = Math.ceil(def.r * 2.7 * S); c = document.createElement('canvas'); c.width = c.height = size;
+  const x = c.getContext('2d'); x.setTransform(S, 0, 0, S, size / 2, size / 2); x.lineJoin = 'round';
+  try { drawBldg(x, role, f, lv, '#8d8176', 0, null); } catch (e) { /* Form fehlt */ }
+  x.globalAlpha = 1; x.setTransform(1, 0, 0, 1, 0, 0);
+  x.globalCompositeOperation = 'source-atop'; x.fillStyle = 'rgba(40,30,22,0.42)'; x.fillRect(0, 0, size, size);
+  let sd = hashStr(key) >>> 0; const rnd = () => { sd = (sd * 1103515245 + 12345) >>> 0; return (sd >>> 8) / 16777216; };
+  /* Brandflecken */
+  for (let i = 0; i < 5; i++) { const a = rnd() * TAU, d = rnd() * def.r * S * 0.7, rr = (0.15 + rnd() * 0.25) * def.r * S, gx = size / 2 + Math.cos(a) * d, gy = size / 2 + Math.sin(a) * d, gr = x.createRadialGradient(gx, gy, 0, gx, gy, rr); gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); x.fillStyle = gr; x.fillRect(gx - rr, gy - rr, rr * 2, rr * 2); }
+  /* Bruchkanten: Keile herausschneiden, Risse */
+  x.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 2; i++) { const a = rnd() * TAU, w = 0.12 + rnd() * 0.18; x.beginPath(); x.moveTo(size / 2 + Math.cos(a) * def.r * S * 0.7, size / 2 + Math.sin(a) * def.r * S * 0.7); x.lineTo(size / 2 + Math.cos(a - w) * size, size / 2 + Math.sin(a - w) * size); x.lineTo(size / 2 + Math.cos(a + w * 0.6) * size, size / 2 + Math.sin(a + w * 0.6) * size); x.closePath(); x.fill(); }
+  x.lineWidth = 1.6 * S; x.strokeStyle = '#000';
+  for (let i = 0; i < 6; i++) { let px = size / 2 + (rnd() - 0.5) * def.r * S, py = size / 2 + (rnd() - 0.5) * def.r * S; x.beginPath(); x.moveTo(px, py); for (let k = 0; k < 3; k++) { px += (rnd() - 0.5) * def.r * S * 0.5; py += (rnd() - 0.5) * def.r * S * 0.5; x.lineTo(px, py); } x.stroke(); }
+  x.globalCompositeOperation = 'source-over';
+  /* Trümmerteile rundum und Glutnester */
+  for (let i = 0; i < 12; i++) { const a = rnd() * TAU, d = def.r * S * (0.95 + rnd() * 0.3), rr = def.r * S * (0.04 + rnd() * 0.06), cx = size / 2 + Math.cos(a) * d, cy = size / 2 + Math.sin(a) * d; x.fillStyle = rnd() < 0.5 ? '#5d554e' : '#3e3832'; x.beginPath(); for (let k = 0; k < 4; k++) { const b = a + k * 1.57 + rnd() * 0.6; x.lineTo(cx + Math.cos(b) * rr, cy + Math.sin(b) * rr); } x.closePath(); x.fill(); }
+  for (let i = 0; i < 4; i++) { const a = rnd() * TAU, d = rnd() * def.r * S * 0.6, rr = def.r * S * (0.08 + rnd() * 0.08), gx = size / 2 + Math.cos(a) * d, gy = size / 2 + Math.sin(a) * d, gr = x.createRadialGradient(gx, gy, 0, gx, gy, rr); gr.addColorStop(0, 'rgba(255,150,60,0.75)'); gr.addColorStop(1, 'rgba(255,90,30,0)'); x.fillStyle = gr; x.fillRect(gx - rr, gy - rr, rr * 2, rr * 2); }
+  RUIN_CV.set(key, c); return c;
+}
+function ruinFade(w, g) { return clamp((w.until - g.time) / 20, 0, 1) * clamp(0.35 + 0.65 * (w.sal0 ? w.sal / w.sal0 : 1), 0.35, 1); }
+function drawRuin2D(ctx, w, g) {
+  const c = ruinSprite(w.f, w.role, w.lv || 1); if (!c) return;
+  const k = ruinFade(w, g), sz = c.width / 2;
+  ctx.save(); ctx.translate(w.x, w.y); ctx.rotate(w.ang || 0); ctx.globalAlpha = 0.9 * k; ctx.drawImage(c, -sz / 2, -sz / 2, sz, sz); ctx.restore();
+  /* Glut in den Trümmern */
+  if (R.detail > 1 && k > 0.3 && Math.random() < 0.025) fxSpark(w.x + (Math.random() - 0.5) * w.r, w.y + (Math.random() - 0.5) * w.r, 1, 18, '#ff8a3a', 0.6);
+}
+/* Andockplätze einer Raffinerie: Lichter im Kreis, grün = belegt, bernstein = frei */
+function dockSpots(b) { const n = lvOf(b).docks || 0, out = []; for (let i = 0; i < n; i++) { const a = -Math.PI / 2 + (i + 0.5) / n * TAU; out.push({ x: b.x + Math.cos(a) * (b.def.r + 6), y: b.y + Math.sin(a) * (b.def.r + 6), on: i < b.docks }); } return out; }
+/* Verbindungen der eigenen Stationen (gewählte Station oder Bauvorschau): Netz bzw. Baureichweite als Baum von den
+   Kommandobasen aus, Raffinerie ↔ versorgte Vorkommen und anfliegende Frachter, Schildgenerator ↔ geschützte Stationen.
+   Liefert Linien { x0, y0, x1, y1, col, a, march }, Kreise { x, y, r, col, a } und Texte – in 2D und 3D gleich gezeichnet. */
+const CONN = { key: '', t: -9, tree: null };
+function connTree(g, vp) {
+  /* Prim vom Kern aus: jeder Knoten hängt am nächsten schon verbundenen, der ihn erreicht */
+  const P = g.players[vp], nexus = P.faction === 'nexus', nodes = [];
+  for (const b of g.bldgs) if (!b.dead && b.owner === vp && b.done) nodes.push(b);
+  if (nexus) for (const u of g.ships) if (!u.dead && u.owner === vp && u.def.node && !u.derelict) nodes.push(u);
+  const rng = e => e.k === 2 && e.role === 'base' ? BUILD_RANGE_BASE : BUILD_RANGE;
+  const reach = (a, b) => { const d = hyp(a.x - b.x, a.y - b.y); if (nexus) return d <= Math.max(netRange(g, P, a), netRange(g, P, b)); return d < Math.max(rng(a), rng(b)); };
+  const n = nodes.length, inT = new Uint8Array(n), best = new Float64Array(n).fill(Infinity), par = new Int32Array(n).fill(-1), edges = [];
+  for (let i = 0; i < n; i++) if (nodes[i].k === 2 && nodes[i].role === 'base') best[i] = 0;
+  for (let it = 0; it < n; it++) {
+    let k = -1; for (let i = 0; i < n; i++) if (!inT[i] && best[i] < Infinity && (k < 0 || best[i] < best[k])) k = i;
+    if (k < 0) break;
+    inT[k] = 1; if (par[k] >= 0) edges.push([nodes[par[k]], nodes[k]]);
+    for (let i = 0; i < n; i++) if (!inT[i] && reach(nodes[k], nodes[i])) { const d = hyp(nodes[k].x - nodes[i].x, nodes[k].y - nodes[i].y); if (d < best[i]) { best[i] = d; par[i] = k; } }
+  }
+  return { edges, nodes: nodes.filter((o, i) => inT[i]), loose: nodes.filter((o, i) => !inT[i] && o.k === 2), nexus };
+}
+function connGather(g, vp, U) {
+  const out = { lines: [], rings: [], texts: [] };
+  if (vp < 0 || !U || U.attract) return out;
+  const sb0 = U.selB ? g.byId.get(U.selB) : null, sb = sb0 && !sb0.dead && sb0.owner === vp ? sb0 : null, pl = U.place, P = g.players[vp];
+  if (!sb && !pl) return out;
+  const NET = P.faction === 'nexus' ? '#c9a0ff' : '#9ff0c0';
+  const L2 = (a, b, col, al, march, ra, rb) => { const d = hyp(b.x - a.x, b.y - a.y); if (d < 1) return; const ux = (b.x - a.x) / d, uy = (b.y - a.y) / d, r0 = ra || 0, r1 = rb || 0; if (d <= r0 + r1 + 4) return; out.lines.push({ x0: a.x + ux * r0, y0: a.y + uy * r0, x1: b.x - ux * r1, y1: b.y - uy * r1, col, a: al, march: !!march }); };
+  const rOf = e => e.k === 2 ? e.def.r + 4 : e.k === 3 ? e.r + 2 : e.def.r + 3;
+  /* Netz / Baureichweite (alle 0,5 s neu) */
+  const key = vp + ':' + g.bldgs.length + ':' + g.ships.length;
+  if (R.time - CONN.t > 0.5 || R.time < CONN.t || CONN.key !== key) { CONN.t = R.time; CONN.key = key; CONN.tree = connTree(g, vp); }
+  const T = CONN.tree;
+  for (const [a, b] of T.edges) L2(a, b, NET, sb && (a === sb || b === sb) ? 0.6 : 0.3, false, rOf(a), rOf(b));
+  for (const b of T.loose) out.rings.push({ x: b.x, y: b.y, r: b.def.r + 10, col: '#ff5b47', a: 0.55 });
+  /* Bauvorschau: woran hängt der neue Platz? */
+  if (pl) {
+    const pr = BLDG[P.faction][pl.role].r + 4;
+    const near = (x, y) => { let best = null, bd = 1e9; for (const e of T.nodes) { const d = hyp(e.x - x, e.y - y); if (d < bd) { bd = d; best = e; } } return best; };
+    const spots = pl.row && pl.pts ? pl.pts : [{ x: pl.x, y: pl.y, ok: pl.ok, why: pl.why }];
+    const far = q => q.why === 'Zu weit von der Basis' || q.why === 'Außerhalb des Netzes';
+    if (pl.role !== 'base') for (const q of spots) { const n = near(q.x, q.y); if (n) L2(n, q, far(q) ? '#ff5b47' : NET, far(q) ? 0.6 : 0.45, true, rOf(n), pr); }
+    const ql = spots[spots.length - 1];
+    if (ql && far(ql)) out.texts.push({ x: ql.x, y: ql.y, txt: L(ql.why), col: '#ff5b47', dy: -pr - 18 });
+  }
+  /* Raffinerie: versorgte Vorkommen und anfliegende Frachter */
+  const refs = [];
+  if (sb && sb.role === 'refinery' && sb.done) refs.push(sb);
+  if (pl && pl.role === 'refinery') for (const q of (pl.row && pl.pts ? pl.pts : [pl])) refs.push({ x: q.x, y: q.y, k: 2, def: BLDG[P.faction].refinery, ghost: 1 });
+  for (const rf of refs) {
+    for (const n of g.nodes) if (n.amount > 0 && hyp(n.x - rf.x, n.y - rf.y) - n.r < REF_SERVE && R.seen(n.x, n.y)) L2(rf, n, n.kind === 'ice' ? '#8fe3ff' : '#ffb86b', 0.4, false, rf.def.r + 4, n.r + 2);
+    if (!rf.ghost) for (const u of g.ships) if (!u.dead && u.owner === vp && u.def.cargo && u.o.t === 'return') { const tgt = u.dk ? g.byId.get(u.dk) : u.o.ref ? g.byId.get(u.o.ref) : nearestRefinery(g, vp, u.x, u.y); if (tgt === rf) L2(u, rf, '#ffd36b', 0.5, true, u.def.r + 2, rf.def.r + 8); }
+  }
+  /* Schildgenerator: Umkreis und geschützte Stationen; eine geschützte Station zeigt ihre Generatoren */
+  const gens = [];
+  if (sb && sb.role === 'shield' && sb.done) gens.push({ g: sb, aura: lvOf(sb).aura });
+  if (pl && pl.role === 'shield') for (const q of (pl.row && pl.pts ? pl.pts : [pl])) gens.push({ g: { x: q.x, y: q.y, k: 2, def: BLDG[P.faction].shield }, aura: BLDG[P.faction].shield.lv[0].aura, ghost: 1 });
+  for (const G of gens) { if (G.ghost) out.rings.push({ x: G.g.x, y: G.g.y, r: G.aura, col: '#8fe3ff', a: 0.3 }); for (const o of g.bldgs) if (!o.dead && o !== G.g && o.owner === vp && o.done && hyp(o.x - G.g.x, o.y - G.g.y) <= G.aura) L2(G.g, o, '#8fe3ff', 0.45, false, G.g.def.r + 4, o.def.r + 4); }
+  if (sb && sb.role !== 'shield' && sb.done) for (const o of g.bldgs) if (!o.dead && o.role === 'shield' && o.done && o.owner === vp && hyp(o.x - sb.x, o.y - sb.y) <= lvOf(o).aura) { L2(o, sb, '#8fe3ff', 0.45, false, o.def.r + 4, sb.def.r + 4); out.rings.push({ x: o.x, y: o.y, r: lvOf(o).aura, col: '#8fe3ff', a: 0.2 }); }
+  return out;
+}
+/* Fundamente (eigene, eben abgerissene Stationen): gestrichelter Kreis mit Restzeit */
+function foundList(g, vp) { return vp >= 0 && g.found ? g.found.filter(f => f.owner === vp && f.until > g.time) : []; }
 /* Lebens- und Schildbalken über einem Objekt (Weltkoordinaten) */
 function drawBars(ctx, e, w) {
   const z = R.cam.z, x = e.x - w / 2, y = e.y - (e.k === 2 ? e.def.r : e.def.r) - 10 / z, h = 3 / z;
@@ -624,7 +722,8 @@ function frame2D(alpha, dt) {
   for (const b of g.bldgs) if (!b.dead && b.role === 'spore' && b.done && inV(b.x, b.y, 400) && R.visible(b)) { const r = lvOf(b).aura; const gr = ctx.createRadialGradient(b.x, b.y, b.def.r, b.x, b.y, r); gr.addColorStop(0, 'rgba(180,255,60,0.16)'); gr.addColorStop(1, 'rgba(140,224,74,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(180,255,60,0.25)'; ctx.lineWidth = 1 / cam.z; ctx.setLineDash([4 / cam.z, 6 / cam.z]); ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
   for (const f of g.flares) if (inV(f.x, f.y, f.r + 60)) { const k = f.t / f.t0; ctx.globalCompositeOperation = 'lighter'; const gr = ctx.createRadialGradient(f.x, f.y, 0, f.x, f.y, f.r); gr.addColorStop(0, 'rgba(255,255,230,' + (0.6 * k) + ')'); gr.addColorStop(0.5, 'rgba(255,170,70,' + (0.45 * k) + ')'); gr.addColorStop(1, 'rgba(255,90,40,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.fill(); ctx.globalCompositeOperation = 'source-over'; if (R.detail > 1) { for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, d = Math.random() * f.r; fxSpark(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d, 1, 60, '#ffd27a', 0.4); } } }
   /* Wracks */
-  for (const w of g.wrecks) if (inV(w.x, w.y, 60) && R.seen(w.x, w.y)) { const left = w.until - g.time; ctx.save(); ctx.globalAlpha = clamp(left / 20, 0, 0.55); ctx.translate(w.x, w.y); ctx.rotate(w.ang + Math.sin(w.id) * 0.3); const s = sprScale(), c = shipSprite(w.type, SHIPS[w.type].f, 'wreck', s), ww = c.width / s; ctx.drawImage(c, -ww / 2, -ww / 2, ww, ww); ctx.restore(); }
+  for (const w of g.wrecks) if (w.ruin) { if (inV(w.x, w.y, w.r + 40) && R.seen(w.x, w.y)) drawRuin2D(ctx, w, g); } /* Fassung 22: Ruinen */
+  else if (inV(w.x, w.y, 60) && R.seen(w.x, w.y)) { const left = w.until - g.time; ctx.save(); ctx.globalAlpha = clamp(left / 20, 0, 0.55); ctx.translate(w.x, w.y); ctx.rotate(w.ang + Math.sin(w.id) * 0.3); const s = sprScale(), c = shipSprite(w.type, SHIPS[w.type].f, 'wreck', s), ww = c.width / s; ctx.drawImage(c, -ww / 2, -ww / 2, ww, ww); ctx.restore(); }
   /* Stationen */
   for (const b of g.bldgs) {
     if (b.dead || !inV(b.x, b.y, b.def.r + 40)) continue;
@@ -648,6 +747,8 @@ function frame2D(alpha, dt) {
     if (b.hull < b.hullMax * 0.5 && vis && R.detail > 1 && Math.random() < 0.15) { fxSmoke(b.x + (Math.random() - 0.5) * b.def.r, b.y + (Math.random() - 0.5) * b.def.r, 1, 14, 1.4); if (Math.random() < 0.3) fxSpark(b.x, b.y, 2, 50, '#ffd27a', 0.3); }
     if (b.role === 'super' && vis) { ctx.strokeStyle = b.charge >= 1 ? 'rgba(255,184,107,' + (0.6 + 0.3 * Math.sin(R.time * 5)) + ')' : 'rgba(255,184,107,0.55)'; ctx.lineWidth = 3 / cam.z; ctx.beginPath(); ctx.arc(b.x, b.y, b.def.r + 4, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, b.charge)); ctx.stroke(); if (b.charge >= 1 && b.owner === vp) glowAt(ctx, b.x, b.y, b.def.r * 1.6, '#ffb070', 0.18 + 0.1 * Math.sin(R.time * 4)); }
     if (b.upg && vis) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2 / cam.z; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.arc(b.x, b.y, b.def.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * b.upg.prog); ctx.stroke(); ctx.setLineDash([]); }
+    /* Fassung 22: Andocklichter der Raffinerie */
+    if (b.role === 'refinery' && vis && cam.z > 0.35) for (const d of dockSpots(b)) { if (d.on) glowAt(ctx, d.x, d.y, 9, '#7dff9a', 0.5 + 0.2 * Math.sin(R.time * 4 + d.x)); ctx.fillStyle = d.on ? '#c8ffd6' : 'rgba(255,194,62,0.55)'; ctx.beginPath(); ctx.arc(d.x, d.y, d.on ? 3.2 : 2.6, 0, TAU); ctx.fill(); }
   }
   /* Bauschiff am Werk: Baustrahl */
   for (const u of g.ships) if (!u.dead && u.o.t === 'build' && R.visible(u)) { const b = g.byId.get(u.o.bid); if (b && !b.done && hyp(u.x - b.x, u.y - b.y) < b.def.r + u.def.r + 70) { ctx.strokeStyle = 'rgba(180,255,220,0.55)'; ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([3, 4]); ctx.lineDashOffset = -R.time * 40; ctx.beginPath(); ctx.moveTo(u.x, u.y); ctx.lineTo(b.x + Math.cos(R.time * 1.3) * b.def.r * 0.4, b.y + Math.sin(R.time * 1.3) * b.def.r * 0.4); ctx.stroke(); ctx.setLineDash([]); } }
@@ -781,12 +882,29 @@ function drawOverlay2D(ctx, g, inV, lowZ, vp, dt) {
     }
     /* Reichweiten der Auswahl */
     if (U.showRange) for (const id of U.sel) { const u = g.byId.get(id); if (!u || u.dead) continue; const r = maxRange(u.def); if (r) { ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(u.x, u.y, r, 0, TAU); ctx.stroke(); for (const w of u.def.wpn) if (w.kind !== 'pd' && w.arc < Math.PI) { ctx.strokeStyle = 'rgba(255,200,120,0.3)'; ctx.beginPath(); ctx.moveTo(u.x, u.y); ctx.arc(u.x, u.y, w.range, u.ang + w.mount - w.arc, u.ang + w.mount + w.arc); ctx.closePath(); ctx.stroke(); } } }
+    /* Fassung 22: Verbindungen der gewählten Station / der Bauvorschau (gestrichelt, nur eigene) und Fundamente */
+    { const C = connGather(g, vp, U);
+      ctx.lineWidth = 1.2 / cam.z;
+      for (const l of C.lines) { if (!inV((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2, hyp(l.x1 - l.x0, l.y1 - l.y0) / 2 + 40)) continue; ctx.strokeStyle = l.col; ctx.globalAlpha = l.a; ctx.setLineDash([6 / cam.z, 6 / cam.z]); ctx.lineDashOffset = l.march ? -R.time * 30 / cam.z : 0; ctx.beginPath(); ctx.moveTo(l.x0, l.y0); ctx.lineTo(l.x1, l.y1); ctx.stroke(); }
+      for (const r of C.rings) { if (!inV(r.x, r.y, r.r)) continue; ctx.strokeStyle = r.col; ctx.globalAlpha = r.a; ctx.setLineDash([5 / cam.z, 7 / cam.z]); ctx.beginPath(); ctx.arc(r.x, r.y, r.r, 0, TAU); ctx.stroke(); }
+      ctx.setLineDash([]); ctx.lineDashOffset = 0; ctx.globalAlpha = 1;
+      for (const t of C.texts) { ctx.fillStyle = t.col; ctx.font = '600 ' + (13 / cam.z) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(t.txt, t.x, t.y + t.dy); }
+      for (const f of foundList(g, vp)) if (inV(f.x, f.y, f.r + 20)) { const hot = U.place && U.place.role === f.role; ctx.strokeStyle = hot ? 'rgba(125,255,154,0.8)' : 'rgba(180,255,220,0.4)'; ctx.lineWidth = (hot ? 2 : 1.2) / cam.z; ctx.setLineDash([4 / cam.z, 4 / cam.z]); ctx.beginPath(); ctx.arc(f.x, f.y, f.r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); if (!lowZ) { ctx.fillStyle = ctx.strokeStyle; ctx.font = (11 / cam.z) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(L('Fundament') + ' ' + Math.ceil(f.until - g.time) + ' s', f.x, f.y + f.r + 13 / cam.z); } }
+    }
     /* Bauplatz-Vorschau */
     if (U.place) {
       const pl = U.place, def = BLDG[g.players[vp].faction][pl.role];
       for (const b of g.bldgs) if (!b.dead && b.owner === vp && b.done && inV(b.x, b.y, 800)) { ctx.strokeStyle = 'rgba(140,255,170,0.12)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(b.x, b.y, b.role === 'base' ? BUILD_RANGE_BASE : BUILD_RANGE, 0, TAU); ctx.stroke(); }
+      /* Fassung 22: Reihe – je Platz eine Vorschau (rot = wird übersprungen), Summe am Ende */
+      if (pl.row && pl.pts) {
+        ctx.strokeStyle = 'rgba(140,255,170,0.35)'; ctx.lineWidth = 1 / cam.z; ctx.setLineDash([8 / cam.z, 6 / cam.z]); ctx.beginPath(); ctx.moveTo(pl.ax, pl.ay); ctx.lineTo(pl.x, pl.y); ctx.stroke(); ctx.setLineDash([]);
+        for (const q of pl.pts) { ctx.save(); ctx.translate(q.x, q.y); ctx.globalAlpha = q.ok ? 0.5 : 0.18; drawBldg(ctx, pl.role, g.players[vp].faction, 1, pcol(vp), R.time, null); ctx.restore(); ctx.strokeStyle = q.ok ? 'rgba(140,255,170,0.9)' : 'rgba(255,91,71,0.8)'; ctx.lineWidth = 2 / cam.z; ctx.beginPath(); ctx.arc(q.x, q.y, def.r + 4, 0, TAU); ctx.stroke(); }
+        const q = pl.pts[pl.pts.length - 1]; ctx.fillStyle = pl.ok ? '#9ff0c0' : '#ff8a7a'; ctx.font = '600 ' + (13 / cam.z) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(pl.n + ' × · ' + costTxt(pl.cost), q.x, q.y + def.r + 20 / cam.z);
+      } else {
       ctx.save(); ctx.translate(pl.x, pl.y); ctx.globalAlpha = 0.55; drawBldg(ctx, pl.role, g.players[vp].faction, 1, pcol(vp), R.time, null); ctx.restore();
       ctx.strokeStyle = pl.ok ? 'rgba(140,255,170,0.9)' : 'rgba(255,91,71,0.9)'; ctx.lineWidth = 2 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, def.r + 4, 0, TAU); ctx.stroke();
+      if (pl.fast && !lowZ) { ctx.fillStyle = '#7dff9a'; ctx.font = '600 ' + (12 / cam.z) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(L('Fundament: baut 50 % schneller'), pl.x, pl.y + def.r + 18 / cam.z); }
+      }
       if (pl.role === 'shield') { ctx.strokeStyle = 'rgba(143,227,255,0.3)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, def.lv[0].aura, 0, TAU); ctx.stroke(); }
       if (def.lv[0].wpn.length) { ctx.strokeStyle = 'rgba(255,200,120,0.3)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, Math.max(...def.lv[0].wpn.map(w => w.range)), 0, TAU); ctx.stroke(); }
     }
@@ -859,6 +977,7 @@ function drawOverlay3D(g, inV, lowZ, vp) {
   for (const b of g.bldgs) if (!b.dead && b.done && inV(b.x, b.y, 400) && R.visible(b)) {
     if (b.role === 'spore') { disc(b.x, b.y, lvOf(b).aura, '#b4ff3c', 0.1); ring(b.x, b.y, lvOf(b).aura, '#b4ff3c', 1, { dash: 1, alpha: 0.3 }); }
     if (b.give > 0) ring(b.x, b.y, b.def.r * 1.15, '#8fe3ff', 2, { alpha: 0.2 });
+    if (b.role === 'refinery' && R.cam.z > 0.35) for (const d of dockSpots(b)) { if (d.on) disc(d.x, d.y, 7, '#7dff9a', 0.25 + 0.1 * Math.sin(R.time * 4 + d.x)); disc(d.x, d.y, d.on ? 2.8 : 2.2, d.on ? '#c8ffd6' : '#ffc23e', d.on ? 0.95 : 0.55); } /* Fassung 22: Andocklichter */
     if (b.role === 'super') ring(b.x, b.y, b.def.r + 4, '#ffb86b', 3, { a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * Math.min(1, b.charge), alpha: b.charge >= 1 ? 0.6 + 0.3 * Math.sin(R.time * 5) : 0.55 });
     if (b.off && !lowZ && (R.frameN % 60) < 40) hud.push({ k: 'text', x: b.x, y: b.y, txt: L('Kein Netz'), col: '#ff5b47', dy: b.def.r * 0.6 + 14 });
   }
@@ -905,11 +1024,25 @@ function drawOverlay3D(g, inV, lowZ, vp) {
     for (const u of g.ships) if (!u.dead && u.owner === vp && u.def.node && !u.derelict && inV(u.x, u.y, 500)) { const rr = netRange(g, P, u); disc(u.x, u.y, rr, '#c9a0ff', 0.05); ring(u.x, u.y, rr, '#c9a0ff', 1, { alpha: 0.22 }); }
   }
   if (U.showRange) for (const id of U.sel) { const u = g.byId.get(id); if (!u || u.dead) continue; const r = maxRange(u.def); if (r) { ring(u.x, u.y, r, '#ffffff', 1, { alpha: 0.22 }); for (const w of u.def.wpn) if (w.kind !== 'pd' && w.arc < Math.PI) ring(u.x, u.y, w.range, '#ffc878', 1, { alpha: 0.3, a0: u.ang + w.mount - w.arc, a1: u.ang + w.mount + w.arc }); } }
+  /* Fassung 22: Verbindungen, Fundamente */
+  { const C = connGather(g, vp, U);
+    for (const l of C.lines) if (inV((l.x0 + l.x1) / 2, (l.y0 + l.y1) / 2, hyp(l.x1 - l.x0, l.y1 - l.y0) / 2 + 40)) line(l.x0, l.y0, l.x1, l.y1, l.col, 1.2, { dash: 6, march: l.march, alpha: l.a });
+    for (const r of C.rings) if (inV(r.x, r.y, r.r)) ring(r.x, r.y, r.r, r.col, 1, { dash: 5, alpha: r.a });
+    for (const t of C.texts) hud.push({ k: 'text', x: t.x, y: t.y, txt: t.txt, col: t.col, bold: true, size: 13, dy: t.dy * 0.6 });
+    for (const f of foundList(g, vp)) if (inV(f.x, f.y, f.r + 20)) { const hot = U.place && U.place.role === f.role; ring(f.x, f.y, f.r, hot ? '#7dff9a' : '#b4ffdc', hot ? 2 : 1.2, { dash: 4, alpha: hot ? 0.8 : 0.4 }); if (!lowZ) hud.push({ k: 'text', x: f.x, y: f.y, txt: L('Fundament') + ' ' + Math.ceil(f.until - g.time) + ' s', col: hot ? '#7dff9a' : '#b4ffdc', size: 11, dy: f.r * 0.6 + 12 }); }
+  }
   if (U.place) {
     const pl = U.place, f = g.players[vp].faction, def = BLDG[f][pl.role];
     for (const b of g.bldgs) if (!b.dead && b.owner === vp && b.done && inV(b.x, b.y, 800)) ring(b.x, b.y, b.role === 'base' ? BUILD_RANGE_BASE : BUILD_RANGE, GREEN, 1, { alpha: 0.12 });
-    RA3D.ghost(f, pl.role, 1, pl.x, pl.y, !!pl.ok);
-    ring(pl.x, pl.y, def.r + 4, pl.ok ? GREEN : '#ff5b47', 2, { alpha: 0.9 });
+    if (pl.row && pl.pts) {
+      line(pl.ax, pl.ay, pl.x, pl.y, GREEN, 1, { dash: 8, alpha: 0.35 });
+      pl.pts.forEach((q, i) => { RA3D.ghost(f, pl.role, 1, q.x, q.y, !!q.ok, i); ring(q.x, q.y, def.r + 4, q.ok ? GREEN : '#ff5b47', 2, { alpha: q.ok ? 0.9 : 0.7 }); });
+      const q = pl.pts[pl.pts.length - 1]; hud.push({ k: 'text', x: q.x, y: q.y, txt: pl.n + ' × · ' + costTxt(pl.cost), col: pl.ok ? '#9ff0c0' : '#ff8a7a', bold: true, size: 13, dy: def.r * 0.6 + 18 });
+    } else {
+      RA3D.ghost(f, pl.role, 1, pl.x, pl.y, !!pl.ok);
+      ring(pl.x, pl.y, def.r + 4, pl.ok ? GREEN : '#ff5b47', 2, { alpha: 0.9 });
+      if (pl.fast && !lowZ) hud.push({ k: 'text', x: pl.x, y: pl.y, txt: L('Fundament: baut 50 % schneller'), col: '#7dff9a', bold: true, size: 12, dy: def.r * 0.6 + 16 });
+    }
     if (pl.role === 'shield') ring(pl.x, pl.y, def.lv[0].aura, '#8fe3ff', 1, { alpha: 0.3 });
     if (def.lv[0].wpn.length) ring(pl.x, pl.y, Math.max(...def.lv[0].wpn.map(w => w.range)), '#ffc878', 1, { alpha: 0.3 });
   }

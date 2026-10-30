@@ -160,6 +160,12 @@ function cautious(g, u) {
   ev(g, 'retreat', { x: u.x, y: u.y, owner: u.owner, id: u.id });
 }
 /* Bergung: Frachter zerlegen Wracks zerstörter Schiffe; Ertrag Erz (die Brood: Biomasse) */
+/* Fassung 22: nächste Raffinerie mit freiem Andockplatz (außer ex) im Umkreis maxD */
+function freeRefinery(g, pi, x, y, ex, maxD) {
+  let best = null, bd = maxD;
+  for (const b of g.bldgs) { if (b === ex || b.dead || !b.done || b.role !== 'refinery' || g.tm[b.owner] !== g.tm[pi] || b.docks >= lvOf(b).docks) continue; const d = hyp(b.x - x, b.y - y); if (d < bd) { bd = d; best = b; } }
+  return best;
+}
 function wreckById(g, id) { for (const w of g.wrecks) if (w.id === id) return w; return null; }
 function nearWreck(g, x, y, r) { let best = null, bd = r; for (const w of g.wrecks) { if (!(w.sal > 0)) continue; const d = hyp(w.x - x, w.y - y); if (d < bd) { bd = d; best = w; } } return best; }
 function updateShip(g, u, dt) {
@@ -285,7 +291,9 @@ function updateShip(g, u, dt) {
     }
     case 'return': {
       if (def.net) { if (netCovered(g, u.owner, u.x, u.y, true)) { netDeliver(g, u); let n = g.byId.get(o.nid); if (!n || n.amount <= 0) n = pickNode(g, u.owner, u.x, u.y, 1400) || nearestNode(g, u.x, u.y, null, 1800); u.o = n ? { t: 'harvest', nid: n.id, auto: o.auto } : { t: 'idle' }; u.path = null; break; } const nb = nearestNetNode(g, u.owner, u.x, u.y); if (!nb) { brake(u, dt); break; } goTo(g, u, nb.x, nb.y, dt, 40, 0, nb.id); break; }
-      const ref = nearestRefinery(g, u.owner, u.x, u.y);
+      /* Fassung 22: wer vor einer vollen Raffinerie wartet, weicht zu einer freien in der Nähe aus (o.ref) */
+      let ref = o.ref ? g.byId.get(o.ref) : null;
+      if (!ref || ref.dead || !ref.done) { ref = nearestRefinery(g, u.owner, u.x, u.y); o.ref = 0; }
       if (!ref) { brake(u, dt); if (g.tick % 60 === 0 && u.cargo <= 0) setIdle(u); break; }
       const d = hyp(ref.x - u.x, ref.y - u.y) - ref.def.r - def.r;
       /* Anflug an den Rand, je Frachter ein anderer Winkel; einmal angedockt zählt die Entladezeit weiter, auch wenn
@@ -293,7 +301,7 @@ function updateShip(g, u, dt) {
       if (!u.dk && d > 22) { const a = datan2(u.y - ref.y, u.x - ref.x) + ((u.id % 5) - 2) * 0.3, rr = ref.def.r + def.r + 8; goTo(g, u, ref.x + dcos(a) * rr, ref.y + dsin(a) * rr, dt, 12, 0, ref.id); u.wait = 0; break; }
       brake(u, dt);
       /* Andockplätze: so viele Frachter zugleich wie die Stufe erlaubt */
-      if (!u.dk) { if (ref.docks < lvOf(ref).docks) { ref.docks++; u.dk = ref.id; u.wait = 0; } else break; }
+      if (!u.dk) { if (ref.docks < lvOf(ref).docks) { ref.docks++; u.dk = ref.id; u.wait = 0; } else { u.wait += dt; if (u.wait > 2) { const alt = freeRefinery(g, u.owner, u.x, u.y, ref, 1100); if (alt) o.ref = alt.id; u.wait = 0; } break; } }
       if (d > 60) { ref.docks = Math.max(0, ref.docks - 1); u.dk = 0; u.wait = 0; break; }
       u.wait += dt;
       if (u.wait >= 1.4) {

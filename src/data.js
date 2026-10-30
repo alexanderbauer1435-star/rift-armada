@@ -35,6 +35,13 @@ const PD_TORP = 0.4;
 const SALVAGE = 0.25;
 const RELIC_GATE = 3;                        // Relikte, um ein Tor zu aktivieren
 const NET_R = 440;                           // Reichweite des Nexus-Netzes von Knoten zu Knoten
+/* Fassung 22: Abriss, Fundament, Ruinen, Bauketten */
+const DEMOLISH = 0.5;                        // Abriss: Anteil von allem, was die Station gekostet hat (alle Stufen)
+const FOUND_T = 60, FOUND_RATE = 1.5;        // Fundament: gleiche Rolle am gleichen Platz binnen 60 s baut 50 % schneller
+const FOUND_SNAP = 40;                       // so nah am Fundament gilt als »gleicher Platz«
+const RUIN_VAL = 0.3, RUIN_T = 480;          // Ruine: 30 % der Baukosten bergbar, verfällt nach 8 Minuten
+const REF_SERVE = 520;                       // Raffinerie: Vorkommen in diesem Umkreis gelten als versorgt (Anzeige)
+const BQ_MAX = 12;                           // Bauschiff: höchstens so viele Stationen in einer Reihe
 
 const FACTIONS = {
   alliance: { id: 'alliance', name: 'The Alliance', team: '#5fb8ff', glow: '#8fe3ff', wpn: '#7ff6ff', hull: '#e8eef4', trim: '#4f8fc8',
@@ -440,9 +447,9 @@ const BLDG = {
       { hull: 2600, shield: 450, sreg: 24, energy: -20, cost: { ice: 650, ore: 400 }, time: 34, rate: 1.4 }),
       desc: 'Baut Schiffe. Stufe 2 für Kreuzer, Stufe 3 für Träger und Schlachtschiffe. Repariert angedockte Schiffe.' },
     refinery: { role: 'refinery', name: 'Raffinerie', r: 40, tab: 'eco', lv: lv3(
-      { hull: 1200, shield: 200, sreg: 14, energy: -5, cost: { ice: 350, ore: 120 }, time: 24, docks: 1, bonus: 1 },
-      { hull: 1600, shield: 280, sreg: 18, energy: -7, cost: { ice: 300, ore: 150 }, time: 22, docks: 2, bonus: 1.1 },
-      { hull: 2000, shield: 360, sreg: 22, energy: -9, cost: { ice: 450, ore: 250 }, time: 26, docks: 3, bonus: 1.2 }),
+      { hull: 1200, shield: 200, sreg: 14, energy: -5, cost: { ice: 350, ore: 120 }, time: 24, docks: 2, bonus: 1 },
+      { hull: 1600, shield: 280, sreg: 18, energy: -7, cost: { ice: 300, ore: 150 }, time: 22, docks: 3, bonus: 1.1 },
+      { hull: 2000, shield: 360, sreg: 22, energy: -9, cost: { ice: 450, ore: 250 }, time: 26, docks: 4, bonus: 1.2 }), /* Fassung 22: Andockplätze 2/3/4 */
       desc: 'Nimmt Eis und Erz an. Mehr Andockplätze je Stufe, Stufe 3 verarbeitet mit Aufschlag.' },
     reactor: { role: 'reactor', name: 'Reaktor', r: 30, tab: 'eco', lv: lv3(
       { hull: 900, shield: 150, sreg: 12, energy: 26, cost: { ice: 250, ore: 150 }, time: 20 },
@@ -487,9 +494,9 @@ const BLDG = {
       { hull: 3300, shield: 0, armor: 3, energy: -20, cost: { ice: 650, ore: 400 }, time: 34, rate: 1.4 }),
       desc: 'Baut Schiffe. Stufe 2 für Kreuzer, Stufe 3 für Schlachtschiffe. Repariert angedockte Schiffe.' },
     refinery: { role: 'refinery', name: 'Raffinerie', r: 40, tab: 'eco', lv: lv3(
-      { hull: 1600, shield: 0, armor: 2, energy: -5, cost: { ice: 350, ore: 120 }, time: 24, docks: 1, bonus: 1 },
-      { hull: 2100, shield: 0, armor: 2, energy: -7, cost: { ice: 300, ore: 150 }, time: 22, docks: 2, bonus: 1.1 },
-      { hull: 2600, shield: 0, armor: 3, energy: -9, cost: { ice: 450, ore: 250 }, time: 26, docks: 3, bonus: 1.2 }),
+      { hull: 1600, shield: 0, armor: 2, energy: -5, cost: { ice: 350, ore: 120 }, time: 24, docks: 2, bonus: 1 },
+      { hull: 2100, shield: 0, armor: 2, energy: -7, cost: { ice: 300, ore: 150 }, time: 22, docks: 3, bonus: 1.1 },
+      { hull: 2600, shield: 0, armor: 3, energy: -9, cost: { ice: 450, ore: 250 }, time: 26, docks: 4, bonus: 1.2 }), /* Fassung 22: Andockplätze 2/3/4 */
       desc: 'Nimmt Eis und Erz an. Mehr Andockplätze je Stufe, Stufe 3 verarbeitet mit Aufschlag.' },
     reactor: { role: 'reactor', name: 'Reaktor', r: 30, tab: 'eco', lv: lv3(
       { hull: 1200, shield: 0, armor: 2, energy: 26, cost: { ice: 250, ore: 150 }, time: 20 },
@@ -543,7 +550,7 @@ BLDG.legion = cloneBldgs(BLDG.alliance, {
 BLDG.nexus = cloneBldgs(BLDG.alliance, {
   base: { name: 'Kernknoten', desc: 'Herz des Netzes. Alle Stationen müssen über Knoten mit ihm verbunden sein. Ab Stufe 2 mit gebrochenem Kristallstrahl bewaffnet.', lv: [{ shield: 560, sreg: 34 }, { shield: 760, sreg: 40, wpn: ['prismBeam', 'prismBeam'] }, { shield: 1000, sreg: 48, wpn: ['prismBeam', 'prismBeam', 'prismBeam', 'facetBeam', 'crystalPd', 'crystalPd'] }] },
   yard: { name: 'Wachskammer', desc: 'Züchtet Kristallschiffe. Stufe 2 für Prism, Stufe 3 für Monolith und Prime Facet.' },
-  refinery: { name: 'Verdichter', desc: 'Harvester liefern ins Netz, nicht hierher. Der Verdichter veredelt: +10 % je Stufe auf alles, was ankommt.', lv: [{ docks: 1, bonus: 1.05 }, { docks: 2, bonus: 1.1 }, { docks: 3, bonus: 1.2 }] },
+  refinery: { name: 'Verdichter', desc: 'Harvester liefern ins Netz, nicht hierher. Der Verdichter veredelt: +10 % je Stufe auf alles, was ankommt.', lv: [{ docks: 2, bonus: 1.05 }, { docks: 3, bonus: 1.1 }, { docks: 4, bonus: 1.2 }] },
   reactor: { name: 'Resonator' },
   lab: { name: 'Facettenkammer' },
   turret: { name: 'Kristallwacht', desc: 'Geschützturm mit Kristallstrahlen, die sich auf mehrere Ziele brechen.', lv: [{ wpn: ['spireBeam'] }, { wpn: ['spireBeam', 'spireBeam'] }, { wpn: ['prismBeam', 'spireBeam', 'crystalPd'] }] },

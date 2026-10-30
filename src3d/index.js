@@ -69,7 +69,7 @@ const RA3D = {
   project(x, y) { return project(x, y); },
   unproject(sx, sy) { return unproject(sx, sy); },
   ring, line, disc,
-  ghost(f, role, lv, x, y, ok) { ghost(f, role, lv, x, y, ok, S.view && S.vp >= 0 ? S.view.pcol(S.vp) : undefined); },
+  ghost(f, role, lv, x, y, ok, slot) { ghost(f, role, lv, x, y, ok, S.view && S.vp >= 0 ? S.view.pcol(S.vp) : undefined, slot); }, /* Fassung 22: slot für Reihen */
   shake,
   event(e, g) {
     if (!S.ok) return;
