@@ -94,8 +94,12 @@ const plen = (map, cls, a, b) => { const p = X.findPath(map, cls, a.x, a.y, b.x,
   ok(c.dead || c.hull + c.shield < hs, 'im Kern Schaden');
   /* Warnung, wenn eine Gefahr der Basis nahe kommt */
   const g3 = X.createGame(two('expanse', { hazards: true }));
-  let warn = 0; for (let i = 0; i < 30 * 600 && !warn; i++) { X.stepGame(g3); for (const e of g3.ev) if (e.t === 'hazNear') warn++; g3.ev.length = 0; }
-  ok(warn > 0, 'Meldung, wenn eine Gefahr der Basis nahe kommt');
+  let warn = 0; for (let i = 0; i < 30 * 20; i++) { X.stepGame(g3); for (const e of g3.ev) if (e.t === 'hazNear') warn++; g3.ev.length = 0; }
+  const quiet = warn === 0, h3 = g3.hazards[0];
+  /* eine Raffinerie in die Bahn stellen: die nächste Prüfung meldet die Gefahr, danach eine Minute Ruhe */
+  X.addBldg(g3, 'refinery', 0, h3.x + 500, h3.y, true);
+  const got = []; for (let i = 0; i < 30 * 50; i++) { X.stepGame(g3); for (const e of g3.ev) if (e.t === 'hazNear') got.push(e); g3.ev.length = 0; }
+  ok(quiet && got.length >= 1 && got.every(e => e.owner === 0) && got.filter(e => e.kind === h3.kind).length === 1, 'Meldung, wenn eine Gefahr Basis, Werft oder Raffinerie nahe kommt (einmal je Minute, nicht beim Start)');
 }
 
 /* ---------- 3. Neutrale Stationen ---------- */
