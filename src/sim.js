@@ -441,6 +441,8 @@ function shipsOf(g, pi, uids) { const out = []; for (const id of uids) { const u
 function setIdle(u) { u.o = { t: 'idle' }; u.hx = u.x; u.hy = u.y; u.path = null; u.tgt = 0; }
 /* Formationsplätze um ein Ziel: kompakter Block quer zur Flugrichtung. Keil: jede Reihe leicht zum V gebogen, die
    größten Schiffe vorn in der Mitte. Linie: eine breite Reihe (ab neun Schiffen zwei). Abstand knapp über Rumpfbreite. */
+/* Platz in einer Reihe von der Mitte nach außen: ungerade Reihen 0, +1, −1, +2 …; gerade −0,5, +0,5, −1,5, +1,5 … */
+function slotK(col, inRow) { return inRow % 2 ? (col % 2 ? 1 : -1) * Math.ceil(col / 2) : (col % 2 ? 1 : -1) * (Math.floor(col / 2) + 0.5); }
 function formSlots(us, gx, gy, form) {
   const n = us.length;
   if (n === 1) return [{ x: gx, y: gy }];
@@ -455,7 +457,8 @@ function formSlots(us, gx, gy, form) {
   for (let i = 0; i < n; i++) {
     const row = (i / cols) | 0, col = i % cols, inRow = row === rows - 1 ? n - row * cols : cols;
     /* innerhalb einer Reihe von der Mitte nach außen füllen, damit eine halbe Reihe mittig sitzt */
-    const k = ((col % 2 ? 1 : -1) * Math.ceil(col / 2) + (inRow % 2 === 0 ? (col % 2 ? -0.5 : 0.5) : 0)) * sp;
+    /* Fassung 22: gerade Reihen ±0,5, ±1,5 … (vorher lagen die ersten beiden Plätze aufeinander) */
+    const k = slotK(col, inRow) * sp;
     const back = row * sp * 0.95 + (form === 'line' ? 0 : Math.abs(k) * 0.35);
     out[us.indexOf(sorted[i])] = { x: gx + px * k - fx * back, y: gy + py * k - fy * back };
   }
@@ -481,7 +484,7 @@ function roleSlots(us, gx, gy, fx, fy, px, py, sp) {
   let half = sp;
   rows.forEach((row, r) => {
     const fwd = off - r * rs;
-    row.forEach((u, c) => { const k = ((c % 2 ? 1 : -1) * Math.ceil(c / 2) + (row.length % 2 === 0 ? (c % 2 ? -0.5 : 0.5) : 0)) * sp; half = Math.max(half, Math.abs(k)); out[us.indexOf(u)] = { x: gx + px * k + fx * fwd, y: gy + py * k + fy * fwd }; });
+    row.forEach((u, c) => { const k = slotK(c, row.length) * sp; half = Math.max(half, Math.abs(k)); out[us.indexOf(u)] = { x: gx + px * k + fx * fwd, y: gy + py * k + fy * fwd }; });
   });
   /* Flanken: abwechselnd links und rechts neben den vorderen Reihen, weitere Paare dahinter */
   G.flank.forEach((u, i) => { const side = i % 2 ? 1 : -1, k = side * (half + sp * 1.2), fwd = off - ((i >> 1) * rs * 0.9); out[us.indexOf(u)] = { x: gx + px * k + fx * fwd, y: gy + py * k + fy * fwd }; });
