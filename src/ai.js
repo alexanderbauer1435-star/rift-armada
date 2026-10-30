@@ -146,8 +146,10 @@ function aiThink(g, pi) {
   if (!built && p.ice > 700 && ore > 450) {
     /* Reihenfolge: Labor II, Basis II (Doktrin), Werft II, Labor III, Werft III, Basis III, Raffinerien, Türme */
     const up = (lab && lab.done && lab.lv < 2 && lab) || (base && base.done && base.lv < 2 && t > 270 && base) || (yards[0] && yards[0].lv < 2 && lab && lab.lv >= 1 && yards[0]) || (lab && lab.done && lab.lv < 3 && t > 480 && lab) || (yards[0] && yards[0].lv < 3 && lab && lab.lv >= 2 && yards[0]) || (base && base.done && base.lv < 3 && t > 660 && base) || refs.find(r => r.done && r.lv < 2 && t > 200) || (cfg.def >= 2 && turrets.find(r => r.done && r.lv < 3 && t > 360)) || null;
-    if (up && !up.upg) cmdUpgrade(g, pi, up.id);
+    if (up && !up.upg) cmdUpgrade(g, pi, up.id, up.role === 'turret' && up.lv === 1 && up.def.sp ? aiTurretSpec(g, pi, up) : undefined);
   }
+  /* Fassung 22 (Mittel, Schwer): Frühwarnstation, Reparaturdock, Schildwälle an Engstellen vor der Basis */
+  if (!built && A.lvl >= 2 && rich) built = aiDefense22(g, pi, mine, anchor, dirA, building, turrets);
   /* Forschung: Wirtschaft zuerst, dann Kampf; immer die günstigste verfügbare */
   if (lab && lab.done && !p.research && p.ice > 450 && ore > 250) {
     const t = TECH[f].find(q => !p.tech[q.id] && q.lv <= lab.lv && canPay(p, q.cost));
@@ -290,6 +292,49 @@ function aiThink(g, pi) {
   }
 }
 
+/* Fassung 22: Zweig für einen Turm, der auf Stufe II ausgebaut wird – nach dem, was die KI vom Gegner gesehen hat:
+   viele Kleine → Flak, viele Große → Schwergeschütz; stehen schon zwei Kampftürme in der Nähe und noch kein Störsender,
+   kommt ein Störsender dazu (er bremst Angreifer im Feuer der anderen) */
+function aiTurretSpec(g, pi, b) {
+  const A = g.players[pi].ai, sh = A.seen || { s: 0.4, m: 0.4, l: 0.2 };
+  let armed = 0, jam = 0;
+  for (const o of g.bldgs) if (!o.dead && o.owner === pi && o !== b && o.role === 'turret' && hyp(o.x - b.x, o.y - b.y) < 500) { if (o.spec === 'jam') jam++; else armed++; }
+  if (armed >= 2 && !jam) return 'jam';
+  if (sh.l > 0.3 && sh.l >= sh.s * 0.8) return 'heavy';
+  if (sh.s > 0.45) return 'flak';
+  return (b.id % 2) ? 'heavy' : 'flak';
+}
+function aiDefense22(g, pi, mine, anchor, dirA, building, turrets) {
+  const p = g.players[pi], A = p.ai, t = g.time;
+  if (building.some(b => b.role === 'radar' || b.role === 'dock' || b.role === 'wall')) return false;
+  /* Frühwarnstation: eine, vor der Basis Richtung Gegner */
+  if (t > 240 && !mine.some(b => b.role === 'radar')) { if (aiBuild(g, pi, 'radar', anchor.x + dcos(dirA) * 240, anchor.y + dsin(dirA) * 240, 40, 300)) return true; }
+  /* Reparaturdock: eines, sobald eine Werft steht und die Flotte wächst */
+  if (t > 420 && !mine.some(b => b.role === 'dock') && mine.some(b => b.role === 'yard' && b.done)) { if (aiBuild(g, pi, 'dock', anchor.x + dcos(dirA) * 200, anchor.y + dsin(dirA) * 200, 80, 320)) return true; }
+  /* Schildwälle: bis zu cfg.def Stück, je einer an einem fertigen Turm; quer zur Angriffsrichtung, bevorzugt zur Seite, an
+     der Felsen oder Feldränder liegen (so schließt der Wall mit dem Turm eine Engstelle) */
+  const walls = mine.filter(b => b.role === 'wall');
+  if (t < 360 || walls.length >= A.cfg.def || (g.tick + pi * 17) % 4) return false;
+  const anc = turrets.filter(b => b.done && WALL_ANCHOR[b.role] && hyp(b.x - anchor.x, b.y - anchor.y) < 900 && !walls.some(w => w.link === b.id));
+  if (!anc.length) return false;
+  const builders = g.ships.filter(u => !u.dead && u.owner === pi && u.def.build && (u.o.t === 'idle' || u.o.t === 'move'));
+  if (!builders.length || !canPay(p, bcost(p, bdef(g, pi, 'wall'))) || buildReq(g, pi, 'wall')) return false;
+  const m = g.map, nav = m.nav[1], pa = dirA + Math.PI / 2;
+  let best = null, bs = -1;
+  for (const T of anc) for (const sg of [1, -1]) for (const L of [300, 250, 200]) {
+    const x = T.x + dcos(pa) * sg * L, y = T.y + dsin(pa) * sg * L;
+    if (canPlace(g, pi, 'wall', x, y) || !wallAnchor(g, pi, x, y, T.id)) continue;
+    /* Engstelle: hinter dem Emitter (weiter auf derselben Linie) gesperrte Zellen */
+    let sc = 0; for (let k = 1; k <= 6; k++) { const qx = x + dcos(pa) * sg * k * 32, qy = y + dsin(pa) * sg * k * 32, cx = (qx / NAV) | 0, cy = (qy / NAV) | 0; if (cx < 0 || cy < 0 || cx >= m.gw || cy >= m.gh || (nav[cy * m.gw + cx] & (1 | 2 | 4))) { sc += 7 - k; } }
+    sc += L / 100;
+    if (sc > bs) { bs = sc; best = { x, y, to: T.id }; }
+    break;
+  }
+  if (!best) return false;
+  const why = cmdBuild(g, pi, [builders[0].id], 'wall', best.x, best.y, best.to);
+  if (!why) A.lastB = t;
+  return !why;
+}
 /* Aufklärung: Anteil kleiner, mittlerer, großer Gegnerschiffe in Sicht, langsam gleitend (merkt sich, was es gesehen hat) */
 function aiScout(g, pi) {
   const A = g.players[pi].ai; if ((g.tick + pi * 7) % 30 !== 0) return;

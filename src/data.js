@@ -523,6 +523,36 @@ const BLDG = {
       desc: 'Superwaffe. Schießt eine Masse quer über die Karte: schwerer Schaden im Zielkreis nach wenigen Sekunden Flug. Lädt lange nach.' }
   }
 };
+/* Fassung 22: drei neue Stationen je Fraktion (Legion, Nexus und Brood übernehmen sie über cloneBldgs mit eigenen Namen).
+   Schildwall: Emitter, der ein Sperrfeld zu einem eigenen Turm oder Emitter in Reichweite spannt (field Feldstärke,
+   freg Aufladung je s) – feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen.
+   Frühwarnstation: keine Waffen, sehr weite Sicht (sensor), deckt getarnte Schiffe im Umkreis detect auf.
+   Reparaturdock: repariert eigene Schiffe im Umkreis rep (Hülle und Subsysteme, hrate Anteil je s) und langsam eigene
+   Stationen im Umkreis brep (brate). */
+for (const f of ['alliance', 'mars']) {
+  const m = f === 'mars', sh = (a, b) => m ? 0 : a, ar = (a) => m ? a : 0;
+  BLDG[f].wall = { role: 'wall', name: m ? 'Sperrwall' : 'Schildwall', r: 16, tab: 'def', lv: lv3(
+    { hull: 520, shield: sh(150), sreg: sh(12), armor: ar(2), energy: -6, cost: { ice: 200, ore: 120 }, time: 18, field: 1500, freg: 40 },
+    { hull: 680, shield: sh(200), sreg: sh(14), armor: ar(2), energy: -8, cost: { ice: 180, ore: 110 }, time: 16, field: 2300, freg: 60 },
+    { hull: 860, shield: sh(260), sreg: sh(18), armor: ar(3), energy: -10, cost: { ice: 240, ore: 150 }, time: 18, field: 3300, freg: 85 }),
+    desc: m ? 'Emitter für ein Sperrfeld zu einem eigenen Turm oder Emitter in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen. Braucht Energie; bricht das Feld zusammen, baut es sich nach einigen Sekunden neu auf.' : 'Emitter für einen Schildwall zu einem eigenen Turm oder Emitter in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen. Braucht Energie; bricht das Feld zusammen, baut es sich nach einigen Sekunden neu auf.' };
+  BLDG[f].radar = { role: 'radar', name: m ? 'Frühwarnradar' : 'Frühwarnstation', r: 24, tab: 'def', lv: lv3(
+    { hull: 600, shield: sh(120), sreg: sh(10), armor: ar(1), energy: -8, cost: { ice: 220, ore: 140 }, time: 20, sensor: 1100, detect: 500 },
+    { hull: 800, shield: sh(160), sreg: sh(12), armor: ar(2), energy: -10, cost: { ice: 200, ore: 120 }, time: 18, sensor: 1250, detect: 560 },
+    { hull: 1000, shield: sh(220), sreg: sh(14), armor: ar(2), energy: -12, cost: { ice: 260, ore: 160 }, time: 20, sensor: 1400, detect: 620 }),
+    desc: 'Keine Waffen, aber sehr weite Sicht. Deckt getarnte Schiffe in der Nähe auf. Braucht Energie.' };
+  BLDG[f].dock = { role: 'dock', name: m ? 'Instandsetzungsdock' : 'Reparaturdock', r: 34, tab: 'mil', lv: lv3(
+    { hull: 1000, shield: sh(200), sreg: sh(14), armor: ar(2), energy: -8, cost: { ice: 300, ore: 160 }, time: 24, rep: 300, hrate: 0.025, brep: 350, brate: 0.004 },
+    { hull: 1300, shield: sh(280), sreg: sh(18), armor: ar(2), energy: -10, cost: { ice: 260, ore: 150 }, time: 22, rep: 330, hrate: 0.03, brep: 350, brate: 0.005 },
+    { hull: 1600, shield: sh(360), sreg: sh(22), armor: ar(3), energy: -12, cost: { ice: 340, ore: 220 }, time: 26, rep: 360, hrate: 0.036, brep: 380, brate: 0.006 }),
+    desc: 'Repariert eigene Schiffe in der Nähe (Hülle und Subsysteme, schneller als die Selbstreparatur) und langsam eigene Stationen. Vorsichtige Schiffe ziehen sich auch hierher zurück.' };
+}
+/* Fassung 22: Turmgrenze und Schildwall */
+const TOWER_ROLES = { turret: 1, flak: 1 };
+const TOWER_BASE = 4, TOWER_PER_LV = 2, TOWER_PER_OUTPOST = 2;   // Türme = 4 + 2 × Stufe der besten Basis + 2 je weitere Basis
+const WALL_MAX = 380, WALL_MIN = 70, WALL_CAP = 8;               // Feldlänge (zwischen den Rändern), Anzahl Emitter je Spieler
+const WALL_ANCHOR = { turret: 1, flak: 1, spore: 1, wall: 1 };
+const WALL_DOWN = 10;                                             // Sekunden, bis ein zusammengebrochenes Feld neu startet
 /* Golden Legion und Nexus: dieselben Rollen wie die Alliance (Schilde), mit eigenen Namen, Waffen und Superwaffe */
 function cloneBldgs(src, patch) {
   const out = JSON.parse(JSON.stringify(src));
@@ -538,7 +568,9 @@ BLDG.legion = cloneBldgs(BLDG.alliance, {
   turret: { name: 'Lanzenbastion', desc: 'Geschützturm mit Lichtlanzen: ein Teil des Schadens geht durch Schilde.', lv: [{ wpn: ['lanceM'] }, { wpn: ['lanceM', 'lanceM'] }, { wpn: ['lanceH', 'lanceM'] }] },
   shield: { name: 'Ägis-Schrein' },
   relay: { name: 'Bannerturm' },
-  super: { name: 'Sunbreaker', desc: 'Superwaffe. Entfacht eine Sterneneruption in einem Kartenbereich: acht Sekunden lang schwerer Schaden an allem darin, auch an eigenen Schiffen.', lv: [{ sr: 230, dmg: 110, dur: 8, charge: 240 }, { sr: 260, dmg: 140, dur: 8, charge: 190 }, { sr: 290, dmg: 170, dur: 9, charge: 150 }] }
+  super: { name: 'Sunbreaker', desc: 'Superwaffe. Entfacht eine Sterneneruption in einem Kartenbereich: acht Sekunden lang schwerer Schaden an allem darin, auch an eigenen Schiffen.', lv: [{ sr: 230, dmg: 110, dur: 8, charge: 240 }, { sr: 260, dmg: 140, dur: 8, charge: 190 }, { sr: 290, dmg: 170, dur: 9, charge: 150 }] },
+  /* Fassung 22 */
+  wall: { name: 'Ägiswall' }, radar: { name: 'Seherturm' }, dock: { name: 'Restaurationsdock' }
 });
 BLDG.nexus = cloneBldgs(BLDG.alliance, {
   base: { name: 'Kernknoten', desc: 'Herz des Netzes. Alle Stationen müssen über Knoten mit ihm verbunden sein. Ab Stufe 2 mit gebrochenem Kristallstrahl bewaffnet.', lv: [{ shield: 560, sreg: 34 }, { shield: 760, sreg: 40, wpn: ['prismBeam', 'prismBeam'] }, { shield: 1000, sreg: 48, wpn: ['prismBeam', 'prismBeam', 'prismBeam', 'facetBeam', 'crystalPd', 'crystalPd'] }] },
@@ -549,7 +581,9 @@ BLDG.nexus = cloneBldgs(BLDG.alliance, {
   turret: { name: 'Kristallwacht', desc: 'Geschützturm mit Kristallstrahlen, die sich auf mehrere Ziele brechen.', lv: [{ wpn: ['spireBeam'] }, { wpn: ['spireBeam', 'spireBeam'] }, { wpn: ['prismBeam', 'spireBeam', 'crystalPd'] }] },
   shield: { name: 'Hüllenprisma' },
   relay: { name: 'Netzknoten', desc: 'Knoten des Netzes: verbindet Stationen in seinem Umkreis, gibt Kommandopunkte, Harvester liefern in seiner Nähe.', tab: 'eco', lv: [{ cost: { ice: 160, ore: 70 }, time: 12, cp: 6, net: 1 }, { cost: { ice: 150, ore: 80 }, time: 12, cp: 10, net: 1.15 }, { cost: { ice: 200, ore: 120 }, time: 14, cp: 16, net: 1.3 }] },
-  super: { name: 'Resonanz', desc: 'Superwaffe. Übernimmt alle kleinen feindlichen Schiffe im Zielbereich – sie gehören danach dir.', lv: [{ sr: 260, charge: 240 }, { sr: 300, charge: 190 }, { sr: 340, charge: 150 }] }
+  super: { name: 'Resonanz', desc: 'Superwaffe. Übernimmt alle kleinen feindlichen Schiffe im Zielbereich – sie gehören danach dir.', lv: [{ sr: 260, charge: 240 }, { sr: 300, charge: 190 }, { sr: 340, charge: 150 }] },
+  /* Fassung 22 */
+  wall: { name: 'Gitterwall' }, radar: { name: 'Lauschkristall' }, dock: { name: 'Heilkristall' }
 });
 /* The Brood: aus der Republik (keine Schilde), organisch: regen heilt je Sekunde, Kosten nur Biomasse. spore statt Flak. */
 BLDG.brood = cloneBldgs(BLDG.mars, {
@@ -561,7 +595,11 @@ BLDG.brood = cloneBldgs(BLDG.mars, {
   turret: { name: 'Säurekrater', desc: 'Spuckt Säure auf alles in der Nähe.', lv: [{ wpn: ['acidTw'], regen: 0.005 }, { wpn: ['acidTw', 'acidTw'], regen: 0.006 }, { wpn: ['acidTw', 'acidTw', 'acidHeavy'], regen: 0.007 }] },
   flak: null,
   relay: { name: 'Pheromonknoten', desc: 'Mehr Kommandopunkte, also mehr Brut zugleich.', lv: [{ regen: 0.005 }, { regen: 0.006 }, { regen: 0.007 }] },
-  super: { name: 'Brutsturm', desc: 'Superwaffe. Lässt irgendwo auf der Karte einen Sturm aus Schwärmen und Ravagern schlüpfen, der 60 Sekunden lebt.', lv: [{ sr: 200, charge: 240, regen: 0.004, packs: 8 }, { sr: 230, charge: 190, regen: 0.005, packs: 11 }, { sr: 260, charge: 150, regen: 0.006, packs: 14 }] }
+  super: { name: 'Brutsturm', desc: 'Superwaffe. Lässt irgendwo auf der Karte einen Sturm aus Schwärmen und Ravagern schlüpfen, der 60 Sekunden lebt.', lv: [{ sr: 200, charge: 240, regen: 0.004, packs: 8 }, { sr: 230, charge: 190, regen: 0.005, packs: 11 }, { sr: 260, charge: 150, regen: 0.006, packs: 14 }] },
+  /* Fassung 22 */
+  wall: { name: 'Membranwall', desc: 'Spannt eine zähe Membran zu einem eigenen Säurekrater, Sporennest oder Membranknoten in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben in der Membran hängen. Braucht Nährsaft; reißt sie, wächst sie nach einigen Sekunden nach.', lv: [{ regen: 0.005 }, { regen: 0.006 }, { regen: 0.007 }] },
+  radar: { name: 'Sinnesknospe', desc: 'Ein riesiges Auge ohne Waffen: sehr weite Sicht, spürt getarnte Schiffe in der Nähe auf. Braucht Nährsaft.', lv: [{ regen: 0.004 }, { regen: 0.005 }, { regen: 0.006 }] },
+  dock: { name: 'Heilgrube', desc: 'Heilt eigene Brut in der Nähe (Hülle und Organe, schneller als die eigene Heilung) und langsam eigene Nester. Vorsichtige Brut zieht sich auch hierher zurück.', lv: [{ regen: 0.005 }, { regen: 0.006 }, { regen: 0.007 }] }
 });
 BLDG.brood.spore = { role: 'spore', name: 'Sporennest', r: 26, tab: 'def', lv: lv3(
   { hull: 900, shield: 0, armor: 1, energy: -6, cost: { ice: 420, ore: 0 }, time: 20, aura: 220, regen: 0.006 },
@@ -620,6 +658,29 @@ for (const f in BLDG) for (const role in BLDG[f]) {
   if (!tw && !bs) { for (const l of BLDG[f][role].lv) l.hull = Math.round(l.hull * BAL.other.hull); continue; }
   const k = bs ? BAL.base : BAL.tower, dk = bs ? BAL.base.dps : role === 'flak' ? BAL.tower.flak : (BAL.tower.dps[f] || 1.5);
   for (const l of BLDG[f][role].lv) { l.hull = Math.round(l.hull * k.hull); l.shield = Math.round(l.shield * k.shield); l.wpn = l.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * dk).toFixed(2), range: Math.round(w.range * k.range) })); }
+}
+/* Fassung 22: Turmspezialisierung ab Stufe II. Beim Ausbau auf II wählt der Spieler einen Zweig; die Stufen II und III
+   des Zweigs stehen in def.sp[zweig] (Stufe I bleibt gleich), lvOf(b) liest sie über b.spec.
+   Flak: schnelle, leichtere Schüsse, stark gegen Kleine und Jäger (antiS), schwach gegen Große, dazu Punktverteidigung.
+   Schwergeschütz: langsame, schwere Schüsse mit etwas mehr Reichweite, stark gegen Große (antiL), schwach gegen Kleine.
+   Störsender: kein Schaden; feindliche Schiffe im Umkreis jam werden langsamer (jamSlow) und ihre Waffen tragen weniger weit (jamRange). */
+const TSPEC = {
+  flak: { name: 'Flak', icon: '✷', desc: 'Schnelle, leichtere Schüsse und Punktverteidigung: stark gegen kleine Schiffe und Jäger, schwach gegen große.' },
+  heavy: { name: 'Schwergeschütz', icon: '◆', desc: 'Langsame, schwere Schüsse mit etwas mehr Reichweite: stark gegen große Schiffe, schwach gegen kleine.' },
+  jam: { name: 'Störsender', icon: '≋', desc: 'Kein Schaden. Feindliche Schiffe im Umkreis werden langsamer, ihre Waffen tragen 20 % weniger weit.' }
+};
+const TSPEC_ORDER = ['flak', 'heavy', 'jam'];
+for (const f in BLDG) {
+  const d = BLDG[f].turret; if (!d) continue;
+  d.sp = {};
+  for (const sp of TSPEC_ORDER) d.sp[sp] = d.lv.map((l, i) => {
+    if (i === 0) return l;
+    const o = Object.assign({}, l), main = l.wpn.filter(w => w.kind !== 'pd');
+    if (sp === 'flak') o.wpn = main.map(w => Object.assign({}, w, { id: w.id + ':flak', dmg: +(w.dmg * 0.5).toFixed(2), reload: +(w.reload * 0.5).toFixed(3), range: Math.round(w.range * 0.95), antiS: 1.6, antiL: 0.6, spread: w.spread ? w.spread * 1.4 : w.spread, speed: w.speed ? w.speed * 1.15 : w.speed })).concat(i === 1 ? [W.pdH] : [W.pdH, W.pdH]);
+    else if (sp === 'heavy') o.wpn = main.map(w => Object.assign({}, w, { id: w.id + ':heavy', dmg: +(w.dmg * 2.3).toFixed(2), reload: +(w.reload * 2).toFixed(3), range: Math.round(w.range * 1.15), antiL: 1.6, antiS: 0.5, speed: w.speed ? w.speed * 0.75 : w.speed, spread: w.spread ? w.spread * 0.5 : w.spread, w: w.w ? w.w * 1.5 : w.w }));
+    else { let r = 0; for (const w of main) r = Math.max(r, w.range); o.wpn = []; o.jam = Math.round(r * (i === 1 ? 1.05 : 1.2)); o.jamSlow = i === 1 ? 0.7 : 0.62; o.jamRange = 0.8; }
+    return o;
+  });
 }
 const BLDG_TABS = [['eco', 'Wirtschaft'], ['mil', 'Militär'], ['def', 'Verteidigung'], ['spec', 'Spezial']];
 /* Bauschiff und Frachter je Fraktion */
