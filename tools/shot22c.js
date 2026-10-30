@@ -9,7 +9,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
 (async () => {
   const args = D3 ? ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--no-sandbox'];
   const browser = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args });
-  const ctx = await browser.newContext({ viewport: { width: 800, height: 380 }, deviceScaleFactor: 2, hasTouch: true, isMobile: true, locale: 'de-DE' });
+  const ctx = await browser.newContext({ viewport: { width: 800, height: 380 }, deviceScaleFactor: D3 ? 1 : 2, hasTouch: true, isMobile: true, locale: 'de-DE' });
   await ctx.addInitScript(d3 => { try { localStorage.setItem('ra.prefs', JSON.stringify({ set: { gfx: d3 ? '3d' : '2d', lang: 'de', vol: 0, mus: 0 }, menu: {} })); } catch (e) { /* egal */ } }, D3);
   const page = await ctx.newPage();
   const errors = [], fails = [];
@@ -17,8 +17,8 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   page.on('console', m => { if (m.type() === 'error') errors.push('CONSOLE ' + m.text()); });
   const check = (name, ok) => { console.log((ok ? 'OK   ' : 'FAIL ') + name); if (!ok) fails.push(name); };
   const pre = D3 ? '22c-3d-' : '22c-';
-  const shot = async n => { await page.waitForTimeout(300); await page.screenshot({ path: path.join(OUT, pre + n + '.png') }); console.log('shot', pre + n); };
-  await page.goto('file://' + file);
+  const shot = async n => { await page.waitForTimeout(300); await page.screenshot({ path: path.join(OUT, pre + n + '.png'), timeout: 150000 }); console.log('shot', pre + n); };
+  await page.goto('file://' + file, { timeout: 180000 });
   await page.evaluate(() => { window.__RA_TEST = 1; });
   await page.waitForTimeout(700);
   await page.evaluate(() => {
