@@ -21,7 +21,7 @@ import SDATA from './models/stations.json';
 import SHIPJ from './models/ships.json';
 import { S, CAM_DIR } from './scene.js';
 import { inView, CAM } from './camera.js';
-import { ring, disc } from './overlay.js';
+import { ring, disc, line } from './overlay.js';
 
 /* Fernmodelle (ein Mesh mit Vertexfarben + Flammen) unterhalb dieser Zoomstufen, je Detailstufe */
 const FAR_SHIP = [1.6, 1.05, 0.8], FAR_STATION = [1.2, 0.85, 0.7];
@@ -143,23 +143,24 @@ function bdefOf(f, role) { return SDATA.bldgs.find(d => d.f === f && d.id === ro
    (cloneStation: Geometrien geteilt, eigene Uniforms für Zielwinkel und Ladung). Vorher wurde jede Station – und
    bei Fertigstellung und Ausbau erneut – komplett neu gebaut (15–450 ms je Station). */
 const STPL = new Map();
-function stationTpl(f, def, lv, color) {
-  const key = f + '|' + (def.id || def.role) + '|' + lv + '|' + color;
+function stationTpl(f, def, lv, color, spec) {
+  const key = f + '|' + (def.id || def.role) + (spec ? ':' + spec : '') + '|' + lv + '|' + color;
   let T = STPL.get(key); if (T) return T;
-  const fn = BUILDB[f + ':' + def.id] || BUILDB[f + ':' + def.role], M = mats(f, color);
+  /* Fassung 22: Turmzweige haben eigene Modelle (f:turret:flak …) */
+  const fn = (spec && BUILDB[f + ':' + (def.id || def.role) + ':' + spec]) || BUILDB[f + ':' + def.id] || BUILDB[f + ':' + def.role], M = mats(f, color);
   if (fn) T = fn(M, def, lv);
   else { T = new THREE.Group(); T.add(new THREE.Mesh(new THREE.CylinderGeometry(def.r, def.r, def.r * 0.3, 24, 1), M.hull2)); }
   bake(T, { face: 'cam', faceDir: CAM_DIR, keep: keepFor('station', S.detail), flames: true, station: true });
   T.traverse(o => { if (o.isMesh && o.castShadow === undefined) o.castShadow = true; if (o.isMesh && o.material.transparent) o.castShadow = false; });
   STPL.set(key, T); return T;
 }
-function buildStation(f, def, lv, color) { return cloneStation(stationTpl(f, def, lv, color)); }
-function stationKey(b, color) { return (b.def.f || b.f) + '|' + b.role + '|' + b.lv + '|' + color + '|' + (b.done ? 1 : 0); }
+function buildStation(f, def, lv, color, spec) { return cloneStation(stationTpl(f, def, lv, color, spec)); }
+function stationKey(b, color) { return (b.def.f || b.f) + '|' + b.role + (b.spec ? ':' + b.spec : '') + '|' + b.lv + '|' + color + '|' + (b.done ? 1 : 0); }
 /* Eintrag je Station; Voll- und Fernmodell entstehen erst, wenn sie gebraucht werden */
-function stationEntry(b, color) { return { m: null, far: null, key: stationKey(b, color), f: b.def.f || b.f, def: b.def, lv: b.lv, color, done: b.done, berth: null, berthType: '', berthMats: null, berthM: null, charge: -1, aimA: undefined }; }
+function stationEntry(b, color) { return { m: null, far: null, key: stationKey(b, color), f: b.def.f || b.f, def: b.def, lv: b.lv, spec: b.spec || '', color, done: b.done, berth: null, berthType: '', berthMats: null, berthM: null, charge: -1, aimA: undefined }; }
 function fullStation(e) {
   if (e.m) return e.m;
-  const m = buildStation(e.f, e.def, e.lv, e.color);
+  const m = buildStation(e.f, e.def, e.lv, e.color, e.spec);
   if (!e.done) remat(m, 'ghost', e.color, false);
   m.traverse(o => { if (o.userData.berth && !e.berth) e.berth = o; });
   m.visible = false; E.root.add(m); e.m = m; e.charge = -1; e.aimA = undefined;
@@ -168,9 +169,9 @@ function fullStation(e) {
 const FARST = new Map();
 function farStation(e) {
   if (e.far) return e.far;
-  const key = e.f + '|' + e.def.id + '|' + e.lv + '|' + e.color;
+  const key = e.f + '|' + e.def.id + (e.spec ? ':' + e.spec : '') + '|' + e.lv + '|' + e.color;
   let geo = FARST.get(key);
-  if (!geo) { const fn = BUILDB[e.f + ':' + e.def.id], M = mats(e.f, e.color); const raw = fn ? fn(M, e.def, e.lv) : new THREE.Group(); geo = farGeometry(raw, Math.max(1.5, e.def.r * 0.03)); FARST.set(key, geo); }
+  if (!geo) { const fn = (e.spec && BUILDB[e.f + ':' + e.def.id + ':' + e.spec]) || BUILDB[e.f + ':' + e.def.id], M = mats(e.f, e.color); const raw = fn ? fn(M, e.def, e.lv) : new THREE.Group(); geo = farGeometry(raw, Math.max(1.5, e.def.r * 0.03)); FARST.set(key, geo); }
   const m = new THREE.Mesh(geo, farMaterial('normal')); m.castShadow = S.detail >= 2; m.receiveShadow = true; m.visible = false; E.root.add(m); e.far = m;
   return m;
 }
@@ -243,6 +244,33 @@ function dome(x, y, r, t) {
   d.visible = true; d.position.set(x, 0, y); d.scale.set(r, r * 0.6, r); E.domeMat.uniforms.uT.value = t; E.domeN++;
 }
 
+/* ------------------------------------------------------------ Fassung 22: Schildwälle
+   Senkrechte, additive Fläche je stehendem Wall zwischen den Feldenden (wx1,wy1)→(wx2,wy2): Fresnel-artiger Saum oben
+   und unten, wandernde Waben, Stärke nach Feldenergie, Treffer blitzen kurz auf. Pool aus Meshes (eigene Uniforms). */
+const WALLH = 26, WALLS = { list: [], n: 0, geo: null };
+const WALL_COL = { alliance: '#8fe3ff', mars: '#ffb070', legion: '#ffd27a', nexus: '#eadcff', brood: '#b4ff3c' };
+function wallMat() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uCol: { value: new THREE.Color('#8fe3ff') }, uTeam: { value: new THREE.Color('#ffffff') }, uT: { value: 0 }, uK: { value: 1 }, uHit: { value: 0 }, uL: { value: 100 } },
+    vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform vec3 uCol; uniform vec3 uTeam; uniform float uT; uniform float uK; uniform float uHit; uniform float uL; varying vec2 vUv;\n' +
+      'void main() { float x = vUv.x * uL / 9.0, y = vUv.y * ' + WALLH + '.0 / 9.0; vec2 h = vec2(x - uT * 0.6, y + 0.5 * mod(floor(x - uT * 0.6), 2.0)); vec2 f = abs(fract(h) - 0.5); float hex = smoothstep(0.42, 0.5, max(f.x, f.y));\n' +
+      'float edge = smoothstep(0.0, 0.12, vUv.y) * smoothstep(1.0, 0.75, vUv.y); float rim = smoothstep(0.85, 1.0, vUv.y) + smoothstep(0.1, 0.0, vUv.y) * 0.6; float ends = smoothstep(0.0, 0.03, vUv.x) * smoothstep(1.0, 0.97, vUv.x);\n' +
+      'float a = (0.10 + 0.22 * uK + hex * (0.25 + 0.35 * uK)) * edge * ends + rim * 0.5 * ends + uHit * 0.45 * edge; vec3 c = mix(uCol, uTeam, rim * 0.5) * (1.0 + hex * 0.8 + uHit * 1.5);\n' +
+      'gl_FragColor = vec4(c * a, a);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide
+  });
+}
+function wallField(b, col, gtime, t) {
+  if (!WALLS.geo) { WALLS.geo = new THREE.PlaneGeometry(1, 1); WALLS.geo.translate(0.5, 0.5, 0); }
+  let m = WALLS.list[WALLS.n];
+  if (!m) { m = new THREE.Mesh(WALLS.geo, wallMat()); m.renderOrder = 7; m.frustumCulled = false; E.root.add(m); WALLS.list.push(m); }
+  WALLS.n++;
+  const dx = b.wx2 - b.wx1, dy = b.wy2 - b.wy1, L = Math.hypot(dx, dy), u = m.material.uniforms;
+  m.visible = true; m.position.set(b.wx1, 0.5, b.wy1); m.rotation.set(0, -Math.atan2(dy, dx), 0); m.scale.set(L, WALLH, 1);
+  u.uCol.value.set(WALL_COL[b.def.f] || '#8fe3ff'); u.uTeam.value.set(col); u.uT.value = t; u.uL.value = L; u.uK.value = b.fhpMax ? Math.max(0, Math.min(1, b.fhp / b.fhpMax)) : 1; u.uHit.value = Math.max(0, 1 - (gtime - (b.fhitT || -9)) / 0.25);
+}
+
 /* ------------------------------------------------------------ je Frame */
 export function updateEntities(g, dt, t, view) {
   const fx = E.fx && typeof E.fx.spawn === 'object' ? E.fx.spawn : null, det = S.detail;
@@ -291,6 +319,7 @@ export function updateEntities(g, dt, t, view) {
     if (u.dome > 0) dome(u.x, u.y, def.r * 1.5 + 6, t);
     if (u.abT && u.abT.invuln > 0) { ring(u.x, u.y, def.r * 1.4 + 4, '#ffe6a0', 2.5, { alpha: 0.6 + 0.3 * Math.sin(t * 10) }); disc(u.x, u.y, def.r * 2.2, '#ffd27a', 0.12); }
     if (u.truce > 0) ring(u.x, u.y, def.r + 4, '#ffffff', 1, { dash: 3, alpha: 0.5 });
+    if (u.jamT > g.time) { const a0 = -t * 4 + u.id; for (let i = 0; i < 3; i++) ring(u.x, u.y, def.r + 5, '#c9a0ff', 1.5, { a0: a0 + i * TAU / 3, a1: a0 + i * TAU / 3 + 0.9, alpha: 0.7 }); }   /* Fassung 22: gestört */
     if (u.marked > g.time) { const r = def.r + 9, a0 = t * 2; for (let i = 0; i < 4; i++) ring(u.x, u.y, r, '#ffb86b', 2, { a0: a0 + i * Math.PI / 2, a1: a0 + i * Math.PI / 2 + 0.8 }); }
     if (u.para) { const n = Math.min(4, u.para.n); for (let i = 0; i < n; i++) { const a = t * 2 + i * TAU / n; ring(u.x, u.y, def.r * 0.8, '#ff9ad6', 3, { a0: a - 0.12, a1: a + 0.12 }); } }
     if (u.boarding > 0) { const n = Math.min(8, Math.ceil(u.boarding / 12)), c = pcol(u.boardBy); for (let i = 0; i < n; i++) { const a = t * 3 + i * TAU / n; ring(u.x, u.y, def.r * 0.7, c, 2.5, { a0: a - 0.1, a1: a + 0.1 }); } }
@@ -354,6 +383,17 @@ export function updateEntities(g, dt, t, view) {
     animate(m, t, dt);
   }
   for (const [id, e] of E.stations) if (!live.has(id)) { dropStation(e); E.stations.delete(id); }
+  /* Fassung 22: Schildwälle (stehend: Feld; eigener ohne Feld: gestrichelte Linie) */
+  WALLS.n = 0;
+  for (const b of g.bldgs) {
+    if (b.dead || b.role !== 'wall' || !b.done) continue;
+    const a = b.link ? g.byId.get(b.link) : null; if (!a || a.dead) continue;
+    const mx = (b.x + a.x) / 2, my = (b.y + a.y) / 2;
+    if (!seen(mx, my) || !inView(mx, my, Math.hypot(a.x - b.x, a.y - b.y) / 2 + 40, 30)) continue;
+    if (b.up) wallField(b, pcol(b.owner), g.time, t);
+    else if (b.owner === vp) line(b.x, b.y, a.x, a.y, '#ffffff', 1.5, { dash: 1, alpha: 0.3 });
+  }
+  for (let i = WALLS.n; i < WALLS.list.length; i++) WALLS.list[i].visible = false;
   void FACS;
 }
 export function clearEntities() {
@@ -362,6 +402,7 @@ export function clearEntities() {
   E.sets.clear(); E.tpl.clear(); E.prev.clear(); FARST.clear(); STPL.clear(); PRE.length = 0;
   for (const e of E.stations.values()) dropStation(e); E.stations.clear();
   for (const m of E.ghost.values()) E.root.remove(m); E.ghost.clear(); E.ghostCur = null;
+  for (const m of WALLS.list) { E.root.remove(m); m.material.dispose(); } WALLS.list.length = 0; WALLS.n = 0;
 }
 export function disposeEntities() { clearEntities(); if (E.root) { S.scene.remove(E.root); E.root = null; } }
 export const _E = E;

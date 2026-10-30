@@ -834,8 +834,38 @@ function drawNest(ctx, C, role, lv, t, b, R) {
       circ(ctx, 0, 0, 9); ctx.fillStyle = '#4e7a1a'; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 0.9; ctx.stroke();
       ctx.fillStyle = C.win; ctx.globalAlpha = 0.6 + 0.3 * Math.sin(t * 3); circ(ctx, 0, 0, 6 * pulse); ctx.fill(); ctx.globalAlpha = 1;
       const nB = lv >= 2 ? 2 : 1;
-      for (let i = 0; i < nB; i++) spitTube(Math.cos(aim + (i ? 0.5 : -0.5) * (nB - 1)) * 4, Math.sin(aim + (i ? 0.5 : -0.5) * (nB - 1)) * 4, lv >= 3 ? 20 : 15, aim + (nB > 1 ? (i ? 0.25 : -0.25) : 0));
-      if (lv >= 3) spitTube(0, 0, 24, aim);
+      /* Fassung 22: Zweige – Flak viele dünne Röhren, Schwergeschütz ein dicker Schlund, Störsender pulsierende Ringe */
+      const sp = b && b.spec;
+      if (sp === 'flak') { for (let i = 0; i < 4; i++) { const o = (i - 1.5) * 0.35; spitTube(Math.cos(aim + o * 1.4) * 4, Math.sin(aim + o * 1.4) * 4, 13, aim + o * 0.5); } }
+      else if (sp === 'heavy') { spitTube(0, 0, lv >= 3 ? 30 : 26, aim); spitTube(Math.cos(aim) * 2, Math.sin(aim) * 2, lv >= 3 ? 30 : 26, aim); sac(ctx, C, -Math.cos(aim) * 6, -Math.sin(aim) * 6, 5); }
+      else if (sp === 'jam') { for (let k = 0; k < 3; k++) { const ph = (t * 0.8 + k / 3) % 1; ctx.strokeStyle = C.glow; ctx.lineWidth = 1.4; ctx.globalAlpha = 0.6 * (1 - ph); circ(ctx, 0, 0, 7 + ph * 13); ctx.stroke(); } ctx.globalAlpha = 1; eye(ctx, C, 0, 0, 3.2); }
+      else {
+        for (let i = 0; i < nB; i++) spitTube(Math.cos(aim + (i ? 0.5 : -0.5) * (nB - 1)) * 4, Math.sin(aim + (i ? 0.5 : -0.5) * (nB - 1)) * 4, lv >= 3 ? 20 : 15, aim + (nB > 1 ? (i ? 0.25 : -0.25) : 0));
+        if (lv >= 3) spitTube(0, 0, 24, aim);
+      }
+      break;
+    }
+    /* Fassung 22: Membranknoten (Schildwall), Sinnesknospe (Frühwarnstation), Heilgrube (Reparaturdock) */
+    case 'wall': {
+      for (let i = 0; i < 5; i++) { const a = i / 5 * TAU + t * 0.05; tendril(ctx, C, Math.cos(a) * 5, Math.sin(a) * 5, 9 + lv, a, 3, 1.5 * Math.sin(t * 2 + i)); }
+      dome(0, 0, 8 * pulse, true);
+      ctx.fillStyle = C.glow; ctx.globalAlpha = 0.35 + 0.25 * Math.sin(t * 3); circ(ctx, 0, 0, 5 + lv); ctx.fill(); ctx.globalAlpha = 1;
+      circ(ctx, 0, 0, 2.4); ctx.fillStyle = '#fff'; ctx.fill();
+      break;
+    }
+    case 'radar': {
+      for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; tendril(ctx, C, Math.cos(a) * 12, Math.sin(a) * 12, 10, a, 4, 2 * Math.sin(t + i)); }
+      dome(0, 0, 14 * pulse, true);
+      const la = t * 0.7; circ(ctx, Math.cos(la) * 3, Math.sin(la) * 3, 8); ctx.fillStyle = '#f2ffb0'; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1; ctx.stroke();
+      circ(ctx, Math.cos(la) * 5, Math.sin(la) * 5, 3.6); ctx.fillStyle = '#1a0f22'; ctx.fill();
+      for (let k = 0; k < lv; k++) { ctx.strokeStyle = C.glow; ctx.lineWidth = 1; ctx.globalAlpha = 0.3; circ(ctx, 0, 0, 17 + k * 3); ctx.stroke(); } ctx.globalAlpha = 1;
+      break;
+    }
+    case 'dock': {
+      smoothPath(ctx, [-24, -14, 0, -22, 24, -14, 28, 0, 24, 14, 0, 22, -24, 14, -28, 0]); ctx.fillStyle = '#2a0c18'; ctx.fill(); ctx.strokeStyle = C.line; ctx.lineWidth = 1.2; ctx.stroke();
+      ctx.fillStyle = C.flesh; ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 2); circ(ctx, 0, 0, 16); ctx.fill(); ctx.globalAlpha = 1;
+      for (let i = 0; i < 4 + lv; i++) { const a = i / (4 + lv) * TAU + t * 0.1; tendril(ctx, C, Math.cos(a) * 22, Math.sin(a) * 22, 14, a + Math.PI, 4, 3 * Math.sin(t * 1.6 + i)); }
+      for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + 0.5; sac(ctx, C, Math.cos(a) * 26, Math.sin(a) * 26, 4 + lv * 0.6); }
       break;
     }
     case 'spore': {
@@ -955,12 +985,53 @@ function drawBldg(ctx, role, f, lv, col, t, b) {
       circ(ctx, 0, 0, 15); hull(ctx, C, 15);
       if (lv >= 3) ring3d(ctx, C, 0, 0, 12, 2.5);
       ctx.strokeStyle = C.line; ctx.lineWidth = 0.7; ctx.globalAlpha = 0.5; for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 8, Math.sin(a) * 8); ctx.lineTo(Math.cos(a) * 15, Math.sin(a) * 15); ctx.stroke(); } ctx.globalAlpha = 1;
-      const nB = lv >= 2 ? 2 : 1, len = lv >= 3 ? 24 : 18;
+      const nB = lv >= 2 ? 2 : 1, len = lv >= 3 ? 24 : 18, sp = b && b.spec;
       ctx.save(); ctx.rotate(aim);
-      rrect(ctx, -7, -6.5, 14, 13, 3); hull(ctx, C, 6.5);
-      for (let i = 0; i < nB; i++) barrelS(ctx, C, 2, nB > 1 ? (i ? 4 : -4) : 0, len, lv >= 3 ? 5 : 4, 0);
+      /* Fassung 22: Zweige – Flak Vierlingskopf mit kurzen Läufen, Schwergeschütz ein langer dicker Lauf mit Mündungsbremse,
+         Störsender ohne Lauf: Antennenschüssel mit pulsierenden Ringen */
+      if (sp === 'flak') { rrect(ctx, -7, -8, 14, 16, 3); hull(ctx, C, 8); for (let i = 0; i < 4; i++) barrelS(ctx, C, 3, -6 + i * 4, lv >= 3 ? 15 : 13, 2.4, 0); light(ctx, -4, 0, 1.2, C.trim2); }
+      else if (sp === 'heavy') { rrect(ctx, -9, -7.5, 17, 15, 3.5); hull(ctx, C, 7.5); barrelS(ctx, C, 3, 0, lv >= 3 ? 34 : 30, lv >= 3 ? 8 : 7, 0); rrect(ctx, (lv >= 3 ? 34 : 30) - 1, -5.5, 6, 11, 2); hull(ctx, C, 5.5); plate(ctx, C, -7, -5, 6, 10, -1); }
+      else if (sp === 'jam') { ctx.restore(); ctx.save(); for (let k = 0; k < 3; k++) { const ph = (t * 0.8 + k / 3) % 1; ctx.strokeStyle = C.glow; ctx.lineWidth = 1.5; ctx.globalAlpha = 0.65 * (1 - ph); circ(ctx, 0, 0, 8 + ph * 14); ctx.stroke(); } ctx.globalAlpha = 1; ctx.rotate(t * 0.9); ctx.beginPath(); ctx.arc(0, 0, 11, -1.1, 1.1); ctx.closePath(); hull(ctx, C, 9); ctx.strokeStyle = C.trim; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(10, 0); ctx.stroke(); light(ctx, 10, 0, 1.3, C.glow); }
+      else { rrect(ctx, -7, -6.5, 14, 13, 3); hull(ctx, C, 6.5); for (let i = 0; i < nB; i++) barrelS(ctx, C, 2, nB > 1 ? (i ? 4 : -4) : 0, len, lv >= 3 ? 5 : 4, 0); }
       ctx.restore();
-      sphere(ctx, C, 0, 0, 4.5, C.trim);
+      sphere(ctx, C, 0, 0, 4.5, sp === 'jam' ? C.glow : C.trim);
+      break;
+    }
+    /* Fassung 22: Schildwall-Emitter – sechseckiger Sockel, Leuchtkristall in der Mitte, vier Feldspulen */
+    case 'wall': {
+      ctx.beginPath(); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6; ctx.lineTo(Math.cos(a) * 13, Math.sin(a) * 13); } ctx.closePath(); hull(ctx, C, 13);
+      for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + Math.PI / 4; ctx.save(); ctx.rotate(a); rrect(ctx, 6, -2.2, 9, 4.4, 1.5); hull(ctx, C, 2.2); ctx.fillStyle = C.glow; ctx.globalAlpha = 0.5 + 0.4 * Math.sin(t * 5 + i); ctx.fillRect(9, -1, 4, 2); ctx.globalAlpha = 1; ctx.restore(); }
+      if (lv >= 2) ring3d(ctx, C, 0, 0, 9, 1.6);
+      if (lv >= 3) ringDash(ctx, 15, 8, 1.6, t * 0.6, C, C.trim);
+      const pu = 0.8 + 0.2 * Math.sin(t * 4);
+      ctx.fillStyle = C.glow; ctx.globalAlpha = 0.45; circ(ctx, 0, 0, 7 * pu); ctx.fill(); ctx.globalAlpha = 1;
+      poly(ctx, [0, -5.5, 4, 0, 0, 5.5, -4, 0]); ctx.fillStyle = '#ffffff'; ctx.fill(); ctx.strokeStyle = C.trim; ctx.lineWidth = 1; ctx.stroke();
+      break;
+    }
+    /* Fassung 22: Frühwarnstation – Sockel mit großer drehender Radarschüssel, Abtaststrahl, Antennenmast */
+    case 'radar': {
+      circ(ctx, 0, 0, 14); hull(ctx, C, 14);
+      for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + 0.4; ctx.save(); ctx.rotate(a); rrect(ctx, 12, -2.5, 10, 5, 2); hull(ctx, C, 2.5); ctx.restore(); light(ctx, Math.cos(a) * 21, Math.sin(a) * 21, 1, C.trim2); }
+      const sa = t * 1.1;
+      ctx.save(); ctx.rotate(sa);
+      const gr = ctx.createRadialGradient(0, 0, 2, 0, 0, 24); gr.addColorStop(0, 'rgba(160,255,190,0.35)'); gr.addColorStop(1, 'rgba(160,255,190,0)');
+      ctx.fillStyle = gr; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, 24, -0.5, 0); ctx.closePath(); ctx.fill();
+      ctx.beginPath(); ctx.arc(-4, 0, 17, -1.0, 1.0); ctx.arc(-4, 0, 12, 1.0, -1.0, true); ctx.closePath(); hull(ctx, C, 10);
+      ctx.strokeStyle = C.line; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-4, 0); ctx.lineTo(12, 0); ctx.stroke(); light(ctx, 12, 0, 1.2, C.glow);
+      ctx.restore();
+      if (lv >= 2) { ctx.save(); ctx.rotate(-t * 1.7); ctx.beginPath(); ctx.arc(0, 0, 6, -1.1, 1.1); ctx.closePath(); hull(ctx, C, 5); ctx.restore(); }
+      if (lv >= 3) ringDash(ctx, 22, 10, 2, -t * 0.3, C, C.trim);
+      sphere(ctx, C, 0, 0, 3.5, C.trim);
+      break;
+    }
+    /* Fassung 22: Reparaturdock – offene Wiege aus zwei Auslegern, Reparaturkräne mit grünen Schweißlichtern */
+    case 'dock': {
+      rrect(ctx, -30, -24, 10, 48, 3); hull(ctx, C, 5); plate(ctx, C, -28, -20, 6, 40, -1);
+      for (const sg of [-1, 1]) { rrect(ctx, -22, sg * 20 - 4, 50, 8, 3); hull(ctx, C, 4, sg * 20); for (let x = -16; x < 26; x += 9) panel(ctx, C, x, sg * 20 - 4, x, sg * 20 + 4); light(ctx, 26, sg * 20, 1.4, C.trim2); }
+      if (lv >= 2) for (const sg of [-1, 1]) { rrect(ctx, -20, sg * 29 - 2.5, 40, 5, 2); hull(ctx, C, 2.5, sg * 29); }
+      const nC = lv >= 3 ? 3 : 2;
+      for (let i = 0; i < nC; i++) { const x = -12 + ((Math.sin(t * 0.6 + i * 2.1) + 1) / 2) * 30, sg = i % 2 ? 1 : -1; ctx.strokeStyle = C.trim; ctx.lineWidth = 2.4; ctx.beginPath(); ctx.moveTo(x, sg * 18); ctx.lineTo(x + 4, sg * 6); ctx.stroke(); const on = Math.sin(t * 9 + i * 3) > 0.2; ctx.fillStyle = '#9fffcf'; ctx.globalAlpha = on ? 0.9 : 0.25; circ(ctx, x + 4, sg * 6, on ? 2.2 : 1.2); ctx.fill(); ctx.globalAlpha = 1; }
+      ctx.strokeStyle = 'rgba(159,255,207,0.35)'; ctx.lineWidth = 1; ctx.setLineDash([3, 4]); ctx.lineDashOffset = -t * 12; rrect(ctx, -18, -12, 42, 24, 6); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0;
       break;
     }
     case 'flak': {

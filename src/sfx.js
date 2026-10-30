@@ -46,6 +46,8 @@ function sfxEvents(g, me, evs) {
         break;
       case 'shield': if (vis && (g.tick + (e.x | 0)) % 3 === 0) SND.play('shield', e.x, e.y, 0.5); if (own) sfxFight(g, 0.2); break;
       case 'shdown': if (vis) SND.play('shdown', e.x, e.y, 0.6); break;
+      case 'wallhit': if (vis && (g.tick + (e.x | 0)) % 3 === 0) SND.play('shield', e.x, e.y, 0.5); break;   /* Fassung 22 */
+      case 'wallDown': if (vis) SND.play('shdown', e.x, e.y, 0.9); break;
       case 'flank': if (own && vis) SND.play('flank', e.x, e.y, 0.7); break;
       /* Explosionen nach Größe */
       case 'die': {

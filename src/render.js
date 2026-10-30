@@ -368,6 +368,9 @@ R.consume = function (evs) {
         break;
       case 'shield': fxShield(e.x, e.y, e.r, e.ang, g.players[e.owner].faction === 'alliance' ? '#8fe3ff' : '#ffd27a'); break;
       case 'shdown': fxRing(e.x, e.y, e.r * 1.4, 0.5, '#8fe3ff', 2); break;
+      /* Fassung 22: Schildwall getroffen / zusammengebrochen */
+      case 'wallhit': fxFlash(e.x, e.y, 9, 0.18, '#dff4ff'); fxSpark(e.x, e.y, 3, 60, '#8fe3ff', 0.3); break;
+      case 'wallDown': fxRing(e.x, e.y, 90, 0.6, '#8fe3ff', 3); fxSpark(e.x, e.y, 20, 160, '#bfe9ff', 0.6); break;
       case 'shot': if (e.kind === 'rail') { fxFlash(e.x, e.y, 10, 0.15, '#dff4ff'); } else if (e.kind === 'kin' && e.big) fxFlash(e.x + Math.cos(e.ang) * 10, e.y + Math.sin(e.ang) * 10, 5, 0.1, '#ffe0a0'); R.lastAct = { x: e.x, y: e.y, t: R.time }; break;
       case 'pd': fxLine(e.x, e.y, e.tx, e.ty, 0.12, 'rgba(255,230,140,0.9)', 1); break;
       case 'built': fxRing(e.x, e.y, 60, 0.8, pcol(e.owner), 2); break;
@@ -529,9 +532,26 @@ function drawDamage(ctx, u, def, lvl) {
     else { fxSmoke(wx, wy, 1, rr, 1.5); if (lvl === 2 && Math.random() < 0.5) fxSpark(wx, wy, 2, 60, '#ffd27a', 0.35); }
   }
 }
+/* Fassung 22: Feld eines Schildwalls (2D) zwischen Emitter b und Anker a */
+function drawWallField(ctx, b, a, col, vp, z, time) {
+  const t = R.time, x1 = b.up ? b.wx1 : b.x, y1 = b.up ? b.wy1 : b.y, x2 = b.up ? b.wx2 : a.x, y2 = b.up ? b.wy2 : a.y, L = Math.hypot(x2 - x1, y2 - y1), ang = Math.atan2(y2 - y1, x2 - x1);
+  if (!b.up) { if (b.owner !== vp) return; ctx.strokeStyle = 'rgba(255,255,255,0.28)'; ctx.lineWidth = 1.5 / z; ctx.setLineDash([5 / z, 7 / z]); ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); ctx.setLineDash([]); return; }
+  const k = b.fhpMax ? b.fhp / b.fhpMax : 1, hit = Math.max(0, 1 - (time - (b.fhitT || -9)) / 0.25), fcol = b.def.f === 'brood' ? '#b4ff3c' : b.def.f === 'mars' ? '#ffb070' : b.def.f === 'legion' ? '#ffd27a' : b.def.f === 'nexus' ? '#eadcff' : '#8fe3ff';
+  ctx.save(); ctx.translate(x1, y1); ctx.rotate(ang);
+  ctx.globalCompositeOperation = 'lighter';
+  const gr = ctx.createLinearGradient(0, -9, 0, 9); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(0.5, fcol); gr.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalAlpha = (0.28 + 0.4 * k) * (0.85 + 0.15 * Math.sin(t * 6 + b.id)) + hit * 0.4; ctx.fillStyle = gr; ctx.fillRect(0, -9, L, 18);
+  /* Wabenmuster: kurze Striche, die längs wandern */
+  ctx.strokeStyle = fcol; ctx.lineWidth = 1.1; ctx.globalAlpha = 0.35 + 0.35 * k;
+  const off = (t * 22) % 12; ctx.beginPath(); for (let x = -off; x < L; x += 12) { if (x < 0) continue; ctx.moveTo(x, -5); ctx.lineTo(x + 5, 0); ctx.lineTo(x, 5); } ctx.stroke();
+  ctx.globalAlpha = 0.85; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 0.8; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(L, 0); ctx.stroke();
+  ctx.globalAlpha = 0.5; ctx.strokeStyle = col; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(0, -7); ctx.lineTo(L, -7); ctx.moveTo(0, 7); ctx.lineTo(L, 7); ctx.stroke();
+  ctx.restore();
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+}
 function drawBldgAt(ctx, b, alpha) {
   const f = b.def.f, col = pcol(b.owner);
-  if (b.tgt && b.def.lv[b.lv - 1].wpn.length) { const t = R.g.byId.get(b.tgt); if (t) { const want = Math.atan2(t.y - b.y, t.x - b.x); b.aimA = b.aimA === undefined ? want : b.aimA + angDiff(want, b.aimA) * Math.min(1, R.dt * 6); } }
+  if (b.tgt && lvOf(b).wpn.length) { const t = R.g.byId.get(b.tgt); if (t) { const want = Math.atan2(t.y - b.y, t.x - b.x); b.aimA = b.aimA === undefined ? want : b.aimA + angDiff(want, b.aimA) * Math.min(1, R.dt * 6); } }
   if (R.detail > 1 && R.cam.z >= 0.4) {
     /* Station in einen Zwischenspeicher zeichnen, darin Licht von oben links auftragen, mit Schatten einsetzen */
     const S = Math.min(2, Math.max(1, R.dpr * R.cam.z)), size = Math.ceil(b.def.r * 2.7 * S);
@@ -649,6 +669,15 @@ function frame2D(alpha, dt) {
     if (b.role === 'super' && vis) { ctx.strokeStyle = b.charge >= 1 ? 'rgba(255,184,107,' + (0.6 + 0.3 * Math.sin(R.time * 5)) + ')' : 'rgba(255,184,107,0.55)'; ctx.lineWidth = 3 / cam.z; ctx.beginPath(); ctx.arc(b.x, b.y, b.def.r + 4, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, b.charge)); ctx.stroke(); if (b.charge >= 1 && b.owner === vp) glowAt(ctx, b.x, b.y, b.def.r * 1.6, '#ffb070', 0.18 + 0.1 * Math.sin(R.time * 4)); }
     if (b.upg && vis) { ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2 / cam.z; ctx.setLineDash([3, 5]); ctx.beginPath(); ctx.arc(b.x, b.y, b.def.r + 6, -Math.PI / 2, -Math.PI / 2 + TAU * b.upg.prog); ctx.stroke(); ctx.setLineDash([]); }
   }
+  /* Fassung 22: Schildwälle – stehendes Feld als leuchtendes Band mit wanderndem Wabenmuster, Treffer blitzen auf;
+     eigener Emitter ohne Feld (Energiemangel, Zusammenbruch, Anker fehlt): blasse gestrichelte Linie */
+  for (const b of g.bldgs) {
+    if (b.dead || b.role !== 'wall' || !b.done) continue;
+    const a = b.link ? g.byId.get(b.link) : null; if (!a || a.dead) continue;
+    const mx = (b.x + a.x) / 2, my = (b.y + a.y) / 2;
+    if (!inV(mx, my, 260) || (vp >= 0 && !R.seen(mx, my))) continue;
+    drawWallField(ctx, b, a, pcol(b.owner), vp, cam.z, g.time);
+  }
   /* Bauschiff am Werk: Baustrahl */
   for (const u of g.ships) if (!u.dead && u.o.t === 'build' && R.visible(u)) { const b = g.byId.get(u.o.bid); if (b && !b.done && hyp(u.x - b.x, u.y - b.y) < b.def.r + u.def.r + 70) { ctx.strokeStyle = 'rgba(180,255,220,0.55)'; ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([3, 4]); ctx.lineDashOffset = -R.time * 40; ctx.beginPath(); ctx.moveTo(u.x, u.y); ctx.lineTo(b.x + Math.cos(R.time * 1.3) * b.def.r * 0.4, b.y + Math.sin(R.time * 1.3) * b.def.r * 0.4); ctx.stroke(); ctx.setLineDash([]); } }
   /* Schiffe */
@@ -664,6 +693,7 @@ function frame2D(alpha, dt) {
     if (u.derelict) { if (R.detail > 1 && Math.random() < 0.04) fxSpark(u.x + (Math.random() - 0.5) * u.def.r, u.y + (Math.random() - 0.5) * u.def.r, 2, 30, '#ffd27a', 0.5); }
     if (u.acid && R.detail > 1 && Math.random() < 0.35) fxSpark(u.x + (Math.random() - 0.5) * u.def.r, u.y + (Math.random() - 0.5) * u.def.r, 1, 15, '#b4ff3c', 0.5);
     if (u.para) { const n = Math.min(4, u.para.n); ctx.fillStyle = '#ff9ad6'; for (let i = 0; i < n; i++) { const a = R.time * 2 + i * TAU / n; ctx.beginPath(); ctx.arc(u.x + Math.cos(a) * u.def.r * 0.8, u.y + Math.sin(a) * u.def.r * 0.8, 2 / cam.z + 0.8, 0, TAU); ctx.fill(); } }
+    if (u.jamT > g.time) { const r = u.def.r + 5, a0 = -R.time * 4 + u.id; ctx.strokeStyle = 'rgba(201,160,255,0.7)'; ctx.lineWidth = 1.4 / cam.z; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(u.x, u.y, r, a0 + i * TAU / 3, a0 + i * TAU / 3 + 0.9); ctx.stroke(); } }   /* Fassung 22: gestört */
     if (u.dome > 0) { const r = u.def.r * 1.5 + 6; ctx.fillStyle = 'rgba(143,227,255,0.1)'; ctx.strokeStyle = 'rgba(143,227,255,' + (0.35 + 0.15 * Math.sin(R.time * 6)) + ')'; ctx.lineWidth = 1.5 / cam.z; ctx.beginPath(); ctx.arc(u.x, u.y, r, 0, TAU); ctx.fill(); ctx.stroke(); }
     if (u.abT && u.abT.invuln > 0) { ctx.strokeStyle = 'rgba(255,230,160,' + (0.6 + 0.3 * Math.sin(R.time * 10)) + ')'; ctx.lineWidth = 2.5 / cam.z; ctx.beginPath(); ctx.arc(u.x, u.y, u.def.r * 1.4 + 4, 0, TAU); ctx.stroke(); glowAt(ctx, u.x, u.y, u.def.r * 2.2, '#ffd27a', 0.35); }
     if (u.truce > 0) { ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1 / cam.z; ctx.setLineDash([3 / cam.z, 3 / cam.z]); ctx.beginPath(); ctx.arc(u.x, u.y, u.def.r + 4, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
@@ -681,7 +711,7 @@ function frame2D(alpha, dt) {
       if (vp >= 0 && !R.visible(s) && !R.visible(t)) continue;
       const wp = (s.k === 2 ? lvOf(s).wpn : s.def.wpn)[i], col = wp.col || wpnCol(s.owner), a = Math.atan2(t.y - s.y, t.x - s.x), r0 = s.k === 2 ? s.def.r * 0.6 : s.def.r * 0.5;
       if (bm.extra) for (const eid of bm.extra) { const e2 = g.byId.get(eid); if (!e2 || e2.dead) continue; ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.45; ctx.strokeStyle = col; ctx.lineWidth = (wp.w || 2) * 1.6; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e2.x, e2.y); ctx.stroke(); ctx.globalAlpha = 0.9; ctx.strokeStyle = '#fff'; ctx.lineWidth = 0.6; ctx.beginPath(); ctx.moveTo(s.x, s.y); ctx.lineTo(e2.x, e2.y); ctx.stroke(); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; }
-      const sx = s.x + Math.cos(a) * r0, sy = s.y + Math.sin(a) * r0, jx = (Math.random() - 0.5) * 3, jy = (Math.random() - 0.5) * 3, tx = t.x + jx, ty = t.y + jy;
+      const sx = s.x + Math.cos(a) * r0, sy = s.y + Math.sin(a) * r0, jx = (Math.random() - 0.5) * 3, jy = (Math.random() - 0.5) * 3, tx = (bm.wx !== undefined ? bm.wx : t.x) + jx, ty = (bm.wy !== undefined ? bm.wy : t.y) + jy;   /* Fassung 22: am Schildwall endet der Strahl */
       const bw = (wp.w || 2), pulse = 0.85 + 0.15 * Math.sin(R.time * 40 + s.id);
       ctx.lineCap = 'round'; ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.25; ctx.strokeStyle = col; ctx.lineWidth = bw * 5 * pulse; ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(tx, ty); ctx.stroke();
@@ -766,6 +796,8 @@ function drawOverlay2D(ctx, g, inV, lowZ, vp, dt) {
       if (b.dead || !inV(b.x, b.y, 80) || !R.seen(b.x, b.y)) continue;
       const sel = U.selB === b.id;
       if (sel) { ctx.strokeStyle = 'rgba(140,255,170,0.9)'; ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([6 / cam.z, 5 / cam.z]); ctx.beginPath(); ctx.arc(b.x, b.y, b.def.r + 8, 0, TAU); ctx.stroke(); ctx.setLineDash([]); if (b.rally) { ctx.strokeStyle = 'rgba(140,255,170,0.4)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.lineTo(b.rally.x, b.rally.y); ctx.stroke(); ctx.beginPath(); ctx.arc(b.rally.x, b.rally.y, 6 / cam.z, 0, TAU); ctx.stroke(); } if (b.role === 'shield' && b.done) { ctx.strokeStyle = 'rgba(143,227,255,0.35)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(b.x, b.y, lvOf(b).aura, 0, TAU); ctx.stroke(); } }
+      /* Fassung 22: Reichweiten der gewählten Station (Sicht/Aufdeckung, Reparatur, Störsender) */
+      if (sel && b.done) { const l = lvOf(b), rg = (r, c, d) => { ctx.strokeStyle = c; ctx.lineWidth = 1 / cam.z; if (d) ctx.setLineDash([5 / cam.z, 5 / cam.z]); ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }; if (l.detect) { rg(l.sensor, 'rgba(160,255,190,0.25)'); rg(l.detect, 'rgba(160,255,190,0.35)', 1); } if (l.rep) rg(l.rep, 'rgba(159,255,207,0.35)'); if (l.jam) rg(l.jam, 'rgba(201,160,255,0.4)', 1); }
       if (!lowZ && b.done && (sel || b.hull < b.hullMax || U.showAll || isFoeV(b.owner) && R.visible(b))) drawBars(ctx, b, Math.max(30, b.def.r * 1.6));
       if (!lowZ && b.done) drawChevrons(ctx, b.x, b.y - b.def.r - 4 / cam.z, b.lv, pcol(b.owner));
       if (!b.done && !b.bld && b.owner === vp && (R.frameN % 60) < 30) { ctx.fillStyle = '#ffc23e'; ctx.font = (12 / cam.z) + 'px ' + FONT; ctx.textAlign = 'center'; ctx.fillText(L('Bauschiff fehlt'), b.x, b.y - b.def.r - 8 / cam.z); }
@@ -789,6 +821,11 @@ function drawOverlay2D(ctx, g, inV, lowZ, vp, dt) {
       ctx.strokeStyle = pl.ok ? 'rgba(140,255,170,0.9)' : 'rgba(255,91,71,0.9)'; ctx.lineWidth = 2 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, def.r + 4, 0, TAU); ctx.stroke();
       if (pl.role === 'shield') { ctx.strokeStyle = 'rgba(143,227,255,0.3)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, def.lv[0].aura, 0, TAU); ctx.stroke(); }
       if (def.lv[0].wpn.length) { ctx.strokeStyle = 'rgba(255,200,120,0.3)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, Math.max(...def.lv[0].wpn.map(w => w.range)), 0, TAU); ctx.stroke(); }
+      /* Fassung 22: Sicht- und Aufdeckweite, Reparaturumkreis, Feldlinie zum Anker */
+      const l0 = def.lv[0];
+      if (l0.sensor) { ctx.strokeStyle = 'rgba(160,255,190,0.25)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, l0.sensor, 0, TAU); ctx.stroke(); ctx.setLineDash([5 / cam.z, 5 / cam.z]); ctx.beginPath(); ctx.arc(pl.x, pl.y, l0.detect, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
+      if (l0.rep) { ctx.strokeStyle = 'rgba(159,255,207,0.35)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, l0.rep, 0, TAU); ctx.stroke(); }
+      if (pl.role === 'wall') { const an = pl.anc ? g.byId.get(pl.anc) : null; if (an) { ctx.strokeStyle = pl.ok ? 'rgba(143,227,255,0.85)' : 'rgba(255,91,71,0.7)'; ctx.lineWidth = 3 / cam.z; ctx.setLineDash([8 / cam.z, 5 / cam.z]); ctx.lineDashOffset = -R.time * 30 / cam.z; ctx.beginPath(); ctx.moveTo(pl.x, pl.y); ctx.lineTo(an.x, an.y); ctx.stroke(); ctx.setLineDash([]); ctx.lineDashOffset = 0; } ctx.strokeStyle = 'rgba(143,227,255,0.18)'; ctx.lineWidth = 1 / cam.z; ctx.beginPath(); ctx.arc(pl.x, pl.y, WALL_MAX + def.r, 0, TAU); ctx.stroke(); }
     }
     /* Superwaffe: Umkreis am Tor / Zielvorschau */
     if (U.mode === 'super') { const sb = g.byId.get(U.selB); if (sb && sb.role === 'super') { const lv = lvOf(sb); if (g.players[vp].faction === 'alliance') { ctx.strokeStyle = 'rgba(143,227,255,0.45)'; ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([6 / cam.z, 6 / cam.z]); ctx.beginPath(); ctx.arc(sb.x, sb.y, lv.sr, 0, TAU); ctx.stroke(); ctx.setLineDash([]); } if (U.superTgt) { const t = U.superTgt; ctx.strokeStyle = 'rgba(255,184,107,0.9)'; ctx.lineWidth = 2 / cam.z; ctx.beginPath(); ctx.arc(t.x, t.y, g.players[vp].faction === 'alliance' ? 60 : lv.sr, 0, TAU); ctx.stroke(); ctx.beginPath(); ctx.moveTo(t.x - 12 / cam.z, t.y); ctx.lineTo(t.x + 12 / cam.z, t.y); ctx.moveTo(t.x, t.y - 12 / cam.z); ctx.lineTo(t.x, t.y + 12 / cam.z); ctx.stroke(); } } }
@@ -893,7 +930,7 @@ function drawOverlay3D(g, inV, lowZ, vp) {
   for (const b of g.bldgs) {
     if (b.dead || !inV(b.x, b.y, 80) || !R.seen(b.x, b.y)) continue;
     const sel = U.selB === b.id;
-    if (sel) { ring(b.x, b.y, b.def.r + 8, GREEN, 1.5, { dash: 1, alpha: 0.9 }); if (b.rally) { line(b.x, b.y, b.rally.x, b.rally.y, GREEN, 1, { alpha: 0.4 }); ring(b.rally.x, b.rally.y, 6, GREEN, 1, { alpha: 0.6 }); } if (b.role === 'shield' && b.done) ring(b.x, b.y, lvOf(b).aura, '#8fe3ff', 1, { alpha: 0.35 }); }
+    if (sel) { ring(b.x, b.y, b.def.r + 8, GREEN, 1.5, { dash: 1, alpha: 0.9 }); if (b.rally) { line(b.x, b.y, b.rally.x, b.rally.y, GREEN, 1, { alpha: 0.4 }); ring(b.rally.x, b.rally.y, 6, GREEN, 1, { alpha: 0.6 }); } if (b.role === 'shield' && b.done) ring(b.x, b.y, lvOf(b).aura, '#8fe3ff', 1, { alpha: 0.35 }); if (b.done) { const l = lvOf(b); if (l.detect) { ring(b.x, b.y, l.sensor, '#a0ffbe', 1, { alpha: 0.25 }); ring(b.x, b.y, l.detect, '#a0ffbe', 1, { dash: 1, alpha: 0.35 }); } if (l.rep) ring(b.x, b.y, l.rep, '#9fffcf', 1, { alpha: 0.35 }); if (l.jam) ring(b.x, b.y, l.jam, '#c9a0ff', 1, { dash: 1, alpha: 0.4 }); } }
     if (!lowZ && b.done && (sel || b.hull < b.hullMax || U.showAll || isFoeV(b.owner) && R.visible(b))) hud.push({ k: 'bars', x: b.x, y: b.y, e: b, w: Math.max(30, b.def.r * 1.6) });
     if (!lowZ && b.done) hud.push({ k: 'chev', x: b.x, y: b.y, n: b.lv, col: pcol(b.owner), dx: 0, dy: -b.def.r - 4 });
     if (!b.done && !b.bld && b.owner === vp && (R.frameN % 60) < 30) hud.push({ k: 'text', x: b.x, y: b.y, txt: L('Bauschiff fehlt'), col: '#ffc23e', dy: -b.def.r - 8 });
@@ -912,6 +949,11 @@ function drawOverlay3D(g, inV, lowZ, vp) {
     ring(pl.x, pl.y, def.r + 4, pl.ok ? GREEN : '#ff5b47', 2, { alpha: 0.9 });
     if (pl.role === 'shield') ring(pl.x, pl.y, def.lv[0].aura, '#8fe3ff', 1, { alpha: 0.3 });
     if (def.lv[0].wpn.length) ring(pl.x, pl.y, Math.max(...def.lv[0].wpn.map(w => w.range)), '#ffc878', 1, { alpha: 0.3 });
+    /* Fassung 22 */
+    const l0 = def.lv[0];
+    if (l0.sensor) { ring(pl.x, pl.y, l0.sensor, '#a0ffbe', 1, { alpha: 0.25 }); ring(pl.x, pl.y, l0.detect, '#a0ffbe', 1, { dash: 1, alpha: 0.3 }); }
+    if (l0.rep) ring(pl.x, pl.y, l0.rep, '#9fffcf', 1, { alpha: 0.35 });
+    if (pl.role === 'wall') { const an = pl.anc ? g.byId.get(pl.anc) : null; if (an) line(pl.x, pl.y, an.x, an.y, pl.ok ? '#8fe3ff' : '#ff5b47', 2.5, { dash: 1, alpha: 0.85 }); ring(pl.x, pl.y, WALL_MAX + def.r, '#8fe3ff', 1, { alpha: 0.18 }); }
   }
   if (U.mode === 'super') { const sb = g.byId.get(U.selB); if (sb && sb.role === 'super') { const lv = lvOf(sb); if (g.players[vp].faction === 'alliance') ring(sb.x, sb.y, lv.sr, '#8fe3ff', 1.5, { dash: 1, alpha: 0.45 }); if (U.superTgt) { const t = U.superTgt, rr = g.players[vp].faction === 'alliance' ? 60 : lv.sr; ring(t.x, t.y, rr, '#ffb86b', 2, { alpha: 0.9 }); line(t.x - 12, t.y, t.x + 12, t.y, '#ffb86b', 2); line(t.x, t.y - 12, t.x, t.y + 12, '#ffb86b', 2); } } }
   if (U.mode === 'board') for (const id of U.sel) { const u = g.byId.get(id); if (u && !u.dead && u.def.marines) ring(u.x, u.y, ABIL.board.r + u.def.r, '#ffb86b', 1, { alpha: 0.4 }); }

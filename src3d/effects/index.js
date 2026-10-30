@@ -210,6 +210,9 @@ export function event(e, g, view) {
     }
     case 'shield': { const t = g ? targetAt(g, e.x, e.y) : null; if (t && (t.derelict || t.dead || (t.k === 1 && !(t.shield > 0) && !(t.abT && t.abT.invuln > 0) && !(t.dome > 0)))) break; dome(e.x, e.y, e.r || 16, e.ang || 0, pc(e.owner)); break; }
     case 'shdown': ring(e.x, e.y, (e.r || 16) * 1.4, '#8fe3ff', 0.5, 2.5); break;
+    /* Fassung 22: Schildwall getroffen / zusammengebrochen */
+    case 'wallhit': flash(e.x, e.y, 12, '#dff4ff', 0.18, H.proj); spark(e.x, e.y, 3, 70, '#8fe3ff', 0.3, H.proj); break;
+    case 'wallDown': ring(e.x, e.y, 110, '#8fe3ff', 0.8, 3); spark(e.x, e.y, 24, 180, '#bfe9ff', 0.7, H.proj); break;
     case 'shot':
       if (e.kind === 'rail') { flash(e.x, e.y, 12, '#dff4ff', 0.15, H.proj, TILE.star, 1.4); glow(e.x, e.y, H.proj, 20, 36, '#9fd0ff', 0.25, 0.5); }
       else if (e.kind === 'kin' && e.big) flash(e.x + Math.cos(e.ang) * 10, e.y + Math.sin(e.ang) * 10, 5, '#ffe0a0', 0.1, H.proj);
@@ -290,10 +293,10 @@ function beamsOf(list, g, dt, time, view) {
       const bm = s.beams[i]; if (!bm) continue;
       const t = g.byId.get(bm.tid); if (!t || t.dead) continue;
       if (view && view.vp >= 0 && !view.visible(s) && !view.visible(t)) continue;
-      const wps = s.k === 2 ? (s.def.lv && s.def.lv[s.lv - 1] ? s.def.lv[s.lv - 1].wpn : null) : s.def.wpn, wp = wps ? wps[i] : null;
+      const wps = s.k === 2 ? (typeof lvOf === 'function' ? lvOf(s).wpn : s.def.lv && s.def.lv[s.lv - 1] ? s.def.lv[s.lv - 1].wpn : null) : s.def.wpn, wp = wps ? wps[i] : null;   /* Fassung 22: Turmzweige */
       const c = col(wpnColOf(g, s, wp)), bw = (wp && wp.w) || 2, a = Math.atan2(t.y - s.y, t.x - s.x);
       const r0 = s.k === 2 ? s.def.r * 0.6 : s.def.r * 0.5, h0 = s.k === 2 ? H.beam + 6 : H.beam, h1 = H.beam + (t.k === 2 ? 4 : 0);
-      const sx = s.x + Math.cos(a) * r0, sy = s.y + Math.sin(a) * r0, tx = t.x + rnd(-1.5, 1.5), ty = t.y + rnd(-1.5, 1.5);
+      const sx = s.x + Math.cos(a) * r0, sy = s.y + Math.sin(a) * r0, tx = (bm.wx !== undefined ? bm.wx : t.x) + rnd(-1.5, 1.5), ty = (bm.wy !== undefined ? bm.wy : t.y) + rnd(-1.5, 1.5);   /* Fassung 22: am Schildwall endet der Strahl */
       const pulse = 0.92 + 0.08 * Math.sin(time * 28 + s.id);
       if (bm.extra) for (const eid of bm.extra) { const e2 = g.byId.get(eid); if (!e2 || e2.dead) continue; B.quad.write(sx, h0, sy, e2.x, h1, e2.y, bw * 2.2, QMODE.flat, c[0], c[1], c[2], 0.35); B.quad.write(sx, h0, sy, e2.x, h1, e2.y, bw * 0.5, QMODE.flat, 1.5, 1.5, 1.5, 0.8); B.spr.write(e2.x, h1, e2.y, bw * 6, 0, TILE.glow, c[0], c[1], c[2], 0.6); }
       B.quad.write(sx, h0, sy, tx, h1, ty, bw * 6 * pulse, QMODE.flat, c[0], c[1], c[2], 0.16);
