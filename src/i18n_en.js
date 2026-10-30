@@ -2463,5 +2463,20 @@ const EN = {
   "Kristallkatapult. Wirft verdichtete Kristallmasse aus großer Entfernung, nur im Stand. Bewegliche Ziele weichen aus. Zerbrechlich.": "Crystal catapult. Throws compressed crystal mass from long range, only while stationary. Moving targets dodge. Fragile.",
   "Sporenmörser. Spuckt Säureblasen im hohen Bogen weit hinter die Turmlinie, nur im Stand. Bewegliche Ziele weichen aus, im Nahkampf wehrlos.": "Spore mortar. Spits acid blisters in a high arc far behind the turret line, only while stationary. Moving targets dodge; defenceless at close range.",
   "Belagerungsartillerie. Feuert im Stand Granaten aus großer Entfernung, weit außerhalb der Turmreichweite – vor allem auf Stationen, aber auch auf Schiffe. Die Granaten fliegen lange: wer in Bewegung bleibt, weicht aus. Selbst kaum gepanzert – braucht Begleitschutz.": "Siege artillery. Fires shells from long range while stationary, far outside turret range – mainly at stations, but also at ships. The shells fly for a long time: whoever keeps moving dodges them. Barely armoured itself – needs an escort.",
-  "Runde 20": "Round 20"
+  "Runde 20": "Round 20",
+  "{0} × {1} in der Warteschlange": "{0} × {1} queued",
+  "Neue Kampfschiffe sammeln bei Gruppe {0}": "New warships rally to group {0}",
+  "1 Frachter": "1 freighter",
+  "{0} Frachter": "{0} freighters",
+  "1 Werft": "1 shipyard",
+  "{0} Werften": "{0} shipyards",
+  "1 Bauschiff": "1 builder",
+  "{0} Bauschiffe": "{0} builders",
+  "Untätig": "Idle",
+  "Zeitlupe": "Slow motion",
+  "Pausiert – Befehle möglich": "Paused – orders allowed",
+  "Neue Schiffe zur aktiven Gruppe": "New ships join active group",
+  "Befehle in der Pause": "Orders while paused",
+  "Zeitlupe bei Großgefechten": "Slow motion in big battles",
+  "Pause mit Befehlen: Das Spiel steht, du kannst wählen und Befehle geben (Q)": "Pause with orders: the game stops, you can still select and give orders (Q)"
 };

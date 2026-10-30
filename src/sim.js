@@ -501,6 +501,7 @@ function execCmd(g, c) {
     case 'cancel': return cmdCancel(g, pi, c.b, c.i | 0);
     case 'upgrade': return cmdUpgrade(g, pi, c.b);
     case 'rally': return cmdRally(g, pi, c.b, c.x, c.y);
+    case 'grally': { const n = c.n | 0; if (n < 0 || n > 5) return 'Nicht möglich'; p.grally = n; return null; }   /* Fassung 22: neue Kampfschiffe sammeln bei Gruppe n (0 = aus) */
     case 'sell': return cmdSell(g, pi, c.b);
     case 'research': return cmdResearch(g, pi, c.id);
     case 'cancelResearch': return cmdCancelResearch(g, pi);
@@ -565,9 +566,21 @@ function spawnFrom(g, b, id) {
   /* KI: Schlachtschiffe ziehen sich zur Reparatur zurück (Haltung Vorsichtig) */
   if (p.ai && def.role === 'war' && def.cls === 'l') u.stance = 3;
   if (def.cargo) { const n = pickNode(g, b.owner, b.x, b.y, 1400) || nearestNode(g, b.x, b.y, null, 1800); if (n) { cmdHarvest(g, [u], n); u.o.auto = 1; } }
-  else if (b.rally) cmdMove(g, [u], b.rally.x, b.rally.y, def.wpn.length > 0);
+  else if (!grallyJoin(g, p, u) && b.rally) cmdMove(g, [u], b.rally.x, b.rally.y, def.wpn.length > 0);
   ev(g, 'ready', { owner: b.owner, id: u.id, x: u.x, y: u.y, type: id });
   return u;
+}
+/* Fassung 22: Sammeln bei der aktiven Gruppe – ist p.grally gesetzt (Befehl 'grally'), tritt ein neues Kampfschiff der Gruppe
+   bei und fliegt im Angriffsmarsch zu ihrer Mitte. Gruppe leer: es tritt bei und nimmt den Sammelpunkt der Werft. */
+function grallyJoin(g, p, u) {
+  const n = p.grally | 0, def = u.def;
+  if (!n || def.cargo || def.build || def.role === 'fighter' || !armed(u)) return false;
+  u.grp = n;
+  let x = 0, y = 0, k = 0;
+  for (const v of g.ships) if (v !== u && !v.dead && v.owner === u.owner && v.grp === n && !v.derelict) { x += v.x; y += v.y; k++; }
+  if (!k) return false;
+  cmdMove(g, [u], x / k, y / k, true);
+  return true;
 }
 function completeBldg(g, b) {
   b.done = true; b.prog = 1; b.hull = b.hullMax; b.shield = b.shieldMax;

@@ -137,10 +137,11 @@ function frame(t) {
   if (UI.cqOpen) { cqFrame(dt); MUS.tick(); return; }
   const g = UI.g;
   if (!g) return;
-  const run = !UI.paused && !UI.askOpen, mp = UI.kind === 'mp' && NET.live;
+  /* Fassung 22: aktive Pause (UI.apause, play.js) hält nur die Simulation an – Kamera und Bedienung bleiben */
+  const live = !UI.paused && !UI.askOpen, run = live && !UI.apause, mp = UI.kind === 'mp' && NET.live;
   if (run && mp) mpFrame(g, dt);
   else if (run) {
-    const speed = UI.attract ? (g.time < 200 ? 6 : 1.5) : (UI.speed || 1) * (UI.slow ? 0.15 : 1);
+    const speed = UI.attract ? (g.time < 200 ? 6 : 1.5) : (UI.speed || 1) * (UI.slow ? 0.15 : 1) * (UI.slowmo || 1);   /* Fassung 22: Zeitlupe (play.js) */
     _acc += dt * speed;
     let n = 0;
     const maxN = UI.attract ? 8 : 4;
@@ -150,7 +151,7 @@ function frame(t) {
     }
     if (_acc > STEP * 2) _acc = 0;
   }
-  if (run) {
+  if (live) {
     if (UI.attract) {
       if (g.over || g.time > 1500) { startAttract(); return; }
       const cam = R.cam, vw = R.cssW / cam.z, vh = R.cssH / cam.z;
@@ -195,6 +196,7 @@ function frame(t) {
   initCampaign();
   initConquest();
   appInit(); fbInit(); hpInit(); rpInit(); progInit();
+  plInit();       /* Fassung 22: Spielhilfen (play.js) */
   initEditor();   /* KARTENEDITOR (editor.js): eigene Karten eintragen, Knopf im Hauptmenü */
   applySet();
   $('mSkirm').addEventListener('click', () => { SND.init(); SND.play('click'); if (MENU.mode !== 'skirmish') { MENU.mode = 'skirmish'; } menuPage('setup'); });

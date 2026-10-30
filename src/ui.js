@@ -9,7 +9,7 @@ const UI = {
   g: null, me: -1, P: null, sel: new Set(), selB: 0, mode: 'normal', place: null, box: null, boxMode: false, keys: {}, paused: false, endShown: false, attract: true, kind: '', opts: null,
   speed: 1, tab: 'eco', showRange: false, showAll: false, mark: null, mouse: false, cx: 0, cy: 0, hx: 0, hy: 0, onView: false, rect: null, form: 'wedge', lastTap: 0, lastTapId: 0, hovT: 0, tipT: 0, saveAt: 0, alertT: -99, alertPos: null, camTravel: 0, fsOff: false, fsPause: false, mPage: 'home', items: []
 };
-const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d' };
+const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d', grally: false, apause: true, slowmo: false };   /* Fassung 22: grally, apause, slowmo (play.js) */
 const MENU = { faction: 'alliance', map: 'haven', opp: 1, lvl: 2, res: 'normal', oppF: 'random', mode: 'skirmish', allies: 1, allyLvl: 2 };
 const SCALES = [0.9, 1, 1.15, 1.3], SPEEDS = [0.75, 1, 1.5, 2];
 const $ = id => document.getElementById(id);
@@ -597,7 +597,9 @@ function hudBuild(force) {
     for (const d of list) {
       const why = trainReq(g, UI.me, d.id) || (b.lv < d.yard ? 'Benötigt Werft Stufe ' + ROMAN[d.yard] : null), afford = canPay(P, shipCost(P, d)), n = b.q.filter(q => q.id === d.id).length;
       const extra = (n ? '<span class="q">' + n + '</span>' : '') + (b.q.length && b.q[0].id === d.id ? '<span class="pb"><i style="width:' + Math.round(b.qp * 100) + '%"></i></span>' : '') + (why ? '<span class="lock">' + esc(L(why)) + '</span>' : '');
-      const el = itemBtn(L(d.name), shipCost(P, d), () => { const r = issue({ t: 'train', b: b.id, id: d.id }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { SND.play('click'); hudBuild(); } }, () => shipTip(d), extra);
+      /* Fassung 22: Doppeltippen/Umschalt-Klick reiht 5 ein, Tippen auf die Zahl oder Rechtsklick nimmt eines heraus (play.js) */
+      const el = itemBtn(L(d.name), shipCost(P, d), e => plTrain(b, d, e), () => shipTip(d), extra);
+      el.addEventListener('contextmenu', e => { if (plUnqueue(b, d)) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
       if (why || !afford) el.classList.add('off');
       el.dataset.k = 'item:' + d.id;
       items.appendChild(el);
@@ -848,6 +850,10 @@ function initSettings() {
     segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
     segInit('sQual', [['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); });
     segInit('sLang', [['de', 'Deutsch'], ['en', 'English']], () => SET.lang, v => { SET.lang = v; savePrefs(); setLang(v); langRefresh(); seg(); });
+    /* Fassung 22: Spielhilfen (play.js) */
+    segInit('sGrally', [[true, 'An'], [false, 'Aus']], () => !!SET.grally, v => { SET.grally = v; savePrefs(); plGrallySync(true); });
+    segInit('sApause', [[true, 'An'], [false, 'Aus']], () => SET.apause !== false, v => { SET.apause = v; savePrefs(); if (!v) plSetAP(false); plQpUpdate(); });
+    segInit('sSlowmo', [[true, 'An'], [false, 'Aus']], () => !!SET.slowmo, v => { SET.slowmo = v; savePrefs(); });
   };
   seg();
   $('sClose').addEventListener('click', closeSettings);
