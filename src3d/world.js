@@ -20,7 +20,7 @@ import { CAM, inView } from './camera.js';
 import { ring } from './overlay.js';
 
 const EDGE = 110, TAU = Math.PI * 2;
-const W = { root: null, sky: null, anim: null, nodes: [], nebs: [], sites: new Map(), gates: new Map(), fieldsN: 0, map: null };
+const W = { root: null, sky: null, anim: null, nodes: [], nebs: [], sites: new Map(), gates: new Map(), fieldsN: 0, map: null, rockRef: [], rockN: 0, rockDmg: null };
 
 /* ------------------------------------------------------------ Himmel
    Tiefe Ebene (Y = −2600) mit Nebelschwaden, darüber Sterne als Punkte in fester Pixelgröße (ohne Größen-
@@ -112,12 +112,16 @@ export function buildWorld(g) {
   const M = mats('guardian');
   /* Felsen: je Grundform ein InstancedMesh; Lage und Stauchung aus dem Modell, Platz und Drehung aus der Karte */
   const byGeo = new Map(), m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3();
+  /* Fassung 22: je Fels (Index) Verweis auf InstancedMesh und Platz – gesprengte Felsen verschwinden, angeschlagene glühen */
+  W.rockRef = []; W.rockN = -1; W.rockDmg = new Float32Array(map.rocks.length);
   map.rocks.forEach((o, i) => {
     const m = buildW({ kind: 'rock', r: o.r, seed: o.seed || i }, M); let child = null; m.traverse(c => { if (c.isMesh && !child) child = c; }); if (!child) return;
     m.position.set(o.x, 0, o.y); m.rotation.y = -(o.ang || 0); m.updateMatrixWorld(true);
-    let e = byGeo.get(child.geometry); if (!e) byGeo.set(child.geometry, e = { mat: child.material, list: [] }); e.list.push(child.matrixWorld.clone());
+    let e = byGeo.get(child.geometry); if (!e) byGeo.set(child.geometry, e = { mat: child.material, list: [], idx: [] }); e.list.push(child.matrixWorld.clone()); e.idx.push(i);
   });
-  for (const [geo, e] of byGeo) { const im = new THREE.InstancedMesh(geo, e.mat, e.list.length); e.list.forEach((mw, i) => im.setMatrixAt(i, mw)); im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.name = 'rocks'; root.add(im); }
+  const white = new THREE.Color(1, 1, 1);
+  for (const [geo, e] of byGeo) { const im = new THREE.InstancedMesh(geo, e.mat, e.list.length); e.list.forEach((mw, i) => { im.setMatrixAt(i, mw); im.setColorAt(i, white); W.rockRef[e.idx[i]] = { im, j: i }; }); im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; im.name = 'rocks'; root.add(im); }
+  if (map.debris && map.debris.length) root.add(buildDebris(map.debris));
   /* Vorkommen */
   W.nodes = [];
   g.nodes.forEach((n, i) => {
@@ -145,7 +149,51 @@ export function buildWorld(g) {
   S.scene.add(root);
 }
 /* Stätte / Tor je Zustand (Schlüssel) bauen; wird bei Änderung ersetzt */
-function siteKey(st) { return st.kind + '|' + (st.scanned ? 1 : 0) + '|' + (st.done ? 1 : 0); }
+function siteKey(st, col) { return st.kind + '|' + (st.scanned ? 1 : 0) + '|' + (st.done ? 1 : 0) + (OP_KINDS[st.kind] ? '|' + (col || '') : ''); }
+/* ------------------------------------------------------------ Fassung 22: Trümmerfelder und neutrale Stationen */
+const OP_KINDS = { relayst: 1, refplat: 1, drydock: 1 };
+function buildDebris(list) {
+  const g = new THREE.Group(); g.name = 'debris';
+  const n = list.reduce((s, d) => s + Math.round(d.r * d.r / 900), 0), r = rng(77);
+  const plate = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.22, 0.5), new THREE.MeshStandardMaterial({ color: '#7d8796', metalness: 0.7, roughness: 0.45 }), n);
+  const chunk = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: '#5c636e', metalness: 0.55, roughness: 0.6, flatShading: true }), n);
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
+  let k = 0;
+  for (const d of list) {
+    const cnt = Math.round(d.r * d.r / 900);
+    for (let i = 0; i < cnt; i++, k++) {
+      const a = r() * TAU, dd = Math.sqrt(r()) * d.r * 0.9, s = 3 + r() * 9;
+      p.set(d.x + Math.cos(a) * dd, -2 + r() * 6, d.y + Math.sin(a) * dd); e.set(r() * TAU, r() * TAU, r() * TAU); q.setFromEuler(e);
+      sc.set(s * (1 + r()), s, s); m4.compose(p, q, sc); plate.setMatrixAt(k, m4);
+      p.x += (r() - 0.5) * 30; p.z += (r() - 0.5) * 30; sc.setScalar(s * 0.6); m4.compose(p, q, sc); chunk.setMatrixAt(k, m4);
+    }
+    const dust = new THREE.Mesh(new THREE.CircleGeometry(d.r, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#7890b0', transparent: true, opacity: 0.1, depthWrite: false, fog: false }));
+    dust.position.set(d.x, -4, d.y); dust.renderOrder = 1; g.add(dust);
+  }
+  for (const im of [plate, chunk]) { im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; g.add(im); }
+  return g;
+}
+function outpostModel(st, col) {
+  const g = new THREE.Group(), r = st.r, k = st.kind, own = col || '#8fe3ff';
+  const hullM = new THREE.MeshStandardMaterial({ color: '#8a96a6', metalness: 0.6, roughness: 0.45 }), darkM = new THREE.MeshStandardMaterial({ color: '#4a5462', metalness: 0.5, roughness: 0.6 });
+  const glowM = new THREE.MeshBasicMaterial({ color: own, toneMapped: false });
+  const add = (geo, m, x, y, z, ry) => { const o = new THREE.Mesh(geo, m); o.position.set(x, y, z); if (ry) o.rotation.y = ry; o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
+  add(new THREE.CylinderGeometry(r * 0.62, r * 0.7, 7, 8), hullM, 0, 0, 0);
+  add(new THREE.CylinderGeometry(r * 0.3, r * 0.34, 12, 8), darkM, 0, 6, 0);
+  if (k === 'relayst') {
+    for (let i = 0; i < 3; i++) { const a = i / 3 * TAU; const arm = add(new THREE.BoxGeometry(r * 0.7, 3, 5), hullM, Math.cos(a) * r * 0.75, 2, Math.sin(a) * r * 0.75, -a); void arm; const l = add(new THREE.SphereGeometry(2.6, 8, 6), glowM, Math.cos(a) * r * 1.1, 4, Math.sin(a) * r * 1.1); l.userData.blink = 0.7; }
+    add(new THREE.CylinderGeometry(1.5, 2, 30, 6), darkM, 0, 18, 0);
+    const dish = add(new THREE.SphereGeometry(r * 0.32, 16, 8, 0, TAU, 0, 0.9), hullM, 0, 34, 0); dish.rotation.x = 0.6; const piv = new THREE.Group(); piv.position.y = 0; g.remove(dish); piv.add(dish); piv.userData.spin = { axis: 'y', speed: 0.4 }; g.add(piv);
+  } else if (k === 'refplat') {
+    for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + Math.PI / 4; add(new THREE.CylinderGeometry(r * 0.22, r * 0.22, 18, 14), hullM, Math.cos(a) * r * 0.62, 9, Math.sin(a) * r * 0.62); add(new THREE.CylinderGeometry(r * 0.1, r * 0.1, 19, 10), new THREE.MeshBasicMaterial({ color: '#ffb86b', toneMapped: false }), Math.cos(a) * r * 0.62, 9.5, Math.sin(a) * r * 0.62); }
+    const piv = new THREE.Group(); piv.userData.spin = { axis: 'y', speed: -0.6 }; for (let i = 0; i < 2; i++) { const b = new THREE.Mesh(new THREE.BoxGeometry(r * 1.7, 2.5, 4), darkM); b.position.y = 13; b.rotation.y = i * Math.PI / 2; piv.add(b); } g.add(piv);
+    const l = add(new THREE.SphereGeometry(3, 8, 6), glowM, 0, 15, 0); l.userData.pulse = { speed: 2, amp: 0.2 };
+  } else {
+    for (const s of [-1, 1]) { add(new THREE.BoxGeometry(r * 1.1, 10, 9), hullM, r * 0.15, 5, s * r * 0.55); add(new THREE.BoxGeometry(r * 1.0, 2, 2), glowM, r * 0.15, 10.5, s * r * 0.55); }
+    const cr = new THREE.Group(); cr.userData.sway = { axis: 'y', speed: 0.6, amp: 0.4 }; const beam = new THREE.Mesh(new THREE.BoxGeometry(5, 4, r * 1.3), darkM); beam.position.set(r * 0.2, 18, 0); cr.add(beam); const hook = new THREE.Mesh(new THREE.SphereGeometry(2.4, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffd27a', toneMapped: false })); hook.position.set(r * 0.2, 14, 0); hook.userData.blink = 1.2; cr.add(hook); g.add(cr);
+  }
+  return g;
+}
 function gateKey(gt, col) { return gt.state + '|' + gt.mode + '|' + col; }
 function siteModel(st, i) {
   const m = bake(buildW({ kind: st.kind, r: st.r, seed: st.seed !== undefined ? st.seed : i * 31 + 3, scanned: st.scanned }, mats('guardian')), { face: 'cam', faceDir: CAM_DIR, keep: keepFor('world', S.detail) });
@@ -169,12 +217,15 @@ export function updateWorld(g, dt, t, view) {
   /* Nebelmodelle (BUILDW.neb): nur im Bild sichtbar und animiert */
   for (const e of W.nebs) if (e.m) e.m.visible = inView(e.n.x, e.n.y, e.n.r * 1.2, 20);
   for (const e of W.nebs) if (e.grp) { const n = e.n, tt = t * 0.15 + n.x * 0.01; e.grp.children.forEach((d, k) => { d.position.x = Math.cos(tt + k * 2.1) * n.r * 0.18; d.position.z = Math.sin(tt * 1.3 + k * 2.1) * n.r * 0.18; }); }
+  /* Fassung 22: gesprengte Felsen ausblenden, angeschlagene rot getönt */
+  if ((g.rockN || 0) !== W.rockN) { W.rockN = g.rockN || 0; const z = new THREE.Matrix4().makeScale(0, 0, 0); g.map.rocks.forEach((o, i) => { const rf = W.rockRef[i]; if (o.gone && rf && !rf.gone) { rf.gone = 1; rf.im.setMatrixAt(rf.j, z); rf.im.instanceMatrix.needsUpdate = true; } }); }
+  if (g.rocks && W.rockDmg) for (const e of g.rocks) { const o = g.map.rocks[e.ri], rf = W.rockRef[e.ri], d = o && o.dmg || 0; if (!rf || rf.gone || Math.abs(d - W.rockDmg[e.ri]) < 0.04) continue; W.rockDmg[e.ri] = d; const c = new THREE.Color(1, 1 - 0.45 * d, 1 - 0.6 * d); rf.im.setColorAt(rf.j, c); rf.im.instanceColor.needsUpdate = true; }
   /* Stätten */
   const seen = view.vp < 0 ? () => true : view.seen;
   g.sites.forEach((st, i) => {
     let e = W.sites.get(st.id);
-    const key = siteKey(st);
-    if (!e || e.key !== key) { if (e) { W.anim.remove(e.m); } e = { m: siteModel(st, i), key }; put(W.anim, e.m, st.x, st.y, 0); W.sites.set(st.id, e); }
+    const opc = OP_KINDS[st.kind] && st.owner >= 0 ? view.pcol(st.owner) : '', key = siteKey(st, opc);
+    if (!e || e.key !== key) { if (e) { W.anim.remove(e.m); } e = { m: OP_KINDS[st.kind] ? outpostModel(st, opc) : siteModel(st, i), key }; put(W.anim, e.m, st.x, st.y, 0); W.sites.set(st.id, e); }
     e.m.visible = seen(st.x, st.y) && inView(st.x, st.y, st.r + 60, 20);
     if (!e.m.visible) return;
     if (st.prog > 0 && !st.done) ring(st.x, st.y, st.r + 10, pcol(st.by), 3, { a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * st.prog });

@@ -32,7 +32,7 @@ const NET = {
   hs: new Map(), rhs: new Map(), wait: '', rx: null, stall: 0, syncs: 0, okHash: 0, soft: false, sigT: 0
 };
 /* Wahl in der Lobby; bestimmt vom Gastgeber. slots: { t: 'h' (Mensch, id) | 'ai' (f, lvl) | 'off', team, s (Startplatz) } */
-const MPL = { kind: 'free', map: 'haven', size: 'normal', pace: 'tactical', res: 'normal', seed: 1, slots: [] };
+const MPL = { kind: 'free', map: 'haven', size: 'normal', pace: 'tactical', res: 'normal', seed: 1, haz: 'auto', slots: [] };   /* Fassung 22: haz */
 const MPU = { pane: 'home', own: '', ownType: '', stream: null, scanT: 0, scanFor: '', canScan: false, busy: false, prevKey: '', inet: false, name: '', roster: [], turn: { url: '', user: '', pass: '' } };
 function mpBuildId() { return String(window.RA_BUILD || window.RA_VERSION || 'dev'); }
 
@@ -428,6 +428,7 @@ function mpLobbyNew() {
   MPL.kind = 'free'; MPL.seed = 1 + ((Math.random() * 999999) | 0);
   if (MAPS[MENU.map] && !MAPS[MENU.map].waves) MPL.map = MENU.map;
   MPL.size = MENU.size || 'normal'; MPL.pace = MENU.pace || 'tactical'; MPL.res = MENU.res || 'normal';
+  MPL.haz = MENU.haz || 'auto';   /* Fassung 22: Wandernde Gefahren */
 }
 function mpFreeSlot() { let i = MPL.slots.findIndex(q => q.t === 'off'); if (i < 0) i = MPL.slots.findIndex(q => q.t === 'ai'); return i; }
 function mpSlotFor(id) {
@@ -470,6 +471,7 @@ function mpCfgApply(s) {
   if (PACE[s.pace]) MPL.pace = s.pace;
   if (s.res === 'low' || s.res === 'normal' || s.res === 'rich') MPL.res = s.res;
   if (s.seed > 0 && s.seed < 1e7) MPL.seed = s.seed | 0;
+  if (s.haz === 'auto' || s.haz === 'on' || s.haz === 'off') MPL.haz = s.haz;   /* Fassung 22 */
   if (Array.isArray(s.slots) && s.slots.length === MP_MAX) {
     MPL.slots = s.slots.map(q => ({ t: q && (q.t === 'h' || q.t === 'ai') ? q.t : 'off', id: q ? q.id | 0 : 0, f: q && (q.f === 'random' || PLAYABLE.indexOf(q.f) >= 0) ? q.f : 'random', lvl: q && AI_LEVELS[q.lvl] ? q.lvl : 2, team: q ? clamp(q.team | 0, 0, 4) : 0, s: q && q.s >= 0 && q.s < MP_MAX ? q.s | 0 : -1 }));
   }
@@ -509,6 +511,7 @@ function mpLobbyRender() {
   seg('mpSize', [['small', 'Klein'], ['normal', 'Mittel'], ['large', 'Groß']], 'size');
   seg('mpPace', [['tactical', 'Taktisch'], ['normal', 'Normal'], ['fast', 'Schnell']], 'pace');
   seg('mpRes', [['low', 'Knapp'], ['normal', 'Normal'], ['rich', 'Reich']], 'res');
+  seg('mpHaz', [['auto', 'Karte'], ['on', 'An'], ['off', 'Aus']], 'haz'); $('mpHazRow').hidden = waves;   /* Fassung 22 */
   segInit('mpPreset', [['ffa', 'Jeder für sich'], ['hvai', 'Menschen gegen KI'], ['two', 'Zwei Teams']], () => '', v => { mpPreset(v); mpLobbySend(); });
   $('mpPresetRow').hidden = ro || waves;
   $('mpSizeRow').hidden = waves; $('mpResRow').hidden = waves;
@@ -554,7 +557,7 @@ function mpPrevMap() {
 }
 function mpPreview() {
   const list = mpPlayers(), cols = mpColors(list.map(q => q.f)), me = mpMySlot();
-  const key = JSON.stringify([MPL.kind, MPL.map, MPL.size, MPL.seed, list.map(q => [q.f, q.s, q.id]), NET.id]);
+  const key = JSON.stringify([MPL.kind, MPL.map, MPL.size, MPL.seed, MPL.haz, list.map(q => [q.f, q.s, q.id]), NET.id]);
   if (MPU.prevKey === key) return;
   MPU.prevKey = key;
   const cv = $('mpPrev'), m = mpPrevMap();
@@ -562,7 +565,7 @@ function mpPreview() {
   if (!m) return;
   const starts = m.starts.map(() => '#5d6b80');
   list.forEach((q, i) => { if (q.s >= 0 && q.s < starts.length) starts[q.s] = cols[i] || FACTIONS[q.f === 'random' ? 'guardian' : q.f].team; });
-  mapLayout(cv, m, { starts, mine: me && me.s >= 0 ? me.s : -1 });
+  mapLayout(cv, m, { starts, mine: me && me.s >= 0 ? me.s : -1, haz: MPL.kind !== 'waves' && hazOn(m.id, MPL.haz) });
   setText('mpMapInfo', L(MAPS[MPL.map] ? MAPS[MPL.map].name : MAPS[m.id] ? MAPS[m.id].name : MPL.map) + ' · ' + L('{0} Spieler', list.length) + ' · ' + m.w + ' × ' + m.h);
   setText('mpStartNote', me && me.s >= 0 ? L('Dein Startplatz: {0}. Erneut antippen für Zufall.', me.s + 1) : L('Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.'));
 }
@@ -604,7 +607,7 @@ function mpStart() {
   for (let i = free.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [free[i], free[j]] = [free[j], free[i]]; }
   const players = list.map((q, i) => ({ faction: facs[i], human: q.human, ai: q.human ? 0 : q.lvl, team: waves ? 0 : q.team ? q.team : 10 + i, color: cols[i], name: q.human && q.n ? q.n : null, start: q.s >= 0 && q.s < np && taken.indexOf(q.s) === taken.lastIndexOf(q.s) ? q.s : free.shift() }));
   const res = waves ? undefined : MPL.res === 'low' ? { ice: 700, ore: 300 } : MPL.res === 'rich' ? { ice: 2500, ore: 1400 } : undefined;
-  const opts = JSON.parse(JSON.stringify({ map: waves ? 'quarantine' : mapFor(MPL.map, np), size: waves ? undefined : MPL.size, seed: MPL.seed, players, res, pace: MPL.pace, mode: waves ? 'quarantine' : undefined, mp: 1, custom: waves ? undefined : edLayoutOf(MPL.map) }));   /* KARTENEDITOR: custom */
+  const opts = JSON.parse(JSON.stringify({ map: waves ? 'quarantine' : mapFor(MPL.map, np), size: waves ? undefined : MPL.size, seed: MPL.seed, players, res, pace: MPL.pace, mode: waves ? 'quarantine' : undefined, mp: 1, custom: waves ? undefined : edLayoutOf(MPL.map), hazards: waves ? undefined : hazOn(mapFor(MPL.map, np), MPL.haz) }));   /* Fassung 22: hazards */   /* KARTENEDITOR: custom */
   const seats = list.map((q, i) => q.human ? { seat: i, id: q.id, n: q.n || '' } : null).filter(Boolean);
   const D = clamp(Math.ceil((Math.max(0, mpRttMax()) + 120) / (STEP * 1000)), 5, 12);
   for (const P of guests) { const s = seats.find(x => x.id === P.id); if (s) mpSendTo(P, { k: 'go', opts, seat: s.seat, D, seats }); P.in = false; }

@@ -1058,6 +1058,7 @@ function drawBldg(ctx, role, f, lv, col, t, b) {
    drawSite(ctx, st, t, vis): Ursprung Mitte. drawGate(ctx, gt, t, col): Ring mit Wirbel je Zustand. */
 const SITE_C = { hull: '#7c8f86', hi: '#cfe3d9', lo: '#3c4a44', dark: '#5a6b63', line: '#17201c', trim: '#3fb37f', trim2: '#3fb37f', glow: '#9ff0c0', win: '#b8ffd8', gold: '#9ff0c0' };
 function drawSite(ctx, st, t, vis) {
+  if (OUTPOST[st.kind]) { drawOutpost(ctx, st, t, vis); return; }   /* Fassung 22: neutrale Stationen (terrui.js) */
   const C = SITE_C, r = st.r, k = st.kind, rng = makeRng(st.seed + 3);
   if (k === 'ruin') {
     /* zerbrochene Plattform: Trümmerplatten, ein halber Ring, Leuchtpunkte solange ungescannt */

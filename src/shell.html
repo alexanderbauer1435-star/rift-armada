@@ -625,6 +625,8 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
         <p class="fine" id="startNote"></p>
         <div class="row" id="rowSize"><span class="lbl">Größe</span><div class="seg" id="sizeSeg"></div></div>
         <div class="row" id="rowPace"><span class="lbl">Kampftempo</span><div class="seg" id="paceSeg"></div></div>
+        <div class="row" id="rowHaz"><span class="lbl">Wandernde Gefahren</span><div class="seg" id="hazSeg"></div><span class="fine" id="hazInfo"></span></div>
+        <div class="row" id="rowRand" hidden><span class="lbl">Zufallskarte</span><span class="fine" id="randInfo"></span><button class="key" id="randRoll">Neu würfeln</button></div>
         <p class="fine" id="mapDesc"></p>
         <p class="fine" id="mapLegend" style="opacity:.8"></p>
       </section>
@@ -709,6 +711,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
           <div class="row" id="mpSizeRow"><span class="lbl">Größe</span><div class="seg" id="mpSize"></div></div>
           <div class="row"><span class="lbl">Kampftempo</span><div class="seg" id="mpPace"></div></div>
           <div class="row" id="mpResRow"><span class="lbl">Startmittel</span><div class="seg" id="mpRes"></div></div>
+          <div class="row" id="mpHazRow"><span class="lbl">Wandernde Gefahren</span><div class="seg" id="mpHaz"></div></div>
         </div>
         <div>
           <canvas id="mpPrev" width="220" height="220"></canvas>

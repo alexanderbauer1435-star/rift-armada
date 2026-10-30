@@ -74,6 +74,7 @@ function pickAt(wx, wy) {
   for (const u of g.ships) { if (u.dead || !R.visible(u) || u.def.role === 'fighter') continue; test(u, u.def.r + 4, u.owner === UI.me ? 2 : 1); }
   for (const b of g.bldgs) { if (b.dead || !R.seen(b.x, b.y)) continue; test(b, b.def.r, b.owner === UI.me ? 0.5 : 0.3); }
   if (!best) { for (const o of g.sites) if (R.seen(o.x, o.y)) test(o, o.r, 0.2); for (const o of g.gates) if (R.seen(o.x, o.y)) test(o, o.r, 0.2); }
+  if (!best && g.rocks) for (const o of g.rocks) if (!o.dead && R.seen(o.x, o.y)) test(o, o.r + 4, 0.1);   /* Fassung 22: sprengbare Felsen */
   if (!best) for (const n of g.nodes) test(n, n.r, 0);
   return best;
 }
@@ -97,7 +98,8 @@ function tap(sx, sy) {
   if (hit && hit.k === 2 && hit.owner === UI.me && !us.some(u => u.def.build && !hit.done)) { if (us.length && hit.role === 'yard' && us.some(u => u.hull < u.hullMax)) { orderMove(us, hit.x + (us[0].x - hit.x) * 0.3, hit.y + (us[0].y - hit.y) * 0.3, false); showInfo(L('Zur Werft: Reparatur im Umkreis')); return; } selBldg(hit); SND.play('click'); return; }
   if (!us.length) {
     if (hit && (hit.k === 4 || hit.k === 5)) { selSite(hit); SND.play('click'); return; }
-    if (hit && hit.k === 3) showInfo(hit.kind === 'ice' ? L('Eismond: {0} Eis', fmt(hit.amount)) : L('Erz: {0}', fmt(hit.amount)));
+    if (hit && hit.k === 6) showInfo(L('{0}: sprengbar ({1} / {2}). Kampfschiffe wählen und antippen.', L(hit.def.name), Math.max(0, Math.round(hit.hp)), hit.hpMax));   /* Fassung 22 */
+    else if (hit && hit.k === 3) showInfo(hit.kind === 'ice' ? L('Eismond: {0} Eis', fmt(hit.amount)) : L('Erz: {0}', fmt(hit.amount)));
     else if (hit && hit.k === 1) showInfo((hit.derelict ? L('Wrack') + ': ' : L('Feind') + ': ') + L(hit.def.name) + (hit.crewMax ? ' · ' + L('Crew') + ' ' + Math.round(hit.crew) + '/' + hit.crewMax : ''));
     else if (hit && hit.k === 2) showInfo(L('Feind: {0} Stufe {1}', L(hit.def.name), ROMAN[hit.lv]));
     else { const w = nearWreck(g, wx, wy, 70 / Math.max(0.3, R.cam.z)); if (w && R.seen(w.x, w.y)) showInfo(L('Wrack: {0} bergbar. Frachter wählen und das Wrack antippen.', Math.round(w.sal))); else if (UI.selB) desel(); }
@@ -120,6 +122,8 @@ function order(us, hit, wx, wy) {
     const gz = us.filter(u => u.def.eat);
     if (gz.length) { issue({ t: 'eat', u: ids(gz), id: hit.id }); mark(hit.x, hit.y, '#b4ff3c'); SND.play('order'); showInfo(L('Grazer verschlingen das Wrack')); if (gz.length < us.length) orderMove(us.filter(u => !u.def.eat), wx, wy, false); return; }
   }
+  /* Fassung 22: Fels sprengen */
+  if (hit && hit.k === 6) { const arm = us.filter(u => armed(u)); if (arm.length) { issue({ t: 'attack', u: ids(arm), e: hit.id }); mark(hit.x, hit.y, '#ffb86b'); SND.play('order'); showInfo(L('Feuer auf den Felsen')); if (arm.length < us.length) orderMove(us.filter(u => !armed(u)), wx, wy, false); return; } }
   if (hit && (hit.k === 1 || hit.k === 2) && isFoe(hit.owner)) {
     const arm = us.filter(u => armed(u));
     if (arm.length) { issue({ t: 'attack', u: ids(arm), e: hit.id, sub: hit.k === 1 && UI.subAim ? UI.subAim : undefined }); mark(hit.x, hit.y, UI.subAim && hit.k === 1 ? '#c9a0ff' : 'rgba(255,120,90,0.9)'); SND.play('order'); if (arm.length < us.length) orderMove(us.filter(u => !armed(u)), wx, wy, false); return; }
@@ -558,6 +562,7 @@ function objTip(o) {
   if (o.k === 2) { const lv = o.def.lv[o.lv - 1]; return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + ' · ' + L('Stufe {0}', ROMAN[o.lv]) + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + (o.done ? hp(o) : L('Im Bau') + ' ' + Math.round(o.prog * 100) + ' %') + (lv.energy ? ' · ' + L('Energie') + ' ' + (lv.energy > 0 ? '+' : '') + lv.energy : '') + (lv.wpn.length ? ' · ' + lv.wpn.length + ' ' + L(lv.wpn.length > 1 ? 'Waffen' : 'Waffe') : '') + '</p>'; }
   if (o.k === 1) return '<h4 style="color:' + col + '">' + esc(L(o.def.name)) + '</h4><div class="cost">' + esc(who) + '</div><p>' + esc(L(o.def.desc)) + '</p><p class="fine">' + hp(o) + (counterTxt(o.def) ? '<br>' + counterTxt(o.def) : '') + '</p>';
   if (o.k === 3) return '<h4>' + L(o.kind === 'ice' ? 'Eis' : 'Erz') + '</h4><p>' + L('Vorrat') + ' ' + Math.round(o.amount) + ' / ' + Math.round(o.max) + '</p>';
+  if (o.k === 6) return rockTip(o);   /* Fassung 22 */
   if (o.k === 5) return '<h4 style="color:#9ff0c0">' + L('Sprungtor') + '</h4><p>' + L({ dead: 'Erloschen – ein Bauschiff kann es mit Relikten wecken.', flicker: 'Flackert: öffnet sich alle 50 Sekunden kurz.', active: 'Aktiv' }[o.state] || '') + '</p>';
   if (o.kind && SITE_DEF[o.kind]) return '<h4 style="color:#9ff0c0">' + esc(L(SITE_DEF[o.kind].name)) + '</h4><p>' + esc(L(SITE_DEF[o.kind].desc)) + '</p>';
   return '';
@@ -642,6 +647,7 @@ function hudSel() {
       else if (so.kind === 'citadel') h += '<div class="sub">' + (so.done ? L('Erobert') : so.guard.some(id => { const u = g.byId.get(id); return u && !u.dead; }) ? L('Von Wächterdrohnen bewacht') : L('Frei: 60 s mit 6 ★ Kampfschiffen halten')) + '</div>';
       else if (so.kind === 'warden') h += '<div class="sub">' + (so.done ? L('Zerstört') : so.woke ? L('Erwacht und auf Amoklauf!') : L('Schläft. Wer schießt, weckt ihn.')) + '</div>';
       else if (so.kind === 'forge') h += '<div class="sub">' + (so.held >= 0 ? L('Gehalten von {0}', pname(so.held)) : L('Niemand hält die Schmiede')) + '</div>';
+      else if (OUTPOST[so.kind]) h += outpostCard(so);   /* Fassung 22: neutrale Station */
       else if (so.kind === 'archive') h += '<div class="sub">' + (so.used.length ? L('Genutzt von') + ': ' + so.used.map(pname).join(', ') : L('45 s halten')) + '</div>';
       if (so.prog > 0 && !so.done) h += '<div class="bar prog"><i style="width:' + Math.round(so.prog * 100) + '%"></i></div><div class="sub">' + (so.by >= 0 ? esc(pname(so.by)) : '') + ' ' + Math.round(so.prog * 100) + ' %</div>';
       h += '<div class="sub desc">' + esc(L(D.desc)) + '</div>';
@@ -671,6 +677,7 @@ function hudSel() {
     else if (u.hero) h += '<div class="cmdr">' + esc(qt(L(u.hero))) + '</div>';
     if (u.ion) h += '<div class="sub" style="color:var(--acc2)">' + L('Im Ionennebel: Schilde aus, Sicht nur im Nahbereich – für Feinde erst aus der Nähe zu sehen.') + '</div>';
     else if (inAsh(UI.g.map, u.x, u.y)) h += '<div class="sub" style="color:var(--bad)">' + L('Im Aschenebel: Schilde aus, die Hülle nimmt Schaden.') + '</div>';
+    h += coverLine(u);   /* Fassung 22: In Deckung (Trümmerfeld) */
     if (u.abT.cloak > 0) h += '<div class="sub" style="color:var(--acc2)">' + L('Getarnt: noch {0} s. Ein Angriff hebt die Tarnung auf.', Math.ceil(u.abT.cloak)) + '</div>';
     if (u.retreat) h += '<div class="sub" style="color:var(--acc2)">' + L('Rückzug zur Werft: kehrt nach der Reparatur zurück.') + '</div>';
     if (u.dormant) h += '<div class="sub" style="color:var(--acc2)">' + L('Ruht. Ein Restorer daneben erweckt das Schiff mit allem Rang.') + '</div>';
@@ -781,6 +788,7 @@ UI.consume = function (evs) {
       case 'flareWarn': toast(L('Sonneneruption in 25 Sekunden! Schiffe in den Schatten von Monden, Felsen und Stationen'), 'bad', 7000); SND.play('alarm'); buzz(60); break;
       case 'flareStart': toast(L('Sonneneruption! Im Freien brennen die Schiffe'), 'bad', 4000); break;
       case 'flareEnd': toast(L('Die Eruption ist vorbei'), 'good'); break;
+      case 'hazNear': case 'stCap': case 'rockGone': terrUiEvent(g, e, me, mine); break;   /* Fassung 22 */
       case 'etech': if (mine) { toast(L('Erbauer-Technologie: {0}', L(ETECH[e.id].name)), 'good', 4000); } break;
     }
   }
@@ -909,17 +917,18 @@ function setupRender() {
   if (MENU.mode === 'skirmish') { const n = slotPlayers().length; setText('startNote', MENU.myStart >= 0 && MENU.myStart < n ? L('Dein Startplatz: {0}. Erneut antippen für Zufall.', MENU.myStart + 1) : L('Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.')); } else setText('startNote', '');
   segInit('paceSeg', [['tactical', 'Taktisch'], ['normal', 'Normal'], ['fast', 'Schnell']], () => MENU.pace || 'tactical', v => { MENU.pace = v; savePrefs(); toast(L(v === 'tactical' ? 'Taktisch: lange Gefechte, Zeit für Rückzug, Flanken und Subsysteme' : v === 'normal' ? 'Normal: Gefechte etwa halb so lang wie Taktisch' : 'Schnell: Schiffe fallen in Sekunden')); });
   segInit('resSeg', [['low', 'Knapp'], ['normal', 'Normal'], ['rich', 'Reich']], () => MENU.res, v => { MENU.res = v; savePrefs(); });
+  terrSetup(mapId);   /* Fassung 22: Wandernde Gefahren, Zufallskarte neu würfeln */
   slotsRender();
   setText('slotNote', (mapId !== MENU.map ? L('{0} ist für {1} Spieler nicht ausgelegt – es wird {2} gespielt.', MAPS[MENU.map].name, np, MAPS[mapId].name) + ' ' : '') + L('Tippen wechselt Fraktion, Stärke und Team. Gleiches Team = Verbündete; »–« spielt für sich.'));
   if (MENU.mode === 'survival') setText('mapDesc', L('Allein gegen endlose Wellen der Brood. Nach jeder Welle eine von drei Belohnungen, alle fünf Wellen ein Leviathan. Rekord mit {0}: Welle {1}.', L(FACTIONS[MENU.faction].name), bestWave(MENU.faction)));
   else if (MENU.mode === 'quarantine') setText('mapDesc', L('Gemeinsam das Siegel in der Kartenmitte halten: 20 Wellen der Brood aus immer mehr Rissen, alle fünf ein Leviathan, zuletzt die Matriarch. Fällt das Siegel, haben alle verloren.'));
-  else { const pm0 = generateMap(mapId, np, 7, MENU.size); setText('mapDesc', L(MAPS[mapId].desc) + ' · ' + L('{0} Spieler', np) + ' · ' + pm0.w + ' × ' + pm0.h); }
+  else { const pm0 = generateMap(mapId, np, 7, MENU.size, undefined, randSeedMenu()); setText('mapDesc', L(MAPS[mapId].desc) + ' · ' + L('{0} Spieler', np) + ' · ' + pm0.w + ' × ' + pm0.h); }
   /* Kartenvorschau: Layout der gewählten Karte (Gefecht) bzw. der Wellenkarte, Startplätze in den Spielerfarben */
-  const pm = MENU.mode === 'skirmish' ? generateMap(mapId, np, 7, MENU.size) : MENU.mode === 'quarantine' ? generateMap('quarantine', MENU.allies + 1, 7) : null;
+  const pm = MENU.mode === 'skirmish' ? generateMap(mapId, np, 7, MENU.size, undefined, randSeedMenu()) : MENU.mode === 'quarantine' ? generateMap('quarantine', MENU.allies + 1, 7) : null;
   $('rowPrev').hidden = !pm; $('mapLegend').hidden = !pm;
   UI.prevMap = pm;
   if (!UI.prevPickOn) { $('mapPrev').addEventListener('click', startPick); UI.prevPickOn = 1; }
-  if (pm) { const cv = $('mapPrev'), side = Math.round(360 * Math.min(1, pm.w / pm.h)), tall = Math.round(360 * Math.min(1, pm.h / pm.w)); cv.width = side; cv.height = tall; cv.style.aspectRatio = side + ' / ' + tall; mapLayout(cv, pm, { mine: MENU.mode === 'skirmish' && MENU.myStart >= 0 && MENU.myStart < pm.starts.length ? MENU.myStart : -1, starts: MENU.mode === 'skirmish' ? previewCols(pm) : [FACTIONS[MENU.faction].team] }); setText('mapLegend', mapLegend(pm)); }
+  if (pm) { const cv = $('mapPrev'), side = Math.round(360 * Math.min(1, pm.w / pm.h)), tall = Math.round(360 * Math.min(1, pm.h / pm.w)); cv.width = side; cv.height = tall; cv.style.aspectRatio = side + ' / ' + tall; mapLayout(cv, pm, { haz: MENU.mode === 'skirmish' && hazOn(mapId, MENU.haz), mine: MENU.mode === 'skirmish' && MENU.myStart >= 0 && MENU.myStart < pm.starts.length ? MENU.myStart : -1, starts: MENU.mode === 'skirmish' ? previewCols(pm) : [FACTIONS[MENU.faction].team] }); setText('mapLegend', mapLegend(pm)); }
 }
 /* ---------- Spielerplätze im Gefecht: Platz 0 bist du, bis zu sieben KI-Plätze mit Fraktion (oder Zufall), Stärke und Team ---------- */
 const SLOT_FACS = ['random'].concat(PLAYABLE);
