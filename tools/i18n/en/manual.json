@@ -575,5 +575,20 @@
  "Begleiten, Rückzug, Formation:": "Escort, retreat, formation:",
  "»Begleiten« und dann ein eigenes Schiff oder eine Station antippen: Die Auswahl folgt in lockerem Ring und greift Feinde an, die ihm nahe kommen. »Rückzug« schaltet je Schiff den Rückzug zur Werft unter 30 % Hülle ein, unabhängig von der Haltung. Die Formation »Rollen« stellt Schwere nach vorn, Artillerie, Träger und Unterstützer nach hinten und schnelle Schiffe an die Flanken.": "Tap “Escort”, then one of your ships or a station: the selection follows in a loose ring and attacks enemies that come close to it. “Retreat” switches on, per ship, the retreat to the shipyard below 30% hull, independent of stance. The “Roles” formation puts heavies in front, artillery, carriers and support at the back and fast ships on the flanks.",
  "Ränge:": "Ranks:",
- "Ab 3, 8 und 15 Abschüssen wird ein Schiff Veteran, Elite und Ass. Je Rang: +10 % Schaden, Hülle und Schild, −15 % Streuung, −5 % Nachladezeit, außer Gefecht repariert es 5 % Hülle je Minute. Symbole über beschädigten Schiffen zeigen getroffene Subsysteme: ⚙ Antrieb, ✶ Waffen, ◯ Schilde, ◎ Sensoren (gelb unter 60 %, rot unter 30 %).": "At 3, 8 and 15 kills a ship becomes Veteran, Elite and Ace. Per rank: +10% damage, hull and shield, −15% spread, −5% reload time, and out of combat it repairs 5% hull per minute. Icons above damaged ships show hit subsystems: ⚙ drive, ✶ weapons, ◯ shields, ◎ sensors (yellow below 60%, red below 30%)."
+ "Ab 3, 8 und 15 Abschüssen wird ein Schiff Veteran, Elite und Ass. Je Rang: +10 % Schaden, Hülle und Schild, −15 % Streuung, −5 % Nachladezeit, außer Gefecht repariert es 5 % Hülle je Minute. Symbole über beschädigten Schiffen zeigen getroffene Subsysteme: ⚙ Antrieb, ✶ Waffen, ◯ Schilde, ◎ Sensoren (gelb unter 60 %, rot unter 30 %).": "At 3, 8 and 15 kills a ship becomes Veteran, Elite and Ace. Per rank: +10% damage, hull and shield, −15% spread, −5% reload time, and out of combat it repairs 5% hull per minute. Icons above damaged ships show hit subsystems: ⚙ drive, ✶ weapons, ◯ shields, ◎ sensors (yellow below 60%, red below 30%).",
+ "{0} × {1} in der Warteschlange": "{0} × {1} queued",
+ "Neue Kampfschiffe sammeln bei Gruppe {0}": "New warships rally to group {0}",
+ "1 Frachter": "1 freighter",
+ "{0} Frachter": "{0} freighters",
+ "1 Werft": "1 shipyard",
+ "{0} Werften": "{0} shipyards",
+ "1 Bauschiff": "1 builder",
+ "{0} Bauschiffe": "{0} builders",
+ "Untätig": "Idle",
+ "Zeitlupe": "Slow motion",
+ "Pausiert – Befehle möglich": "Paused – orders allowed",
+ "Neue Schiffe zur aktiven Gruppe": "New ships join active group",
+ "Befehle in der Pause": "Orders while paused",
+ "Zeitlupe bei Großgefechten": "Slow motion in big battles",
+ "Pause mit Befehlen: Das Spiel steht, du kannst wählen und Befehle geben (Q)": "Pause with orders: the game stops, you can still select and give orders (Q)"
 }
