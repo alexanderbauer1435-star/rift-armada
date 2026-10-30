@@ -177,13 +177,46 @@ function startPlace(role) {
   showInfo(L('Platz antippen oder ziehen, dann »Bauen« bestätigen'), 4000);
   hudCmds();
 }
-function movePlace(sx, sy) { const w = R.s2w(sx, sy); UI.place.x = w.x; UI.place.y = w.y; checkPlace(); }
-function checkPlace() { const p = UI.place; if (!p) return; p.why = canPlace(UI.g, UI.me, p.role, p.x, p.y); p.ok = !p.why; const c = BLDG[UI.P.faction][p.role].lv[0].cost; if (p.ok && !canPay(UI.P, c)) { p.ok = false; p.why = 'Nicht genug Rohstoffe'; } hudCmds(); }
+function movePlace(sx, sy) {
+  const w = R.s2w(sx, sy); UI.place.x = w.x; UI.place.y = w.y;
+  /* Fassung 22: am Fundament einer eben abgerissenen Station gleicher Rolle einrasten (baut schneller) */
+  const p = UI.place, f = !p.row && (UI.g.found || []).find(q => q.owner === UI.me && q.role === p.role && hyp(q.x - w.x, q.y - w.y) < FOUND_SNAP * 1.5);
+  if (f) { p.x = f.x; p.y = f.y; }
+  p.fast = !!f;
+  checkPlace();
+}
+/* Fassung 22: Reihe – mehrere Stationen gleicher Art vom Ankerpunkt (ax, ay) bis zum Zeiger, Abstand nach Größe */
+function rowPts(p) {
+  const def = BLDG[UI.P.faction][p.role], gap = def.r * 2 + 20, dx = p.x - p.ax, dy = p.y - p.ay, d = Math.hypot(dx, dy), n = Math.min(BQ_MAX, Math.floor(d / gap) + 1), out = [];
+  for (let i = 0; i < n; i++) { const k = d > 0 ? i * gap / d : 0, x = Math.round(p.ax + dx * k), y = Math.round(p.ay + dy * k), why = canPlace(UI.g, UI.me, p.role, x, y); out.push({ x, y, ok: !why, why }); }
+  return out;
+}
+function toggleRow() {
+  const p = UI.place; if (!p) return;
+  p.row = !p.row; if (p.row) { p.ax = p.x; p.ay = p.y; } p.pts = null;
+  checkPlace();
+  showInfo(L(p.row ? 'Reihe: Endpunkt antippen oder ziehen – gleicher Abstand, besetzte Plätze werden übersprungen' : 'Einzelne Station'), 3000);
+  SND.play('click'); hudCmds(true);
+}
+function checkPlace() {
+  const p = UI.place; if (!p) return;
+  if (p.row) {
+    const c = bcost(UI.P, BLDG[UI.P.faction][p.role]);
+    p.pts = rowPts(p); const n = p.pts.filter(q => q.ok).length;
+    p.cost = { ice: c.ice * n, ore: c.ore * n }; p.n = n;
+    p.ok = n > 0 && canPay(UI.P, c); p.why = !n ? (p.pts[0].why || 'Nicht möglich') : p.ok ? null : 'Nicht genug Rohstoffe';
+    if (n) showInfo(L('Reihe: {0} Stationen · {1}', n, costTxt(p.cost)) + (n < p.pts.length ? ' · ' + L('{0} Plätze übersprungen', p.pts.length - n) : ''), 1500);
+    hudCmds(); return;
+  }
+  p.pts = null;
+  p.why = canPlace(UI.g, UI.me, p.role, p.x, p.y); p.ok = !p.why; const c = BLDG[UI.P.faction][p.role].lv[0].cost; if (p.ok && !canPay(UI.P, c)) { p.ok = false; p.why = 'Nicht genug Rohstoffe'; } hudCmds(); }
 function confirmPlace() {
   const p = UI.place; if (!p) return;
   checkPlace();
   if (!p.ok) { toast(L(p.why), 'warn'); SND.play('err'); return; }
-  const r = issue({ t: 'build', u: p.u, role: p.role, x: p.x, y: p.y });
+  const r = p.row ? issue({ t: 'buildrow', u: p.u, role: p.role, pts: p.pts.filter(q => q.ok).map(q => [q.x, q.y]) }) : issue({ t: 'build', u: p.u, role: p.role, x: p.x, y: p.y });
+  if (!r && p.row) toast(L('Reihe: {0} Stationen in der Bauliste', p.n), 'good', 2200);
+  if (!r && p.fast) toast(L('Fundament: baut 50 % schneller'), 'good', 2200);
   if (r) { toast(L(r), 'warn'); SND.play('err'); return; }
   SND.play('place'); endMode(); hudCmds();
 }
@@ -468,13 +501,16 @@ function hudCmds(force) {
   const us = selShips(), b = UI.selB ? UI.g.byId.get(UI.selB) : null;
   /* nur neu aufbauen, wenn sich etwas ändert: Ein laufender Fingerdruck soll seine Taste behalten */
   const abs = selAbils(us), so = UI.selS ? UI.g.byId.get(UI.selS) : null;
-  const sig = [UI.mode, so ? so.id + ':' + so.owner + ':' + (so.mode || '') + ':' + (so.state || '') : '', UI.boxMode, UI.form, us.length, us.length ? us[0].stance : '', us.every(u => u.hold), us.some(u => armed(u)), b ? b.id + ':' + b.lv + ':' + (b.upg ? 1 : 0) + ':' + b.done + ':' + (b.done && b.lv < 3 && canPay(UI.P, b.def.lv[b.lv].cost)) + ':' + (b.role === 'super' ? (b.charge >= 1 ? 1 : 0) : '') + ':' + (b.role === 'base' && UI.P.docAsk && !UI.P.doctrine ? 1 : 0) : '', UI.place ? UI.place.ok : '', UI.subAim, abs.map(a => a.id + (a.ready ? 1 : 0) + Math.round(a.cd * 2)).join(','), us.length ? us.every(u => u.auto) : '', UI.superTgt ? 1 : 0].join('|');
+  const sig = [UI.mode, so ? so.id + ':' + so.owner + ':' + (so.mode || '') + ':' + (so.state || '') : '', UI.boxMode, UI.form, us.length, us.length ? us[0].stance : '', us.every(u => u.hold), us.some(u => armed(u)), b ? b.id + ':' + b.lv + ':' + (b.upg ? 1 : 0) + ':' + b.done + ':' + (b.done && b.lv < 3 && canPay(UI.P, b.def.lv[b.lv].cost)) + ':' + (b.role === 'super' ? (b.charge >= 1 ? 1 : 0) : '') + ':' + (b.role === 'base' && UI.P.docAsk && !UI.P.doctrine ? 1 : 0) : '', UI.place ? UI.place.ok + ':' + (UI.place.row ? 1 : 0) + ':' + (UI.place.n || 0) : '', UI.askSell && performance.now() - UI.askSellT < 4000 ? UI.askSell : 0, UI.subAim, abs.map(a => a.id + (a.ready ? 1 : 0) + Math.round(a.cd * 2)).join(','), us.length ? us.every(u => u.auto) : '', UI.superTgt ? 1 : 0].join('|');
   if (!force && box._sig === sig) return;
   box._sig = sig;
   box.textContent = '';
   if (UI.mode === 'place') {
     const p = UI.place;
-    box.appendChild(cmdBtn('✓', 'Bauen', confirmPlace, 'Station hier errichten', p && p.ok ? 'arm' : 'off'));
+    const bb = cmdBtn('✓', 'Bauen', confirmPlace, 'Station hier errichten', p && p.ok ? 'arm' : 'off');
+    if (p && p.row && p.n > 1) bb.querySelector('small').textContent = L('Bauen') + ' ×' + p.n;
+    box.appendChild(bb);
+    box.appendChild(cmdBtn('⋯', 'Reihe', toggleRow, 'Reihe: mehrere gleiche Stationen in einer Linie. Ankerpunkt ist die jetzige Vorschau, dann den Endpunkt antippen oder ziehen. Das Bauschiff baut sie nacheinander, bezahlt wird je Station beim Baubeginn.', p && p.row ? 'on' : ''));
     box.appendChild(cmdBtn('✕', 'Abbruch', () => { endMode(); hudCmds(); }, 'Bauen abbrechen', 'warn'));
     if (p && !p.ok && p.why) showInfo(L(p.why), 1200);
     return;
@@ -513,7 +549,8 @@ function hudCmds(force) {
     if (b.role === 'base' && b.done && UI.P.etechAsk) box.appendChild(cmdBtn('◈', 'Archiv', openEtech, 'Erbauer-Technologie aus dem Archiv wählen', 'arm'));
     if (b.done && b.lv < 3) { const nx = b.def.lv[b.lv]; box.appendChild(cmdBtn('▲', 'Ausbau ' + ROMAN[b.lv + 1], () => { const r = issue({ t: 'upgrade', b: b.id }); if (r) { toast(L(r), 'warn'); SND.play('err'); } else { SND.play('click'); hudSel(); } }, () => '<h4>' + L('Ausbau auf Stufe') + ' ' + ROMAN[b.lv + 1] + '</h4><div class="cost">' + costTxt(nx.cost) + ' · ' + nx.time + ' s</div><p>' + esc(upgradeText(b)) + '</p>', b.upg ? 'off' : canPay(UI.P, nx.cost) ? 'arm' : '')); }
     if (b.role === 'yard' && b.done) box.appendChild(cmdBtn('⚑', 'Sammeln', () => { UI.mode = 'rally'; showInfo(L('Sammelpunkt: Ziel antippen'), 3000); hudCmds(); }, 'Neue Schiffe fliegen zum Sammelpunkt', UI.mode === 'rally' ? 'on' : ''));
-    if (b.role !== 'base' && b.role !== 'seal') box.appendChild(cmdBtn('€', 'Verkauf', () => { if (UI.askSell === b.id) { issue({ t: 'sell', b: b.id }); UI.askSell = 0; desel(); } else { UI.askSell = b.id; toast(L('Noch einmal tippen verkauft die Station (halber Preis)'), 'warn'); } }, 'Station abreißen und die Hälfte der Kosten zurückbekommen', 'warn'));
+    /* Fassung 22: Abreißen – zweimal tippen, die Hälfte von allem Bezahlten kommt zurück, ein Fundament bleibt */
+    if (b.role !== 'base' && b.role !== 'seal') { const ask = UI.askSell === b.id && performance.now() - UI.askSellT < 4000, back = spentOn(b), f = b.done ? DEMOLISH : 0.8; box.appendChild(cmdBtn('⌫', ask ? 'Sicher?' : 'Abreißen', () => { if (UI.askSell === b.id && performance.now() - UI.askSellT < 4000) { const r = issue({ t: 'sell', b: b.id }); UI.askSell = 0; if (r) { toast(L(r), 'warn'); SND.play('err'); } else desel(); } else { UI.askSell = b.id; UI.askSellT = performance.now(); toast(L('Noch einmal tippen: abreißen, {0} zurück', costTxt({ ice: Math.floor(back.ice * f), ore: Math.floor(back.ore * f) })), 'warn', 2500); hudCmds(true); } }, 'Station abreißen: die Hälfte aller Kosten (alle Stufen) zurück. Am selben Platz baut dieselbe Station binnen 60 s um 50 % schneller.', ask ? 'arm' : 'warn')); }
   }
 }
 /* Was die nächste Stufe bringt, in einem Satz */
@@ -652,10 +689,10 @@ function hudSel() {
     if (b.label) h += '<div class="sub" style="color:var(--acc2)">' + esc(L(b.label)) + '</div>';
     h += '<div class="bar"><i style="width:' + Math.round(b.hull / b.hullMax * 100) + '%"></i></div><div class="sub">' + L('Hülle') + ' ' + Math.round(b.hull) + ' / ' + Math.round(b.hullMax) + (lv.armor ? ' · ' + L('Panzerung') + ' ' + lv.armor : '') + '</div>';
     if (b.shieldMax || b.give) h += '<div class="bar sh"><i style="width:' + Math.round(((b.shield || 0) + (b.give || 0)) / ((b.shieldMax || 0) + (b.givep || 0)) * 100) + '%"></i></div><div class="sub">' + L('Schild') + ' ' + Math.round((b.shield || 0) + (b.give || 0)) + ' / ' + Math.round((b.shieldMax || 0) + (b.givep || 0)) + '</div>';
-    if (!b.done) h += '<div class="bar prog"><i style="width:' + Math.round(b.prog * 100) + '%"></i></div><div class="sub">' + (b.bld ? L('Im Bau') + ' ' + Math.round(b.prog * 100) + ' %' : L('Wartet auf ein Bauschiff')) + '</div>';
+    if (!b.done) h += '<div class="bar prog"><i style="width:' + Math.round(b.prog * 100) + '%"></i></div><div class="sub">' + (b.bld ? L('Im Bau') + ' ' + Math.round(b.prog * 100) + ' %' : L('Wartet auf ein Bauschiff')) + (b.fast ? ' · ' + L('Fundament: baut 50 % schneller') : '') + '</div>';
     if (b.upg) h += '<div class="bar prog"><i style="width:' + Math.round(b.upg.prog * 100) + '%"></i></div><div class="sub">' + L('Ausbau auf Stufe') + ' ' + ROMAN[b.lv + 1] + ' ' + Math.round(b.upg.prog * 100) + ' %</div>';
     if (b.role === 'yard' && b.q.length) h += '<div class="sub">' + L('Baut') + ': ' + b.q.map(q => L(SHIPS[q.id].name)).join(', ') + '</div>';
-    if (b.role === 'refinery' && b.done) h += '<div class="sub">' + L('Andockplätze') + ' ' + b.docks + ' / ' + lv.docks + '</div>';
+    if (b.role === 'refinery' && b.done) h += '<div class="sub">' + L('Andockplätze') + ' ' + b.docks + '/' + lv.docks + ' <span class="docks">' + Array.from({ length: lv.docks }, (_, i) => '<i class="' + (i < b.docks ? 'on' : '') + '"></i>').join('') + '</span>' + (b.lv < 3 ? ' · ' + L('Stufe {0}: {1}', ROMAN[b.lv + 1], b.def.lv[b.lv].docks) : '') + '</div>'; /* Fassung 22 */
     if (b.role === 'lab' && b.done && UI.P.research && b.owner === UI.me) h += '<div class="bar prog"><i style="width:' + Math.round(UI.P.research.prog * 100) + '%"></i></div><div class="sub">' + L('Forscht') + ': ' + L(techDef(UI.P.faction, UI.P.research.id).name) + '</div>';
     if (b.role === 'super' && b.done) h += '<div class="bar charge"><i style="width:' + Math.round(b.charge * 100) + '%"></i></div><div class="sub">' + (b.charge >= 1 ? L('Bereit') : L('Lädt') + ' ' + Math.round(b.charge * 100) + ' %') + '</div>';
     if (b.boarding > 0) h += '<div class="sub" style="color:var(--bad)">' + L('Wird geentert') + ': ' + Math.round(b.boarding) + ' ' + L('Marines') + ' · ' + L('Crew') + ' ' + Math.round(b.crew) + '</div>';
@@ -667,6 +704,7 @@ function hudSel() {
     if (u.shieldMax) h += '<div class="bar sh"><i style="width:' + Math.round(u.shield / u.shieldMax * 100) + '%"></i></div><div class="sub">' + L('Schild') + ' ' + Math.round(u.shield) + ' / ' + Math.round(u.shieldMax) + '</div>';
     if (d.cargo) { const cap = Math.round(d.cargo * UI.P.tfx.cargo); h += '<div class="bar prog"><i style="width:' + Math.round(u.cargo / cap * 100) + '%"></i></div><div class="sub">' + L('Fracht') + ' ' + Math.round(u.cargo) + ' / ' + cap + (u.ckind ? ' ' + (u.ckind === 'ore' ? L('Erz') : L('Eis')) : '') + '</div>'; }
     const O = { idle: 'Wartet', hold: 'Hält Stellung', move: 'Fliegt', amove: 'Angriffsmarsch', attack: 'Greift an', harvest: 'Baut ab', return: 'Liefert', build: 'Baut', board: 'Entert', explore: 'Erkundet', salvage: 'Birgt ein Wrack' };
+    if (u.bq && u.bq.length) h += '<div class="sub" style="color:var(--acc2)">' + L('Bauliste: noch {0}', u.bq.length) + (u.bqW ? ' · ' + L('wartet auf Rohstoffe') : '') + '</div>'; /* Fassung 22 */
     if (d.cmdr) h += '<div class="cmdr">★ ' + esc(L(d.cmdr)) + '</div>';
     else if (u.hero) h += '<div class="cmdr">' + esc(qt(L(u.hero))) + '</div>';
     if (u.ion) h += '<div class="sub" style="color:var(--acc2)">' + L('Im Ionennebel: Schilde aus, Sicht nur im Nahbereich – für Feinde erst aus der Nähe zu sehen.') + '</div>';
@@ -742,6 +780,8 @@ UI.consume = function (evs) {
       case 'over': showEnd(); break;
       case 'radio': case 'cam': case 'ask': case 'chosen': case 'goal': case 'breach': case 'gateDark': misUiEvent(e); break;
       case 'place': if (mine) hudSel(); break;
+      case 'sold': if (mine) { SND.play('click'); toast(L('Abgerissen: {0} zurück', costTxt({ ice: e.ice || 0, ore: e.ore || 0 })), 'good', 2200); } break; /* Fassung 22 */
+      case 'bqskip': if (mine) toast(L('Bauliste: Platz übersprungen ({0})', L(e.why)), 'warn', 2000); break;
       case 'doctrine': if (mine) { toast(L('Kommandobasis Stufe II: Wähle deine Doktrin'), 'good', 5000); SND.play('ready'); setTimeout(() => { if (UI.g === g && !UI.P.doctrine) openDoctrine(); }, 900); } break;
       case 'doctrineSet': { const d = doctrineDef(g.players[e.owner].faction, e.id); if (mine) toast(L('Doktrin festgelegt: {0}', L(d.name)), 'good', 4000); else if (isFoe(e.owner)) toast(L('{0} wählt die Doktrin {1}', pname(e.owner), L(d.name)), 'warn', 4000); hudBuild(true); hudCmds(true); break; }
       case 'supercharged': if (mine) { SND.play('ready'); toast(L('{0} ist geladen', L(BLDG[g.players[me].faction].super.name)), 'good', 4000); R.ping(e.x, e.y); } else if (isFoe(e.owner)) toast(L('Warnung: Die Superwaffe von {0} ist geladen', pname(e.owner)), 'bad', 4000); break;
