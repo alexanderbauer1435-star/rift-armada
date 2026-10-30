@@ -18,11 +18,16 @@ for (const f of Object.keys(ART)) {
   while (!a[0].dead && g.time - t0 < 60) { X.stepGame(g); g.ev.length = 0; }
   ok(a[0].dead && g.time - t0 < 40, f + ': eine Needle zerstört die Artillerie in ' + Math.round(g.time - t0) + ' s');
 }
-/* trifft keine Schiffe */
-{ const g = X.createGame({ map: 'test', seed: 3, players: [{ faction: 'mars', ai: 0 }, { faction: 'alliance', ai: 0 }] });
-  for (const u of g.ships.slice()) C.removeShip(g, u); for (const b of g.bldgs.slice()) { b.hull = 0; C.removeBldg(g, b); }
-  const m = X.addShip(g, 'mortar', 0, 1000, 1000, 0), e = X.addShip(g, 'bulwark', 1, 1700, 1000, Math.PI); e.stance = 2; const h0 = e.hull;
-  step(g, 30); ok(e.hull === h0 && !g.proj.some(q => q.kind === 'art'), 'Artillerie schießt nicht auf Schiffe'); }
+/* Schiffe: ein stehendes wird getroffen, ein fahrendes weicht den langsamen Granaten aus */
+for (const moving of [false, true]) {
+  const g = X.createGame({ map: 'test', seed: 3, pace: 'tactical', players: [{ faction: 'mars', ai: 0 }, { faction: 'brood', ai: 0 }] });
+  for (const u of g.ships.slice()) C.removeShip(g, u); g.sites.length = 0; g.gates.length = 0; for (const p of g.players) p.nob = true;
+  const m = X.addShip(g, 'mortar', 0, 1000, 1600, 0), e = X.addShip(g, 'ravager', 1, 1850, 1600, Math.PI); e.stance = 2; const h0 = e.hull + e.shield; g.reveals.push({ x: 1850, y: 1600, r: 700, owner: 0, until: 1e9 });   /* Späher: Schiffe muss man sehen */
+  let shots = 0; const end = g.time + 60;
+  while (g.time < end && !g.over) { if (moving && (g.tick % 60) === 0) X.execCmd(g, { t: 'move', p: 1, u: [e.id], x: 1850, y: (g.tick / 60) % 2 ? 1300 : 1900 }); X.stepGame(g); for (const q of g.ev) if (q.t === 'shot' && q.owner === 0) shots++; g.ev.length = 0; }
+  const lost = h0 - (e.hull + e.shield);
+  ok(shots >= 5 && (moving ? lost < h0 * 0.12 : lost > h0 * 0.25), (moving ? 'fahrendes' : 'stehendes') + ' Schiff: ' + shots + ' Schüsse, Verlust ' + Math.round(lost) + ' von ' + Math.round(h0));
+}
 const h = () => { const g = X.createGame({ map: 'keep', seed: 8, players: [{ faction: 'legion', ai: 3 }, { faction: 'brood', ai: 3 }, { faction: 'mars', ai: 3 }] }); step(g, 600); return X.stateHash(g); };
 ok(h() === h(), 'deterministisch');
 console.log(fail ? fail + ' FAILS' : 'ALL OK'); process.exit(fail ? 1 : 0);

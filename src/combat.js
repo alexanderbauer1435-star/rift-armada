@@ -245,7 +245,7 @@ function updateShip(g, u, dt) {
     case 'attack': {
       const t = g.byId.get(o.tid);
       /* Artillerie: eine bekannte Station bleibt Ziel, auch wenn sie gerade nicht in Sicht ist */
-      if (def.art && t && !t.dead && t.k === 2 && artKnown(g, u.owner, t)) { u.tgt = 0; o.x = t.x; o.y = t.y; artMove(g, u, t, dt); break; }
+      if (def.art && t && !t.dead && (t.k === 2 ? artKnown(g, u.owner, t) : t.k === 1 && canSee(g, u.owner, t))) { u.tgt = 0; o.x = t.x; o.y = t.y; artMove(g, u, t, dt); break; }
       if (lostTgt(g, u, t)) {
         if (o.back) { u.o = o.back; u.path = null; u.tgt = 0; }
         else if (o.guard) { setIdle(u); }
@@ -460,9 +460,13 @@ function artTarget(g, s, w) {
   const ok = b => b && !b.dead && b.k === 2 && foes(g, s.owner, b.owner) && !g.players[b.owner].neutral && (() => { const d = tdist(s, b); return d <= w.range && d >= w.minR * 0.9; })() && artKnown(g, s.owner, b);
   const o = s.o && s.o.t === 'attack' ? g.byId.get(s.o.tid) : null;
   if (ok(o)) return o;
+  if (o && o.k === 1 && !o.dead && canSee(g, s.owner, o) && foes(g, s.owner, o.owner)) { const d = tdist(s, o); if (d <= w.range && d >= w.minR * 0.9) return o; }
   const cur = s.artT ? g.byId.get(s.artT) : null; if (ok(cur)) return cur;
   let best = null, bs = 1e9;
   for (const b of g.bldgs) { if (!ok(b)) continue; const sc = tdist(s, b) - (b.role === 'turret' || b.role === 'flak' || b.role === 'spore' ? 400 : 0); if (sc < bs) { bs = sc; best = b; } }
+  /* keine Station in Reichweite: sichtbare Schiffe (ohne Vorhalt – die Granate fliegt Sekunden, wer fährt, weicht aus) */
+  if (!best) { const okS = u => !u.dead && !u.derelict && u.def.role !== 'fighter' && foes(g, s.owner, u.owner) && canSee(g, s.owner, u) && (() => { const d = tdist(s, u); return d <= w.range && d >= w.minR * 0.9; })();
+    nearShips(g, s.x, s.y, w.range + 40, u => { if (!okS(u)) return false; const sc = tdist(s, u) + u.v * 6 - (u.def.cls === 'l' ? 300 : u.def.cls === 'm' ? 150 : 0); if (sc < bs) { bs = sc; best = u; } return false; }); }
   s.artT = best ? best.id : 0; return best;
 }
 /* Anfahrt: bis knapp innerhalb der Reichweite heran (zu nah: zurück), dann stehen bleiben und feuern */
@@ -553,7 +557,7 @@ function updateProj(g, dt) {
       q.x = q.tx; q.y = q.ty;
       const src = g.byId.get(q.sid) || null, R0 = q.splash;
       for (const b of g.bldgs) { if (b.dead || !foes(g, q.owner, b.owner)) continue; const dd = hyp(b.x - q.x, b.y - q.y); if (dd > R0 + b.def.r) continue; damage(g, b, q.dmg * (dd < b.def.r ? 1 : 0.5), 'art', src, q.owner, q.x, q.y); }
-      nearShips(g, q.x, q.y, R0 + 20, e => { if (!e.dead && foes(g, q.owner, e.owner) && hyp(e.x - q.x, e.y - q.y) < R0 + e.def.r * 0.5) damage(g, e, q.dmg * 0.5, 'art', src, q.owner, q.x, q.y); return false; });
+      nearShips(g, q.x, q.y, R0 + 20, e => { if (!e.dead && foes(g, q.owner, e.owner)) { const dd = hyp(e.x - q.x, e.y - q.y); if (dd < R0 + e.def.r * 0.5) damage(g, e, q.dmg * (dd < e.def.r + 25 ? 1 : 0.5), 'art', src, q.owner, q.x, q.y); } return false; });
       ev(g, 'hit', { x: q.x, y: q.y, kind: 'torp', art: 1 });
       continue;
     }
