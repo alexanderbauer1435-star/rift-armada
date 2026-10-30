@@ -36,15 +36,15 @@ const F = process.argv[2] || 'build/rift-armada.html';
     ok(info.ruin && info.found === 1 && info.sell == null, gfx + ': Ruine und Fundament liegen');
     ok(/Andockplätze \d\/4/.test(info.card), gfx + ': Karte zeigt ' + (info.card.match(/Andockplätze \d\/4/) || ['?'])[0]);
     await p.waitForTimeout(600);
-    await p.screenshot({ path: 'tools/shots/b22b-ref-' + gfx + '.png' });
+    await p.screenshot({ path: 'tools/shots/b22b-ref-' + gfx + '.png', timeout: 180000 });
     /* Schildgenerator gewählt */
     await p.evaluate(id => { const S = UI.g.byId.get(id); selBldg(S); R.center(S.x, S.y); }, info.shield);
     await p.waitForTimeout(500);
-    await p.screenshot({ path: 'tools/shots/b22b-shield-' + gfx + '.png' });
+    await p.screenshot({ path: 'tools/shots/b22b-shield-' + gfx + '.png', timeout: 180000 });
     /* Ruine und Fundament nah */
     await p.evaluate(() => { const g = UI.g, w = g.wrecks.find(q => q.ruin), f = g.found[0]; desel(); R.cam.z = 1.4; R.center((w.x + f.x) / 2, (w.y + f.y) / 2); });
     await p.waitForTimeout(500);
-    await p.screenshot({ path: 'tools/shots/b22b-ruin-' + gfx + '.png' });
+    await p.screenshot({ path: 'tools/shots/b22b-ruin-' + gfx + '.png', timeout: 180000 });
     /* Reihe: Bauschiff wählen, Turm platzieren, Reihe an, Endpunkt setzen */
     const row = await p.evaluate(() => {
       const g = UI.g, bu = g.ships.find(u => u.owner === 0 && u.def.build), s = g.players[0].start;
@@ -56,7 +56,7 @@ const F = process.argv[2] || 'build/rift-armada.html';
     });
     ok(row.n >= 4, gfx + ': Reihe mit ' + row.n + ' von ' + row.pts + ' Plätzen, Tasten: ' + row.btn);
     await p.waitForTimeout(500);
-    await p.screenshot({ path: 'tools/shots/b22b-row-' + gfx + '.png' });
+    await p.screenshot({ path: 'tools/shots/b22b-row-' + gfx + '.png', timeout: 180000 });
     const q = await p.evaluate(id => { confirmPlace(); const u = UI.g.byId.get(id); return { bq: u.bq ? u.bq.length : 0, o: u.o.t }; }, row.bu);
     ok(q.o === 'build' && q.bq === row.n - 1, gfx + ': Reihe in der Bauliste (' + q.bq + ' wartend)');
     /* Abreißen über die Taste: zweimal tippen */
