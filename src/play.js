@@ -9,7 +9,7 @@
      Takt der Pause und laufen so in der Wiederholung an derselben Stelle
    · Zeitlupe bei Großgefechten (nur allein, Vorgabe aus): ab etwa 12 kämpfenden Schiffen im Bild sanft auf halbes Tempo
    · Untätig-Hinweise: Frachter und Bauschiffe ohne Auftrag, Werften mit leerer Warteschlange; Tippen wählt sie aus */
-const PL = { tapK: '', tapT: 0, idleT: 0, idleSig: '', cyc: { cargo: -1, yard: -1, build: -1 }, cycT: { cargo: 0, yard: 0, build: 0 }, smT: 0, smHot: false, smCalm: 0, smLast: 0 };
+const PL = { idleSeen: new Set(), tapK: '', tapT: 0, idleT: 0, idleSig: '', cyc: { cargo: -1, yard: -1, build: -1 }, cycT: { cargo: 0, yard: 0, build: 0 }, smT: 0, smHot: false, smCalm: 0, smLast: 0 };
 const PL_SLOW = 0.5, PL_HOT = 12, PL_CALM = 8;
 
 /* ---------------- Warteschlange ×5 ---------------- */
@@ -112,13 +112,18 @@ function plSlowFrame() {
 }
 
 /* ---------------- Untätig-Hinweise ---------------- */
-function plIdleLists() {
-  const g = UI.g, me = UI.me, out = { cargo: [], yard: [], build: [] };
+/* Frachter suchen sich im Leerlauf jede Sekunde selbst ein Vorkommen – untätig zählt erst, wer zwei Prüfungen
+   hintereinander (gut 1 s) ohne Auftrag ist (kein erreichbares Vorkommen) oder mit Ladung keine Raffinerie mehr hat */
+function plIdleLists(upd) {
+  const g = UI.g, me = UI.me, out = { cargo: [], yard: [], build: [] }, seen = new Set();
   for (const u of g.ships) {
     if (u.dead || u.derelict || u.owner !== me) continue;
-    if (u.o.t !== 'idle') continue;
-    if (u.def.cargo) out.cargo.push(u); else if (u.def.build) out.build.push(u);
+    /* Frachter mit Ladung ohne Raffinerie warten ebenfalls nur */
+    if (u.o.t !== 'idle' && !(u.def.cargo && u.o.t === 'return' && !nearestRefinery(g, me, u.x, u.y))) continue;
+    if (u.def.cargo) { seen.add(u.id); if (PL.idleSeen.has(u.id)) out.cargo.push(u); }
+    else if (u.def.build) out.build.push(u);
   }
+  if (upd) PL.idleSeen = seen;
   for (const b of g.bldgs) if (!b.dead && b.owner === me && b.role === 'yard' && b.done && !b.q.length && !b.off) out.yard.push(b);
   return out;
 }
@@ -130,7 +135,7 @@ function plIdle(force) {
   const now = performance.now();
   if (!force && now - PL.idleT < 1000) return;
   PL.idleT = now;
-  const ls = plIdleLists(), keys = ['cargo', 'yard', 'build'].filter(k => ls[k].length);
+  const ls = plIdleLists(true), keys = ['cargo', 'yard', 'build'].filter(k => ls[k].length);
   PL.idle = ls;
   const sig = I18N.lang + '|' + keys.map(k => k + ls[k].length).join('|');
   if (sig === PL.idleSig) return;
