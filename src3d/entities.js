@@ -26,7 +26,7 @@ import { ring, disc } from './overlay.js';
 /* Fernmodelle (ein Mesh mit Vertexfarben + Flammen) unterhalb dieser Zoomstufen, je Detailstufe */
 const FAR_SHIP = [1.6, 1.05, 0.8], FAR_STATION = [1.2, 0.85, 0.7];
 const TAU = Math.PI * 2;
-const E = { tpl: new Map(), sets: new Map(), stations: new Map(), prev: new Map(), domes: [], domeN: 0, domeMat: null, ghost: new Map(), ghostCur: null, fx: null, pcol: null, root: null };
+const E = { tpl: new Map(), sets: new Map(), stations: new Map(), prev: new Map(), domes: [], domeN: 0, domeMat: null, ghost: new Map(), ghostCur: [], ruins: new Map(), fx: null, pcol: null, root: null };
 const M4 = new THREE.Matrix4(), M4b = new THREE.Matrix4(), POS = new THREE.Vector3(), SCL = new THREE.Vector3(1, 1, 1), EUL = new THREE.Euler(0, 0, 0, 'YZX'), QUAT = new THREE.Quaternion(), COL = new THREE.Color();
 const WHITE = new THREE.Color(1, 1, 1), TINT = { ion: new THREE.Color(), acid: new THREE.Color(0.75, 1.05, 0.6), gold: new THREE.Color(1.15, 1.0, 0.7) };
 export function setEffects(fx) { E.fx = fx; }
@@ -224,16 +224,35 @@ export function prebuild(deadline) { let n = 0; while (PRE.length && (n === 0 ||
 
 /* ------------------------------------------------------------ Bauvorschau */
 /* Bauvorschau nach dem Rendern wieder ausblenden (ghost() wird vor frame() aufgerufen) */
-export function hideGhost() { if (E.ghostCur) { E.ghostCur.visible = false; E.ghostCur = null; } }
-export function ghost(f, role, lv, x, y, ok, color) {
-  const key = f + '|' + role + '|' + (lv || 1) + '|' + (ok ? 1 : 0);
+/* Fassung 22: mehrere Vorschauen je Frame (Reihe): slot = Nummer des Platzes */
+export function hideGhost() { for (const m of E.ghostCur) m.visible = false; E.ghostCur.length = 0; }
+export function ghost(f, role, lv, x, y, ok, color, slot) {
+  const key = f + '|' + role + '|' + (lv || 1) + '|' + (ok ? 1 : 0) + '|' + (slot | 0);
   let m = E.ghost.get(key);
   if (!m) {
     const def = bdefOf(f, role); if (!def) return;
     m = buildStation(f, def, lv || 1, color); remat(m, 'ghost', ok ? '#7dff9a' : '#ff5b47', false);
     m.traverse(o => { o.castShadow = false; if (o.material && o.material.userData.isFlame) o.visible = false; }); m.visible = false; E.root.add(m); E.ghost.set(key, m);
   }
-  m.position.set(x, 0.5, y); m.visible = true; E.ghostCur = m;
+  m.position.set(x, 0.5, y); m.visible = true; E.ghostCur.push(m);
+}
+
+/* ------------------------------------------------------------ Fassung 22: Ruinen zerstörter Stationen
+   Klon der Station in der Wrack-Variante (dunkel, ohne Leuchten), gekippt und gestaucht, sinkt beim Bergen und Verfallen
+   ab; Glut als kleine Scheiben aus overlay.js. */
+function ruinStep(w, g, color, t) {
+  let m = E.ruins.get(w.id);
+  if (!m) {
+    const def = bdefOf(w.f, w.role); if (!def) return;
+    m = buildStation(w.f, def, w.lv || 1, color); remat(m, 'wreck', '', false);
+    m.traverse(o => { if (o.isSprite || o.isPoints || (o.material && o.material.userData && o.material.userData.isFlame)) o.visible = false; });
+    const k = (w.id % 5) / 5;
+    m.rotation.set(0.12 + 0.1 * k, w.ang || 0, -0.1 + 0.15 * k); m.scale.set(1, 0.55, 1);
+    E.root.add(m); E.ruins.set(w.id, m);
+  }
+  const fade = Math.max(0, Math.min(1, (w.until - g.time) / 20)) * Math.max(0.35, Math.min(1, w.sal0 ? w.sal / w.sal0 : 1));
+  m.visible = true; m.position.set(w.x, -(1 - fade) * w.r * 0.8 - 2, w.y);
+  if (fade > 0.3) for (let i = 0; i < 3; i++) { const a = w.id * 1.7 + i * 2.1, d = w.r * (0.25 + 0.2 * i); disc(w.x + Math.cos(a) * d, w.y + Math.sin(a) * d, 2.5 + Math.sin(t * 3 + i + w.id) * 0.8, '#ff8a3a', 0.35 + 0.25 * Math.sin(t * 2.3 + i * 1.9)); }
 }
 
 /* ------------------------------------------------------------ Schildkuppeln */
@@ -298,7 +317,9 @@ export function updateEntities(g, dt, t, view) {
   }
   if ((E.sweep = (E.sweep || 0) + 1) % 30 === 0) for (const id of E.prev.keys()) { const u = g.byId.get(id); if (!u || u.dead) E.prev.delete(id); }
   /* Wracks */
+  const ruinLive = new Set();
   for (const w of g.wrecks) {
+    if (w.ruin) { if (seen(w.x, w.y) && inView(w.x, w.y, w.r * 1.4, w.r * 0.6)) { ruinLive.add(w.id); ruinStep(w, g, pcol(w.owner), t); } continue; } /* Fassung 22 */
     if (!seen(w.x, w.y) || !inView(w.x, w.y, 60, 5)) continue;
     const u = g.byId.get(w.id), def = (u && u.def) || (typeof SHIPS !== 'undefined' && SHIPS[w.type]); if (!def) continue;
     const set = setOf(tplOf(def, pcol(w.owner)), 'wreck', farShips), left = w.until - g.time, kf = Math.max(0.05, Math.min(1, left / 20));
@@ -306,6 +327,7 @@ export function updateEntities(g, dt, t, view) {
     COL.setScalar(kf); push(set, -1, COL);
   }
   finish();
+  for (const [id, m] of E.ruins) if (!ruinLive.has(id)) { if (g.wrecks.some(w => w.id === id && w.ruin)) m.visible = false; else { E.root.remove(m); E.ruins.delete(id); } }
   for (let i = E.domeN; i < E.domes.length; i++) E.domes[i].visible = false;
   /* Stationen */
   const live = new Set();
@@ -361,7 +383,8 @@ export function clearEntities() {
   for (const s of E.sets.values()) for (const im of s.ims) { E.root.remove(im); im.dispose(); }
   E.sets.clear(); E.tpl.clear(); E.prev.clear(); FARST.clear(); STPL.clear(); PRE.length = 0;
   for (const e of E.stations.values()) dropStation(e); E.stations.clear();
-  for (const m of E.ghost.values()) E.root.remove(m); E.ghost.clear(); E.ghostCur = null;
+  for (const m of E.ghost.values()) E.root.remove(m); E.ghost.clear(); E.ghostCur.length = 0;
+  for (const m of E.ruins.values()) E.root.remove(m); E.ruins.clear();
 }
 export function disposeEntities() { clearEntities(); if (E.root) { S.scene.remove(E.root); E.root = null; } }
 export const _E = E;
