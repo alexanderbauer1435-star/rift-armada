@@ -268,7 +268,10 @@ function wallField(b, col, gtime, t) {
   WALLS.n++;
   const dx = b.wx2 - b.wx1, dy = b.wy2 - b.wy1, L = Math.hypot(dx, dy), u = m.material.uniforms;
   m.visible = true; m.position.set(b.wx1, 0.5, b.wy1); m.rotation.set(0, -Math.atan2(dy, dx), 0); m.scale.set(L, WALLH, 1);
-  u.uCol.value.set(WALL_COL[b.def.f] || '#8fe3ff'); u.uTeam.value.set(col); u.uT.value = t; u.uL.value = L; u.uK.value = b.fhpMax ? Math.max(0, Math.min(1, b.fhp / b.fhpMax)) : 1; u.uHit.value = Math.max(0, 1 - (gtime - (b.fhitT || -9)) / 0.25);
+  /* Bodenband, damit das Feld auch aus Blickrichtung längs der Wand gut zu sehen ist */
+  const fc = WALL_COL[b.def.f] || '#8fe3ff', k = b.fhpMax ? Math.max(0, Math.min(1, b.fhp / b.fhpMax)) : 1;
+  line(b.wx1, b.wy1, b.wx2, b.wy2, fc, 12, { alpha: 0.18 + 0.2 * k }); line(b.wx1, b.wy1, b.wx2, b.wy2, '#ffffff', 2.5, { alpha: 0.55 + 0.3 * k }); line(b.wx1, b.wy1, b.wx2, b.wy2, col, 6, { alpha: 0.3, dash: 8, march: true });
+  u.uCol.value.set(fc); u.uTeam.value.set(col); u.uT.value = t; u.uL.value = L; u.uK.value = b.fhpMax ? Math.max(0, Math.min(1, b.fhp / b.fhpMax)) : 1; u.uHit.value = Math.max(0, 1 - (gtime - (b.fhitT || -9)) / 0.25);
 }
 
 /* ------------------------------------------------------------ je Frame */
