@@ -547,9 +547,7 @@ for (const f of ['alliance', 'mars']) {
     { hull: 1600, shield: sh(360), sreg: sh(22), armor: ar(3), energy: -12, cost: { ice: 340, ore: 220 }, time: 26, rep: 360, hrate: 0.036, brep: 380, brate: 0.006 }),
     desc: 'Repariert eigene Schiffe in der Nähe (Hülle und Subsysteme, schneller als die Selbstreparatur) und langsam eigene Stationen. Vorsichtige Schiffe ziehen sich auch hierher zurück.' };
 }
-/* Fassung 22: Turmgrenze und Schildwall */
-const TOWER_ROLES = { turret: 1, flak: 1 };
-const TOWER_BASE = 4, TOWER_PER_LV = 2, TOWER_PER_OUTPOST = 2;   // Türme = 4 + 2 × Stufe der besten Basis + 2 je weitere Basis
+/* Fassung 22: Schildwall */
 const WALL_MAX = 380, WALL_MIN = 70, WALL_CAP = 8;               // Feldlänge (zwischen den Rändern), Anzahl Emitter je Spieler
 const WALL_ANCHOR = { turret: 1, flak: 1, spore: 1, wall: 1 };
 const WALL_DOWN = 10;                                             // Sekunden, bis ein zusammengebrochenes Feld neu startet

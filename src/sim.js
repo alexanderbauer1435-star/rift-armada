@@ -254,16 +254,11 @@ function buildReq(g, pi, role) {
   if (lk && lk.bldgs && lk.bldgs.indexOf(role) < 0) return 'In dieser Mission nicht verfügbar';
   if (def.unique && hasBldg(g, pi, role, false)) return 'Nur einmal möglich';
   if (role !== 'base' && !hasBldg(g, pi, 'base', true)) return 'Benötigt Kommandobasis';
-  /* Fassung 22: Turmgrenze, höchstens WALL_CAP Schildwälle */
-  if (TOWER_ROLES[role] && towerCount(g, pi) >= towerCap(g, pi)) return 'Turmgrenze erreicht';
+  /* Fassung 22: höchstens WALL_CAP Schildwälle */
   if (role === 'wall' && g.bldgs.filter(b => !b.dead && b.owner === pi && b.role === 'wall').length >= WALL_CAP) return 'Zu viele Schildwälle';
   if (def.req) { let b = null; for (const q of g.bldgs) if (!q.dead && q.owner === pi && q.role === 'base' && q.done && (!b || q.lv > b.lv)) b = q; if (def.req.base && (!b || b.lv < def.req.base)) return 'Benötigt Kommandobasis Stufe ' + ROMAN[def.req.base]; if (def.req.lab && labLevel(g, pi) < def.req.lab) return 'Benötigt Labor Stufe ' + ROMAN[def.req.lab]; }
   return null;
 }
-/* Fassung 22: Türme (Geschütze und Flak) je Spieler: TOWER_BASE + TOWER_PER_LV × Stufe der besten fertigen Kommandobasis
-   + TOWER_PER_OUTPOST je weitere fertige Kommandobasis; Baustellen zählen mit */
-function towerCount(g, pi) { let n = 0; for (const b of g.bldgs) if (!b.dead && b.owner === pi && TOWER_ROLES[b.role]) n++; return n; }
-function towerCap(g, pi) { let best = 0, nb = 0; for (const b of g.bldgs) if (!b.dead && b.owner === pi && b.role === 'base' && b.done) { nb++; if (b.lv > best) best = b.lv; } return nb ? TOWER_BASE + TOWER_PER_LV * best + TOWER_PER_OUTPOST * (nb - 1) : TOWER_BASE; }
 /* Fassung 22: Schildwall – Gegenstück (Anker) zum Emitter an (x, y): eigener Turm, Flak, Sporennest oder Emitter, dessen
    Rand höchstens WALL_MAX vom Rand des Emitters entfernt ist; to wählt ihn ausdrücklich, sonst der nächste */
 function wallAnchor(g, pi, x, y, to) {

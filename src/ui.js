@@ -572,9 +572,7 @@ function objTip(o) {
 }
 function bldgTip(def) {
   const l = def.lv[0];
-  /* Fassung 22: Türme belegt / erlaubt */
-  const tw = TOWER_ROLES[def.role] ? '<p class="req">' + L('Türme {0}/{1}', towerCount(UI.g, UI.me), towerCap(UI.g, UI.me)) + '</p>' : '';
-  return '<h4>' + esc(L(def.name)) + '</h4><div class="cost">' + costTxt(l.cost) + ' · ' + l.time + ' s</div>' + tw + '<p>' + esc(L(def.desc)) + '</p>' + (def.role === 'base' ? '<p class="fine">' + L('Außenbasis: ein Bauschiff kann weitere Kommandobasen überall auf der Karte errichten, auch fern der eigenen Stationen. Um sie herum lässt sich wieder bauen.') + '</p>' : '') + '<p class="fine">' + L('Hülle') + ' ' + l.hull + (l.shield ? ' · ' + L('Schild') + ' ' + l.shield : '') + (l.armor ? ' · ' + L('Panzerung') + ' ' + l.armor : '') + (l.energy ? ' · ' + L('Energie') + ' ' + (l.energy > 0 ? '+' : '') + l.energy : '') + (l.cp ? ' · ' + L('Kommando') + ' +' + l.cp : '') + '</p>';
+  return '<h4>' + esc(L(def.name)) + '</h4><div class="cost">' + costTxt(l.cost) + ' · ' + l.time + ' s</div><p>' + esc(L(def.desc)) + '</p>' + (def.role === 'base' ? '<p class="fine">' + L('Außenbasis: ein Bauschiff kann weitere Kommandobasen überall auf der Karte errichten, auch fern der eigenen Stationen. Um sie herum lässt sich wieder bauen.') + '</p>' : '') + '<p class="fine">' + L('Hülle') + ' ' + l.hull + (l.shield ? ' · ' + L('Schild') + ' ' + l.shield : '') + (l.armor ? ' · ' + L('Panzerung') + ' ' + l.armor : '') + (l.energy ? ' · ' + L('Energie') + ' ' + (l.energy > 0 ? '+' : '') + l.energy : '') + (l.cp ? ' · ' + L('Kommando') + ' +' + l.cp : '') + '</p>';
 }
 function hudBuild(force) {
   const box = $('build'), items = $('items'), tabs = $('tabs');
