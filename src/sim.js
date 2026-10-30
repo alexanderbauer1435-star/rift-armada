@@ -153,7 +153,8 @@ function addShip(g, defId, owner, x, y, ang) {
     xp: 0, rank: 0, o: { t: 'idle' }, hx: x, hy: y, wcd: def.wpn.map(() => 0), tgt: 0, cargo: 0, ckind: '', path: null, pi: 0, stuck: 0, grp: 0, stance: 0, hold: false,
     beams: null, dead: false, mine: 0, kills: 0, par: 0, born: g.time, cls: CLS_IDX[def.cls] || 0, wait: 0, pt: 0, fr: 0,
     sub: { drive: 1, wpn: 1, shield: 1, sensor: 1, life: 1 }, crew: def.crew, crewMax: def.crew, marines: def.marines ? Math.round(def.marines * p.tfx.marines) : 0, boarding: 0, boardBy: -1, derelict: false,
-    abcd: {}, abT: {}, abx: 0, dis: 0, truce: 0, marked: 0, markT: -1, sprint: 0, dome: 0, auto: true, derT: 0, crus: 0, blessT: 0, pull: null, snapH: 0, snapS: 0, rampT: 0, rampTid: 0, resUsed: 0, adapt: null, acid: null, para: null, cocoon: null, frenzy: 0, until: 0, nocp: 0, hmul: 1
+    abcd: {}, abT: {}, abx: 0, dis: 0, truce: 0, marked: 0, markT: -1, sprint: 0, dome: 0, auto: true, derT: 0, crus: 0, blessT: 0, pull: null, snapH: 0, snapS: 0, rampT: 0, rampTid: 0, resUsed: 0, adapt: null, acid: null, para: null, cocoon: null, frenzy: 0, until: 0, nocp: 0, hmul: 1,
+    autoRet: 0, hitT: -99, fireT: -99   /* Fassung 22: Rückzug bei Schaden je Schiff, zuletzt getroffen / gefeuert (Rang-Reparatur außer Gefecht) */
   };
   if (def.swarm && p.tfx.swarm) { u.hmul = (def.swarm + p.tfx.swarm) / def.swarm; u.hull *= u.hmul; u.hullMax *= u.hmul; }
   if (def.hero) { u.hero = HERO_NAMES[(p.heroIdx * 7 + owner * 3) % HERO_NAMES.length]; p.heroIdx++; }
@@ -447,6 +448,7 @@ function formSlots(us, gx, gy, form) {
   for (const u of us) { cx += u.x; cy += u.y; rmax = Math.max(rmax, u.def.r); }
   cx /= n; cy /= n;
   const dir = datan2(gy - cy, gx - cx), px = -dsin(dir), py = dcos(dir), fx = dcos(dir), fy = dsin(dir), sp = rmax * 2 + 8;
+  if (form === 'roles') return roleSlots(us, gx, gy, fx, fy, px, py, sp);
   const sorted = us.slice().sort((a, b) => b.def.r - a.def.r || a.id - b.id), out = new Array(n);
   const cols = form === 'line' ? (n <= 8 ? n : Math.ceil(n / 2)) : Math.max(2, Math.ceil(Math.sqrt(n)));
   const rows = Math.ceil(n / cols);
@@ -457,6 +459,32 @@ function formSlots(us, gx, gy, form) {
     const back = row * sp * 0.95 + (form === 'line' ? 0 : Math.abs(k) * 0.35);
     out[us.indexOf(sorted[i])] = { x: gx + px * k - fx * back, y: gy + py * k - fy * back };
   }
+  return out;
+}
+/* Fassung 22: Rollenformation – Schwere (große Kampfschiffe) vorn, Mittlere in der Mitte, Artillerie, Träger und
+   Unterstützer hinten, kleine schnelle Schiffe auf den Flanken. Das Tempo richtet sich wie bei allen Formationen nach
+   dem langsamsten Schiff (cmdMove: sp). Reihen von vorn nach hinten, das Ganze mittig um den Zielpunkt. */
+function shipRole(u) {
+  const d = u.def;
+  if (d.art || d.role === 'carrier' || d.role === 'builder' || d.role === 'tanker' || d.bless || d.ab === 'repair' || d.ab === 'fieldyard' || !armed(u)) return 'back';
+  if (d.cls === 'l') return 'front';
+  if (d.cls === 's') return 'flank';
+  return 'mid';
+}
+function roleSlots(us, gx, gy, fx, fy, px, py, sp) {
+  const n = us.length, out = new Array(n), G = { front: [], mid: [], back: [], flank: [] };
+  for (const u of us) G[shipRole(u)].push(u);
+  for (const k in G) G[k].sort((a, b) => b.def.r - a.def.r || a.id - b.id);
+  const cols = Math.max(3, Math.ceil(Math.sqrt(n)) + 1), rows = [];
+  for (const k of ['front', 'mid', 'back']) for (let i = 0; i < G[k].length; i += cols) rows.push(G[k].slice(i, i + cols));
+  const rs = sp * 0.95, off = (rows.length - 1) / 2 * rs;
+  let half = sp;
+  rows.forEach((row, r) => {
+    const fwd = off - r * rs;
+    row.forEach((u, c) => { const k = ((c % 2 ? 1 : -1) * Math.ceil(c / 2) + (row.length % 2 === 0 ? (c % 2 ? -0.5 : 0.5) : 0)) * sp; half = Math.max(half, Math.abs(k)); out[us.indexOf(u)] = { x: gx + px * k + fx * fwd, y: gy + py * k + fy * fwd }; });
+  });
+  /* Flanken: abwechselnd links und rechts neben den vorderen Reihen, weitere Paare dahinter */
+  G.flank.forEach((u, i) => { const side = i % 2 ? 1 : -1, k = side * (half + sp * 1.2), fwd = off - ((i >> 1) * rs * 0.9); out[us.indexOf(u)] = { x: gx + px * k + fx * fwd, y: gy + py * k + fy * fwd }; });
   return out;
 }
 function cmdMove(g, us, x, y, am, form) {
@@ -474,6 +502,17 @@ function cmdMove(g, us, x, y, am, form) {
 }
 function cmdAttack(g, us, t, sub) {
   for (const u of us) { if (!u.def.wpn.length) { u.o = { t: 'move', x: t.x, y: t.y }; u.path = null; continue; } u.o = { t: 'attack', tid: t.id, x: t.x, y: t.y, sub: sub && SUBS.indexOf(sub) >= 0 ? sub : undefined }; u.path = null; u.tgt = t.id; u.hold = false; }
+}
+/* Fassung 22: Begleiten – die Schiffe folgen einem eigenen Schiff (oder einer Station) in lockerem Ring und wehren
+   Feinde ab, die ihm nahe kommen (combat.js, Befehl 'escort'). k: Platz im Ring, n: Zahl der Begleiter. */
+function cmdEscort(g, us, t, k0) {
+  us = us.filter(u => u !== t); k0 = k0 | 0;
+  us.forEach((u, i) => { u.o = { t: 'escort', tid: t.id, x: t.x, y: t.y, k: k0 + i, n: k0 + us.length, eid: 0 }; u.path = null; u.tgt = 0; u.hold = false; });
+  return us.length;
+}
+/* Fassung 22: Rückzug bei Schaden je Schiff (unabhängig von der Haltung) */
+function cmdAutoRet(g, us, on) {
+  for (const u of us) { u.autoRet = on ? 1 : 0; if (!on && u.retreat && u.stance !== 3) { u.retreat = 0; u.hold = false; if (u.o.ret) setIdle(u); } }
 }
 function cmdStop(g, us) { for (const u of us) { setIdle(u); u.hold = false; } }
 function cmdHold(g, us, on) { for (const u of us) { u.hold = !!on; if (on) { u.o = { t: 'hold' }; u.path = null; u.hx = u.x; u.hy = u.y; } else setIdle(u); } }
@@ -518,6 +557,9 @@ function execCmd(g, c) {
     case 'etech': return cmdEtech(g, pi, c.id);
     case 'ab': return cmdAbility(g, pi, c.u, c.id, c.e);
     case 'super': return cmdSuper(g, pi, c.x, c.y);
+    /* Fassung 22: Begleiten und Rückzug bei Schaden */
+    case 'escort': { const t = g.byId.get(c.e); if (!t || t.dead || (t.k !== 1 && t.k !== 2) || t.owner !== pi || t.derelict || (t.k === 1 && t.def.role === 'fighter')) return 'Nicht möglich'; if (!cmdEscort(g, shipsOf(g, pi, c.u), t)) return 'Nicht möglich'; return null; }
+    case 'autoRet': cmdAutoRet(g, shipsOf(g, pi, c.u), !!c.on); return null;
     case 'board': { const t = g.byId.get(c.e); if (!t || t.dead || t.k === 3) return 'Nicht möglich'; const us = shipsOf(g, pi, c.u).filter(u => u.def.marines); if (!us.length) return 'Kein Enterschiff'; for (const u of us) { u.o = { t: 'board', tid: t.id, x: t.x, y: t.y }; u.path = null; u.tgt = t.id; } return null; }
   }
   return 'Nicht möglich';

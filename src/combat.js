@@ -147,7 +147,7 @@ function cautious(g, u) {
     if (!u.o.ret) { u.retreat = 0; return; }
     const y = g.byId.get(u.ryd);
     if (u.o.t === 'idle' || (u.o.t === 'move' && y && !y.dead && hyp(u.x - y.x, u.y - y.y) < y.def.r + u.def.r + 55)) { u.o = { t: 'hold', ret: 1 }; u.hold = true; u.path = null; }
-    if (u.hull >= u.hullMax * RETURN_AT) { u.retreat = 0; u.hold = false; u.o = { t: 'amove', x: u.rx, y: u.ry }; u.path = null; }
+    if (u.hull >= u.hullMax * RETURN_AT) { u.retreat = 0; u.hold = false; const e = u.rO ? g.byId.get(u.rO.tid) : null; u.o = e && !e.dead && e.owner === u.owner ? u.rO : { t: 'amove', x: u.rx, y: u.ry }; u.rO = null; u.path = null; }
     return;
   }
   if (u.hull >= u.hullMax * RETREAT_AT) return;
@@ -155,9 +155,45 @@ function cautious(g, u) {
   for (const b of g.bldgs) if (!b.dead && b.done && b.owner === u.owner && b.role === 'yard') { const d = hyp(b.x - u.x, b.y - u.y); if (d < bd) { bd = d; best = b; } }
   if (!best) return;
   u.retreat = 1; u.ryd = best.id; u.rx = u.x; u.ry = u.y; u.tgt = 0; u.hold = false;
+  u.rO = u.o.t === 'escort' ? { t: 'escort', tid: u.o.tid, x: u.o.x, y: u.o.y, k: u.o.k, n: u.o.n, eid: 0 } : null;   /* Fassung 22: nach der Reparatur wieder begleiten */
   const a = datan2(u.y - best.y, u.x - best.x) + ((u.id % 5) - 2) * 0.35, rr = best.def.r + u.def.r + 30;
   u.o = { t: 'move', x: best.x + dcos(a) * rr, y: best.y + dsin(a) * rr, ret: 1 }; u.path = null;
   ev(g, 'retreat', { x: u.x, y: u.y, owner: u.owner, id: u.id });
+}
+/* Fassung 22: Begleiten. Platz im lockeren Ring um das begleitete Schiff (ESC_R0–ESC_R1 vom Mittelpunkt), Feinde
+   im Umkreis ESC_GUARD um es werden angegriffen – die, die es beschießen, zuerst –, aber nicht weiter als ESC_LEASH
+   von ihm weg verfolgt. Endet, wenn das begleitete Schiff fällt (dann wartet das Schiff an Ort und Stelle). */
+const ESC_R0 = 150, ESC_R1 = 250, ESC_GUARD = 450, ESC_LEASH = 650;
+function escortSlot(u, t, o) {
+  const rr = clamp(t.def.r + u.def.r + 110, ESC_R0, ESC_R1), n = Math.max(1, o.n || 1), k = o.k || 0;
+  /* Schiffe: Plätze vorn-seitlich zuerst (±0,7 rad), dann weiter nach hinten; Stationen: gleichmäßig im Kreis */
+  const a = t.k === 1 ? t.ang + (k % 2 ? -1 : 1) * (0.7 + (k >> 1) * 1.1) : k * TAU / Math.max(3, n);
+  return { x: t.x + dcos(a) * rr, y: t.y + dsin(a) * rr };
+}
+function escortStep(g, u, o, dt, warship) {
+  const t = g.byId.get(o.tid);
+  if (!t || t.dead || t.owner !== u.owner || (t.k === 1 && t.derelict)) { setIdle(u); return; }
+  o.x = t.x; o.y = t.y;
+  if (warship && u.stance !== 2) {
+    let e = o.eid ? g.byId.get(o.eid) : null;
+    if (e && (e.dead || !foes(g, u.owner, e.owner) || !canSee(g, u.owner, e) || hyp(e.x - t.x, e.y - t.y) > ESC_GUARD + 120 || hyp(u.x - t.x, u.y - t.y) > ESC_LEASH)) { e = null; o.eid = 0; u.tgt = 0; }
+    if (!e && (g.tick + u.id) % 5 === 0) {
+      let bs = 1e9;
+      nearShips(g, t.x, t.y, ESC_GUARD + 40, f => {
+        if (f.dead || f.derelict || f.def.role === 'fighter' || !foes(g, u.owner, f.owner) || !canSee(g, u.owner, f)) return false;
+        const d = hyp(f.x - t.x, f.y - t.y); if (d > ESC_GUARD) return false;
+        const sc = d - (f.tgt === t.id ? 250 : 0) + hyp(f.x - u.x, f.y - u.y) * 0.3;
+        if (sc < bs) { bs = sc; e = f; } return false;
+      });
+      if (e) o.eid = e.id;
+    }
+    if (e) { u.tgt = e.id; engage(g, u, e, dt); return; }
+  }
+  const s = escortSlot(u, t, o), d = hyp(s.x - u.x, s.y - u.y);
+  if (d < 30) { if (t.k === 1 && t.v > 5) steer(g, u, s.x + dcos(t.ang) * 60, s.y + dsin(t.ang) * 60, dt, false, t.v); else { brake(u, dt); face(u, t.k === 1 ? t.ang : datan2(u.y - t.y, u.x - t.x), dt); } return; }
+  /* nah und frei: direkt (mit dem Tempo des Begleiteten), sonst über die Wegsuche */
+  if (d < 400 && navLosWorld(g.map, u.cls, u.x, u.y, s.x, s.y)) { u.path = null; steer(g, u, s.x, s.y, dt, true, d < 120 && t.k === 1 && t.v > 5 ? t.v * 1.25 + 10 : 0); return; }
+  goTo(g, u, s.x, s.y, dt, 30);
 }
 /* Bergung: Frachter zerlegen Wracks zerstörter Schiffe; Ertrag Erz (die Brood: Biomasse) */
 function wreckById(g, id) { for (const w of g.wrecks) if (w.id === id) return w; return null; }
@@ -177,7 +213,7 @@ function updateShip(g, u, dt) {
   shipUpkeep(g, u, dt);
   if (u.cocoon) { brake(u, dt); u.lx = u.x; u.ly = u.y; return; }
   if ((g.tick + u.id) % 15 === 0 && (def.ab || def.abs || def.ab2)) abilityAuto(g, u);
-  if (u.stance === 3) cautious(g, u);
+  if (u.stance === 3 || u.autoRet) cautious(g, u);   /* Fassung 22: Rückzug bei Schaden auch als Schalter je Schiff */
   const warship = armed(u);
   switch (o.t) {
     case 'salvage': {
@@ -310,6 +346,7 @@ function updateShip(g, u, dt) {
       }
       break;
     }
+    case 'escort': escortStep(g, u, o, dt, warship); break;   /* Fassung 22 */
     case 'board': {
       const t = g.byId.get(o.tid);
       if (!t || t.dead || !u.marines || (t.k === 2 && !def.stationsToo) || !foes(g, u.owner, t.owner) && !t.derelict) { setIdle(u); break; }
@@ -422,6 +459,13 @@ function inArc(s, w, t) {
   const want = datan2(t.y - s.y, t.x - s.x), mount = s.k === 2 ? 0 : s.ang + w.mount;
   return Math.abs(angDiff(want, mount)) <= w.arc + (t.k === 2 ? 0.15 : 0.05);
 }
+/* Fassung 22: Rangboni – je Rang +10 % Schaden, Hülle und Schild (wie bisher), dazu −15 % Streuung (Geschosse, Granaten,
+   Zielnachführung gegen kleinere Schiffe), −5 % Nachladezeit und außer Gefecht (10 s ohne Treffer, 5 s ohne Schuss)
+   5 % der Hülle je Minute Selbstreparatur. Für Auswahlkarte und Hinweis: rankBonus(rank). */
+const RANK_DMG = 0.1, RANK_ACC = 0.15, RANK_RELOAD = 0.05, RANK_REGEN = 0.05;
+function rankBonus(r) { return { dmg: Math.round(RANK_DMG * r * 100), acc: Math.round(RANK_ACC * r * 100), reload: Math.round(RANK_RELOAD * r * 100), regen: Math.round(RANK_REGEN * r * 100) }; }
+function rankAcc(s) { return s.k === 1 && s.rank ? 1 - RANK_ACC * s.rank : 1; }
+function rankRel(s) { return s.k === 1 && s.rank ? 1 - RANK_RELOAD * s.rank : 1; }
 function dmgMul(s) { return s.k === 1 ? (1 + 0.1 * s.rank) * (s.crus > 0 ? 1.25 : 1) * (s.blessT > FX_TIME(s) ? 1.12 : 1) : 1; }
 function FX_TIME(s) { return CUR_G ? CUR_G.time : 0; }
 let CUR_G = null;
@@ -435,8 +479,8 @@ function fireAll(g, s, dt) {
     s.wcd[i] -= dt;
     if (s.wcd[i] > 0) continue;
     const sub = s.k === 1 ? 1 + 2 * (1 - s.sub.wpn) : 1;
-    if (w.kind === 'pd') { if (firePd(g, s, w, i)) s.wcd[i] = w.reload * slow * p.tfx.pdReload * sub * (s.k === 1 && s.abT.flak > 0 ? 0.34 : 1); continue; }
-    if (w.art) { const t = artTarget(g, s, w); if (!t) continue; s.wcd[i] = w.reload * sub; fireArt(g, s, w, t); continue; }
+    if (w.kind === 'pd') { if (firePd(g, s, w, i)) s.wcd[i] = w.reload * slow * p.tfx.pdReload * sub * (s.k === 1 && s.abT.flak > 0 ? 0.34 : 1) * rankRel(s); continue; }
+    if (w.art) { const t = artTarget(g, s, w); if (!t) continue; s.wcd[i] = w.reload * sub * rankRel(s); fireArt(g, s, w, t); continue; }
     const bs = s.k === 1 && s.abT.broadside > 0;
     let t = s.tgt ? g.byId.get(s.tgt) : null;
     if (t && (t.dead || t.k === 3 || !foes(g, s.owner, t.owner) || tdist(s, t) > w.range || !(bs || inArc(s, w, t)) || !canSee(g, s.owner, t))) t = null;
@@ -447,7 +491,7 @@ function fireAll(g, s, dt) {
       if (s.k === 2) s.tgt = t.id;
     }
     if (w.minR && tdist(s, t) < w.minR * 0.9) continue;
-    s.wcd[i] = bs ? 0.15 : w.reload * slow * sub * (w.kind === 'rail' ? p.tfx.railReload : 1) * (w.kind === 'kin' && s.k === 1 && s.abT.flak > 0 ? 0.75 : 1) * (s.k === 1 && s.frenzy > 0 ? 0.7 : 1);
+    s.wcd[i] = bs ? 0.15 : w.reload * slow * sub * (w.kind === 'rail' ? p.tfx.railReload : 1) * (w.kind === 'kin' && s.k === 1 && s.abT.flak > 0 ? 0.75 : 1) * (s.k === 1 && s.frenzy > 0 ? 0.7 : 1) * (bs ? 1 : rankRel(s));
     fireWeapon(g, s, i, w, t);
   }
 }
@@ -477,7 +521,8 @@ function artMove(g, u, t, dt) {
 }
 function fireArt(g, s, w, t) {
   if (s.abT.cloak > 0) { s.abT.cloak = 0; ev(g, 'decloak', { x: s.x, y: s.y, owner: s.owner, id: s.id }); }
-  const sp = 22 + tdist(s, t) * 0.03, a0 = g.rng() * TAU, r0 = g.rng() * sp, tx = t.x + dcos(a0) * r0, ty = t.y + dsin(a0) * r0;
+  s.fireT = g.time;
+  const sp = (22 + tdist(s, t) * 0.03) * rankAcc(s), a0 = g.rng() * TAU, r0 = g.rng() * sp, tx = t.x + dcos(a0) * r0, ty = t.y + dsin(a0) * r0;
   const a = datan2(ty - s.y, tx - s.x), d = hyp(tx - s.x, ty - s.y);
   g.proj.push({ kind: 'art', x: s.x, y: s.y, ang: a, sp: w.speed, dmg: w.dmg * dmgMul(s), owner: s.owner, sid: s.id, tid: t.id, tx, ty, d0: d, left: d, splash: w.splash, life: d / w.speed + 1, col: w.col, r: 5 });
   ev(g, 'shot', { x: s.x, y: s.y, kind: 'kin', owner: s.owner, snd: w.snd, ang: a, big: true });
@@ -487,6 +532,7 @@ function fireArt(g, s, w, t) {
 }
 function fireWeapon(g, s, i, w, t) {
   if (s.k === 1 && s.abT.cloak > 0) { s.abT.cloak = 0; ev(g, 'decloak', { x: s.x, y: s.y, owner: s.owner, id: s.id }); }
+  if (s.k === 1) s.fireT = g.time;
   const mul = dmgMul(s) * techMul(g, s, w) * (s.k === 1 && s.abT.overload > 0 && w.kind === 'beam' ? 1.4 : 1);
   if (w.kind === 'beam') {
     if (!s.beams) s.beams = [];
@@ -513,7 +559,7 @@ function fireWeapon(g, s, i, w, t) {
   let tx = t.x, ty = t.y;
   if (t.k === 1 && t.v > 0) { const d = hyp(t.x - sx, t.y - sy), tf = d / w.speed; tx += dcos(t.ang) * t.v * tf; ty += dsin(t.ang) * t.v * tf; }
   let a = datan2(ty - sy, tx - sx);
-  if (w.spread) a += (g.rng() - 0.5) * 2 * w.spread;
+  if (w.spread) a += (g.rng() - 0.5) * 2 * w.spread * rankAcc(s);
   const rail = w.kind === 'rail', r0 = s.k === 2 ? s.def.r * 0.9 : s.def.r * 0.9;
   let pierce = w.pierce || 1, dm = w.dmg * mul;
   if (rail && s.k === 1 && s.abT.pierce > 0) { pierce = 6; dm *= 1.5; s.abT.pierce = 0; ev(g, 'abfx', { x: sx, y: sy, id: 'pierce', owner: s.owner }); }
@@ -614,6 +660,7 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   if (t.dead || amt <= 0) return;
   const lv = t.k === 2 ? lvOf(t) : t.def, p = g.players[t.owner];
   t.sT = 0;
+  if (t.k === 1) t.hitT = g.time;   /* Fassung 22: außer Gefecht erst 10 s nach dem letzten Treffer */
   if (t.k === 1) { if (t.abT.invuln > 0) { shieldHit(g, t, sx, sy); return; } if (t.dome > 0) amt *= 0.5; }
   if (t.marked > g.time && owner >= 0 && g.tm[owner] === t.markT) amt *= 1.3;
   /* Kampftempo: Waffenfeuer (src gesetzt) wird skaliert; Flächenwirkungen (src = null) nicht */
@@ -622,7 +669,7 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   /* nur Waffenfeuer (Schütze oder Geschoss); Flächenwirkungen wie Eruptionen und Säure übergeben src = null */
   const ck = COUNTER[kind]; if (ck && !bypass && src !== null) amt *= t.k === 1 ? (ck[t.def.cls] || 1) : t.k === 2 ? ck.b : 1;
   if (w && w.antiL && t.k === 1 && t.def.cls === 'l' && !bypass) amt *= w.antiL;
-  if (src && src.k === 1 && t.k === 1 && !bypass && kind !== 'torp') { const tr = TRACK[src.def.cls]; if (tr && tr[t.def.cls]) amt *= tr[t.def.cls]; }
+  if (src && src.k === 1 && t.k === 1 && !bypass && kind !== 'torp') { const tr = TRACK[src.def.cls]; if (tr && tr[t.def.cls]) amt *= tr[t.def.cls] < 1 ? 1 - (1 - tr[t.def.cls]) * rankAcc(src) : tr[t.def.cls]; }
   if (t.k === 1 && !bypass && src !== null && sx !== undefined && t.def.role !== 'fighter' && (sx !== t.x || sy !== t.y)) {
     const rel = Math.abs(angDiff(datan2(sy - t.y, sx - t.x), t.ang));
     if (rel > 2.1) { amt *= FLANK_REAR; if (owner >= 0 && g.time - (t.flankT || -9) > 2.5) { t.flankT = g.time; ev(g, 'flank', { x: t.x, y: t.y, owner, rear: 1 }); } }
@@ -690,6 +737,8 @@ function shipUpkeep(g, u, dt) {
   /* Selbstreparatur der Subsysteme, an Werft oder Basis fünfmal so schnell */
   const yard = nearOwnYard(g, u, 160), rate = SUB_REPAIR * (yard ? 5 : 1) * step;
   for (const id of SUBS) if (u.sub[id] < 1) u.sub[id] = Math.min(1, u.sub[id] + rate);
+  /* Fassung 22: erfahrene Crews flicken die Hülle außer Gefecht selbst (5 % je Minute und Rang) */
+  if (u.rank && u.hull < u.hullMax && g.time - (u.hitT === undefined ? -99 : u.hitT) > 10 && g.time - (u.fireT === undefined ? -99 : u.fireT) > 5) u.hull = Math.min(u.hullMax, u.hull + u.hullMax * RANK_REGEN / 60 * u.rank * step);
   /* Lebenserhaltung: unter 50 % schwindet die Crew */
   if (u.sub.life < 0.5 && u.crewMax) { u.crew -= u.crewMax * (0.5 - u.sub.life) * 0.1 * step; if (u.crew <= 0) { makeDerelict(g, u); return; } }
   else if (u.crew < u.crewMax && yard) u.crew = Math.min(u.crewMax, u.crew + u.crewMax * 0.03 * step);
