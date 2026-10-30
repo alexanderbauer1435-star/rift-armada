@@ -167,7 +167,7 @@ function buildDebris(list) {
       sc.set(s * (1 + r()), s, s); m4.compose(p, q, sc); plate.setMatrixAt(k, m4);
       p.x += (r() - 0.5) * 30; p.z += (r() - 0.5) * 30; sc.setScalar(s * 0.6); m4.compose(p, q, sc); chunk.setMatrixAt(k, m4);
     }
-    const dust = new THREE.Mesh(new THREE.CircleGeometry(d.r, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#7890b0', transparent: true, opacity: 0.1, depthWrite: false, fog: false }));
+    const dust = new THREE.Mesh(new THREE.CircleGeometry(d.r, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#40506a', transparent: true, opacity: 0.35, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
     dust.position.set(d.x, -4, d.y); dust.renderOrder = 1; g.add(dust);
   }
   for (const im of [plate, chunk]) { im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; g.add(im); }
