@@ -29,7 +29,7 @@ function saveGame(g) {
     v: SAVE_V, opts: g.opts, rng: g.rng.st.a, tick: g.tick, time: g.time, nextId: g.nextId, over: g.over, winner: g.winner, winTeam: g.winTeam, visStamp: g.visStamp,
     players: g.players.map(p => { const o = enc(p); o.ex = rleEnc(p.explored, v => v); return o; }),
     ships: g.ships.filter(e => !e.dead).map(enc), bldgs: g.bldgs.filter(e => !e.dead).map(enc), nodes: g.nodes.map(n => [n.amount, n.miners]), proj: enc(g.proj), wrecks: enc(g.wrecks), reveals: enc(g.reveals), strikes: enc(g.strikes), log: g.log,
-    sites: enc(g.sites), gates: enc(g.gates), events: enc(g.events), flares: enc(g.flares), flareOn: !!g.flareOn, spores: enc(g.spores), wave: enc(g.wave), threat: g.threat, mis: enc(g.mis), fort: enc(g.fort)
+    sites: enc(g.sites), gates: enc(g.gates), events: enc(g.events), flares: enc(g.flares), flareOn: !!g.flareOn, spores: enc(g.spores), mines: enc(g.mines), wave: enc(g.wave), threat: g.threat, mis: enc(g.mis), fort: enc(g.fort)
   };
 }
 function loadGame(d) {
@@ -62,7 +62,7 @@ function loadGame(d) {
   if (Array.isArray(d.gates) && d.gates.length === g.gates.length) d.gates.forEach((gd, i) => Object.assign(g.gates[i], dec(gd)));
   for (const o of g.sites) g.byId.set(o.id, o);
   for (const o of g.gates) g.byId.set(o.id, o);
-  g.events = dec(d.events || g.events); g.flares = dec(d.flares || []); g.flareOn = !!d.flareOn; g.spores = dec(d.spores || []);
+  g.events = dec(d.events || g.events); g.flares = dec(d.flares || []); g.flareOn = !!d.flareOn; g.spores = dec(d.spores || []); g.mines = dec(d.mines || []);   /* Fassung 22 */
   if (d.wave) { g.wave = dec(d.wave); g.threat = d.threat; }
   if (d.mis) g.mis = dec(d.mis);
   if (d.fort) g.fort = dec(d.fort);

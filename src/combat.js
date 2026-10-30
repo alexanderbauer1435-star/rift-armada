@@ -177,6 +177,7 @@ function updateShip(g, u, dt) {
   shipUpkeep(g, u, dt);
   if (u.cocoon) { brake(u, dt); u.lx = u.x; u.ly = u.y; return; }
   if ((g.tick + u.id) % 15 === 0 && (def.ab || def.abs || def.ab2)) abilityAuto(g, u);
+  if (def.heal && (g.tick + u.id) % 6 === 0) healTick(g, u, dt * 6);   /* Fassung 22: Reparaturschiff */
   if (u.stance === 3) cautious(g, u);
   const warship = armed(u);
   switch (o.t) {
@@ -538,7 +539,28 @@ function firePd(g, s, w, i) {
   let f = null;
   nearShips(g, s.x, s.y, w.range, u => { if (u.def.role === 'fighter' && foes(g, pi, u.owner) && canSee(g, pi, u)) { const d = hyp(u.x - s.x, u.y - s.y); if (d < bd) { bd = d; f = u; } } return false; });
   if (f) { ev(g, 'pd', { x: s.x, y: s.y, tx: f.x, ty: f.y, owner: pi, kill: f.hull <= w.dmg }); damage(g, f, w.dmg, 'pd', s, pi, s.x, s.y); return true; }
+  /* Fassung 22: entdeckte feindliche Minen räumen */
+  if (g.mines.length) { let mn = null; for (const m of g.mines) { if (m.hp <= 0 || !foes(g, pi, m.owner)) continue; const d = (m.x - s.x) * (m.x - s.x) + (m.y - s.y) * (m.y - s.y); if (d < r2 && d < bd && mineSeen(g, pi, m)) { bd = d; mn = m; } } if (mn) { mn.hp -= 1; ev(g, 'pd', { x: s.x, y: s.y, tx: mn.x, ty: mn.y, owner: pi, kill: mn.hp <= 0 }); if (mn.hp <= 0) ev(g, 'hit', { x: mn.x, y: mn.y, kind: 'torpdie' }); return true; } }
   return false;
+}
+/* Fassung 22: Reparaturschiff – bis zu heal.n eigene Schiffe und Stationen im Umkreis (am stärksten beschädigte zuerst,
+   nie sich selbst): Hülle heal.rate je Sekunde (höchstens heal.cap), Subsysteme heal.sub; Brood-Amme löst Säure. u.heals
+   hält die Ziele für den Reparaturstrahl der Darstellung. */
+function healTick(g, u, dt) {
+  const H = u.def.heal, R0 = H.r, cand = [];
+  if (u.derelict || u.cocoon) { u.heals = null; return; }
+  nearShips(g, u.x, u.y, R0 + 30, e => { if (e === u || e.dead || e.derelict || e.owner !== u.owner || e.def.role === 'fighter') return false; if (hyp(e.x - u.x, e.y - u.y) > R0 + e.def.r * 0.5) return false; const sub = e.sub.drive + e.sub.wpn + e.sub.shield + e.sub.sensor + e.sub.life; if (e.hull < e.hullMax - 0.5 || sub < 4.99 || (H.cure && e.acid)) cand.push(e); return false; });
+  for (const b of g.bldgs) if (!b.dead && b.done && b.owner === u.owner && b.hull < b.hullMax - 0.5 && hyp(b.x - u.x, b.y - u.y) <= R0 + b.def.r) cand.push(b);
+  if (!cand.length) { u.heals = null; return; }
+  cand.sort((a, b) => (a.hull / a.hullMax - b.hull / b.hullMax) || (a.id - b.id));
+  const k = g.pace.regen * dt, ids = [];
+  for (let i = 0; i < cand.length && i < H.n; i++) {
+    const e = cand[i];
+    e.hull = Math.min(e.hullMax, e.hull + Math.min(e.hullMax * H.rate, H.cap) * k);
+    if (e.k === 1) { for (const sb of SUBS) if (e.sub[sb] < 1) e.sub[sb] = Math.min(1, e.sub[sb] + H.sub * dt); if (H.cure && e.acid) { e.acid.t -= dt * 2; if (e.acid.t <= 0) e.acid = null; } }
+    ids.push(e.id);
+  }
+  u.heals = ids;
 }
 
 /* ------------------------------------------------------------------ Geschosse */
@@ -790,6 +812,8 @@ function abilityUse(g, u, id, t) {
       u.cocoon = { to: A.mut, t: A.dur * p.tfx.mutT, t0: A.dur * p.tfx.mutT }; u.o = { t: 'idle' }; u.hx = u.x; u.hy = u.y; u.path = null; u.tgt = 0; u.beams = null;
       break;
     }
+    /* Fassung 22: Minenfeld an der eigenen Position */
+    case 'mines': if (!layMines(g, u)) return false; break;
     case 'netpulse': { for (const b of g.bldgs) if (!b.dead && b.owner === u.owner && hyp(b.x - u.x, b.y - u.y) <= A.r + b.def.r) { b.hull = Math.min(b.hullMax, b.hull + b.hullMax * 0.25); b.forceNet = g.time + 30; if (b.off) { b.off = false; } ev(g, 'heal', { x: b.x, y: b.y, r: b.def.r, owner: u.owner }); } recalcPower(g, u.owner); recalcCp(g, u.owner); break; }
     default: ok = false;
   }
@@ -855,6 +879,8 @@ function abilityAuto(g, u) {
       case 'plague': go = nearFoes(g, u, ABIL.plague.r).length >= 2; break;
       case 'molt': go = hurtFrac(u) < 0.35; break;
       case 'mutSwarm': case 'mutSpit': case 'mutRav': case 'mutLeech': case 'mutMaw': break;
+      /* Fassung 22: Minen, wenn Feinde nahen und hier noch kein eigenes Feld liegt */
+      case 'mines': go = (o.t === 'idle' || o.t === 'hold' || o.t === 'attack') && nearFoes(g, u, 500).length > 0; break;
       case 'netpulse': go = g.bldgs.some(b => !b.dead && b.owner === u.owner && (b.off || b.hull < b.hullMax * 0.5) && hyp(b.x - u.x, b.y - u.y) <= ABIL.netpulse.r); break;
     }
     if (go) abilityUse(g, u, id, t);

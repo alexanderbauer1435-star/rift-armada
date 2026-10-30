@@ -297,6 +297,51 @@ const ART_SHIPS = {
     desc: 'Sporenmörser. Spuckt Säureblasen im hohen Bogen weit hinter die Turmlinie, nur im Stand. Bewegliche Ziele weichen aus, im Nahkampf wehrlos.' }
 };
 Object.assign(SHIPS, ART_SHIPS);
+/* Fassung 22: Unterstützer je Fraktion – Minenleger (Fähigkeit »Minen legen«, mines: 1), Reparaturschiff (heal: Umkreis,
+   Ziele zugleich, Anteil der Hülle je Sekunde, Obergrenze je Ziel und Sekunde, Subsysteme je Sekunde) und Truppentransporter
+   (Entern wie Boarder/Dropship, auch Stationen; troop: 1). Keine oder nur Abwehrwaffen: die KI führt sie gesondert (ai.js). */
+const SUP_SHIPS = {
+  /* ---- Minenleger ---- */
+  tripwire: { f: 'alliance', name: 'Tripwire', role: 'war', cls: 'm', r: 15, len: 42, hull: 460, shield: 320, sreg: 22, speed: 96, accel: 64, turn: 1.6, sensor: 440, cp: 2, cost: { ice: 440, ore: 200 }, time: 20, tier: 2, yard: 2, wpn: [], ab: 'mines', mines: 1,
+    desc: 'Minenleger. Legt Minenfelder aus vier Minen, die der Feind erst aus nächster Nähe oder mit einem Sensorimpuls sieht. Selbst unbewaffnet.' },
+  caltrop: { f: 'mars', name: 'Caltrop', role: 'war', cls: 'm', r: 15, len: 44, hull: 640, shield: 0, armor: 2, speed: 90, accel: 60, turn: 1.5, sensor: 420, cp: 2, cost: { ice: 430, ore: 220 }, time: 20, tier: 2, yard: 2, wpn: ['pd'], ab: 'mines', mines: 1,
+    desc: 'Minenleger der Republik. Wirft gepanzerte Haftminen ab, unsichtbar, bis man fast auf ihnen steht. Nur Punktverteidigung an Bord.' },
+  censer: { f: 'legion', name: 'Censer', role: 'war', cls: 'm', r: 15, len: 42, hull: 480, shield: 360, sreg: 24, speed: 94, accel: 62, turn: 1.6, sensor: 440, cp: 2, cost: { ice: 450, ore: 210 }, time: 20, tier: 2, yard: 2, wpn: [], ab: 'mines', mines: 1,
+    desc: 'Rauchfass der Legion. Streut geweihte Glutminen aus, die im Dunkel warten. Kein Heldenschiff, unbewaffnet.' },
+  geode: { f: 'nexus', name: 'Geode', role: 'war', cls: 'm', r: 15, len: 40, hull: 440, shield: 360, sreg: 26, speed: 88, accel: 60, turn: 1.6, sensor: 440, cp: 2, cost: { ice: 440, ore: 210 }, time: 20, tier: 2, yard: 2, wpn: ['crystalPd'], ab: 'mines', mines: 1,
+    desc: 'Sät Kristallgeoden, die bei Berührung zersplittern. Feinde sehen sie erst aus nächster Nähe. Nur Kristallabwehr an Bord.' },
+  clutch: { f: 'brood', name: 'Clutch', role: 'war', cls: 'm', r: 15, len: 42, hull: 720, armor: 1, speed: 92, accel: 62, turn: 1.6, sensor: 420, cp: 2, cost: { ice: 640, ore: 0 }, time: 18, tier: 2, yard: 2, wpn: [], regen: 0.012, crew: 0, ab: 'mines', mines: 1,
+    desc: 'Legt Säureeier ins Leere. Sie platzen, sobald ein Feind sie streift. Unsichtbar bis aus nächster Nähe, ohne Waffen.' },
+  /* ---- Reparaturschiffe ---- */
+  mender: { f: 'alliance', name: 'Mender', role: 'war', cls: 'm', r: 16, len: 46, hull: 520, shield: 420, sreg: 30, speed: 92, accel: 60, turn: 1.5, sensor: 440, cp: 2, cost: { ice: 480, ore: 240 }, time: 22, tier: 2, yard: 2, wpn: [], heal: { r: 260, n: 3, rate: 0.02, cap: 24, sub: 0.03 },
+    desc: 'Reparaturschiff. Repariert ständig Hülle und Subsysteme von bis zu drei eigenen Schiffen und Stationen im Umkreis, nicht sich selbst. Unbewaffnet.' },
+  anvil: { f: 'mars', name: 'Anvil', role: 'war', cls: 'm', r: 16, len: 48, hull: 720, shield: 0, armor: 3, speed: 86, accel: 56, turn: 1.4, sensor: 420, cp: 2, cost: { ice: 470, ore: 260 }, time: 22, tier: 2, yard: 2, wpn: ['pd'], heal: { r: 260, n: 3, rate: 0.02, cap: 24, sub: 0.04 },
+    desc: 'Werkstattschiff der Republik. Schweißt Panzerplatten und Subsysteme eigener Schiffe und Stationen im Umkreis nach, nicht sich selbst.' },
+  hospitaller: { f: 'legion', name: 'Hospitaller', role: 'war', cls: 'm', r: 16, len: 46, hull: 540, shield: 460, sreg: 32, speed: 90, accel: 60, turn: 1.5, sensor: 440, cp: 2, cost: { ice: 490, ore: 240 }, time: 22, tier: 2, yard: 2, wpn: [], heal: { r: 260, n: 3, rate: 0.02, cap: 24, sub: 0.03 },
+    desc: 'Hospitaliter. Heilt die Hüllen der Helden und Stationen im Umkreis mit goldenem Licht, nicht sich selbst. Unbewaffnet.' },
+  lumen: { f: 'nexus', name: 'Lumen', role: 'war', cls: 'm', r: 16, len: 44, hull: 500, shield: 460, sreg: 34, speed: 88, accel: 60, turn: 1.5, sensor: 440, cp: 2, cost: { ice: 480, ore: 240 }, time: 22, tier: 2, yard: 2, wpn: [], heal: { r: 260, n: 3, rate: 0.02, cap: 24, sub: 0.03 },
+    desc: 'Lässt Kristall in die Risse eigener Schiffe und Stationen im Umkreis nachwachsen, nicht in sich selbst. Unbewaffnet.' },
+  nurse: { f: 'brood', name: 'Nurse', role: 'war', cls: 'm', r: 16, len: 46, hull: 760, armor: 1, speed: 94, accel: 62, turn: 1.6, sensor: 420, cp: 2, cost: { ice: 700, ore: 0 }, time: 18, tier: 2, yard: 2, wpn: [], regen: 0.012, crew: 0, heal: { r: 260, n: 3, rate: 0.025, cap: 28, sub: 0.03, cure: 1 },
+    desc: 'Amme der Brut. Leckt die Wunden eigener Schiffe und Nester im Umkreis, heilt schneller als die anderen und löst Säure, nicht bei sich selbst. Ohne Waffen.' },
+  /* ---- Truppentransporter ---- */
+  envoy: { f: 'alliance', name: 'Envoy', role: 'war', cls: 'm', r: 17, len: 46, hull: 560, shield: 380, sreg: 26, speed: 104, accel: 74, turn: 1.7, sensor: 400, cp: 3, cost: { ice: 580, ore: 270 }, time: 24, tier: 2, yard: 2, wpn: ['pd'], marines: 70, ab: 'board', stationsToo: true, troop: 1,
+    desc: 'Truppentransporter mit 70 Marines der Charta. Entert Schiffe mit geschwächter Crew und sogar Stationen.' },
+  breacher: { f: 'mars', name: 'Breacher', role: 'war', cls: 'm', r: 17, len: 48, hull: 700, shield: 0, armor: 3, speed: 100, accel: 72, turn: 1.6, sensor: 380, cp: 3, cost: { ice: 580, ore: 280 }, time: 24, tier: 2, yard: 2, wpn: ['pd'], marines: 70, ab: 'board', stationsToo: true, troop: 1,
+    desc: 'Sturmlandeschiff. Rammt den Rumpf auf und setzt 70 Marines ab, auf Schiffe und Stationen. Ohne Doktrin.' },
+  templar: { f: 'legion', name: 'Templar', role: 'war', cls: 'm', r: 17, len: 48, hull: 580, shield: 420, sreg: 28, speed: 102, accel: 72, turn: 1.7, sensor: 400, cp: 3, cost: { ice: 600, ore: 270 }, time: 24, tier: 2, yard: 2, wpn: ['pd'], marines: 70, ab: 'board', stationsToo: true, troop: 1,
+    desc: 'Templer-Fähre mit 70 Ordensrittern. Entert angeschlagene Schiffe und Stationen. Kein Heldenschiff.' },
+  assimilator: { f: 'nexus', name: 'Assimilator', role: 'war', cls: 'm', r: 17, len: 46, hull: 540, shield: 420, sreg: 30, speed: 98, accel: 70, turn: 1.7, sensor: 420, cp: 3, cost: { ice: 580, ore: 270 }, time: 24, tier: 2, yard: 2, wpn: ['crystalPd'], marines: 70, ab: 'board', stationsToo: true, troop: 1,
+    desc: 'Schickt 70 Konverterdrohnen in Schiffe und Stationen. Ist die Crew überwältigt, wird das Ziel Teil des Netzes.' },
+  parasitepod: { f: 'brood', name: 'Parasite Pod', role: 'war', cls: 'm', r: 17, len: 46, hull: 780, armor: 1, speed: 108, accel: 78, turn: 1.8, sensor: 400, cp: 3, cost: { ice: 840, ore: 0 }, time: 20, tier: 2, yard: 2, wpn: [], regen: 0.012, crew: 0, marines: 70, ab: 'board', stationsToo: true, troop: 1,
+    desc: 'Parasitenkapsel. Bohrt sich in Schiffe und Stationen und lässt 70 Parasiten los. Ist die Crew gefressen, gehört das Ziel der Brut.' }
+};
+Object.assign(SHIPS, SUP_SHIPS);
+/* Fassung 22: Minen – n je Feld, max je Spieler (die ältesten verfallen), life Sekunden, arm Schärfzeit, trig Zünd-Abstand
+   zum Rumpf, r Wirkradius, dmg Schaden in der Mitte (am Rand die Hälfte, Konter nach Größe), hp Treffer der
+   Punktverteidigung. Feinde sehen Minen nur mit Nahsicht (150 Einheiten), Sensorimpuls oder Geschützen in Waffenreichweite. */
+const MINE = { n: 4, max: 15, life: 180, arm: 2, trig: 30, r: 110, dmg: 220, hp: 3, spread: 70 };
+COUNTER.mine = { f: 0.6, s: 1.4, m: 1.15, l: 0.6, b: 0 };
+DMG_VS_SHIELD.mine = 0.8; DMG_VS_HULL.mine = 1.15;
 /* Subsysteme: Antrieb, Waffen, Schilde (Mars: Schadenskontrolle für die Panzerung), Sensoren, Lebenserhaltung */
 const SUBS = ['drive', 'wpn', 'shield', 'sensor', 'life'];
 const SUB_NAMES = { drive: 'Antrieb', wpn: 'Waffen', shield: 'Schilde', sensor: 'Sensoren', life: 'Lebenserhaltung' };
@@ -360,7 +405,9 @@ const ABIL = {
   frenzy: { name: 'Raserei', short: 'Raserei', cd: 70, dur: 8, r: 360, icon: '✶', desc: 'Alle Brood-Schiffe im Umkreis 8 Sekunden lang +40 % Feuerrate und Tempo.' },
   plague: { name: 'Seuche', short: 'Seuche', cd: 80, dur: 0, r: 320, icon: '☣', desc: 'Setzt Parasiten auf alle feindlichen Schiffe im Umkreis.' },
   molt: { name: 'Häutung', short: 'Häutung', cd: 90, dur: 0, icon: '✚', desc: 'Das Flaggschiff heilt sofort 50 % seiner Hülle und verliert alle Säure und Parasiten.' },
-  merge: { name: 'Verschmelzen', short: 'Verschmelzen', cd: 0, dur: 0, r: 90, icon: '⟁', desc: 'Drei gleiche Kristallschiffe nahe beieinander verschmelzen zur nächsten Form. Erfahrung bleibt erhalten.' }
+  merge: { name: 'Verschmelzen', short: 'Verschmelzen', cd: 0, dur: 0, r: 90, icon: '⟁', desc: 'Drei gleiche Kristallschiffe nahe beieinander verschmelzen zur nächsten Form. Erfahrung bleibt erhalten.' },
+  /* Fassung 22: Minenleger */
+  mines: { name: 'Minen legen', short: 'Minen', cd: 30, dur: 0, r: 70, icon: '✹', desc: 'Legt vier Minen um das Schiff. Feinde sehen sie erst aus 150 Einheiten Nähe oder mit einem Sensorimpuls. Sie explodieren bei Berührung, stark gegen kleine und mittlere Schiffe, und halten 180 Sekunden. Höchstens 15 Minen je Spieler.' }
 };
 for (const id in ABIL) ABIL[id].id = id;
 SHIPS.wren.ab = 'pulse'; SHIPS.lancer.ab = 'overload'; SHIPS.bulwark.ab = 'surge'; SHIPS.haven.ab = 'resupply'; SHIPS.pathfinder.ab = 'repair';
