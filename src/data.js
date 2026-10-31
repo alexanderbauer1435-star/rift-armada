@@ -729,6 +729,8 @@ SHIPS.lancer.cost = { ice: 350, ore: 140 };
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'alliance' && s.role === 'war') for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.96); if (s.f === 'mars' && s.role === 'war') s.hull = Math.round(s.hull * 1.06); }
 /* Runde 18 (Fassung 20, neue KI im Gefecht): Legion gewann nur noch 19–25 % – Kampfschiffe Rumpf +8 % */
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'legion' && s.role === 'war') s.hull = Math.round(s.hull * 1.08); }
+/* Fassung 22 (Messung f22d): Legion nur noch 13 % auf beiden Karten – Kampfschiffe 6 % billiger, Waffen +6 % */
+for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'legion' && s.role === 'war') { for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.94); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.06).toFixed(2) })); } }
 /* Brood: Biomasse aus allem – die Grube verwertet 15 % mehr (gleicht die anfällige Ausbreitung aus) */
 /* (Runde 18: mit doppelten Vorkommen kein Brood-Bonus mehr nötig) */
 /* Kostenduelle (tools/balance/duel.js, Runde 17): Ausreißer auf etwa ±0,25 Vorsprung bei gleichem Budget bringen */
