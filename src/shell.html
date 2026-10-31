@@ -54,7 +54,7 @@ button { font: inherit; color: inherit; }
 .grp.has { opacity: 1; border-color: var(--acc); }
 #bottom { position: absolute; left: 0; right: 0; bottom: 0; display: flex; align-items: flex-end; gap: 0.5em; padding: 0.4em 0.5em calc(0.4em + env(safe-area-inset-bottom)); pointer-events: none; }
 #bottom > * { pointer-events: auto; }
-#selCard { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.4em 0.6em; min-width: 10em; max-width: 14em; }
+#selCard { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0.4em 0.6em; min-width: 10em; max-width: 14em; max-height: 36vh; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }   /* Fassung 22: die Karte wuchs mit Rang, Nachrüstung und Flottenbefehl – höchstens gut ein Drittel der Höhe, Rest scrollt */
 #selCard h3 { margin: 0 0 0.2em; font-size: 1.15em; font-weight: 600; color: var(--acc); display: flex; justify-content: space-between; gap: 0.5em; }
 #selCard .sub { color: var(--dim); font-size: 0.9em; }
 #selCard .docks i { display: inline-block; width: 7px; height: 7px; margin: 0 2px; border-radius: 50%; background: rgba(255,194,62,0.35); vertical-align: middle; } #selCard .docks i[data-on] { background: #7dff9a; box-shadow: 0 0 5px #7dff9a; } /* Fassung 22: Andockplätze */
