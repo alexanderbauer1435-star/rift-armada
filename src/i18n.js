@@ -9,15 +9,25 @@
    Die festen Texte der Seite übersetzt applyLang() direkt in den Textknoten (der deutsche Text bleibt am Knoten).
    ===================================================================== */
 const I18N = { lang: 'de', miss: null };
+/* Sprachen der App (Fassung 22): Deutsch ist die Quelle, Englisch die Rückfallsprache für fehlende Einträge.
+   Die Wörterbücher fr/es/it/pt/pl erzeugt tools/i18n/merge.py nach src/i18n_more.js (LANGS). */
+const LANG_LIST = [['de', 'Deutsch'], ['en', 'English'], ['fr', 'Français'], ['es', 'Español'], ['it', 'Italiano'], ['pt', 'Português (BR)'], ['pl', 'Polski']];
+const LANG_LOC = { de: 'de-DE', en: 'en-GB', fr: 'fr-FR', es: 'es-ES', it: 'it-IT', pt: 'pt-BR', pl: 'pl-PL' };
+function langOk(l) { return LANG_LIST.some(q => q[0] === l) && (l === 'de' || l === 'en' || (typeof LANGS !== 'undefined' && !!LANGS[l])); }
+function langLoc() { return LANG_LOC[I18N.lang] || 'en-GB'; }
 function L(s, ...args) {
   let t = s;
-  if (I18N.lang === 'en' && typeof s === 'string' && s) {
-    const e = EN[s];
+  const lg = I18N.lang;
+  if (lg !== 'de' && typeof s === 'string' && s) {
+    const D = lg === 'en' ? null : (typeof LANGS !== 'undefined' && LANGS[lg]) || null;
+    let e = D ? D[s] : undefined;
+    if (e === undefined && D && PAT_X[lg]) { const h = patHit(PAT_X[lg], s); if (h !== null) e = h; }
+    if (e === undefined) e = EN[s];
     if (e !== undefined) t = e;
     else {
-      let hit = false;
-      for (let i = 0; i < EN_PAT.length && !hit; i++) { const m = EN_PAT[i][0].exec(s); if (m) { t = EN_PAT[i][1](m); hit = true; } }
-      if (!hit && I18N.miss && /[A-Za-zÄÖÜäöü]{2}/.test(s) && !enVal(s)) I18N.miss[s] = 1;
+      const h = patHit(EN_PAT, s);
+      if (h !== null) t = h;
+      else if (lg === 'en' && I18N.miss && /[A-Za-zÄÖÜäöü]{2}/.test(s) && !enVal(s)) I18N.miss[s] = 1;
     }
   }
   if (args.length && typeof t === 'string') for (let i = 0; i < args.length; i++) if (args[i] !== undefined) t = t.split('{' + i + '}').join(args[i]);
@@ -26,7 +36,9 @@ function L(s, ...args) {
   return t;
 }
 /* Anführungszeichen der Sprache: »…« oder “…” */
-function qt(s) { return I18N.lang === 'en' ? '“' + s + '”' : '»' + s + '«'; }
+const QT = { de: ['»', '«'], en: ['“', '”'], fr: ['« ', ' »'], es: ['«', '»'], it: ['«', '»'], pt: ['“', '”'], pl: ['„', '”'] };
+function qt(s) { const q = QT[I18N.lang] || QT.en; return q[0] + s + q[1]; }
+function patHit(P, s) { for (let i = 0; i < P.length; i++) { const m = P[i][0].exec(s); if (m) return P[i][1](m); } return null; }
 /* schon englisch? (für die Prüfung auf fehlende Einträge) */
 let _enVal = null;
 function enVal(s) { if (!_enVal) _enVal = new Set(Object.values(EN)); return _enVal.has(s); }
@@ -48,6 +60,30 @@ const EN_PAT = [
   [/^Akt (\d+)$/, m => 'Act ' + m[1]],
   [/^(Prolog|Bonus): (.+)$/, m => L(m[1]) + ': ' + L(m[2])]
 ];
+/* dieselben Muster für die weiteren Sprachen */
+const PAT_W = {
+  fr: { req: 'Nécessite', lvl: 'niveau', doc: 'doctrine', build: 'Version', round: 'Manche', pre: 'Préversion', up: 'Amélioration', act: 'Acte' },
+  es: { req: 'Requiere', lvl: 'nivel', doc: 'doctrina', build: 'Versión', round: 'Ronda', pre: 'Versión previa', up: 'Mejora', act: 'Acto' },
+  it: { req: 'Richiede', lvl: 'livello', doc: 'dottrina', build: 'Versione', round: 'Round', pre: 'Anteprima', up: 'Potenziamento', act: 'Atto' },
+  pt: { req: 'Requer', lvl: 'nível', doc: 'doutrina', build: 'Versão', round: 'Rodada', pre: 'Prévia', up: 'Melhoria', act: 'Ato' },
+  pl: { req: 'Wymaga', lvl: 'poziom', doc: 'doktryna', build: 'Wersja', round: 'Runda', pre: 'Wersja zapoznawcza', up: 'Ulepszenie', act: 'Akt' }
+};
+const PAT_X = {};
+for (const lg in PAT_W) {
+  const w = PAT_W[lg];
+  PAT_X[lg] = [
+    [/^Benötigt (.+) Stufe ([IVX]+)$/, m => w.req + ': ' + L(m[1]) + ' ' + w.lvl + ' ' + m[2]],
+    [/^Benötigt Doktrin (.+)$/, m => w.req + ': ' + w.doc + ' ' + L(m[1])],
+    [/^Benötigt (.+)$/, m => w.req + ': ' + L(m[1])],
+    [/^Rift Armada · Fassung (\d+)$/, m => 'Rift Armada · ' + w.build + ' ' + m[1]],
+    [/^Runde (\d+) · Vorabfassung$/, m => w.round + ' ' + m[1] + ' · ' + w.pre],
+    [/^Runde (\d+)$/, m => w.round + ' ' + m[1]],
+    [/^Ausbau ([IVX]+)$/, m => w.up + ' ' + m[1]],
+    [/^Akt (\d+): (.+)$/, m => w.act + ' ' + m[1] + ': ' + L(m[2])],
+    [/^Akt (\d+)$/, m => w.act + ' ' + m[1]],
+    [/^(Prolog|Bonus): (.+)$/, m => L(m[1]) + ': ' + L(m[2])]
+  ];
+}
 /* feste Texte der Seite: alle Textknoten und einige Attribute; Bereiche mit data-nol bleiben unberührt */
 const I18N_ATTR = ['placeholder', 'aria-label', 'title'];
 function applyLang(root) {
@@ -75,10 +111,12 @@ function applyLang(root) {
     }
   });
 }
-/* Sprache wählen: ohne Einstellung die des Geräts (Deutsch, sonst Englisch) */
-/* Ohne gespeicherte Einstellung ist Englisch die Vorgabe; die Sprache steht ganz oben im Hauptmenü und in den Einstellungen */
-function langDefault() { try { return navigator.webdriver ? 'de' : 'en'; } catch (e) { return 'en'; } }   // Prüfläufe (Playwright) in Deutsch, Spieler ohne Einstellung Englisch
+/* Sprache wählen: ohne gespeicherte Einstellung die des Geräts, falls vorhanden, sonst Englisch (Prüfläufe Deutsch) */
+function langDefault() {
+  try { if (navigator.webdriver) return 'de'; for (const l of (navigator.languages || [navigator.language || ''])) { const c = String(l).slice(0, 2).toLowerCase(); if (langOk(c)) return c; } } catch (e) { /* kein Browser */ }
+  return 'en';
+}   // Prüfläufe (Playwright) in Deutsch, Spieler ohne Einstellung Englisch
 function setLang(l) {
-  I18N.lang = l === 'en' ? 'en' : 'de';
+  I18N.lang = langOk(l) ? l : 'de';
   if (typeof document !== 'undefined') { document.documentElement.lang = I18N.lang; applyLang(); }
 }

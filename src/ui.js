@@ -13,7 +13,7 @@ const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', q
 const MENU = { faction: 'alliance', map: 'haven', opp: 1, lvl: 2, res: 'normal', oppF: 'random', mode: 'skirmish', allies: 1, allyLvl: 2 };
 const SCALES = [0.9, 1, 1.15, 1.3], SPEEDS = [0.75, 1, 1.5, 2];
 const $ = id => document.getElementById(id);
-const fmt = n => Math.round(n).toLocaleString(I18N.lang === 'en' ? 'en-US' : 'de-DE');
+const fmt = n => Math.round(n).toLocaleString(I18N.lang === 'en' ? 'en-US' : langLoc());
 function setText(el, s) { if (typeof el === 'string') el = $(el); s = String(s); if (el._t !== s) { el._t = s; el.textContent = s; } }
 function buzz(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) { /* nicht verfügbar */ } } }
 function clock(t) { return Math.floor(t / 60) + ':' + ('0' + Math.floor(t % 60)).slice(-2); }
@@ -325,7 +325,12 @@ function initInput() {
     if (e.type === 'pointercancel') { UI.box = null; return; }
     switch (k) {
       case 'pend': if (!held) tap(p.x, p.y); break;
-      case 'lpend': tap(p.x, p.y); break;
+      case 'lpend': {
+        /* Maus: Linksklick ins Leere hebt die Auswahl auf (Befehle mit Rechtsklick); Wrack und Vorkommen bleiben anklickbar */
+        const w = R.s2w(p.x, p.y);
+        if (UI.mode === 'normal' && UI.g && !pickAt(w.x, w.y) && !(nearWreck(UI.g, w.x, w.y, 70 / Math.max(0.3, R.cam.z)) && selShips().some(u => u.def.cargo))) { if (UI.sel.size || UI.selB || UI.selS) { desel(); SND.play('click'); } break; }
+        tap(p.x, p.y); break;
+      }
       case 'rpan': if (!moved) { const us = selShips(); if (UI.mode === 'place') { endMode(); hudCmds(); break; } if (UI.mode !== 'normal') { endMode(); break; } if (us.length) { const w = R.s2w(p.x, p.y), hit = pickAt(w.x, w.y); if (ctrl) orderMove(us, w.x, w.y, true); else order(us, hit, w.x, w.y); } } break;
       case 'box': finishBox(UI.box && UI.box.add); break;
       case 'ghost': if (!moved) movePlace(p.x, p.y); break;
@@ -935,7 +940,7 @@ function setPaused(p, remote) {
 function loadPrefs() {
   let d = {};
   try { d = JSON.parse(localStorage.getItem('ra.prefs') || '{}') || {}; Object.assign(SET, d.set || {}); Object.assign(MENU, d.menu || {}); } catch (e) { /* keine Einstellungen */ }
-  if (!d.set || (d.set.lang !== 'de' && d.set.lang !== 'en')) SET.lang = langDefault();
+  if (!d.set || !langOk(d.set.lang)) SET.lang = langDefault();
   /* Grafik: Vorgabe 3D; Prüfläufe (Playwright) laufen in 2D, 3D prüft tools/game3d.js mit eigener Einstellung */
   if (!d.set || (d.set.gfx !== '2d' && d.set.gfx !== '3d')) { let wd = false; try { wd = !!navigator.webdriver; } catch (e) { /* kein Browser */ } SET.gfx = wd ? '2d' : '3d'; }
 }
@@ -965,7 +970,7 @@ function initSettings() {
     segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
     segInit('sQual', [['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); });
     segInit('sDmg', [[true, 'An'], [false, 'Aus']], () => SET.dmgIcons !== false, v => { SET.dmgIcons = v; savePrefs(); });   /* Fassung 22: Schadenssymbole */
-    segInit('sLang', [['de', 'Deutsch'], ['en', 'English']], () => SET.lang, v => { SET.lang = v; savePrefs(); setLang(v); langRefresh(); seg(); });
+    langPick('sLang', () => seg());
     /* Fassung 22: Spielhilfen (play.js) */
     segInit('sGrally', [[true, 'An'], [false, 'Aus']], () => !!SET.grally, v => { SET.grally = v; savePrefs(); plGrallySync(true); });
     segInit('sApause', [[true, 'An'], [false, 'Aus']], () => SET.apause !== false, v => { SET.apause = v; savePrefs(); if (!v) plSetAP(false); plQpUpdate(); });
@@ -989,7 +994,16 @@ function langRefresh() {
 function closeSettings() { $('settings').hidden = true; SND.play('click'); }
 /* Aufstellung im Hauptmenü */
 /* Sprachwahl ganz oben im Hauptmenü (dieselbe Einstellung wie unter Einstellungen) */
-function homeLang() { if (!$('homeLang')) return; segInit('homeLang', [['de', 'Deutsch'], ['en', 'English']], () => SET.lang, v => { SET.lang = v; savePrefs(); setLang(v); langRefresh(); }); }
+function homeLang() { if (!$('homeLang')) return; langPick('homeLang'); }
+/* Sprachwahl als Auswahlliste (sieben Sprachen passen nicht in eine Knopfleiste) */
+function langPick(id, after) {
+  const el = $(id); el.textContent = ''; el.classList.add('langPick');
+  const sel = document.createElement('select'); sel.setAttribute('aria-label', 'Sprache · Language'); sel.setAttribute('data-nol', '');
+  for (const [v, txt] of LANG_LIST) { if (!langOk(v)) continue; const o = document.createElement('option'); o.value = v; o.textContent = txt; sel.appendChild(o); }
+  sel.value = SET.lang;
+  sel.addEventListener('change', () => { SET.lang = sel.value; savePrefs(); setLang(sel.value); langRefresh(); if (after) after(); });
+  el.appendChild(sel);
+}
 function menuPage(p) { UI.mPage = p; $('pHome').hidden = p !== 'home'; $('setup').hidden = p !== 'setup'; $('pCamp').hidden = p !== 'camp'; if (p !== 'camp') closeBrief(); if (p === 'setup') setupRender(); if (p === 'camp') campRender(); }
 /* Startplatz-Reihenfolge je Spieler: Platz 0 (du) auf MENU.myStart, falls gesetzt; sonst Zufall bei Spielstart */
 function startOrder(np) {
@@ -1100,7 +1114,7 @@ function slotLine(d) {
   if (!d) return { t: L('Leer'), s: '' };
   const m = d.meta || {}, F = FACTIONS[m.fac], mins = Math.floor((m.t || 0) / 60), MIN = ' min' + ' · ', date = new Date(m.date || (d.ui && d.ui.t) || Date.now());
   const kind = { skirmish: 'Gefecht', sandbox: 'Übungsplatz', waves: 'Wellen', mis: 'Kampagne', cq: 'Conquest' }[m.kind || (d.ui && d.ui.kind)] || 'Gefecht';
-  return { t: (m.map ? L(m.map) : L(kind)) + (F ? ' · ' + L(F.name) : ''), s: L(kind) + ' · ' + mins + MIN + date.toLocaleDateString(I18N.lang === 'en' ? 'en-GB' : 'de-AT') + ' ' + date.toLocaleTimeString(I18N.lang === 'en' ? 'en-GB' : 'de-AT', { hour: '2-digit', minute: '2-digit' }) };
+  return { t: (m.map ? L(m.map) : L(kind)) + (F ? ' · ' + L(F.name) : ''), s: L(kind) + ' · ' + mins + MIN + date.toLocaleDateString(I18N.lang === 'de' ? 'de-AT' : langLoc()) + ' ' + date.toLocaleTimeString(I18N.lang === 'de' ? 'de-AT' : langLoc(), { hour: '2-digit', minute: '2-digit' }) };
 }
 function openLoad() {
   const box = $('loadList'); box.textContent = '';

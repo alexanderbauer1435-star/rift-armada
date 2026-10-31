@@ -114,7 +114,7 @@ VOX.pick = function (lang) {
   let vs = [];
   try { vs = window.speechSynthesis.getVoices() || []; } catch (e) { /* keine Stimmen */ }
   const m = vs.filter(v => (v.lang || '').toLowerCase().replace('_', '-').indexOf(lang) === 0);
-  const pref = lang === 'de' ? 'de-de' : 'en-gb';
+  const pref = (LANG_LOC[lang] || 'en-GB').toLowerCase();
   VOX.voice = m.find(v => v.localService && v.lang.toLowerCase().replace('_', '-') === pref) || m.find(v => v.localService) || m[0] || null;
   if (vs.length) VOX.vl = lang;
   return VOX.voice;
@@ -133,8 +133,8 @@ VOX.speak = function (text, prio, any) {
       if (prio <= VOX.prio) { if (!VOX.next || prio >= VOX.next.prio) VOX.next = { text, prio, at: performance.now() }; return; }
       VOX.cur = null; ss.cancel();
     }
-    const lang = I18N.lang === 'en' ? 'en' : 'de', u = new SpeechSynthesisUtterance(text), v = VOX.pick(lang);
-    u.lang = lang === 'en' ? 'en-GB' : 'de-DE';
+    const lang = I18N.lang, u = new SpeechSynthesisUtterance(text), v = VOX.pick(lang);
+    u.lang = langLoc();
     if (v) u.voice = v;
     u.rate = 1.08; u.pitch = 0.9; u.volume = clamp(0.4 + SND.vol, 0, 1);
     const done = () => { if (VOX.cur === u) VOX.unduck(); };

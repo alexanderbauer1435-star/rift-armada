@@ -164,6 +164,9 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 #pHome { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.8em; width: min(100%, 30em); padding: calc(3.2em + env(safe-area-inset-top)) 1em calc(2.4em + env(safe-area-inset-bottom)); justify-items: stretch; }
 .homeL, .homeR { display: contents; }
 #title { order: 1; } .titleLine { order: 2; } .tiles { order: 3; } .mini { order: 4; } #mNote { order: 5; }
+.langPick { padding: 0; }
+.langPick select { min-height: var(--tap); padding: 0.25em 0.6em; font: inherit; font-size: 0.9em; color: inherit; background: rgba(4,6,11,0.55); border: 1px solid rgba(143,227,255,0.25); border-radius: 10px; }
+.langPick select option { background: #0b1220; color: #e8eef4; }
 .homeTop { position: absolute; top: calc(0.5em + env(safe-area-inset-top)); right: 0.6em; display: flex; gap: 0.4em; align-items: center; z-index: 2; }
 .homeTop .seg button, .homeTop .key { min-height: var(--tap); padding: 0.25em 0.65em; font-size: 0.84em; }
 .homeTop .seg { background: rgba(4,6,11,0.55); border-color: rgba(143,227,255,0.2); }
