@@ -36,6 +36,6 @@ E ANCORA
 • Multigiocatore direttamente da dispositivo a dispositivo – nessun server, nessun account (1 contro 1, cooperativa contro l'IA, 2 contro 2, Quarantine)
 • Completamente in 3D con modelli procedurali, la risoluzione si adatta al tuo dispositivo (commutabile in 2D)
 • Esplorazione automatica, tre slot di salvataggio
-• Inglese e tedesco
+• Sette lingue: italiano, inglese, tedesco, francese, spagnolo, portoghese (Brasile), polacco
 
 Un universo inventato con fazioni immaginarie. L'app non raccoglie alcun dato.

@@ -7,7 +7,7 @@
 const fs = require('fs'), path = require('path');
 const { chromium } = require('playwright');
 const root = path.join(__dirname, '..'), res = path.join(root, 'app/android/app/src/main/res'), store = path.join(root, 'store/graphics');
-const C = { bg0: '#16204a', bg1: '#04060d', neb: '#5b2f8f', ring: '#8fe3ff', hot: '#ffb86b', hull: '#eef3fb', hullLo: '#93a5b6', ink: '#e8eef8', facs: ['#4fa3ff', '#ff6a3d', '#f2c14e', '#c9a0ff'] };
+const C = { bg0: '#16204a', bg1: '#04060d', neb: '#5b2f8f', ring: '#8fe3ff', hot: '#ffb86b', hull: '#eef3fb', hullLo: '#93a5b6', ink: '#e8eef8', facs: ['#4fa3ff', '#ff6a3d', '#f2c14e', '#c9a0ff', '#7ddc6b'] };
 let uid = 0;
 /* Sterne, fest verteilt */
 function stars(W, H, n, seed) {
@@ -48,7 +48,7 @@ function motif(white) {
   s += `</g>`;
   s += `<g transform="rotate(-18)">${ell(front)}</g>`;
   /* Fraktionen */
-  C.facs.forEach((c, i) => { s += `<circle cx="${-27 + i * 18}" cy="80" r="5.5" fill="${white ? '#fff' : c}"/>`; });
+  C.facs.forEach((c, i) => { s += `<circle cx="${-36 + i * 18}" cy="80" r="5.5" fill="${white ? '#fff' : c}"/>`; });
   return s;
 }
 const mark = (cx, cy, size, white) => `<g transform="translate(${cx} ${cy}) scale(${size / 200})">${motif(white)}</g>`;
@@ -77,10 +77,14 @@ for (const [d, [w, h]] of Object.entries(SPL)) {
 add(`${res}/drawable/splash.jpg`, 480, 320, splash(480, 320));
 /* Store: Symbol 512 (vollflächig, Google rundet selbst) und Feature-Grafik 1024 × 500 */
 add(`${store}/icon-512.png`, 512, 512, ground(512, 512) + mark(256, 256, 440));
-const feature = sub => ground(1024, 500) + mark(250, 250, 380) + word(470, 220, 76, 'RIFT ARMADA', C.ink, 'start', 12) +
-  word(474, 268, 28, sub, '#a9b8d6', 'start', 1) + `<rect x="474" y="296" width="320" height="3" fill="${C.hot}"/>`;
+/* lange Untertitel (fr, es, pl …) auf zwei Zeilen: erster Teil, dann der Rest */
+const feature = sub => { const parts = sub.split(' · '), two = sub.length > 46, l1 = two ? parts[0] : sub, l2 = two ? parts.slice(1).join(' · ') : '';
+  return ground(1024, 500) + mark(250, 250, 380) + word(470, 220, 76, 'RIFT ARMADA', C.ink, 'start', 12) +
+  word(474, 268, 28, l1, '#a9b8d6', 'start', 1) + (two ? word(474, 304, 28, l2, '#a9b8d6', 'start', 1) : '') + `<rect x="474" y="${two ? 332 : 296}" width="320" height="3" fill="${C.hot}"/>`; };
 add(`${store}/feature-1024x500.png`, 1024, 500, feature('Weltraum-Echtzeitstrategie · fünf Fraktionen · offline'));
 add(`${store}/feature-1024x500-en.png`, 1024, 500, feature('Space real-time strategy · five factions · offline'));
+for (const [lg, sub] of [['fr', 'Stratégie spatiale en temps réel · cinq factions · hors ligne'], ['es', 'Estrategia espacial en tiempo real · cinco facciones · sin conexión'], ['it', 'Strategia spaziale in tempo reale · cinque fazioni · offline'], ['pt', 'Estratégia espacial em tempo real · cinco facções · offline'], ['pl', 'Kosmiczna strategia czasu rzeczywistego · pięć frakcji · offline']])
+  add(`${store}/feature-1024x500-${lg}.png`, 1024, 500, feature(sub));
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox'] });
   const p = await b.newPage();

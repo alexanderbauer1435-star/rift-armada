@@ -36,6 +36,6 @@ WIĘCEJ
 • Gra wieloosobowa bezpośrednio między urządzeniami – bez serwera, bez konta (1 na 1, kooperacja przeciw SI, 2 na 2, Quarantine)
 • Pełne 3D z proceduralnymi modelami, rozdzielczość dopasowuje się do urządzenia (można przełączyć na 2D)
 • Automatyczny zwiad, trzy sloty zapisu
-• Język polski, angielski i niemiecki
+• Siedem języków: polski, angielski, niemiecki, francuski, hiszpański, włoski, portugalski (Brazylia)
 
 Wymyślony wszechświat z fikcyjnymi frakcjami. Aplikacja nie zbiera żadnych danych.

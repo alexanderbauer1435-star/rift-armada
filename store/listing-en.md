@@ -36,6 +36,6 @@ MORE
 • Multiplayer directly from device to device – no server, no account (1 vs 1, co-op against the AI, 2 vs 2, Quarantine)
 • Fully 3D with procedural models, resolution adapts to your device (switchable to 2D)
 • Auto-explore, three save slots
-• English and German
+• Seven languages: English, German, French, Spanish, Italian, Portuguese (Brazil), Polish
 
 An invented universe with fictional factions. The app collects no data.

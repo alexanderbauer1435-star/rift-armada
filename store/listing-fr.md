@@ -36,6 +36,6 @@ ET AUSSI
 • Multijoueur directement d'appareil à appareil – sans serveur, sans compte (1 contre 1, coopération contre l'IA, 2 contre 2, Quarantine)
 • Entièrement en 3D avec des modèles procéduraux, résolution adaptée à ton appareil (bascule possible en 2D)
 • Exploration automatique, trois emplacements de sauvegarde
-• Français, anglais et allemand
+• Sept langues : français, anglais, allemand, espagnol, italien, portugais (Brésil), polonais
 
 Un univers inventé avec des factions fictives. L'application ne collecte aucune donnée.

@@ -36,6 +36,6 @@ MEHR
 • Mehrspieler direkt von Gerät zu Gerät – ohne Server, ohne Konto (1 gegen 1, gemeinsam gegen die KI, 2 gegen 2, Quarantine)
 • Vollständig in 3D mit prozeduralen Modellen, passt die Auflösung selbst an das Gerät an (umschaltbar auf 2D)
 • Automatisches Erkunden, drei Speicherplätze
-• Deutsch und Englisch
+• Sieben Sprachen: Deutsch, Englisch, Französisch, Spanisch, Italienisch, Portugiesisch (Brasilien), Polnisch
 
 Ein frei erfundenes Universum mit erfundenen Fraktionen. Die App erhebt keine Daten.
