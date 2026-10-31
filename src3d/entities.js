@@ -195,7 +195,7 @@ function berthShip(e, type, def, color) {
    Zeit bleibt. So entsteht der Ruck beim ersten Auftauchen eines Typs nicht mitten im Gefecht. */
 const PRE = [], LATER = [];
 export function queuePrebuild(g) {
-  const pcol = id => { const p = g.players[id]; return p && (p.color || (p.F && p.F.team)) || '#d8d0bd'; };
+  const pcol = id => { const p = g.players[id]; return p && (typeof pcolor === 'function' ? pcolor(p) : (p.color || (p.F && p.F.team))) || '#d8d0bd'; };
   PRE.length = 0;
   const seen = new Set();
   for (const p of g.players) {
