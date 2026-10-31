@@ -30,18 +30,31 @@ function aiTrain(g, pi, id) {
   if (!yards.length) return false;
   return !cmdTrain(g, pi, yards[0].id, id);
 }
+/* Store-Fassung: Alle gegen alle (mindestens zwei gegnerische Mannschaften) – die KI wählt bevorzugt den schwächsten
+   Gegner (wenige Stationen), statt immer den nächsten. Sonst belauern sich vier Parteien bis zum Zeitlimit (Messung sffa: 16/20 offen). */
+function aiFfaK(g, pi) {
+  if (g._ffaT === g.tick && g._ffaK) return g._ffaK[pi];
+  g._ffaT = g.tick; g._ffaK = [];
+  const cnt = new Array(g.players.length).fill(0); for (const b of g.bldgs) if (!b.dead && b.owner >= 0) cnt[b.owner]++;
+  for (let i = 0; i < g.players.length; i++) {
+    const p = g.players[i], teams = new Set(); let mx = 1;
+    for (const q of g.players) if (q.alive && !q.neutral && !q.threat && !q.pirate && q.team !== p.team) { teams.add(q.team); mx = Math.max(mx, cnt[q.id]); }
+    g._ffaK[i] = teams.size >= 2 ? g.players.map(q => 0.55 + 0.9 * cnt[q.id] / mx) : null;
+  }
+  return g._ffaK[pi];
+}
 function aiEnemyStart(g, pi) {
-  const p = g.players[pi];
+  const p = g.players[pi], K = aiFfaK(g, pi);
   let best = null, bd = 1e9;
-  for (const q of g.players) { if (!q.alive || q.neutral || q.threat || q.team === p.team) continue; const d = hyp(q.start.x - p.start.x, q.start.y - p.start.y); if (d < bd) { bd = d; best = q.start; } }
+  for (const q of g.players) { if (!q.alive || q.neutral || q.threat || q.team === p.team) continue; const d = hyp(q.start.x - p.start.x, q.start.y - p.start.y) * (K ? K[q.id] : 1); if (d < bd) { bd = d; best = q.start; } }
   return best;
 }
 /* Nächstes bekanntes feindliches Ziel: sichtbare Station, sonst der Startplatz des nächsten Gegners */
 function aiTarget(g, pi, x, y) {
   let best = null, bd = 1e9;
   /* Teamspiel: Ziele, die ein Verbündeter gerade angreift, sind deutlich attraktiver (gemeinsamer Angriff) */
-  const p = g.players[pi], focus = new Set(); for (const q of g.players) if (q !== p && q.alive && !q.neutral && q.team === p.team && q.ai && q.ai.atk && q.ai.atk.tid) focus.add(q.ai.atk.tid);
-  for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || g.players[b.owner].pirate || !g.players[pi].explored[clamp((b.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((b.x / VIS) | 0, 0, g.vw - 1)]) continue; const q = g.players[b.owner], far = !q.neutral && hyp(b.x - q.start.x, b.y - q.start.y) > 1300, d = hyp(b.x - x, b.y - y) + (b.role === 'base' && !far ? 300 : 0) + (b.role === 'turret' || b.role === 'flak' ? 200 : 0) - (focus.has(b.id) ? 900 : 0) - (far && (b.role === 'refinery' || b.role === 'base' || b.role === 'relay') ? 350 : 0); if (d < bd) { bd = d; best = { x: b.x, y: b.y, id: b.id }; } }
+  const p = g.players[pi], K = aiFfaK(g, pi), focus = new Set(); for (const q of g.players) if (q !== p && q.alive && !q.neutral && q.team === p.team && q.ai && q.ai.atk && q.ai.atk.tid) focus.add(q.ai.atk.tid);
+  for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || g.players[b.owner].pirate || !g.players[pi].explored[clamp((b.y / VIS) | 0, 0, g.vh - 1) * g.vw + clamp((b.x / VIS) | 0, 0, g.vw - 1)]) continue; const q = g.players[b.owner], far = !q.neutral && hyp(b.x - q.start.x, b.y - q.start.y) > 1300; let d = hyp(b.x - x, b.y - y) + (b.role === 'base' && !far ? 300 : 0) + (b.role === 'turret' || b.role === 'flak' ? 200 : 0) - (focus.has(b.id) ? 900 : 0) - (far && (b.role === 'refinery' || b.role === 'base' || b.role === 'relay') ? 350 : 0); if (K && d > 0) d *= K[b.owner]; if (d < bd) { bd = d; best = { x: b.x, y: b.y, id: b.id }; } }
   if (best) return best;
   /* spät im Spiel: versprengte Reste aufspüren (ein letztes Geschütz hält eine Partei sonst ewig am Leben) */
   if (g.time > 600) for (const b of g.bldgs) { if (b.dead || !foes(g, pi, b.owner) || g.players[b.owner].neutral) continue; const d = hyp(b.x - x, b.y - y); if (d < bd) { bd = d; best = { x: b.x, y: b.y, id: b.id }; } }
@@ -281,7 +294,7 @@ function aiThink(g, pi) {
        zwischen Angriffen. So greift im selben Spiel die eine KI früh an, die andere baut erst in Ruhe auf. */
     if (A.first === undefined) { const w = AI_FIRST[A.lvl] || AI_FIRST[2]; A.first = w[0] + g.rng() * (w[1] - w[0]); A.armyK = 1.2 + g.rng() * 0.6; A.gapK = 0.6 + g.rng() * 1.2; }
     if (A.gap === undefined) A.gap = 40;
-    const late = t > 1200 ? 0.6 : 1;   /* Fassung 22: spät im Spiel entschlossener angreifen (gegen Pattsituationen) */
+    const late = t > 1200 ? 0.6 : (aiFfaK(g, pi) && t > 840 ? 0.75 : 1);   /* Fassung 22: spät im Spiel entschlossener angreifen (gegen Pattsituationen); Alle gegen alle schon ab 14 Minuten etwas */
     const ready = t > A.first && t - A.atkT > A.gap * late && (cpF >= Math.min((cfg.army * A.armyK + Math.min(16, Math.floor(t / 150) * 2)) * late, p.cpMax * 0.6) ||   /* Fassung 22: nie mehr verlangen, als die Kommandopunkte erlauben (sonst Patt) */ (weakFoe && cpF >= 4));
     if (ready) {
       const tg = aiTarget(g, pi, anchor.x, anchor.y);
