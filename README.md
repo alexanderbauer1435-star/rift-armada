@@ -47,6 +47,18 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 22 (Runde 20, große Erweiterung): Artillerie feuert auch auf Schiffe (Granaten ohne Vorhalt, Flugzeit, gestrichelter
+  Einschlagkreis – wer fährt, weicht aus) und auf Befehl »Feuer auf Stelle« auf erkundetes Gebiet auch ohne Sicht.
+  Schiffe: Begleiten (Ring um Schiff oder Station, verteidigt), Ränge mit Genauigkeit/Nachladen/Selbstreparatur, Veteranen
+  bleiben im Conquest, Rückzug bei Schaden je Schiff, Formation »Rollen«, Schadenssymbole; je Fraktion Minenleger,
+  Reparaturschiff und Truppentransporter (15 Schiffe, 2D/3D); Nachrüsten an der Werft (Panzerung, Waffen, Antrieb,
+  Sensoren, höchstens zwei) und Flottenbefehle der Flaggschiffe mit Aura. Gebäude: Schildwall zwischen Turm und Emitter,
+  Turmzweige ab Stufe II (Flak, Schwergeschütz, Störsender), Frühwarnstation, Reparaturdock, kein Turmlimit; Abreißen
+  mit 50 % Rückerstattung und Fundament, Raffinerien 2/3/4 Andockplätze, Verbindungslinien, Bau in Reihe, Ruinen zum
+  Bergen. Karten: zerstörbare Felsen und Pfropfen, wandernde Gefahren (Ionensturm, Schwerkraftsenke), eroberbare neutrale
+  Stationen, Trümmerfelder als Deckung, Zufallskarte 2–8 Spieler mit Symmetrie. Spielbarkeit: ×5 per Doppeltippen,
+  neue Schiffe zur aktiven Gruppe, Pause mit Befehlen (Einzelspieler), Zeitlupe bei Großgefechten (Vorgabe aus),
+  Untätig-Hinweise. Tests: ships22a/b/c, buildings22a/b, maps22, play22 (node und Browser), in tools/regress.sh.
 - Fassung 21 (Runde 19, Belagerungsartillerie): je Fraktion ein Artillerieschiff (Catapult, Mortar, Ballista, Lodestar,
   Boomer; Werft II): Bogengranaten (Waffenart art) nur auf Stationen, Reichweite 960–1000 gegen etwa 400 der Türme,
   Mindestabstand 340, feuert nur im Stand, Splitter im Umkreis; Ziele sind alle Stationen auf der erkundeten Karte.
