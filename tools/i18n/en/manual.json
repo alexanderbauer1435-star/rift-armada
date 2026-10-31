@@ -724,5 +724,11 @@
  "In Deckung: −25 % Schaden durch Geschosse, Feinde sehen dich erst näher, Tempo −20 %.": "In cover: −25% damage from projectiles, enemies only spot you at closer range, speed −20%.",
  "{0}: sprengbar ({1} / {2}). Kampfschiffe wählen und antippen.": "{0}: destructible ({1} / {2}). Select warships and tap it.",
  "Feuer auf den Felsen": "Fire on the rock",
- "Wandernde Gefahren": "Roaming Hazards"
+ "Wandernde Gefahren": "Roaming Hazards",
+ "Das Gerät ist für 3D zu langsam – auf 2D umgestellt (Einstellungen → Grafik).": "This device is too slow for 3D – switched to 2D (Settings → Graphics).",
+ "Flüssig": "Smooth",
+ "Akku sparen": "Save battery",
+ "Bildrate": "Frame rate",
+ "Farbenblind-Modus": "Colour-blind mode",
+ "Vibration": "Vibration"
 }

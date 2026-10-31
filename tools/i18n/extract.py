@@ -5,7 +5,7 @@ python3 tools/i18n/extract.py --groups   -> tools/i18n/src/<gruppe>.json (Listen
 python3 tools/i18n/extract.py --missing  -> Texte ohne Eintrag in src/i18n_en.js"""
 import re, glob, json, os, sys, html
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SKIP = {'core.js', 'fx.js', 'audio.js', 'music.js', 'qr.js', 'ships.js', 'portrait.js', 'i18n.js', 'i18n_en.js', 'render3d.js'}
+SKIP = {'core.js', 'fx.js', 'audio.js', 'music.js', 'qr.js', 'ships.js', 'portrait.js', 'i18n.js', 'i18n_en.js', 'i18n_more.js', 'render3d.js'}
 
 def js_strings(src):
     """Zeichenketten eines Moduls ohne Kommentare (einfacher Zerleger: Kommentare, '…', "…", `…`)."""

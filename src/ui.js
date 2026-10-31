@@ -9,19 +9,21 @@ const UI = {
   g: null, me: -1, P: null, sel: new Set(), selB: 0, mode: 'normal', place: null, box: null, boxMode: false, keys: {}, paused: false, endShown: false, attract: true, kind: '', opts: null,
   speed: 1, tab: 'eco', showRange: false, showAll: false, mark: null, mouse: false, cx: 0, cy: 0, hx: 0, hy: 0, onView: false, rect: null, form: 'wedge', lastTap: 0, lastTapId: 0, hovT: 0, tipT: 0, saveAt: 0, alertT: -99, alertPos: null, camTravel: 0, fsOff: false, fsPause: false, mPage: 'home', items: []
 };
-const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d', dmgIcons: true, grally: false, apause: true, slowmo: false };   /* Fassung 22: dmgIcons – Schadenssymbole; grally, apause, slowmo (play.js) */
+const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d', dmgIcons: true, grally: false, apause: true, slowmo: false, pwr: 'auto', cb: false, vib: true, gfxUser: false };   /* Store-Fassung: pwr Stromsparen, cb Farbenblind, vib Vibration, gfxUser = Grafik selbst gewählt */   /* Fassung 22: dmgIcons – Schadenssymbole; grally, apause, slowmo (play.js) */
 const MENU = { faction: 'alliance', map: 'haven', opp: 1, lvl: 2, res: 'normal', oppF: 'random', mode: 'skirmish', allies: 1, allyLvl: 2 };
 const SCALES = [0.9, 1, 1.15, 1.3], SPEEDS = [0.75, 1, 1.5, 2];
 const $ = id => document.getElementById(id);
 const fmt = n => Math.round(n).toLocaleString(I18N.lang === 'en' ? 'en-US' : langLoc());
 function setText(el, s) { if (typeof el === 'string') el = $(el); s = String(s); if (el._t !== s) { el._t = s; el.textContent = s; } }
-function buzz(ms) { if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) { /* nicht verfügbar */ } } }
+function buzz(ms) { if (SET.vib === false) return; if (navigator.vibrate) { try { navigator.vibrate(ms); } catch (e) { /* nicht verfügbar */ } } }
 function clock(t) { return Math.floor(t / 60) + ':' + ('0' + Math.floor(t % 60)).slice(-2); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function issue(c) { c.p = UI.me; return issueCmd(UI.g, c); }
 const ids = us => us.map(u => u.id);
 function isFoe(o) { return o >= 0 && UI.g.tm[o] !== UI.g.tm[UI.me]; }
-function pcolor(p) { return p.color || p.F.team; }
+/* Farbenblind-Modus: gut unterscheidbare Farben (Okabe-Ito) je Partei statt der Fraktionsfarben */
+const CB_COLS = ['#56B4E9', '#E69F00', '#F0E442', '#CC79A7', '#009E73', '#D55E00', '#FFFFFF', '#0072B2'];
+function pcolor(p) { if (SET.cb && p && !p.neutral) return CB_COLS[(p.id | 0) % CB_COLS.length]; return p.color || p.F.team; }
 function costTxt(c) { c = c || { ice: 0, ore: 0 }; if (UI.P && UI.P.F && UI.P.F.bio) return (c.ice + c.ore) + ' ' + L('Biomasse'); return (c.ice ? c.ice + ' ' + L('Eis') : '') + (c.ice && c.ore ? ' · ' : '') + (c.ore ? c.ore + ' ' + L('Erz') : ''); }
 
 /* ------------------------------------------------------------------ Meldungen */
@@ -941,9 +943,14 @@ function loadPrefs() {
   let d = {};
   try { d = JSON.parse(localStorage.getItem('ra.prefs') || '{}') || {}; Object.assign(SET, d.set || {}); Object.assign(MENU, d.menu || {}); } catch (e) { /* keine Einstellungen */ }
   if (!d.set || !langOk(d.set.lang)) SET.lang = langDefault();
+  /* Erststart: Gegner auf »Leicht«, damit die ersten Partien gewinnbar sind (umstellbar im Gefechtsmenü) */
+  if (!d.menu) { MENU.lvl = 1; MENU.allyLvl = 1; }
   /* Grafik: Vorgabe 3D; Prüfläufe (Playwright) laufen in 2D, 3D prüft tools/game3d.js mit eigener Einstellung */
-  if (!d.set || (d.set.gfx !== '2d' && d.set.gfx !== '3d')) { let wd = false; try { wd = !!navigator.webdriver; } catch (e) { /* kein Browser */ } SET.gfx = wd ? '2d' : '3d'; }
+  if (!d.set || (d.set.gfx !== '2d' && d.set.gfx !== '3d')) { let wd = false; try { wd = !!navigator.webdriver; } catch (e) { /* kein Browser */ } SET.gfx = wd ? '2d' : gfxGuess(); }
+  if (!d.set || (d.set.pwr !== 'save' && d.set.pwr !== 'auto')) SET.pwr = 'auto';
 }
+/* Erststart: schwache Geräte (wenig Speicher oder Kerne) beginnen in 2D; der Leistungswächter (main.js) korrigiert später */
+function gfxGuess() { try { const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4; if (mem <= 2 || cores <= 4) return '2d'; } catch (e) { /* unbekannt */ } return '3d'; }
 function savePrefs() { try { localStorage.setItem('ra.prefs', JSON.stringify({ set: SET, menu: MENU })); } catch (e) { /* Speicher gesperrt */ } }
 function applySet() {
   SND.setVol(SET.vol / 100); MUS.setVol(SET.mus / 100);
@@ -967,8 +974,11 @@ function initSettings() {
     segInit('sSpeed', [[0.75, 'Langsam'], [1, 'Normal'], [1.5, 'Schnell'], [2, 'Sehr schnell']], () => SET.speed, v => { SET.speed = v; applySet(); savePrefs(); });
     segInit('sBars', [['auto', 'Bei Schaden'], ['all', 'Immer']], () => SET.bars, v => { SET.bars = v; applySet(); savePrefs(); });
     segInit('sVoice', [[true, 'An'], [false, 'Aus']], () => SET.voice !== false, v => { SET.voice = v; savePrefs(); if (v) VOX.test(); else VOX.stop(); });   /* Runde 18 */
-    segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
+    segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; SET.gfxUser = true; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
     segInit('sQual', [['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); });
+    segInit('sPwr', [['auto', 'Flüssig'], ['save', 'Akku sparen']], () => SET.pwr, v => { SET.pwr = v; savePrefs(); });
+    segInit('sCb', [[false, 'Aus'], [true, 'An']], () => !!SET.cb, v => { SET.cb = v; savePrefs(); if (R.drawMini) try { R.drawMini(); } catch (e) { /* nichts */ } });
+    segInit('sVib', [[true, 'An'], [false, 'Aus']], () => SET.vib !== false, v => { SET.vib = v; savePrefs(); if (v) buzz(40); });
     segInit('sDmg', [[true, 'An'], [false, 'Aus']], () => SET.dmgIcons !== false, v => { SET.dmgIcons = v; savePrefs(); });   /* Fassung 22: Schadenssymbole */
     langPick('sLang', () => seg());
     /* Fassung 22: Spielhilfen (play.js) */

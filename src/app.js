@@ -36,7 +36,7 @@ function appInit() {
   try {
     if (A && A.addListener) {
       A.addListener('backButton', () => { try { appBack(); } catch (e) { /* nichts tun */ } });
-      A.addListener('appStateChange', s => { if (!s) return; if (!s.isActive) { if (UI.g && !UI.attract && !UI.endShown && !UI.paused) setPaused(true); SND.sleep(); } else SND.wake(); });
+      A.addListener('appStateChange', s => { if (!s) return; if (!s.isActive) { if (UI.g && !UI.attract && !UI.endShown && !UI.paused && UI.kind !== 'mp') setPaused(true); try { saveNow(); } catch (e) { /* Speichern optional */ } SND.sleep(); } else SND.wake(); });
     }
   } catch (e) { /* ohne App-Plugin geht es auch */ }
 }

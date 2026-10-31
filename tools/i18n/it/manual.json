@@ -722,5 +722,11 @@
  "In Deckung: −25 % Schaden durch Geschosse, Feinde sehen dich erst näher, Tempo −20 %.": "In copertura: −25% danni dai proiettili, i nemici ti scorgono solo da più vicino, velocità −20%.",
  "{0}: sprengbar ({1} / {2}). Kampfschiffe wählen und antippen.": "{0}: distruttibile ({1} / {2}). Seleziona le navi da guerra e toccalo.",
  "Feuer auf den Felsen": "Fuoco sulla roccia",
- "Wandernde Gefahren": "Pericoli vaganti"
+ "Wandernde Gefahren": "Pericoli vaganti",
+ "Das Gerät ist für 3D zu langsam – auf 2D umgestellt (Einstellungen → Grafik).": "Il dispositivo è troppo lento per il 3D – passato al 2D (Impostazioni → Grafica).",
+ "Flüssig": "Fluido",
+ "Akku sparen": "Risparmio batteria",
+ "Bildrate": "Frame rate",
+ "Farbenblind-Modus": "Modalità daltonici",
+ "Vibration": "Vibrazione"
 }

@@ -71,9 +71,9 @@ button { font: inherit; color: inherit; }
 #items { display: flex; flex-wrap: wrap; gap: 0.35em; max-height: 36vh; overflow-y: auto; touch-action: pan-y; align-content: flex-start; }
 .item { position: relative; width: 6.6em; min-height: 3em; flex-direction: column; gap: 0.1em; padding: 0.3em 0.3em; text-transform: none; }
 .item .nm { font-weight: 600; font-size: 0.92em; line-height: 1.05; white-space: normal; text-align: center; }
-.item .cost { font-size: 0.82em; color: var(--dim); display: flex; gap: 0.5em; }
+.item .cost { font-size: 0.82em; color: var(--dim); display: flex; flex-wrap: wrap; column-gap: 0.5em; row-gap: 0; line-height: 1.25; justify-content: center; }
 .item .cost b { font-weight: 600; color: var(--txt); }
-.item .lock { font-size: 0.78em; color: var(--warn); }
+.item .lock { font-size: 0.78em; color: var(--warn); white-space: normal; text-align: center; line-height: 1.15; }
 .item .q { position: absolute; right: 0.3em; top: 0.2em; background: var(--acc); color: #000; border-radius: 1em; padding: 0 0.4em; font-size: 0.8em; font-weight: 700; }
 .item.done { opacity: 0.55; border-color: var(--good); } .item.done .q { background: var(--good); }
 .item .pb { position: absolute; left: 0.3em; right: 0.3em; bottom: 0.2em; height: 3px; background: rgba(255,255,255,0.15); }
@@ -883,6 +883,9 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     <div class="row"><span class="lbl">Balken</span><div class="seg" id="sBars"></div></div>
     <div class="row"><span class="lbl">Grafik</span><div class="seg" id="sGfx"></div></div>
     <div class="row"><span class="lbl">Qualität</span><div class="seg" id="sQual"></div></div>
+    <div class="row"><span class="lbl">Bildrate</span><div class="seg" id="sPwr"></div></div>
+    <div class="row"><span class="lbl">Farbenblind-Modus</span><div class="seg" id="sCb"></div></div>
+    <div class="row"><span class="lbl">Vibration</span><div class="seg" id="sVib"></div></div>
     <div class="row"><span class="lbl">Schadenssymbole</span><div class="seg" id="sDmg"></div></div><!-- Fassung 22 -->
     <div class="row"><span class="lbl">Sprache · Language</span><div class="seg" id="sLang"></div></div>
     <div class="row"><span class="lbl">Neue Schiffe zur aktiven Gruppe</span><div class="seg" id="sGrally"></div></div><!-- Fassung 22 (play.js) -->

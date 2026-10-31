@@ -5,8 +5,8 @@ const file = path.join(__dirname, '..', 'build', 'rift-armada.html'), OUT = path
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--no-sandbox', '--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const errs = [];
-  for (const lang of ['de', 'en']) {
-    const ctx = await b.newContext({ viewport: { width: 405, height: 720 }, deviceScaleFactor: 1080 / 405, locale: lang === 'de' ? 'de-DE' : 'en-US', hasTouch: true, isMobile: true });
+  for (const lang of (process.env.LANGS || 'de,en').split(',')) {
+    const ctx = await b.newContext({ viewport: { width: 405, height: 720 }, deviceScaleFactor: 1080 / 405, locale: { de: 'de-DE', en: 'en-US', fr: 'fr-FR', es: 'es-ES', it: 'it-IT', pt: 'pt-BR', pl: 'pl-PL' }[lang], hasTouch: true, isMobile: true });
     await ctx.addInitScript(l => { try { localStorage.setItem('ra.prefs', JSON.stringify({ set: { gfx: '3d', lang: l, vol: 0, mus: 0 }, menu: {} })); localStorage.setItem('ra.seen', '1'); } catch (e) {} }, lang);
     const p = await ctx.newPage(); p.on('pageerror', e => errs.push(lang + ': ' + e.message));
     await p.goto('file://' + file); await p.waitForTimeout(1200);

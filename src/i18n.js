@@ -111,11 +111,8 @@ function applyLang(root) {
     }
   });
 }
-/* Sprache wählen: ohne gespeicherte Einstellung die des Geräts, falls vorhanden, sonst Englisch (Prüfläufe Deutsch) */
-function langDefault() {
-  try { if (navigator.webdriver) return 'de'; for (const l of (navigator.languages || [navigator.language || ''])) { const c = String(l).slice(0, 2).toLowerCase(); if (langOk(c)) return c; } } catch (e) { /* kein Browser */ }
-  return 'en';
-}   // Prüfläufe (Playwright) in Deutsch, Spieler ohne Einstellung Englisch
+/* Sprache wählen: ohne gespeicherte Einstellung Englisch; umstellen im Hauptmenü oben rechts oder in den Einstellungen */
+function langDefault() { try { return navigator.webdriver ? 'de' : 'en'; } catch (e) { return 'en'; } }   // Prüfläufe (Playwright) in Deutsch, Spieler ohne Einstellung Englisch (Vorgabe des Entwicklers)
 function setLang(l) {
   I18N.lang = langOk(l) ? l : 'de';
   if (typeof document !== 'undefined') { document.documentElement.lang = I18N.lang; applyLang(); }

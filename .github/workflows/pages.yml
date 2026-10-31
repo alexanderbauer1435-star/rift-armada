@@ -1,0 +1,34 @@
+# Veröffentlicht die Datenschutzerklärung (für den Play Store nötig) und die Browser-Fassung des Spiels über GitHub Pages.
+# Einmalig einschalten: Settings → Pages → Source: »GitHub Actions«. Adresse danach:
+#   https://<konto>.github.io/rift-armada/datenschutz.html   (Datenschutz)
+#   https://<konto>.github.io/rift-armada/                   (Spiel im Browser)
+name: Webseite (Datenschutz und Spiel)
+on:
+  push:
+    branches: [main]
+    paths: ['store/**', 'src/**', 'tools/build.py', '.github/workflows/pages.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency: { group: pages, cancel-in-progress: true }
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.d.outputs.page_url }}' }
+    steps:
+      - uses: actions/checkout@v5
+      - name: Seite zusammenstellen
+        run: |
+          python3 tools/build.py
+          mkdir -p site
+          cp build/Rift-Armada-*.html site/index.html
+          cp store/datenschutz.html site/datenschutz.html
+          cp store/datenschutz.html site/privacy.html
+          touch site/.nojekyll
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: d
+        uses: actions/deploy-pages@v4

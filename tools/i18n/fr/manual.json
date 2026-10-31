@@ -722,5 +722,11 @@
  "In Deckung: −25 % Schaden durch Geschosse, Feinde sehen dich erst näher, Tempo −20 %.": "À couvert : −25 % de dégâts des projectiles, les ennemis ne te repèrent que de plus près, vitesse −20 %.",
  "{0}: sprengbar ({1} / {2}). Kampfschiffe wählen und antippen.": "{0} : destructible ({1} / {2}). Sélectionne des vaisseaux de guerre et touche-le.",
  "Feuer auf den Felsen": "Feu sur la roche",
- "Wandernde Gefahren": "Dangers errants"
+ "Wandernde Gefahren": "Dangers errants",
+ "Das Gerät ist für 3D zu langsam – auf 2D umgestellt (Einstellungen → Grafik).": "Cet appareil est trop lent pour la 3D – passage en 2D (Paramètres → Graphismes).",
+ "Flüssig": "Fluide",
+ "Akku sparen": "Économie batterie",
+ "Bildrate": "Fréquence d'images",
+ "Farbenblind-Modus": "Mode daltonien",
+ "Vibration": "Vibration"
 }

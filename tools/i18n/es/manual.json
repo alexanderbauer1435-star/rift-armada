@@ -722,5 +722,11 @@
  "In Deckung: −25 % Schaden durch Geschosse, Feinde sehen dich erst näher, Tempo −20 %.": "A cubierto: −25 % de daño por proyectiles, los enemigos solo te detectan más de cerca, velocidad −20 %.",
  "{0}: sprengbar ({1} / {2}). Kampfschiffe wählen und antippen.": "{0}: destructible ({1} / {2}). Selecciona naves de combate y tócalo.",
  "Feuer auf den Felsen": "Fuego sobre la roca",
- "Wandernde Gefahren": "Peligros errantes"
+ "Wandernde Gefahren": "Peligros errantes",
+ "Das Gerät ist für 3D zu langsam – auf 2D umgestellt (Einstellungen → Grafik).": "Este dispositivo es demasiado lento para 3D: se ha cambiado a 2D (Ajustes → Gráficos).",
+ "Flüssig": "Fluido",
+ "Akku sparen": "Ahorrar batería",
+ "Bildrate": "Fotogramas",
+ "Farbenblind-Modus": "Modo daltónico",
+ "Vibration": "Vibración"
 }

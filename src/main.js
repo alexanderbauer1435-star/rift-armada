@@ -129,10 +129,23 @@ function mpFrame(g, dt) {
   if (_acc > STEP * 3) _acc = STEP * 3;
   mpStallTick(starved, dt);
 }
+const PERF = { acc: 0, n: 0, slow: 0, done: false };
+/* Leistungswächter: läuft 3D im Gefecht dauerhaft unter etwa 22 Bildern je Sekunde, einmalig auf 2D umschalten */
+function perfWatch(dt) {
+  if (PERF.done || !UI.g || UI.attract || UI.paused || !R.mode3d || SET.gfxUser || dt > 0.5 || document.hidden) return;
+  PERF.acc += dt; PERF.n++;
+  if (PERF.acc < 8) return;
+  const avg = PERF.acc / PERF.n; PERF.acc = 0; PERF.n = 0;
+  PERF.slow = avg > 0.045 ? PERF.slow + 1 : 0;
+  if (PERF.slow >= 2) { PERF.done = true; SET.gfx = '2d'; applySet(); savePrefs(); toast(L('Das Gerät ist für 3D zu langsam – auf 2D umgestellt (Einstellungen → Grafik).'), 'warn', 5000); }
+}
 function frame(t) {
   requestAnimationFrame(frame);
+  /* Stromsparen: höchstens etwa 30 Bilder je Sekunde */
+  if (SET.pwr === 'save' && t - _last < 31) return;
   let dt = (t - _last) / 1000;
   _last = t;
+  perfWatch(dt);
   if (!(dt > 0)) dt = 0.016;
   if (dt > 0.1) dt = 0.1;
   if (UI.cqOpen) { cqFrame(dt); MUS.tick(); return; }
@@ -232,7 +245,7 @@ function frame(t) {
   window.addEventListener('resize', layout);
   window.addEventListener('orientationchange', () => setTimeout(layout, 250));
   if (window.ResizeObserver) new ResizeObserver(() => { if (!$('hud').hidden) layout(); }).observe($('bottom'));
-  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (UI.g && !UI.attract && !UI.endShown && UI.kind !== 'mp') setPaused(true); SND.sleep(); } else { SND.wake(); if (UI.g && !UI.attract) keepAwake(); } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) { if (UI.g && !UI.attract && !UI.endShown && UI.kind !== 'mp') { setPaused(true); try { saveNow(); } catch (e) { /* Speichern optional */ } } SND.sleep(); } else { SND.wake(); if (UI.g && !UI.attract) keepAwake(); } });
   window.addEventListener('pagehide', () => { if (!UI.paused) saveNow(); });
   document.addEventListener('gesturestart', e => e.preventDefault());
   window.RA = { I18N, setLang, langRefresh, L, T, UI, R, MENU, SET, NET, MPL, MPU, CAMP, RADIO, CQS, cqOpen, cqLoad, cqSave, cqClose, cqLeave, mpPack, mpUnpack, mpOpen, beginGame, startSkirmish, saveNow, clearSave, continueGame, issue, toMenu, misStart, openBrief, campRender, menuPage, step(n) { const g = UI.g; for (let i = 0; i < n && !g.over; i++) { stepGame(g); if (g.ev.length) { if (!UI.attract) UI.consume(g.ev); R.consume(g.ev); g.ev.length = 0; } } } };
