@@ -208,7 +208,7 @@ function aiThink(g, pi) {
     if (artD && A.lvl >= 2 && yardL >= artD.yard && t > 360 && (g.tick + pi * 11) % 90 < 4) {
       let towers = 0; for (const b of g.bldgs) if (!b.dead && (b.role === 'turret' || b.role === 'flak' || b.role === 'spore') && foes(g, pi, b.owner) && !g.players[b.owner].neutral && artKnownAi(g, pi, b)) towers++;
       const have = ships.filter(u => u.def.art).length + yards.reduce((n, y) => n + y.q.filter(q => SHIPS[q.id].art).length, 0);
-      if (towers >= 3 && have < (t > 900 ? 3 : 2) && canPay(p, shipCost(p, artD)) && p.cpUse + p.queued + artD.cp <= p.cpMax) aiTrain(g, pi, artD.id);
+      if (towers >= 3 && have < (t > 1200 ? 4 : t > 900 ? 3 : 2) && canPay(p, shipCost(p, artD)) && p.cpUse + p.queued + artD.cp <= p.cpMax) aiTrain(g, pi, artD.id);
     }
     for (const y of yards) if (!y.rally) cmdRally(g, pi, y.id, anchor.x + dcos(dirA) * 300, anchor.y + dsin(dirA) * 300);
   }
@@ -281,7 +281,8 @@ function aiThink(g, pi) {
        zwischen Angriffen. So greift im selben Spiel die eine KI früh an, die andere baut erst in Ruhe auf. */
     if (A.first === undefined) { const w = AI_FIRST[A.lvl] || AI_FIRST[2]; A.first = w[0] + g.rng() * (w[1] - w[0]); A.armyK = 1.2 + g.rng() * 0.6; A.gapK = 0.6 + g.rng() * 1.2; }
     if (A.gap === undefined) A.gap = 40;
-    const ready = t > A.first && t - A.atkT > A.gap && (cpF >= cfg.army * A.armyK + Math.min(16, Math.floor(t / 150) * 2) || (weakFoe && cpF >= 4));
+    const late = t > 1200 ? 0.6 : 1;   /* Fassung 22: spät im Spiel entschlossener angreifen (gegen Pattsituationen) */
+    const ready = t > A.first && t - A.atkT > A.gap * late && (cpF >= Math.min((cfg.army * A.armyK + Math.min(16, Math.floor(t / 150) * 2)) * late, p.cpMax * 0.6) ||   /* Fassung 22: nie mehr verlangen, als die Kommandopunkte erlauben (sonst Patt) */ (weakFoe && cpF >= 4));
     if (ready) {
       const tg = aiTarget(g, pi, anchor.x, anchor.y);
       if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'roles'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; A.gap = (40 + g.rng() * 140) * A.gapK; ev(g, 'aiattack', { owner: pi }); }
@@ -319,7 +320,7 @@ function aiDefense22(g, pi, mine, anchor, dirA, building, turrets) {
   /* Schildwälle: bis zu cfg.def Stück, je einer an einem fertigen Turm; quer zur Angriffsrichtung, bevorzugt zur Seite, an
      der Felsen oder Feldränder liegen (so schließt der Wall mit dem Turm eine Engstelle) */
   const walls = mine.filter(b => b.role === 'wall');
-  if (t < 360 || walls.length >= A.cfg.def || (g.tick + pi * 17) % 4) return false;
+  if (t < 360 || walls.length >= A.cfg.def - 1 ||   /* Fassung 22: ein Wall weniger – sonst zu viele Patt-Partien */ (g.tick + pi * 17) % 4) return false;
   const anc = turrets.filter(b => b.done && WALL_ANCHOR[b.role] && hyp(b.x - anchor.x, b.y - anchor.y) < 900 && !walls.some(w => w.link === b.id));
   if (!anc.length) return false;
   const builders = g.ships.filter(u => !u.dead && u.owner === pi && u.def.build && (u.o.t === 'idle' || u.o.t === 'move'));
