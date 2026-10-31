@@ -18,8 +18,17 @@ jobs:
     runs-on: ubuntu-latest
     environment: { name: github-pages, url: '${{ steps.d.outputs.page_url }}' }
     steps:
+      # Ohne eingeschaltete Pages (Settings → Pages → Source: GitHub Actions) nur ein Hinweis statt eines Fehlers
+      - name: Pages eingeschaltet?
+        id: on
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          if gh api "repos/${{ github.repository }}/pages" > /dev/null 2>&1; then echo "ok=1" >> "$GITHUB_OUTPUT";
+          else echo "::warning::GitHub Pages ist noch nicht eingeschaltet: Settings → Pages → Source »GitHub Actions« wählen, dann diesen Ablauf erneut starten."; echo "ok=0" >> "$GITHUB_OUTPUT"; fi
       - uses: actions/checkout@v5
+        if: steps.on.outputs.ok == '1'
       - name: Seite zusammenstellen
+        if: steps.on.outputs.ok == '1'
         run: |
           python3 tools/build.py
           mkdir -p site
@@ -28,7 +37,10 @@ jobs:
           cp store/datenschutz.html site/privacy.html
           touch site/.nojekyll
       - uses: actions/configure-pages@v5
+        if: steps.on.outputs.ok == '1'
       - uses: actions/upload-pages-artifact@v3
+        if: steps.on.outputs.ok == '1'
         with: { path: site }
       - id: d
+        if: steps.on.outputs.ok == '1'
         uses: actions/deploy-pages@v4
