@@ -77,7 +77,9 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   /* Kommandopunkte begrenzen */
   await ev(page, () => { const y = RA.UI.g.byId.get(RA.UI.yardId); for (let i = y.q.length - 1; i >= 0; i--) RA.issue({ t: 'cancel', b: y.id, i }); const P = RA.UI.P; P.cpMax = P.cpUse + P.queued + 2; hudBuild(true); });
   await page.waitForTimeout(300);
-  check('×5 achtet auf Kommandopunkte (' + await ev(page, () => plMaxTrain(RA.UI.g.byId.get(RA.UI.yardId), SHIPS.wren, 5)) + ')', await ev(page, () => plMaxTrain(RA.UI.g.byId.get(RA.UI.yardId), SHIPS.wren, 5)) === 2);
+  /* Fassung 22: Kommandopunkte werden laufend neu berechnet – Grenze im selben Schritt setzen und prüfen */
+  const cpN = await ev(page, () => { const P = RA.UI.P, y = RA.UI.g.byId.get(RA.UI.yardId), keep = P.cpMax; P.cpMax = P.cpUse + P.queued + 2; const n = plMaxTrain(y, SHIPS.wren, 5); P.cpMax = keep; return n; });
+  check('×5 achtet auf Kommandopunkte (' + cpN + ')', cpN === 2);
   await ev(page, () => { recalcCp(RA.UI.g, RA.UI.me); desel(); });
 
   /* ---- 2. Sammeln bei Gruppe (Einstellung über das Pausenmenü) ---- */

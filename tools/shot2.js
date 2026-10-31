@@ -49,7 +49,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, b = g.bldgs.find(x => x.owner === me && x.role === 'base'); const fs = addShip(g, 'archipelago', me, b.x + 260, b.y + 120, 0); const l = addShip(g, 'lancer', me, b.x + 300, b.y + 60, 0); const l2 = addShip(g, 'reckoning', me, b.x + 300, b.y + 180, 0); fs.auto = false; l.auto = false; l2.auto = false; RA.UI.sel.clear(); RA.UI.sel.add(fs.id); RA.UI.selB = 0; hudSel(); R.cam.z = 1.1; R.center(fs.x, fs.y); RA.step(5); });
   await page.waitForTimeout(300);
   const abBtns = await page.evaluate(() => [...document.querySelectorAll('#cmds .key.ab')].map(b => b.textContent));
-  check('flagship shows 3 ability buttons (' + abBtns.join(' | ') + ')', abBtns.length === 3);
+  check('flagship shows 4 ability buttons incl. fleet command (' + abBtns.join(' | ') + ')', abBtns.length === 4);   /* Fassung 22: Flottenbefehl */
   check('commander on card', await page.evaluate(() => document.querySelector('#selCard .cmdr') !== null && document.querySelector('#selCard .subs') !== null));
   await shot('24-flagship-card');
   /* Fähigkeit per Taste zünden: Feldwerft */

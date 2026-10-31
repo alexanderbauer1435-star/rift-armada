@@ -80,7 +80,7 @@ const OUT = path.resolve(__dirname, 'shots');
   await page.waitForTimeout(200);
   check('shards merged into prism', await page.evaluate(() => RA.UI.g.ships.filter(u => !u.dead && u.type === 'prism' && u.owner === RA.UI.me).length === 2));
   /* Übernahme per Taste und Ziel */
-  await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, b = g.ships.find(u => u.type === 'binder'); const bs = g.bldgs.find(x => x.owner === me && x.role === 'base'); b.x = bs.x - 500; b.y = bs.y - 400; b.hx = b.x; b.hy = b.y; const v = addShip(g, 'paladin', 1 - me, b.x + 100, b.y, Math.PI); v.stance = 2; v.hull = v.hullMax * 0.15; v.shield = 0; v.o = { t: 'hold' }; v.hold = true; window.__tgt = v.id; setSel([b]); R.cam.z = 1.2; R.center(b.x + 50, b.y); RA.step(5); });
+  await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, b = g.ships.find(u => u.type === 'binder'); const bs = g.bldgs.find(x => x.owner === me && x.role === 'base'); b.x = g.map.w / 2 - 300; b.y = g.map.h / 2 + 500;   /* Fassung 22: frei auf der Karte, nicht unter der Auswahlkarte */ b.hx = b.x; b.hy = b.y; const v = addShip(g, 'paladin', 1 - me, b.x + 100, b.y, Math.PI); v.stance = 2; v.hull = v.hullMax * 0.15; v.shield = 0; v.o = { t: 'hold' }; v.hold = true; window.__tgt = v.id; setSel([b]); R.cam.z = 1.2; R.center(b.x + 50, b.y); RA.step(5); R.center(v.x, v.y); });   /* Fassung 22: Ziel in die Bildmitte, die größere Auswahlkarte deckt sonst ab */
   check('target alive for bind', await page.evaluate(() => { const t = RA.UI.g.byId.get(window.__tgt); return !!t && !t.dead; }));
   await page.evaluate(() => useAbility('bind'));
   check('bind target mode', await page.evaluate(() => RA.UI.mode === 'abt' && RA.UI.abId === 'bind'));

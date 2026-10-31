@@ -24,7 +24,7 @@ const SHOTS = process.argv.includes('--shots'), OUT = path.resolve(__dirname, '.
   const look = async where => {
     const r = await page.evaluate(() => {
       const de = /[äöüÄÖÜß»«]|\b(und|oder|der|die|das|den|dem|nicht|mit|ist|sind|eine?n?|für|auf|zum|zur|noch|Schiffe?|Werft|Stufe|Welle|Ziele?|Runde|Zurück|Weiter|Gegner|Feind|Hülle|Schilde?|Station|Basis|Spieler|Sieg|Niederlage|Kampagne|Einstellungen|Hilfe|Fortsetzen|Abbrechen|Leicht|Mittel|Schwer|Zufall|Eis|Erz)\b/;
-      const ok = /New Tharsis|Neu-Tharsis|Ägis|Deutsch|Sprache/;
+      const ok = /New Tharsis|Neu-Tharsis|Ägis|Deutsch|Sprache|Early Warning Station/;
       const out = [];
       const vis = el => { for (let e = el; e && e !== document.body; e = e.parentElement) { if (e.hidden || e.hasAttribute('data-nol')) return false; const cs = getComputedStyle(e); if (cs.display === 'none' || cs.visibility === 'hidden') return false; } return true; };
       const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
