@@ -164,7 +164,7 @@ for (const f of ['alliance', 'mars', 'legion', 'nexus', 'brood']) {
   console.log('     KI 0: ' + roles(0) + '\n     KI 1: ' + roles(1));
   const all = A.g.bldgs.filter(b => !b.dead && b.owner <= 1), has = r => all.some(b => b.role === r);
   ok(has('radar') && has('dock'), 'KI (Mittel, Schwer) baut Frühwarnstation und Reparaturdock');
-  ok(has('wall'), 'KI baut Schildwälle (' + all.filter(b => b.role === 'wall').length + ')');
+  ok(!has('wall'), 'KI baut keine Schildwälle (Werkzeug des Spielers, ' + all.filter(b => b.role === 'wall').length + ')');   /* Fassung 22 */
   /* Zweigwahl der KI nach dem Gesehenen */
   const g = A.g, me = g.players[0], t0 = g.bldgs.find(b => !b.dead && b.owner === 0 && b.role === 'turret');
   const T = X.addBldg(g, 'turret', 0, t0.x + 900, t0.y + 900, true);

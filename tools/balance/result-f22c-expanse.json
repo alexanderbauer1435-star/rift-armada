@@ -1,0 +1,47 @@
+{
+ "tag": "f22c-expanse",
+ "maps": [
+  "expanse"
+ ],
+ "seeds": 1,
+ "games": 20,
+ "draws": 9,
+ "avgMin": 19.7,
+ "winrate": {
+  "alliance": 0.13,
+  "mars": 0.75,
+  "legion": 0.25,
+  "nexus": 0.13,
+  "brood": 0.13
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 0,
+   "mars": 1
+  },
+  "alliance-legion": {
+   "alliance": 1,
+   "legion": 1
+  },
+  "mars-legion": {
+   "mars": 2,
+   "legion": 0
+  },
+  "mars-nexus": {
+   "mars": 1,
+   "nexus": 0
+  },
+  "mars-brood": {
+   "mars": 2,
+   "brood": 0
+  },
+  "legion-nexus": {
+   "legion": 1,
+   "nexus": 1
+  },
+  "nexus-brood": {
+   "nexus": 0,
+   "brood": 1
+  }
+ }
+}

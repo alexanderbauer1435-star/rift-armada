@@ -618,9 +618,9 @@ const BLDG = {
 for (const f of ['alliance', 'mars']) {
   const m = f === 'mars', sh = (a, b) => m ? 0 : a, ar = (a) => m ? a : 0;
   BLDG[f].wall = { role: 'wall', name: m ? 'Sperrwall' : 'Schildwall', r: 16, tab: 'def', lv: lv3(
-    { hull: 520, shield: sh(150), sreg: sh(12), armor: ar(2), energy: -6, cost: { ice: 200, ore: 120 }, time: 18, field: 1500, freg: 40 },
-    { hull: 680, shield: sh(200), sreg: sh(14), armor: ar(2), energy: -8, cost: { ice: 180, ore: 110 }, time: 16, field: 2300, freg: 60 },
-    { hull: 860, shield: sh(260), sreg: sh(18), armor: ar(3), energy: -10, cost: { ice: 240, ore: 150 }, time: 18, field: 3300, freg: 85 }),
+    { hull: 520, shield: sh(150), sreg: sh(12), armor: ar(2), energy: -6, cost: { ice: 200, ore: 120 }, time: 18, field: 750, freg: 20 },
+    { hull: 680, shield: sh(200), sreg: sh(14), armor: ar(2), energy: -8, cost: { ice: 180, ore: 110 }, time: 16, field: 1150, freg: 30 },
+    { hull: 860, shield: sh(260), sreg: sh(18), armor: ar(3), energy: -10, cost: { ice: 240, ore: 150 }, time: 18, field: 1650, freg: 42 }),
     desc: m ? 'Emitter für ein Sperrfeld zu einem eigenen Turm oder Emitter in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen. Braucht Energie; bricht das Feld zusammen, baut es sich nach einigen Sekunden neu auf.' : 'Emitter für einen Schildwall zu einem eigenen Turm oder Emitter in Reichweite. Feindliche Schiffe kommen nicht hindurch, feindliche Schüsse bleiben im Feld hängen. Braucht Energie; bricht das Feld zusammen, baut es sich nach einigen Sekunden neu auf.' };
   BLDG[f].radar = { role: 'radar', name: m ? 'Frühwarnradar' : 'Frühwarnstation', r: 24, tab: 'def', lv: lv3(
     { hull: 600, shield: sh(120), sreg: sh(10), armor: ar(1), energy: -8, cost: { ice: 220, ore: 140 }, time: 20, sensor: 1100, detect: 500 },
@@ -634,7 +634,7 @@ for (const f of ['alliance', 'mars']) {
     desc: 'Repariert eigene Schiffe in der Nähe (Hülle und Subsysteme, schneller als die Selbstreparatur) und langsam eigene Stationen. Vorsichtige Schiffe ziehen sich auch hierher zurück.' };
 }
 /* Fassung 22: Schildwall */
-const WALL_MAX = 380, WALL_MIN = 70, WALL_CAP = 8;               // Feldlänge (zwischen den Rändern), Anzahl Emitter je Spieler
+const WALL_MAX = 380, WALL_MIN = 70, WALL_CAP = 4;   /* Fassung 22: halbe Feldstärke, höchstens 4 Emitter – der Wall soll Lücken schließen, keine Festung bauen */               // Feldlänge (zwischen den Rändern), Anzahl Emitter je Spieler
 const WALL_ANCHOR = { turret: 1, flak: 1, spore: 1, wall: 1 };
 const WALL_DOWN = 10;                                             // Sekunden, bis ein zusammengebrochenes Feld neu startet
 /* Golden Legion und Nexus: dieselben Rollen wie die Alliance (Schilde), mit eigenen Namen, Waffen und Superwaffe */

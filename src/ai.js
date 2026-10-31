@@ -320,7 +320,7 @@ function aiDefense22(g, pi, mine, anchor, dirA, building, turrets) {
   /* Schildwälle: bis zu cfg.def Stück, je einer an einem fertigen Turm; quer zur Angriffsrichtung, bevorzugt zur Seite, an
      der Felsen oder Feldränder liegen (so schließt der Wall mit dem Turm eine Engstelle) */
   const walls = mine.filter(b => b.role === 'wall');
-  if (t < 360 || walls.length >= A.cfg.def - 1 ||   /* Fassung 22: ein Wall weniger – sonst zu viele Patt-Partien */ (g.tick + pi * 17) % 4) return false;
+  if (true ||   /* Fassung 22: die KI baut keine Schildwälle (Werkzeug des Spielers; mit Wällen gruben sich KIs zu Patt-Partien ein) */ t < 360 || walls.length >= A.cfg.def - 1 || (g.tick + pi * 17) % 4) return false;
   const anc = turrets.filter(b => b.done && WALL_ANCHOR[b.role] && hyp(b.x - anchor.x, b.y - anchor.y) < 900 && !walls.some(w => w.link === b.id));
   if (!anc.length) return false;
   const builders = g.ships.filter(u => !u.dead && u.owner === pi && u.def.build && (u.o.t === 'idle' || u.o.t === 'move'));

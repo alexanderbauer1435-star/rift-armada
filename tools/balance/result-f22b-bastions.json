@@ -1,0 +1,43 @@
+{
+ "tag": "f22b-bastions",
+ "maps": [
+  "bastions"
+ ],
+ "seeds": 1,
+ "games": 20,
+ "draws": 13,
+ "avgMin": 18.4,
+ "winrate": {
+  "alliance": 0.25,
+  "mars": 0.25,
+  "legion": 0.13,
+  "nexus": 0.13,
+  "brood": 0.13
+ },
+ "pair": {
+  "alliance-mars": {
+   "alliance": 1,
+   "mars": 0
+  },
+  "alliance-legion": {
+   "alliance": 1,
+   "legion": 1
+  },
+  "mars-legion": {
+   "mars": 1,
+   "legion": 0
+  },
+  "mars-nexus": {
+   "mars": 1,
+   "nexus": 0
+  },
+  "legion-nexus": {
+   "legion": 0,
+   "nexus": 1
+  },
+  "nexus-brood": {
+   "nexus": 0,
+   "brood": 1
+  }
+ }
+}
