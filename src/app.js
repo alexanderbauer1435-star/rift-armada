@@ -9,6 +9,11 @@ function appNative() { try { const C = window.Capacitor; return !!(C && (typeof 
 function appPlugin(n) { try { const C = window.Capacitor; return (C && C.Plugins && C.Plugins[n]) || null; } catch (e) { return null; } }
 function appBack() {
   const wins = [['settings', closeSettings], ['help', () => { $('help').hidden = true; }], ['brief', closeBrief], ['cqMenuWin', () => { $('cqMenuWin').hidden = true; }]];
+  /* Fassung 22: weitere Fenster (Rückmeldung, Profil, Laden, Karteneditor, Team) schließen ebenfalls mit »Zurück« */
+  for (const id of ['fbWin', 'profWin', 'loadWin']) wins.push([id, () => { $(id).hidden = true; }]);
+  if (typeof ED !== 'undefined' && ED.open) wins.push(['edWin', edClose]);
+  if (typeof HP !== 'undefined' && HP.teamOpen) { HP.teamOpen = false; hpTeam(); return; }
+  if (typeof RP !== 'undefined' && RP.view) { rpStop(); toMenu(); return; }
   for (const [id, fn] of wins) if ($(id) && !$(id).hidden) { fn(); SND.play('click'); return; }
   if (UI.cqOpen) { if (!$('cqEv').hidden) return; if (!$('cqSetup').hidden) cqClose(); else $('cqMenuB').click(); return; }
   if (UI.g && !UI.attract && $('menu').hidden) {

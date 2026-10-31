@@ -3,7 +3,7 @@
 /* RÜCKMELDUNG – kleines Fenster aus Pause und Hauptmenü: Art (Fehler/Balance/Bedienung/Idee), freier Text, dazu der
    Spielkontext (Fassung, Modus, Karte, Fraktion, Spielzeit, Tempo, Gerät). Einträge bleiben lokal (ra.feedback) und
    lassen sich kopieren, teilen (Teilen-Menü des Geräts, sonst E-Mail) oder gesammelt exportieren. Nichts wird ungefragt gesendet. */
-const FB = { kind: 'bug', key: 'ra.feedback', mail: '' };
+const FB = { kind: 'bug', key: 'ra.feedback', mail: 'rtsgame2026@gmail.com' };
 const FB_KINDS = [['bug', 'Fehler'], ['bal', 'Balance'], ['ui', 'Bedienung'], ['idea', 'Idee']];
 function fbLoad() { try { return JSON.parse(localStorage.getItem(FB.key) || '[]') || []; } catch (e) { return []; } }
 function fbStore(list) { try { localStorage.setItem(FB.key, JSON.stringify(list.slice(-50))); return true; } catch (e) { return false; } }
