@@ -62,6 +62,9 @@
   KI gegen Pattsituationen: ein Schildwall weniger je Stufe, nach 20 Minuten entschlossener (kleinere Flotte, kürzere
   Pausen, bis zu vier Artillerieschiffe), Angriffsschwelle höchstens 60 % der Kommandopunkte. Messung (Schwer gegen
   Schwer, je 20 Partien): entschiedene Partien 18–20 Minuten, aber noch 9 von 20 Partien nach 30 Minuten offen.
+  Abschluss: Schildwall mit halber Feldstärke (750/1150/1650) und höchstens 4 Emittern, die KI baut keine Wälle;
+  Auswahlkarte höchstens 36 % der Bildhöhe (scrollt); Legion-Kampfschiffe 6 % billiger, Waffen +6 %. Messung f22e:
+  Bastions 6/20 offen, alle Fraktionen 25–38 %; Expanse 5/20 offen, Mars 63 %, Allianz 50 %, übrige 25 %.
 - Fassung 21 (Runde 19, Belagerungsartillerie): je Fraktion ein Artillerieschiff (Catapult, Mortar, Ballista, Lodestar,
   Boomer; Werft II): Bogengranaten (Waffenart art) nur auf Stationen, Reichweite 960–1000 gegen etwa 400 der Türme,
   Mindestabstand 340, feuert nur im Stand, Splitter im Umkreis; Ziele sind alle Stationen auf der erkundeten Karte.
