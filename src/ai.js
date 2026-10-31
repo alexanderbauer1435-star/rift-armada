@@ -148,7 +148,7 @@ function aiThink(g, pi) {
   }
   if (!built && !lab && yards.length && t > 120 && rich && !building.some(b => b.role === 'lab')) built = aiBuild(g, pi, 'lab', anchor.x - dcos(dirA) * 80, anchor.y - dsin(dirA) * 80, 150, 340);
   /* Verteidigung: Türme vor der Basis und an Raffinerien */
-  if (!built && t > 90 && turrets.length < cfg.def * 2 + Math.floor(t / 300) && rich && !building.some(b => b.role === 'turret' || b.role === 'flak' || b.role === 'spore')) {
+  if (!built && t > 90 && turrets.length < cfg.def * 2 + Math.min(4, Math.floor(t / 300)) && rich && !building.some(b => b.role === 'turret' || b.role === 'flak' || b.role === 'spore')) {
     const role = f === 'mars' && turrets.length % 3 === 2 ? 'flak' : f === 'brood' && turrets.length % 3 === 2 ? 'spore' : 'turret';
     const at = turrets.length % 2 === 0 || refs.length < 2 ? anchor : refs[turrets.length % refs.length];
     built = aiBuild(g, pi, role, at.x + dcos(dirA) * 120, at.y + dsin(dirA) * 120, 80, 260);
@@ -294,11 +294,11 @@ function aiThink(g, pi) {
        zwischen Angriffen. So greift im selben Spiel die eine KI früh an, die andere baut erst in Ruhe auf. */
     if (A.first === undefined) { const w = AI_FIRST[A.lvl] || AI_FIRST[2]; A.first = w[0] + g.rng() * (w[1] - w[0]); A.armyK = 1.2 + g.rng() * 0.6; A.gapK = 0.6 + g.rng() * 1.2; }
     if (A.gap === undefined) A.gap = 40;
-    const late = t > 1200 ? 0.6 : (aiFfaK(g, pi) && t > 840 ? 0.75 : 1);   /* Fassung 22: spät im Spiel entschlossener angreifen (gegen Pattsituationen); Alle gegen alle schon ab 14 Minuten etwas */
+    const late = t > 1800 ? 0.45 : t > 1200 ? 0.6 : (aiFfaK(g, pi) && t > 840 ? 0.75 : 1);   /* Fassung 22: spät im Spiel entschlossener angreifen (gegen Pattsituationen); Alle gegen alle schon ab 14 Minuten etwas */
     const ready = t > A.first && t - A.atkT > A.gap * late && (cpF >= Math.min((cfg.army * A.armyK + Math.min(16, Math.floor(t / 150) * 2)) * late, p.cpMax * 0.6) ||   /* Fassung 22: nie mehr verlangen, als die Kommandopunkte erlauben (sonst Patt) */ (weakFoe && cpF >= 4));
     if (ready) {
       const tg = aiTarget(g, pi, anchor.x, anchor.y);
-      if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'roles'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; A.gap = (40 + g.rng() * 140) * A.gapK; ev(g, 'aiattack', { owner: pi }); }
+      if (tg) { cmdMove(g, fleet, tg.x, tg.y, true, 'roles'); A.atk = { ids: fleet.map(u => u.id), cp: cpF, t0: t, tid: tg.id || 0 }; A.gap = (40 + g.rng() * 140) * A.gapK; if (t > 1800) A.gap = Math.min(A.gap, 70);   /* Fassung 22: nach 30 Minuten pausenlos angreifen, Türme wachsen nur bis +4 (Messung ffadiag: Endspiele zu zweit gruben sich ein) */ ev(g, 'aiattack', { owner: pi }); }
     } else {
       /* sammeln vor der Basis; Verwundete zur Werft */
       const rp = { x: anchor.x + dcos(dirA) * 300, y: anchor.y + dsin(dirA) * 300 };
