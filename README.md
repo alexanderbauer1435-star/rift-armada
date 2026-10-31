@@ -59,6 +59,9 @@
   Stationen, Trümmerfelder als Deckung, Zufallskarte 2–8 Spieler mit Symmetrie. Spielbarkeit: ×5 per Doppeltippen,
   neue Schiffe zur aktiven Gruppe, Pause mit Befehlen (Einzelspieler), Zeitlupe bei Großgefechten (Vorgabe aus),
   Untätig-Hinweise. Tests: ships22a/b/c, buildings22a/b, maps22, play22 (node und Browser), in tools/regress.sh.
+  KI gegen Pattsituationen: ein Schildwall weniger je Stufe, nach 20 Minuten entschlossener (kleinere Flotte, kürzere
+  Pausen, bis zu vier Artillerieschiffe), Angriffsschwelle höchstens 60 % der Kommandopunkte. Messung (Schwer gegen
+  Schwer, je 20 Partien): entschiedene Partien 18–20 Minuten, aber noch 9 von 20 Partien nach 30 Minuten offen.
 - Fassung 21 (Runde 19, Belagerungsartillerie): je Fraktion ein Artillerieschiff (Catapult, Mortar, Ballista, Lodestar,
   Boomer; Werft II): Bogengranaten (Waffenart art) nur auf Stationen, Reichweite 960–1000 gegen etwa 400 der Türme,
   Mindestabstand 340, feuert nur im Stand, Splitter im Umkreis; Ziele sind alle Stationen auf der erkundeten Karte.
