@@ -21,3 +21,4 @@ signing/
 __pycache__/
 .claude/
 tools/balance/*.log
+tools/balance/result-*.json
