@@ -29,7 +29,7 @@ android {
                 storeFile file(ks)
                 storePassword envOr('RA_KEYSTORE_PASSWORD', '')
                 keyAlias envOr('RA_KEY_ALIAS', 'riftarmada')
-                keyPassword envOr('RA_KEY_PASSWORD', '')
+                keyPassword envOr('RA_KEYSTORE_PASSWORD', '')  // PKCS12: Schlüssel- und Speicherpasswort sind gleich
             }
         }
     }
