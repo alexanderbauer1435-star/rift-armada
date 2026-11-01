@@ -65,6 +65,14 @@
   Abschluss: Schildwall mit halber Feldstärke (750/1150/1650) und höchstens 4 Emittern, die KI baut keine Wälle;
   Auswahlkarte höchstens 36 % der Bildhöhe (scrollt); Legion-Kampfschiffe 6 % billiger, Waffen +6 %. Messung f22e:
   Bastions 6/20 offen, alle Fraktionen 25–38 %; Expanse 5/20 offen, Mars 63 %, Allianz 50 %, übrige 25 %.
+  Store-Fassung: sieben Sprachen (Deutsch, Englisch, Französisch, Spanisch, Italienisch, Portugiesisch (BR), Polnisch;
+  Vorgabe Englisch, Auswahl im Hauptmenü), Einstellungen Bildrate (Akku sparen), Farbenblind-Modus (Okabe-Ito),
+  Vibration; Erststart auf Leicht; schwache Geräte starten in 2D, 3D wechselt bei Rucklern einmal auf 2D; Speichern beim
+  Verlassen der App; Zurück-Taste schließt alle Fenster; Linksklick ins Leere hebt die Auswahl auf. KI Alle gegen alle:
+  greift bevorzugt den schwächsten Gegner an, Türme wachsen nur bis +4, nach 30 Minuten pausenlose Angriffe. Messung:
+  1v1 80 Partien 24 offen, Siegquoten 31–44 %; Leicht gegen Schwer 2/20, Leicht gegen Normal 1/20; Alle gegen alle zu
+  viert (60 Minuten) Arena 3/4 entschieden nach 25–40 Minuten; offene Partien sind Endspiele zweier KIs.
+  Store-Unterlagen in store/ (Texte je Sprache, Bilder, Symbolvorschläge), Werkzeuge tools/textfit.js, tools/storeshots.js.
 - Fassung 21 (Runde 19, Belagerungsartillerie): je Fraktion ein Artillerieschiff (Catapult, Mortar, Ballista, Lodestar,
   Boomer; Werft II): Bogengranaten (Waffenart art) nur auf Stationen, Reichweite 960–1000 gegen etwa 400 der Türme,
   Mindestabstand 340, feuert nur im Stand, Splitter im Umkreis; Ziele sind alle Stationen auf der erkundeten Karte.
