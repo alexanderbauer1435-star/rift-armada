@@ -2156,7 +2156,7 @@ const LANGS = {
     "Dein Startplatz: {0}. Erneut antippen für Zufall.": "Ton départ : {0}. Touche à nouveau pour un départ aléatoire.",
     "Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.": "Position de départ : aléatoire. Touche une position de départ dans l'aperçu pour la choisir.",
     "Außenbasis: ein Bauschiff kann weitere Kommandobasen überall auf der Karte errichten, auch fern der eigenen Stationen. Um sie herum lässt sich wieder bauen.": "Avant-poste : un constructeur peut ériger des bases de commandement supplémentaires n'importe où sur la carte, même loin de tes propres stations. Tu peux de nouveau construire autour.",
-    "Rückmeldung": "Retour",
+    "Rückmeldung": "Avis",
     "Fehler": "Bug",
     "Bedienung": "Commandes",
     "Idee": "Idée",
@@ -2664,7 +2664,8 @@ const LANGS = {
     "Akku sparen": "Économie batterie",
     "Bildrate": "Fréquence d'images",
     "Farbenblind-Modus": "Mode daltonien",
-    "Vibration": "Vibration"
+    "Vibration": "Vibration",
+    "Weltraum-Strategie": "Stratégie spatiale"
   },
   es: {
     "Ziele": "Objetivos",
@@ -5327,7 +5328,8 @@ const LANGS = {
     "Akku sparen": "Ahorrar batería",
     "Bildrate": "Fotogramas",
     "Farbenblind-Modus": "Modo daltónico",
-    "Vibration": "Vibración"
+    "Vibration": "Vibración",
+    "Weltraum-Strategie": "Estrategia espacial"
   },
   it: {
     "Ziele": "Obiettivi",
@@ -7990,7 +7992,8 @@ const LANGS = {
     "Akku sparen": "Risparmio batteria",
     "Bildrate": "Frame rate",
     "Farbenblind-Modus": "Modalità daltonici",
-    "Vibration": "Vibrazione"
+    "Vibration": "Vibrazione",
+    "Weltraum-Strategie": "Strategia spaziale"
   },
   pt: {
     "Ziele": "Objetivos",
@@ -10653,7 +10656,8 @@ const LANGS = {
     "Akku sparen": "Economizar bateria",
     "Bildrate": "Taxa de quadros",
     "Farbenblind-Modus": "Modo daltônico",
-    "Vibration": "Vibração"
+    "Vibration": "Vibração",
+    "Weltraum-Strategie": "Estratégia espacial"
   },
   pl: {
     "Ziele": "Cele",
@@ -13316,6 +13320,7 @@ const LANGS = {
     "Akku sparen": "Oszczędzanie baterii",
     "Bildrate": "Liczba klatek",
     "Farbenblind-Modus": "Tryb dla daltonistów",
-    "Vibration": "Wibracje"
+    "Vibration": "Wibracje",
+    "Weltraum-Strategie": "Strategia kosmiczna"
   },
 };

@@ -12,7 +12,7 @@ def build(version):
     js = '\n'.join(open(os.path.join(SRC, f), encoding='utf-8').read() for f in ORDER)
     bid = '%d-%s' % (version, hashlib.sha1(js.encode('utf-8')).hexdigest()[:10])
     out = shell.replace('/*FONT*/', font).replace('<!--SCRIPT-->', '<script>window.RA_OFFLINE = 1; window.RA_VERSION = %d; window.RA_BUILD = "%s";</script>\n<script>\n%s\n</script>' % (version, bid, js))
-    out = out.replace('Rift Armada · Fassung %V%', 'Rift Armada · Fassung %d' % version)
+    out = out.replace('%V%', str(version))   # auch in den Übersetzungen (sonst stand dort »Version %V%«)
     name = 'Rift-Armada-%02d.html' % version
     path = os.path.join(ROOT, 'build', name)
     os.makedirs(os.path.dirname(path), exist_ok=True)

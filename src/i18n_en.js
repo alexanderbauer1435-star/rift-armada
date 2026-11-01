@@ -2663,5 +2663,6 @@ const EN = {
   "Akku sparen": "Save battery",
   "Bildrate": "Frame rate",
   "Farbenblind-Modus": "Colour-blind mode",
-  "Vibration": "Vibration"
+  "Vibration": "Vibration",
+  "Weltraum-Strategie": "Space Strategy"
 };

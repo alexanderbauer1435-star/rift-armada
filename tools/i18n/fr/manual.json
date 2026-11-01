@@ -213,7 +213,7 @@
  "Dein Startplatz: {0}. Erneut antippen für Zufall.": "Ton départ : {0}. Touche à nouveau pour un départ aléatoire.",
  "Startplatz: Zufall. Tippe in der Vorschau auf einen Startplatz, um ihn zu wählen.": "Position de départ : aléatoire. Touche une position de départ dans l'aperçu pour la choisir.",
  "Außenbasis: ein Bauschiff kann weitere Kommandobasen überall auf der Karte errichten, auch fern der eigenen Stationen. Um sie herum lässt sich wieder bauen.": "Avant-poste : un constructeur peut ériger des bases de commandement supplémentaires n'importe où sur la carte, même loin de tes propres stations. Tu peux de nouveau construire autour.",
- "Rückmeldung": "Retour",
+ "Rückmeldung": "Avis",
  "Fehler": "Bug",
  "Bedienung": "Commandes",
  "Idee": "Idée",
@@ -728,5 +728,6 @@
  "Akku sparen": "Économie batterie",
  "Bildrate": "Fréquence d'images",
  "Farbenblind-Modus": "Mode daltonien",
- "Vibration": "Vibration"
+ "Vibration": "Vibration",
+ "Weltraum-Strategie": "Stratégie spatiale"
 }
