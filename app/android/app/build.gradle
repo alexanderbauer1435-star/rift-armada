@@ -28,7 +28,7 @@ android {
             if (ks) {
                 storeFile file(ks)
                 storePassword envOr('RA_KEYSTORE_PASSWORD', '')
-                keyAlias envOr('RA_KEY_ALIAS', 'upload')
+                keyAlias envOr('RA_KEY_ALIAS', 'riftarmada')
                 keyPassword envOr('RA_KEY_PASSWORD', '')
             }
         }
