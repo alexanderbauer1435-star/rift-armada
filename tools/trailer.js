@@ -4,7 +4,7 @@
 const { chromium } = require('playwright'); const fs = require('fs'), path = require('path');
 const F = path.resolve(process.argv[2] || 'build/rift-armada.html');
 const ONLY = process.argv[3] ? process.argv[3].split(',') : null;
-const OUT = path.join(__dirname, 'trailer'), FPS = 30;
+const OUT = path.join(__dirname, 'trailer'), FPS = 15;   /* aufgenommen mit 15, im Video auf 30 verdoppelt (ohne GPU dauert ein Bild 15 s) */
 const CAP_CSS = `#cap{position:fixed;left:0;right:0;top:9%;text-align:center;z-index:99;pointer-events:none;font-family:"Barlow Condensed",sans-serif;font-weight:600;color:#fff;letter-spacing:.06em;text-shadow:0 2px 12px #000,0 0 30px rgba(0,0,0,.8)}
 #cap b{display:block;font-size:44px;text-transform:uppercase}#cap i{display:block;font-style:normal;font-size:22px;color:#8fe3ff;letter-spacing:.12em;margin-top:6px}`;
 
@@ -50,8 +50,9 @@ async function scene(b, name, gfx, setup, sec, cap, sub, opt) {
     g.reveals.push({ x: cx, y: cy, r: 2200, owner: 0, until: 1e9 });
     execCmd(g, { t: 'amove', p: 0, u: A.map(u => u.id), x: cx + 500, y: cy });
     execCmd(g, { t: 'amove', p: 1, u: M.map(u => u.id), x: cx - 500, y: cy });
-    UI.speed = 1; R.cam.z = 0.62; R.center(cx - 120, cy);
-  }, 7, 'Command the Armada', 'Real-time fleet battles in full 3D', { hideHud: true, each: i => { R.cam.z = 0.62 + i * 0.0012; R.center(UI.g.map.w / 2 - 120 + i * 0.6, UI.g.map.h / 2); } });
+    for (let i = 0; i < 3000 && !g.ships.some(u => u.hull < u.hullMax * 0.97); i++) { stepGame(g); g.ev.length = 0; }
+    UI.speed = 1; R.cam.z = 0.72; R.center(cx, cy);
+  }, 5, 'Command the Armada', 'Real-time fleet battles in full 3D', { hideHud: true, each: i => { R.cam.z = 0.72 + i * 0.002; const g = UI.g; let sx = 0, sy = 0, n = 0; for (const u of g.ships) if (!u.dead) { sx += u.x; sy += u.y; n++; } if (n) R.center(sx / n, sy / n); } });
 
   /* 2. Fünf Fraktionen: Brood gegen Legion und Nexus */
   await scene(b, 'factions', '3d', () => {
@@ -64,8 +65,9 @@ async function scene(b, name, gfx, setup, sec, cap, sub, opt) {
     for (const q of g.players) for (let i = 0; i < q.explored.length; i++) q.explored[i] = 1;
     g.reveals.push({ x: cx, y: cy, r: 2200, owner: 0, until: 1e9 });
     fl.forEach((arr, o) => execCmd(g, { t: 'amove', p: o, u: arr.map(u => u.id), x: cx, y: cy }));
-    R.cam.z = 0.66; R.center(cx, cy);
-  }, 6, 'Five Factions', 'Alliance · Mars · Golden Legion · Nexus · Brood', { hideHud: true, each: i => { R.cam.z = 0.66 + i * 0.0015; } });
+    for (let i = 0; i < 3000 && !g.ships.some(u => u.hull < u.hullMax * 0.97); i++) { stepGame(g); g.ev.length = 0; }
+    R.cam.z = 0.7; R.center(cx, cy);
+  }, 4, 'Five Factions', 'Alliance · Mars · Golden Legion · Nexus · Brood', { hideHud: true, each: i => { R.cam.z = 0.7 + i * 0.003; } });
 
   /* 3. Lahmlegen und Entern */
   await scene(b, 'board', '3d', () => {
@@ -81,7 +83,7 @@ async function scene(b, name, gfx, setup, sec, cap, sub, opt) {
     /* bis kurz vor dem Ausfall vorspulen, dann filmen */
     for (let i = 0; i < 4000 && !t.crip; i++) { stepGame(g); if (Math.max(t.sub.drive, t.sub.wpn, t.sub.shield) < 0.3) break; g.ev.length = 0; }
     window.__tr = { t: t.id, tr: tr.id }; R.cam.z = 1.05; R.center(1640, 1600); UI.speed = 1;
-  }, 9, 'Disable. Board. Capture.', 'Shoot out engines, weapons and shields – then send in the marines', { hideHud: true, each: i => { const g = UI.g, t = g.byId.get(window.__tr.t); if (t && t.crip && !window.__tr.sent) { window.__tr.sent = 1; issue({ t: 'board', u: [window.__tr.tr], e: t.id }); } if (window.__tr.sent) UI.speed = 3; if (t) R.center(t.x - 60, t.y + 20); } });
+  }, 7, 'Disable. Board. Capture.', 'Shoot out engines, weapons and shields – then send in the marines', { hideHud: true, each: i => { const g = UI.g, t = g.byId.get(window.__tr.t); if (t && t.crip && !window.__tr.sent) { window.__tr.sent = 1; issue({ t: 'board', u: [window.__tr.tr], e: t.id }); } if (window.__tr.sent) UI.speed = 4; else UI.speed = 2; if (t) R.center(t.x - 60, t.y + 20); } });
 
   /* 4. Basis bauen: Werft mit Rollensymbolen */
   await scene(b, 'base', '3d', () => {
@@ -90,6 +92,6 @@ async function scene(b, name, gfx, setup, sec, cap, sub, opt) {
     for (let i = 0; i < 1800; i++) { stepGame(g); g.ev.length = 0; }
     const y = g.bldgs.find(b => b.owner === 0 && b.role === 'yard') || g.bldgs.find(b => b.owner === 0);
     UI.sel.clear(); UI.selB = y.id; hudSel(); R.cam.z = 0.85; R.center(y.x + 120, y.y + 60);
-  }, 5, 'Build Your Base', 'Stations, research, doctrines and superweapons', { each: i => { R.cam.z = 0.85 + i * 0.001; } });
+  }, 3, 'Build Your Base', 'Stations, research, doctrines and superweapons', { each: i => { R.cam.z = 0.85 + i * 0.002; } });
   await b.close();
 })();
