@@ -227,6 +227,7 @@ export function event(e, g, view) {
     case 'lance': line(e.x, e.y, e.tx, e.ty, 5, '#ffffff', 0.45, QMODE.flat, H.proj, H.proj, 1.6, 0.95); line(e.x, e.y, e.tx, e.ty, 14, '#8fe3ff', 0.6, QMODE.flat, H.proj, H.proj, 1, 0.5); flash(e.tx, e.ty, 40, '#dff4ff', 0.4, H.proj, TILE.star, 1.2); spark(e.tx, e.ty, 20, 200, '#bfe9ff', 0.6, H.proj); shake(5); break;
     case 'board': line(e.fx, e.fy, e.x, e.y, 2, '#ffb86b', 0.5, QMODE.flat, H.proj, H.proj, 1, 0.8); spark(e.x, e.y, 10, 60, '#ffd27a', 0.6, H.proj); break;
     case 'captured': ring(e.x, e.y, 50, pc(e.to), 1, 3); spark(e.x, e.y, 14, 90, '#ffffff', 0.6, H.proj); break;
+    case 'crippled': smoke(e.x, e.y, 10, 5, 2, H.proj); spark(e.x, e.y, 14, 70, '#8fe8ff', 0.6, H.proj); break;
     case 'derelict': smoke(e.x, e.y, 12, 6, 2, H.proj); spark(e.x, e.y, 8, 50, '#ffd27a', 0.5, H.proj); break;
     case 'recrew': ring(e.x, e.y, 30, '#7ddc6b', 0.6, 2); break;
     case 'heal': if (detail > 1) spark(e.x + rnd(-0.5, 0.5) * (e.r || 10), e.y + rnd(-0.5, 0.5) * (e.r || 10), 2, 25, '#9fffcf', 0.4, H.proj + 3, 1.2, 1.5); break;

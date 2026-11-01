@@ -385,6 +385,7 @@ R.consume = function (evs) {
       case 'board': { const bf = g.players[e.owner] ? g.players[e.owner].faction : ''; fxLine(e.fx, e.fy, e.x, e.y, 0.5, 'rgba(255,184,107,0.8)', 2); fxSpark(e.x, e.y, 10, 60, bf === 'brood' ? '#ff9ad6' : '#ffd27a', 0.6); fxText(e.x, e.y - 24, L(bf === 'brood' ? '+{0} Parasiten' : bf === 'nexus' ? '+{0} Drohnen' : '+{0} Marines', Math.round(e.n)), '#ffb86b'); break; }   /* Fassung 22: je Fraktion */
       case 'mineboom': fxRing(e.x, e.y, e.r, 0.6, '#ffb060', 3); fxFlash(e.x, e.y, e.r * 0.6, 0.3, '#ffe0a0'); fxDebris(e.x, e.y, 8, 120, '#c9b9a0'); break;   /* Fassung 22 */
       case 'captured': fxRing(e.x, e.y, 50, 1, pcol(e.to), 3); fxText(e.x, e.y - 30, L('Geentert'), pcol(e.to)); fxSpark(e.x, e.y, 14, 90, '#ffffff', 0.6); break;
+      case 'crippled': fxSmoke(e.x, e.y, 5, 10, 2); fxSpark(e.x, e.y, 14, 70, '#8fe8ff', 0.6); break;
       case 'derelict': fxSmoke(e.x, e.y, 6, 12, 2); fxSpark(e.x, e.y, 8, 50, '#ffd27a', 0.5); break;
       case 'recrew': fxRing(e.x, e.y, 30, 0.6, '#7ddc6b', 2); break;
       case 'heal': if (R.detail > 1) fxSpark(e.x + (Math.random() - 0.5) * e.r, e.y + (Math.random() - 0.5) * e.r, 2, 25, '#9fffcf', 0.4); break;
@@ -451,7 +452,7 @@ function drawShip(ctx, u, alpha) {
   ctx.save(); ctx.translate(u.x, u.y); ctx.rotate(u.ang);
   if (alpha !== undefined) ctx.globalAlpha = alpha;
   /* Triebwerke: Glühen und bei Mars lange Fackel, Länge nach Fahrt; G-Rausch und Sprint strecken die Flamme */
-  const boost = u.abT && u.abT.grush > 0 ? 1.8 : u.sprint > 0 ? 1.4 : 1, k = Math.min(1.6, u.v / Math.max(1, def.speed)) * boost, eng = u.derelict ? [] : (ENGINES[u.type] || []);
+  const boost = u.abT && u.abT.grush > 0 ? 1.8 : u.sprint > 0 ? 1.4 : 1, k = Math.min(1.6, u.v / Math.max(1, def.speed)) * boost, eng = u.derelict || u.crip ? [] : (ENGINES[u.type] || []);
   if (k > 0.05 || mars) ctx.globalCompositeOperation = 'lighter';
   if (k > 0.05 || mars) for (const [ex0, ey0, st] of eng) {
     const ex = ex0 * SHIP_VIS, ey = ey0 * SHIP_VIS, flick = 1 + 0.18 * Math.sin(R.time * 37 + u.id * 1.7), len = (mars ? 16 : 7) * st * (0.2 + k) * flick, rr = def.r * 0.42 * st;
@@ -820,6 +821,7 @@ function frame2D(alpha, dt) {
     if (u.def.role === 'fighter') continue;
     /* Zustände: Wrack (Funken), Schildkuppel, Unverwundbar, Waffenstillstand, Markierung, Enterkampf */
     if (u.dormant) glowAt(ctx, u.x, u.y, u.def.r * 1.8, '#ffd27a', 0.18 + 0.1 * Math.sin(R.time * 2 + u.id));
+    if (u.crip && Math.random() < 0.08) { fxSpark(u.x + (Math.random() - 0.5) * u.def.r, u.y + (Math.random() - 0.5) * u.def.r, 3, 40, Math.random() < 0.5 ? '#ffd27a' : '#8fe8ff', 0.5); if (Math.random() < 0.3) fxSmoke(u.x, u.y, 1, 8, 1.5); }
     if (u.derelict) { if (R.detail > 1 && Math.random() < 0.04) fxSpark(u.x + (Math.random() - 0.5) * u.def.r, u.y + (Math.random() - 0.5) * u.def.r, 2, 30, '#ffd27a', 0.5); }
     if (u.acid && R.detail > 1 && Math.random() < 0.35) fxSpark(u.x + (Math.random() - 0.5) * u.def.r, u.y + (Math.random() - 0.5) * u.def.r, 1, 15, '#b4ff3c', 0.5);
     if (u.para) { const n = Math.min(4, u.para.n); ctx.fillStyle = '#ff9ad6'; for (let i = 0; i < n; i++) { const a = R.time * 2 + i * TAU / n; ctx.beginPath(); ctx.arc(u.x + Math.cos(a) * u.def.r * 0.8, u.y + Math.sin(a) * u.def.r * 0.8, 2 / cam.z + 0.8, 0, TAU); ctx.fill(); } }
@@ -1087,6 +1089,9 @@ function drawOverlay3D(g, inV, lowZ, vp) {
   for (const u of g.ships) {
     if (u.dead || !R.visible(u)) continue;
     if (u.def.flag && FCMD[u.def.f] && !u.derelict && inV(u.x, u.y, FCMD_R)) { const F = FCMD[u.def.f]; ring(u.x, u.y, FCMD_AURA, F.col, 1.2, { dash: 1, alpha: 0.18 }); if (u.abT[F.ab] > 0) { ring(u.x, u.y, FCMD_R, F.col, 2.5, { alpha: 0.35 + 0.25 * Math.sin(R.time * 4) }); disc(u.x, u.y, FCMD_R, F.col, 0.05); } }
+    /* Fassung 23: manövrierunfähig (bernsteinfarben pulsierend, Entern möglich) und gekapert auf dem Weg zur Werft */
+    if (u.crip && inV(u.x, u.y, 80)) { ring(u.x, u.y, u.def.r + 14, '#ffb347', 2, { dash: 1, alpha: 0.45 + 0.3 * Math.sin(R.time * 4 + u.id) }); if (!lowZ) hud.push({ k: 'text', x: u.x, y: u.y - u.def.r - 18, txt: '⚠ ' + Math.max(0, Math.ceil(u.crip - g.time)) + ' s', col: '#ffb347' }); }
+    if (u.limp && inV(u.x, u.y, 80)) ring(u.x, u.y, u.def.r + 12, '#7df9a0', 1.4, { dash: 1, alpha: 0.5 });
     if (u.fcT > 0 && FCMD[u.fc] && inV(u.x, u.y, 60)) ring(u.x, u.y, u.def.r + 9, FCMD[u.fc].col, 1.5, { alpha: 0.3 + 0.2 * Math.sin(R.time * 6 + u.id) });
   }
   /* Massetreiber: Warnkreis am Ziel, Masse im Flug */

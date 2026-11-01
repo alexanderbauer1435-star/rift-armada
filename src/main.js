@@ -136,8 +136,18 @@ function perfWatch(dt) {
   PERF.acc += dt; PERF.n++;
   if (PERF.acc < 8) return;
   const avg = PERF.acc / PERF.n; PERF.acc = 0; PERF.n = 0;
-  PERF.slow = avg > 0.045 ? PERF.slow + 1 : 0;
-  if (PERF.slow >= 2) { PERF.done = true; SET.gfx = '2d'; applySet(); savePrefs(); toast(L('Das Gerät ist für 3D zu langsam – auf 2D umgestellt (Einstellungen → Grafik).'), 'warn', 5000); }
+  PERF.slow = avg > 1 / 40 ? PERF.slow + 1 : 0;
+  if (PERF.slow >= 2) { PERF.done = true; perfHint(Math.round(1 / avg)); }
+}
+/* Fassung 23: unter 40 Bildern je Sekunde in 3D einen Wechsel auf 2D anbieten (nicht selbst umstellen) */
+function perfHint(fps) {
+  const el = document.createElement('div'); el.id = 'perfHint'; el.className = 'win';
+  el.innerHTML = '<div>' + esc(L('3D läuft hier mit nur {0} Bildern je Sekunde. 2D ist auf diesem Gerät flüssiger.', fps)) + '</div><div class="row"><button class="key" id="phYes">' + esc(L('Auf 2D wechseln')) + '</button><button class="key" id="phNo">' + esc(L('3D behalten')) + '</button></div>';
+  document.body.appendChild(el);
+  const close = () => { el.remove(); SET.gfxUser = true; savePrefs(); };
+  el.querySelector('#phYes').addEventListener('click', () => { SET.gfx = '2d'; applySet(); close(); toast(L('Auf 2D umgestellt (Einstellungen → Grafik).'), 'good', 3500); });
+  el.querySelector('#phNo').addEventListener('click', close);
+  setTimeout(() => { if (el.isConnected) el.remove(); }, 20000);
 }
 function frame(t) {
   requestAnimationFrame(frame);

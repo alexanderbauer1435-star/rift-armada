@@ -28,7 +28,8 @@ function shipCost(p, def) {
 }
 /* Einnahmen gutschreiben: die Brood macht aus allem Biomasse (Eis) */
 function earn(p, kind, amt) { if (kind === 'ore' && !p.F.bio) p.ore += amt; else p.ice += amt; p.stats.earned += amt; }
-function bcost(p, def) { const c = cost(def.lv[0].cost); if (def.role === 'relay' && p.tfx.nodeCost !== 1) return { ice: Math.round(c.ice * p.tfx.nodeCost), ore: Math.round(c.ore * p.tfx.nodeCost) }; return c; }
+const TUR_ROLES = { turret: 1, flak: 1, spore: 1 }, TUR_FREE = 7, TUR_MORE = 1.15;
+function bcost(p, def) { const c = cost(def.lv[0].cost); if (TUR_ROLES[def.role] && (p.turN || 0) >= TUR_FREE) return { ice: Math.round(c.ice * TUR_MORE), ore: Math.round(c.ore * TUR_MORE) }; if (def.role === 'relay' && p.tfx.nodeCost !== 1) return { ice: Math.round(c.ice * p.tfx.nodeCost), ore: Math.round(c.ore * p.tfx.nodeCost) }; return c; }
 function canPay(p, c) { c = cost(c); return p.ice >= c.ice && p.ore >= c.ore; }
 function pay(p, c) { c = cost(c); p.ice -= c.ice; p.ore -= c.ore; p.stats.spent += c.ice + c.ore; }
 function refund(p, c, f) { c = cost(c); p.ice += Math.floor(c.ice * f); p.ore += Math.floor(c.ore * f); }
@@ -309,6 +310,7 @@ function cmdBuild(g, pi, uids, role, x, y, to) {
   pay(p, c);
   const b = addBldg(g, role, pi, x, y, false);
   b.paid = { ice: c.ice, ore: c.ore };
+  if (TUR_ROLES[role]) p.turN = (p.turN || 0) + 1;
   /* Fassung 22: Fundament – dieselbe Rolle am Platz einer eben abgerissenen Station baut schneller */
   const fi = g.found ? g.found.findIndex(f => f.owner === pi && f.role === role && g.time <= f.until && hyp(f.x - x, f.y - y) <= FOUND_SNAP) : -1;
   if (fi >= 0) { b.fast = FOUND_RATE; g.found.splice(fi, 1); }
@@ -620,6 +622,7 @@ function execCmd(g, c) {
     case 'explore': { const us = shipsOf(g, pi, c.u).filter(u => u.def.role !== 'builder' && u.def.role !== 'tanker' && !u.def.node); if (!us.length) return 'Nicht möglich'; for (const u of us) { u.hold = false; u.o = { t: 'explore' }; u.path = null; u.tgt = 0; } return null; }
     case 'hold': cmdHold(g, shipsOf(g, pi, c.u), c.on); return null;
     case 'stance': cmdStance(g, shipsOf(g, pi, c.u), c.v); return null;
+    case 'fmode': for (const u of shipsOf(g, pi, c.u)) u.fm = c.v ? 1 : 0; return null;   /* Fassung 23: Feuermodus Zerstören/Lahmlegen */
     case 'group': cmdGroup(g, shipsOf(g, pi, c.u), c.n); return null;
     case 'build': return cmdBuild(g, pi, c.u, c.role, c.x, c.y, c.to | 0);
     case 'buildrow': return cmdBuildRow(g, pi, c.u, c.role, c.pts); /* Fassung 22 */
@@ -1044,6 +1047,9 @@ function stepGame(g) {
   const dt = STEP;
   g.tick++; g.time += dt;
   rebuildGrid(g);
+  /* Fassung 23: Geschütze je Spieler zählen (ab dem 8. kostet jedes weitere 15 % mehr) */
+  for (const p of g.players) p.turN = 0;
+  for (const b of g.bldgs) if (!b.dead && TUR_ROLES[b.role] && g.players[b.owner]) g.players[b.owner].turN++;
   if (g.tick % 6 === 1) updateVision(g);
   for (const p of g.players) {
     if (!p.alive) continue;
@@ -1179,7 +1185,7 @@ function applyRefit(g, u, id) {
 }
 /* Marines an Bord kämpfen gegen die Crew; ist sie besiegt, wechselt das Schiff (oder die Station) den Besitzer */
 function boardTick(g, t, dt) {
-  const att = g.players[t.boardBy], rate = 2.2 * dt * (att ? att.tfx.board : 1);
+  const att = g.players[t.boardBy], rate = 2.2 * dt * (att ? att.tfx.board : 1) * (t.crip ? 3 : 1);   /* Fassung 23: eine manövrierunfähige Crew wehrt sich kaum */
   if (t.crew > 0) { const k = Math.min(t.crew, t.boarding, rate * Math.max(1, Math.min(t.crew, t.boarding) / 10)); t.crew -= k; t.boarding -= k * 0.8; }
   if (t.boarding <= 0) { t.boarding = 0; t.boardBy = -1; ev(g, 'boardfail', { x: t.x, y: t.y, owner: t.owner }); return; }
   if (t.crew <= 0) {
@@ -1194,11 +1200,13 @@ function captureEntity(g, t, from, to) {
   if (t.k === 1) {
     if (!t.derelict) g.players[from].shipCount -= t.def.cp;
     g.players[to].shipCount += t.def.cp;
+    const wasCrip = !!t.crip;
     t.owner = to; t.o = { t: 'idle' }; t.hx = t.x; t.hy = t.y; t.path = null; t.tgt = 0; t.grp = 0; t.derelict = false; t.marked = 0; t.truce = 0;
     if (t.mine) { const n = g.byId.get(t.mine); if (n) n.miners = Math.max(0, n.miners - 1); t.mine = 0; }
     if (t.dk) { const ref = g.byId.get(t.dk); if (ref) ref.docks = Math.max(0, ref.docks - 1); t.dk = 0; }
     if (t.hangar) { for (const id of t.hangar.ids) { const f = g.byId.get(id); if (f && !f.dead) removeShip(g, f); } t.hangar.ids = []; t.hangar.n = 0; }
     g.players[to].stats.kills++;
+    if (wasCrip) limpHome(g, t);
   } else {
     t.owner = to; t.q.length = 0; t.qp = 0; t.rally = null; t.tgt = 0; t.give = 0; t.givep = 0;
     recalcPower(g, from); recalcPower(g, to); recalcCp(g, from); recalcCp(g, to);

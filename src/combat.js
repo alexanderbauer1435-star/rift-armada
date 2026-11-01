@@ -12,6 +12,7 @@ function maxRange(def) { let r = 0; for (const w of def.wpn) if (w.kind !== 'pd'
 /* kürzeste Reichweite der Hauptwaffen: so nah muss ein Schiff heran, damit alle Waffen tragen */
 function keepRange(def) { if (def.keep) return def.keep; let r = 1e9; for (const w of def.wpn) if (w.kind !== 'pd') r = Math.min(r, w.range); return r === 1e9 ? 0 : r * 0.8; }
 function minRange(def) { let r = 0; for (const w of def.wpn) if (w.minR) r = Math.max(r, w.minR); return r; }
+const CRIP_SUBS = ['drive', 'wpn', 'shield'], CRIP_AT = 0.06, CRIP_HULL = 0.33, CRIP_T = 75, CRIP_CHANCE = 0.1, LIMP_SPEED = 0.45;
 function armed(u) { for (const w of u.def.wpn) if (w.kind !== 'pd') return true; return false; }
 function tdist(s, t) { return hyp(t.x - s.x, t.y - s.y) - (t.k === 2 ? t.def.r * 0.8 : t.def.r * 0.5); }
 /* Wert eines Ziels bei der Zielwahl: Kampfschiffe vor Frachtern, nahe vor fernen */
@@ -26,7 +27,7 @@ function acquire(g, s, r, fn) {
   const pi = s.owner;
   let best = null, bs = 1e9;
   nearShips(g, s.x, s.y, r + 40, u => {
-    if (!foes(g, pi, u.owner) || !canSee(g, pi, u)) return false;
+    if (!foes(g, pi, u.owner) || !canSee(g, pi, u) || u.crip) return false;   /* Fassung 23: manövrierunfähige Schiffe nicht von selbst beschießen */
     const d = tdist(s, u);
     if (d > r) return false;
     if (fn && !fn(u)) return false;
@@ -80,6 +81,7 @@ function steer(g, u, px, py, dt, arrive, spCap) {
   const diff = Math.abs(angDiff(want, u.ang));
   let top = def.speed * tf.speed * (u.cls === 0 && inField(g.map, u.x, u.y) ? 0.5 : 1) * (0.3 + 0.7 * u.sub.drive) * (u.abT.grush > 0 || u.abT.lunge > 0 ? 2 : 1) * (u.sprint > 0 ? 1.6 : 1) * (u.frenzy > 0 ? 1.4 : 1) * (u.crus > 0 ? 1.3 : 1) * (u.pull ? 0.5 : 1) * (u.rfS || 1) * fcMul(g, u, 'speed') * (u.cov ? COVER_SLOW : 1);   /* Fassung 22: Trümmerfeld bremst */
   if (u.jamT > g.time) top *= u.jamK;   // Fassung 22: Störsender
+  if (u.limp) top *= LIMP_SPEED;   // Fassung 23: gekapertes Wrack schleppt sich zur Werft
   if (spCap) top = Math.min(top, spCap);
   let goal = diff < 1.1 ? top * (1 - diff * 0.45) : top * 0.25;
   if (arrive) goal = Math.min(goal, Math.sqrt(2 * def.accel * Math.max(0, d - 2)) + 4);
@@ -218,6 +220,7 @@ function updateShip(g, u, dt) {
   if (def.role === 'fighter') { fighterStep(g, u, dt); return; }
   if (u.boarding > 0) boardTick(g, u, dt);
   if (u.derelict) { derelictStep(g, u, dt); return; }
+  if (u.crip) { cripStep(g, u, dt); return; }
   shipUpkeep(g, u, dt);
   if (u.cocoon) { brake(u, dt); u.lx = u.x; u.ly = u.y; return; }
   if ((g.tick + u.id) % 15 === 0 && (def.ab || def.abs || def.ab2)) abilityAuto(g, u);
@@ -293,7 +296,7 @@ function updateShip(g, u, dt) {
       const t = g.byId.get(o.tid);
       /* Artillerie: eine bekannte Station bleibt Ziel, auch wenn sie gerade nicht in Sicht ist */
       if (def.art && t && !t.dead && (t.k === 2 ? artKnown(g, u.owner, t) : t.k === 6 || t.k === 1 && canSee(g, u.owner, t))) { u.tgt = 0; o.x = t.x; o.y = t.y; artMove(g, u, t, dt); break; }
-      if (lostTgt(g, u, t)) {
+      if (lostTgt(g, u, t) || (t && t.k === 1 && t.crip && (o.guard || o.back || u.fm === 1))) {
         if (o.back) { u.o = o.back; u.path = null; u.tgt = 0; }
         else if (o.guard) { setIdle(u); }
         else if (t && t.dead) setIdle(u);
@@ -389,7 +392,7 @@ function updateShip(g, u, dt) {
     u.x = clamp(nx, 8, m.w - 8); u.y = clamp(ny, 8, m.h - 8);
     if (u.v > 15 && prog < u.v * dt * 0.2) { u.stuck += dt; if (u.stuck > 1.2) { u.path = null; u.stuck = 0; u.ang += 0.6; u.pt = 0; } } else u.stuck = 0;
   }
-  if (def.wpn.length && u.stance !== 2 && u.dis <= 0 && u.truce <= 0) fireAll(g, u, dt);
+  if (def.wpn.length && u.stance !== 2 && u.dis <= 0 && u.truce <= 0 && !u.limp) fireAll(g, u, dt);
 }
 /* Träger: Jäger nachbauen und verwalten */
 function hangarMax(g, u) { return u.def.hangar + (u.def.hero ? g.players[u.owner].tfx.drones : 0); }
@@ -525,6 +528,7 @@ function fireAll(g, s, dt) {
     }
     const bs = s.k === 1 && s.abT.broadside > 0, rng = s.k === 1 && s.jamT > g.time ? w.range * s.jamR : w.range;   // Fassung 22: Störsender
     let t = s.tgt ? g.byId.get(s.tgt) : null;
+    if (t && t.k === 1 && t.crip && !(s.k === 1 && s.o.t === 'attack' && s.o.tid === t.id && !s.o.guard && !s.o.back && s.fm !== 1)) { t = null; s.tgt = 0; }
     if (t && (t.dead || t.k === 3 || !(foes(g, s.owner, t.owner) || t.k === 6) || tdist(s, t) > rng || !(bs || inArc(s, w, t)) || !canSee(g, s.owner, t))) t = null;
     if (!t) {
       if ((g.tick + s.id + i) % 3) continue;
@@ -552,7 +556,7 @@ function artTarget(g, s, w) {
   let best = null, bs = 1e9;
   for (const b of g.bldgs) { if (!ok(b)) continue; const sc = tdist(s, b) - (b.role === 'turret' || b.role === 'flak' || b.role === 'spore' ? 400 : 0); if (sc < bs) { bs = sc; best = b; } }
   /* keine Station in Reichweite: sichtbare Schiffe (ohne Vorhalt – die Granate fliegt Sekunden, wer fährt, weicht aus) */
-  if (!best) { const okS = u => !u.dead && !u.derelict && u.def.role !== 'fighter' && foes(g, s.owner, u.owner) && canSee(g, s.owner, u) && (() => { const d = tdist(s, u); return d <= w.range && d >= w.minR * 0.9; })();
+  if (!best) { const okS = u => !u.dead && !u.derelict && !u.crip && u.def.role !== 'fighter' && foes(g, s.owner, u.owner) && canSee(g, s.owner, u) && (() => { const d = tdist(s, u); return d <= w.range && d >= w.minR * 0.9; })();
     nearShips(g, s.x, s.y, w.range + 40, u => { if (!okS(u)) return false; const sc = tdist(s, u) + u.v * 6 - (u.def.cls === 'l' ? 300 : u.def.cls === 'm' ? 150 : 0); if (sc < bs) { bs = sc; best = u; } return false; }); }
   s.artT = best ? best.id : 0; return best;
 }
@@ -795,8 +799,9 @@ function damage(g, t, amt, kind, src, owner, sx, sy, w, bypass) {
   /* Missionen: Hüllen-Untergrenze (das Schiff wird gestellt, nicht zerstört) */
   if (t.minHull && t.hull < t.minHull) t.hull = t.minHull;
   if (t.k === 2 && p && g.time - p.hurtT > 12 && owner >= 0 && owner !== t.owner && !g.players[owner].pirate) { p.hurtT = g.time; p.hurtX = t.x; p.hurtY = t.y; ev(g, 'attack', { owner: t.owner, x: t.x, y: t.y }); }
+  if (t.hull <= 0 && t.k === 1 && !t.crip && !t.derelict && t.crewMax && t.def.role !== 'fighter' && !t.def.hero && !t.minHull && t.def.cls !== 's' && g.rng() < CRIP_CHANCE) { t.hull = t.hullMax * 0.08; cripple(g, t, owner); return; }   /* Fassung 23: manchmal bleibt ein Wrack mit Crew übrig */
   if (t.hull <= 0) { kill(g, t, src, owner); return; }
-  if (t.k === 1 && t.crewMax && !t.derelict) { t.crew -= t.crewMax * d / t.hullMax * (t.shieldMax ? 0.45 : 0.25); if (t.crew <= 0) makeDerelict(g, t); }
+  if (t.k === 1 && t.crewMax && !t.derelict && !t.crip) { t.crew -= t.crewMax * d / t.hullMax * (t.shieldMax ? 0.45 : 0.25); if (t.crew <= 0) makeDerelict(g, t); }
   else if (t.k === 2 && t.crewMax) t.crew = Math.max(t.crewMax * 0.2, t.crew - t.crewMax * d / t.hullMax * 0.3);
 }
 function shieldHit(g, t, sx, sy) { if ((g.tick + t.id) % 2 === 0) ev(g, 'shield', { x: t.x, y: t.y, r: t.k === 2 ? t.def.r * 1.1 : t.def.r * 1.25, ang: datan2(sy - t.y, sx - t.x), owner: t.owner }); }
@@ -810,6 +815,14 @@ function subDamage(g, t, d, src) {
      geht dort nur ein kleiner Teil hinein */
   const pts = t.hullMax * SUB_FRAC, arm = t.shieldMax ? 1 : 0.4;
   const aimed = src && src.k === 1 && src.o && src.o.t === 'attack' && src.o.tid === t.id && src.o.sub;
+  /* Fassung 23: Feuermodus »Lahmlegen« – Treffer gehen in Antrieb, Waffen und Schilde (jeweils das stärkste), die Hülle
+     nimmt nur ein Drittel und fällt dadurch nicht unter 12 %. Sind alle drei unten, treibt das Schiff manövrierunfähig. */
+  if (src && src.k === 1 && src.fm === 1 && t.crewMax && t.def.role !== 'fighter' && !t.crip) {
+    let id = 'drive'; for (const k of CRIP_SUBS) if (t.sub[k] > t.sub[id]) id = k;
+    t.sub[id] = Math.max(0, t.sub[id] - d * SUB_HIT * (t.shieldMax ? 1 : 0.7) / pts);
+    if (CRIP_SUBS.every(k => t.sub[k] <= CRIP_AT)) { cripple(g, t, src.owner); return 0; }
+    return Math.max(0, Math.min(d * CRIP_HULL, t.hull - t.hullMax * 0.12));
+  }
   if (aimed) { t.sub[aimed] = Math.max(0, t.sub[aimed] - d * SUB_HIT * (t.shieldMax ? 1 : 0.7) / pts); return d * 0.6; }
   const id = SUBS[(g.tick + t.id) % 5];
   t.sub[id] = Math.max(0, t.sub[id] - d * 0.2 * arm / pts);
@@ -837,7 +850,8 @@ function shipUpkeep(g, u, dt) {
   if (u.fcT > 0 || u.faT > g.time) { const rg = (u.fcT > 0 && FCMD[u.fc] ? FCMD[u.fc].cmd.regen || 0 : 0) + (u.faT > g.time && FCMD[u.fa] ? FCMD[u.fa].aura.regen || 0 : 0); if (rg && u.hull < u.hullMax) u.hull = Math.min(u.hullMax, u.hull + u.hullMax * rg * step); }
   /* Selbstreparatur der Subsysteme, an Werft oder Basis fünfmal so schnell */
   const yard = nearOwnYard(g, u, 160), rate = SUB_REPAIR * (yard ? 5 : 1) * step;
-  for (const id of SUBS) if (u.sub[id] < 1) u.sub[id] = Math.min(1, u.sub[id] + rate);
+  if (!u.limp || yard) for (const id of SUBS) if (u.sub[id] < 1) u.sub[id] = Math.min(1, u.sub[id] + rate);
+  if (u.limp && yard && u.sub.drive >= 0.9 && u.sub.wpn >= 0.9) { u.limp = 0; ev(g, 'repaired', { x: u.x, y: u.y, owner: u.owner, id: u.id, name: u.def.name }); }
   /* Fassung 22: erfahrene Crews flicken die Hülle außer Gefecht selbst (5 % je Minute und Rang) */
   if (u.rank && u.hull < u.hullMax && g.time - (u.hitT === undefined ? -99 : u.hitT) > 10 && g.time - (u.fireT === undefined ? -99 : u.fireT) > 5) u.hull = Math.min(u.hullMax, u.hull + u.hullMax * RANK_REGEN / 60 * u.rank * step);
   /* Lebenserhaltung: unter 50 % schwindet die Crew */
@@ -856,6 +870,31 @@ function makeDerelict(g, u) {
   if (u.mine) { const n = g.byId.get(u.mine); if (n) n.miners = Math.max(0, n.miners - 1); u.mine = 0; }
   if (u.dk) { const ref = g.byId.get(u.dk); if (ref) ref.docks = Math.max(0, ref.docks - 1); u.dk = 0; }
   ev(g, 'derelict', { x: u.x, y: u.y, owner: u.owner, name: u.def.name, id: u.id });
+}
+/* Fassung 23: manövrierunfähig – Antrieb, Waffen und Schilde ausgefallen, die Crew lebt noch. Das Schiff treibt langsam
+   und dreht sich, feuert nicht, wird von niemandem mehr von selbst beschossen und kann geentert werden (die Crew wehrt
+   sich nur schwach). Nach CRIP_T Sekunden hat die Crew das Nötigste geflickt und das Schiff kommt wieder in Fahrt. */
+function cripple(g, u, by) {
+  if (u.crip || u.derelict || u.dead) return;
+  u.crip = g.time + CRIP_T; u.cripBy = by; u.shield = 0; u.beams = null; u.tgt = 0; u.o = { t: 'idle' }; u.path = null; u.hx = u.x; u.hy = u.y;
+  u.spin = (((u.id * 7919) % 100) / 100 - 0.5) * 0.5; u.v = Math.max(u.v, 14); for (const k of CRIP_SUBS) u.sub[k] = Math.min(u.sub[k], CRIP_AT);
+  for (const id in u.abT) u.abT[id] = 0;
+  for (const s of g.ships) if (!s.dead && s.k === 1 && s.o && s.o.t === 'attack' && s.o.tid === u.id && (s.fm === 1 || s.o.guard || s.o.back)) { if (s.o.back) { s.o = s.o.back; s.path = null; } else setIdle(s); s.tgt = 0; }
+  ev(g, 'crippled', { x: u.x, y: u.y, owner: u.owner, by, name: u.def.name, id: u.id });
+}
+function cripStep(g, u, dt) {
+  u.v = Math.max(6, u.v - 4 * dt); u.ang += u.spin * dt;
+  u.x = clamp(u.x + dcos(u.ang) * u.v * dt, 8, g.map.w - 8); u.y = clamp(u.y + dsin(u.ang) * u.v * dt, 8, g.map.h - 8);
+  u.lx = u.x; u.ly = u.y; u.shield = 0;
+  for (const id in u.abcd) if (u.abcd[id] > 0) u.abcd[id] -= dt;
+  if (g.time >= u.crip) { u.crip = 0; for (const k of CRIP_SUBS) u.sub[k] = Math.max(u.sub[k], 0.3); u.o = { t: 'idle' }; u.hx = u.x; u.hy = u.y; ev(g, 'uncrippled', { x: u.x, y: u.y, owner: u.owner, id: u.id }); }
+}
+/* Fassung 23: ein gekapertes, manövrierunfähiges Schiff schleppt sich zur nächsten eigenen Werft */
+function limpHome(g, u) {
+  let best = null, bd = 1e9;
+  for (const b of g.bldgs) if (!b.dead && b.done && b.owner === u.owner && (b.role === 'yard' || b.role === 'base')) { const d = hyp(b.x - u.x, b.y - u.y); if (d < bd) { bd = d; best = b; } }
+  u.limp = 1; u.crip = 0; u.sub.drive = Math.max(u.sub.drive, 0.15); u.sub.wpn = 0; u.sub.shield = 0;
+  if (best) { const a = datan2(u.y - best.y, u.x - best.x); u.o = { t: 'move', x: best.x + dcos(a) * (best.def.r + 70), y: best.y + dsin(a) * (best.def.r + 70) }; u.path = null; }
 }
 function derelictStep(g, u, dt) {
   brake(u, dt);
@@ -996,7 +1035,7 @@ function abilityAuto(g, u) {
       case 'invuln': go = hurtFrac(u) < 0.35 && nearFoes(g, u, 400).length > 0; break;
       case 'massboard': go = nearFoes(g, u, ABIL.massboard.r).length >= 2; break;
       case 'dome': go = fighting || nearFoes(g, u, 300).length > 0; break;
-      case 'board': { if (!u.marines || (o.t !== 'attack' && o.t !== 'idle')) break; const f = nearFoes(g, u, 220, e => e.k === 1 && (e.derelict || e.crew < u.marines * 1.6)); if (f.length) abilityUse(g, u, 'board', f[0]); break; }
+      case 'board': { if (!u.marines || (o.t !== 'attack' && o.t !== 'idle')) break; const f = nearFoes(g, u, 220, e => e.k === 1 && (e.derelict || e.crip || e.crew < u.marines * 1.6)); if (f.length) abilityUse(g, u, 'board', f[0]); break; }
       case 'blink': go = o.t === 'attack' && near > 360 && near < 700; break;
       case 'fleetjump': go = (o.t === 'attack' || o.t === 'amove') && near > 500 && near < 1200 && nearAllies(g, u, ABIL.fleetjump.r).length >= 3; break;
       case 'revive': { let any = false; nearShips(g, u.x, u.y, ABIL.revive.r, e => { if (e.derelict && e.owner === u.owner && e.def.hero) any = true; return any; }); go = any; break; }

@@ -313,13 +313,13 @@ export function updateEntities(g, dt, t, view) {
     /* Lage: schweben, rollen in Kurven (aus der Kursänderung) */
     const da = dt > 0 ? angDiff(u.ang, pv.ang) / dt : 0; pv.ang = u.ang;
     const rollT = def.role === 'fighter' || def.swarm ? -da * 0.12 : -da * 0.22; pv.roll += (Math.max(-0.4, Math.min(0.4, rollT)) - pv.roll) * Math.min(1, dt * 6);
-    const hover = u.derelict ? -1.5 : Math.sin(t * 1.1 + u.id * 0.7) * (def.len < 40 ? 0.5 : 0.9);
+    const hover = u.derelict || u.crip ? -1.5 : Math.sin(t * 1.1 + u.id * 0.7) * (def.len < 40 ? 0.5 : 0.9);
     const yOff = (def.id === 'warden' && u.asleep) ? 20 : 0;
-    POS.set(u.x, hover + yOff, u.y); EUL.set(0, Math.PI / 2 - u.ang, u.derelict ? Math.sin(u.id) * 0.25 : pv.roll); QUAT.setFromEuler(EUL); SCL.set(1, 1, 1);
+    POS.set(u.x, hover + yOff, u.y); EUL.set(0, Math.PI / 2 - u.ang, u.derelict ? Math.sin(u.id) * 0.25 : u.crip ? Math.sin(t * 0.7 + u.id) * 0.35 : pv.roll); QUAT.setFromEuler(EUL); SCL.set(1, 1, 1);
     M4.compose(POS, QUAT, SCL);
     /* Flammen: Fahrt, G-Rausch, Sprint; keine bei Wracks und Ruhenden */
     let k = -1;
-    if (!u.derelict && !u.dormant) { const boost = u.abT && u.abT.grush > 0 ? 1.8 : u.sprint > 0 ? 1.4 : 1; k = Math.min(1.6, u.v / Math.max(1, def.speed)) * boost; }
+    if (!u.derelict && !u.dormant && !u.crip) { const boost = u.abT && u.abT.grush > 0 ? 1.8 : u.sprint > 0 ? 1.4 : 1; k = Math.min(1.6, u.v / Math.max(1, def.speed)) * boost; }
     /* Farbe je Instanz */
     COL.copy(WHITE);
     const hitAgo = g.time - (u.hitT || -9); if (hitAgo >= 0 && hitAgo < 0.12 && !u.derelict) COL.setScalar(1 + 1.2 * (1 - hitAgo / 0.12));
@@ -335,11 +335,14 @@ export function updateEntities(g, dt, t, view) {
       const a = Math.random() * TAU, d = Math.random() * def.r * 0.6, px = u.x + Math.cos(a) * d, py = u.y + Math.sin(a) * d;
       if (dmg > 0.6 && fx.smoke) fx.smoke(px, py, def.r * 0.35, 1); else if (fx.spark) fx.spark(px, py, 2, 40, '#ffd27a');
     }
+    if (u.crip && fx && fx.spark && Math.random() < 0.08) fx.spark(u.x + (Math.random() - 0.5) * def.r, u.y + (Math.random() - 0.5) * def.r, 3, 40, Math.random() < 0.5 ? '#ffd27a' : '#8fe8ff');
     if (u.derelict && fx && fx.spark && det > 1 && Math.random() < 0.03) fx.spark(u.x + (Math.random() - 0.5) * def.r, u.y + (Math.random() - 0.5) * def.r, 2, 30, '#ffd27a');
     /* Zustände */
     if (u.dormant) disc(u.x, u.y, def.r * 1.8, '#ffd27a', 0.14 + 0.08 * Math.sin(t * 2 + u.id));
     if (u.dome > 0) dome(u.x, u.y, def.r * 1.5 + 6, t);
     if (u.abT && u.abT.invuln > 0) { ring(u.x, u.y, def.r * 1.4 + 4, '#ffe6a0', 2.5, { alpha: 0.6 + 0.3 * Math.sin(t * 10) }); disc(u.x, u.y, def.r * 2.2, '#ffd27a', 0.12); }
+    if (u.crip) { ring(u.x, u.y, def.r + 14, '#ffb347', 2, { dash: 5, alpha: 0.45 + 0.3 * Math.sin(t * 4 + u.id) }); const k = Math.max(0, (u.crip - g.time) / 75); ring(u.x, u.y, def.r + 19, '#ffb347', 2.5, { a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * k, alpha: 0.8 }); }   /* Fassung 23: manövrierunfähig, Bogen = Zeit bis flott */
+    if (u.limp) ring(u.x, u.y, def.r + 12, '#7df9a0', 1.4, { dash: 4, alpha: 0.5 });
     if (u.truce > 0) ring(u.x, u.y, def.r + 4, '#ffffff', 1, { dash: 3, alpha: 0.5 });
     if (u.jamT > g.time) { const a0 = -t * 4 + u.id; for (let i = 0; i < 3; i++) ring(u.x, u.y, def.r + 5, '#c9a0ff', 1.5, { a0: a0 + i * TAU / 3, a1: a0 + i * TAU / 3 + 0.9, alpha: 0.7 }); }   /* Fassung 22: gestört */
     if (u.marked > g.time) { const r = def.r + 9, a0 = t * 2; for (let i = 0; i < 4; i++) ring(u.x, u.y, r, '#ffb86b', 2, { a0: a0 + i * Math.PI / 2, a1: a0 + i * Math.PI / 2 + 0.8 }); }

@@ -81,7 +81,7 @@ function aiThink(g, pi) {
   if (!p.F.bio) { if (A.oreT === undefined || p.ore > (A.oreLast || 0) + 1) A.oreT = t; A.oreLast = p.ore; if (!broke && t - A.oreT > 60 && p.ore < 200 && mine.some(b => b.done)) { p.ore += AI_DOLE.ore * Math.min(5, t - (A.doleT || t)); } }
   A.doleT = t;
   /* Schiffe mit Sonderauftrag (u.task, etwa Wache an einer Kolonie) führt die KI nicht */
-  const ships = g.ships.filter(u => !u.dead && !u.derelict && u.owner === pi && u.def.role !== 'fighter' && !u.task && !u.gar);
+  const ships = g.ships.filter(u => !u.dead && !u.derelict && !u.crip && !u.limp && u.owner === pi && u.def.role !== 'fighter' && !u.task && !u.gar);
   const builders = ships.filter(u => u.def.build), tankers = ships.filter(u => u.def.cargo), fleet = ships.filter(u => armed(u) && !u.retreat && !u.rfq);
   /* Gefecht (Mittel, Schwer): angeschlagene Schiffe ab Fregatte ziehen sich zur Werft zurück und kommen repariert wieder */
   /* (nicht die Legion: ihre Helden fallen als ruhende Wracks und werden vom Restorer geweckt – Rückzug kostete sie Partien) */
@@ -417,7 +417,7 @@ function aiSupport(g, pi, ships, fleet, yards, anchor, dirA) {
   const heals = ships.filter(u => u.def.heal), layers = ships.filter(u => u.def.mines), troops = ships.filter(u => u.def.troop);
   /* Beute: sichtbare, angeschlagene mittlere/große Feindschiffe mit Crew */
   let prey = null, pd = 1e9;
-  if ((g.tick + pi * 5) % 4 === 0 || troops.length) for (const e of g.ships) { if (e.dead || e.derelict || !foes(g, pi, e.owner) || g.players[e.owner].neutral || (e.def.cls !== 'l' && e.def.cls !== 'm') || !e.crewMax || e.hull > e.hullMax * 0.5 || e.def.flag || !canSee(g, pi, e)) continue; const d = hyp(e.x - anchor.x, e.y - anchor.y) - (e.def.cls === 'l' ? 600 : 0); if (d < pd) { pd = d; prey = e; } }
+  if ((g.tick + pi * 5) % 4 === 0 || troops.length) for (const e of g.ships) { if (e.dead || e.derelict || !foes(g, pi, e.owner) || g.players[e.owner].neutral || (e.def.cls !== 'l' && e.def.cls !== 'm') || !e.crewMax || (e.hull > e.hullMax * 0.5 && !e.crip) || e.def.flag || !canSee(g, pi, e)) continue; const d = hyp(e.x - anchor.x, e.y - anchor.y) - (e.def.cls === 'l' ? 600 : 0) - (e.crip ? 900 : 0); if (d < pd) { pd = d; prey = e; } }
   if (prey) A.preyT = t;
   if (yards.length && t - (A.supT || 0) > 8) {
     A.supT = t;
@@ -462,7 +462,7 @@ function aiSupport(g, pi, ships, fleet, yards, anchor, dirA) {
   for (const u of troops) {
     if (u.o.t === 'board') continue;
     let best = null, bd = 1600;
-    if (u.marines >= u.def.marines * 0.6) for (const e of g.ships) { if (e.dead || e.derelict || !foes(g, pi, e.owner) || g.players[e.owner].neutral || (e.def.cls !== 'l' && e.def.cls !== 'm') || !e.crewMax || e.def.flag || e.hull > e.hullMax * 0.5 || e.crew > u.marines * 1.6 || !canSee(g, pi, e)) continue; const d = hyp(e.x - u.x, e.y - u.y); if (d < bd) { bd = d; best = e; } }
+    if (u.marines >= u.def.marines * 0.6) for (const e of g.ships) { if (e.dead || e.derelict || !foes(g, pi, e.owner) || g.players[e.owner].neutral || (e.def.cls !== 'l' && e.def.cls !== 'm') || !e.crewMax || e.def.flag || (!e.crip && (e.hull > e.hullMax * 0.5 || e.crew > u.marines * 1.6)) || !canSee(g, pi, e)) continue; const d = hyp(e.x - u.x, e.y - u.y) - (e.crip ? 800 : 0); if (d < bd) { bd = d; best = e; } }
     if (best) execCmd(g, { t: 'board', p: pi, u: [u.id], e: best.id });
     else if (u.o.t === 'idle' && hyp(u.x - rp.x, u.y - rp.y) > 300) cmdMove(g, [u], rp.x - dcos(dirA) * 100, rp.y - dsin(dirA) * 100, false);
   }

@@ -128,6 +128,11 @@ function order(us, hit, wx, wy) {
     const gz = us.filter(u => u.def.eat);
     if (gz.length) { issue({ t: 'eat', u: ids(gz), id: hit.id }); mark(hit.x, hit.y, '#b4ff3c'); SND.play('order'); showInfo(L('Grazer verschlingen das Wrack')); if (gz.length < us.length) orderMove(us.filter(u => !u.def.eat), wx, wy, false); return; }
   }
+  /* Fassung 23: manövrierunfähiges Feindschiff antippen → Enterschiffe der Auswahl entern, der Rest bleibt in der Nähe */
+  if (hit && hit.k === 1 && hit.crip && isFoe(hit.owner)) {
+    const tr = us.filter(u => u.def.marines && u.marines > 0);
+    if (tr.length) { const r = issue({ t: 'board', u: ids(tr), e: hit.id }); if (!r) { mark(hit.x, hit.y, '#ffb347'); SND.play('order'); showInfo(L('Entern: {0} Enterschiffe setzen über', tr.length)); if (tr.length < us.length) orderMove(us.filter(u => tr.indexOf(u) < 0), hit.x, hit.y, false); return; } }
+  }
   /* Fassung 22: Fels sprengen */
   if (hit && hit.k === 6) { const arm = us.filter(u => armed(u)); if (arm.length) { issue({ t: 'attack', u: ids(arm), e: hit.id }); mark(hit.x, hit.y, '#ffb86b'); SND.play('order'); showInfo(L('Feuer auf den Felsen')); if (arm.length < us.length) orderMove(us.filter(u => !armed(u)), wx, wy, false); return; } }
   if (hit && (hit.k === 1 || hit.k === 2) && isFoe(hit.owner)) {
@@ -391,6 +396,7 @@ function initInput() {
     else if (k === 'h') doStop();
     else if (k === 'g') toggleHold();
     else if (k === 'v') cycleStance();
+    else if (k === 'f') toggleFireMode();
     else if (k === 'c') cycleForm();
     else if (k === 'a') startAmove();
     else if (k === 'b') { const u = selShips().find(x => x.def.build); if (u) setSel([u]); }
@@ -408,6 +414,8 @@ function doExplore() { const us = selShips().filter(canExplore); if (us.length) 
 function doStop() { const us = selShips(); if (us.length) { issue({ t: 'stop', u: ids(us) }); SND.play('order'); } }
 function toggleHold() { const us = selShips(); if (!us.length) return; const on = !us.every(u => u.hold); issue({ t: 'hold', u: ids(us), on }); toast(L(on ? 'Stellung halten: Die Auswahl bleibt stehen' : 'Stellung aufgehoben')); SND.play('order'); hudCmds(); }
 const STANCES = ['Offensiv', 'Defensiv', 'Feuer halten', 'Vorsichtig'], STANCE_HINT = ['Schießt auf jeden Feind in Sicht und verfolgt ihn', 'Schießt nur in Reichweite, verfolgt nicht', 'Schießt nicht', 'Kämpft wie Offensiv, fliegt unter 30 % Hülle zur Werft und kehrt repariert zurück'];
+/* Fassung 23: Feuermodus Zerstören / Lahmlegen (Antrieb, Waffen, Schilde ausschießen; dann entern) */
+function toggleFireMode() { const us = selShips().filter(u => armed(u)); if (!us.length) return; const v = us.every(u => u.fm === 1) ? 0 : 1; issue({ t: 'fmode', u: ids(us), v }); toast(v ? L('Lahmlegen: Antrieb, Waffen und Schilde ausschießen, dann entern') : L('Zerstören: Ziele werden vernichtet')); SND.play('click'); hudCmds(); }
 function cycleStance() { const us = selShips(); if (!us.length) return; const v = ((us[0].stance | 0) + 1) % 4; issue({ t: 'stance', u: ids(us), v }); toast(L(STANCES[v]) + ': ' + L(STANCE_HINT[v])); SND.play('click'); hudCmds(); }
 /* Fassung 22: dritte Formation »Rollen« (sim.js roleSlots) */
 const FORMS = { wedge: ['⋀', 'Keil', 'Formation: Keil'], line: ['≡', 'Linie', 'Formation: Linie'], roles: ['▦', 'Rollen', 'Formation: Rollen – Schwere vorn, Artillerie und Träger hinten, Schnelle an den Flanken'] };
@@ -557,6 +565,7 @@ function hudCmds(force) {
     if (us.some(canExplore)) box.appendChild(cmdBtn('◎', 'Erkunden', doExplore, 'Erkunden: fliegt selbständig unerkundete Gebiete ab, mehrere Erkunder teilen sich die Karte auf; bei schwerem Schaden zurück zur Basis', us.every(u => !canExplore(u) || u.o.t === 'explore') ? 'on' : ''));
     box.appendChild(cmdBtn('⌂', 'Stellung', toggleHold, 'Stellung halten: bleibt stehen, schießt nur in Reichweite', us.every(u => u.hold) ? 'on' : ''));
     if (war) box.appendChild(cmdBtn(['⚔', '🛡', '✋', '↩'][us[0].stance | 0], STANCES[us[0].stance | 0], cycleStance, 'Haltung wechseln: Offensiv, Defensiv, Feuer halten, Vorsichtig (Rückzug zur Reparatur)'));
+    if (war) { const crip = us.filter(u => armed(u)).every(u => u.fm === 1); box.appendChild(cmdBtn(crip ? '⚡' : '✸', crip ? 'Lahmlegen' : 'Zerstören', toggleFireMode, 'Feuermodus (F): Zerstören oder Lahmlegen. Lahmgelegte Schiffe treiben manövrierunfähig, werden nicht weiter beschossen und können geentert werden; das dauert länger als Zerstören.', crip ? 'on' : '')); }
     if (war) box.appendChild(cmdBtn('↶', 'Rückzug', toggleAutoRet, 'Rückzug bei Schaden (je Schiff, unabhängig von der Haltung): unter 30 % Hülle zur nächsten Werft, nach der Reparatur zurück', 'ret' + (us.every(u => !armed(u) || u.autoRet) ? ' on' : '')));
     box.appendChild(cmdBtn('⛨', 'Begleiten', startEscort, 'Begleiten: dann ein eigenes Schiff oder eine Station antippen. Die Auswahl folgt in lockerem Ring und wehrt Feinde in seiner Nähe ab.', UI.mode === 'escort' ? 'on' : ''));
     if (us.length > 1) box.appendChild(cmdBtn(FORMS[UI.form][0], FORMS[UI.form][1], cycleForm, 'Formation für Bewegungsbefehle: Keil, Linie oder Rollen'));
@@ -625,8 +634,25 @@ function wpnTxt(def) {
   for (const w of def.wpn) { const k = w.kind === 'beam' ? 'Strahl' : w.kind === 'kin' ? 'Kanone' : w.kind === 'rail' ? 'Railgun' : w.kind === 'torp' ? 'Torpedo' : 'Abwehr'; out.push(L(k) + ' ' + w.range); }
   return out.join(' · ');
 }
+/* Fassung 23: Rolle je Schiff als Symbol im Baumenü (Bau, Fracht, Belagerung, Entern, Reparatur, Minen, Träger,
+   Flaggschiff, Unterstützung, sonst nach Größe: Jäger, Linie, Schwer) */
+function shipRole(d) {
+  if (d.build) return ['⚒', 'Bauschiff', 'Baut und repariert Stationen'];
+  if (d.cargo) return ['⛏', 'Frachter', 'Sammelt Rohstoffe'];
+  if (d.flag || d.hero) return ['★', 'Flaggschiff', 'Einzigartig, mit Flottenbefehl'];
+  if (d.art) return ['◎', 'Belagerung', 'Beschießt Stationen aus großer Entfernung'];
+  if (d.marines || d.troop) return ['⚑', 'Entern', 'Kapert angeschlagene oder lahmgelegte Schiffe'];
+  if (d.heal) return ['✚', 'Reparatur', 'Repariert eigene Schiffe in der Nähe'];
+  if (d.mines || d.mineT) return ['✱', 'Minen', 'Legt Minenfelder'];
+  if (d.hangar) return ['⌖', 'Träger', 'Startet Jäger aus dem Hangar'];
+  if (!d.wpn.some(w => w.kind !== 'pd')) return ['◇', 'Unterstützung', 'Ohne Hauptwaffen, stärkt die Flotte'];
+  if (d.cls === 's') return ['➤', 'Jäger', 'Schnell und billig, gegen kleine Ziele'];
+  if (d.cls === 'l') return ['▰', 'Schwer', 'Viel Hülle und Feuerkraft, langsam'];
+  return ['◆', 'Linie', 'Rückgrat der Flotte'];
+}
 function shipTip(def) {
-  return '<h4>' + esc(L(def.name)) + '</h4><div class="cost">' + costTxt(shipCost(UI.P, def)) + ' · ' + def.time + ' s · ' + def.cp + ' ★</div><p>' + esc(L(def.desc)) + '</p><p class="fine">' + L('Hülle') + ' ' + def.hull + (def.shield ? ' · ' + L('Schild') + ' ' + def.shield : '') + (def.armor ? ' · ' + L('Panzerung') + ' ' + def.armor : '') + ' · ' + L('Tempo') + ' ' + def.speed + (def.wpn.length ? '<br>' + wpnTxt(def) : '') + (counterTxt(def) ? '<br>' + counterTxt(def) : '') + '</p>' + (reqTxt(def) ? '<p class="req">' + L('Benötigt') + ' ' + reqTxt(def) + '</p>' : '');
+  const ro = shipRole(def);
+  return '<h4>' + esc(L(def.name)) + ' <small class="roleT">' + ro[0] + ' ' + esc(L(ro[1])) + '</small></h4><p class="fine">' + esc(L(ro[2])) + '</p><div class="cost">' + costTxt(shipCost(UI.P, def)) + ' · ' + def.time + ' s · ' + def.cp + ' ★</div><p>' + esc(L(def.desc)) + '</p><p class="fine">' + L('Hülle') + ' ' + def.hull + (def.shield ? ' · ' + L('Schild') + ' ' + def.shield : '') + (def.armor ? ' · ' + L('Panzerung') + ' ' + def.armor : '') + ' · ' + L('Tempo') + ' ' + def.speed + (def.wpn.length ? '<br>' + wpnTxt(def) : '') + (counterTxt(def) ? '<br>' + counterTxt(def) : '') + '</p>' + (reqTxt(def) ? '<p class="req">' + L('Benötigt') + ' ' + reqTxt(def) + '</p>' : '');
 }
 /* Erklärung zu einem Objekt auf der Karte (langes Antippen): Name, Besitzer, Stufe, Funktion, Zustand */
 function objTip(o) {
@@ -676,7 +702,7 @@ function hudBuild(force) {
       const why = trainReq(g, UI.me, d.id) || (b.lv < d.yard ? 'Benötigt Werft Stufe ' + ROMAN[d.yard] : null), afford = canPay(P, shipCost(P, d)), n = b.q.filter(q => q.id === d.id).length;
       const extra = (n ? '<span class="q">' + n + '</span>' : '') + (b.q.length && b.q[0].id === d.id ? '<span class="pb"><i style="width:' + Math.round(b.qp * 100) + '%"></i></span>' : '') + (why ? '<span class="lock">' + esc(L(why)) + '</span>' : '');
       /* Fassung 22: Doppeltippen/Umschalt-Klick reiht 5 ein, Tippen auf die Zahl oder Rechtsklick nimmt eines heraus (play.js) */
-      const el = itemBtn(L(d.name), shipCost(P, d), e => plTrain(b, d, e), () => shipTip(d), extra);
+      const ro = shipRole(d), el = itemBtn(L(d.name), shipCost(P, d), e => plTrain(b, d, e), () => shipTip(d), extra + '<span class="role">' + ro[0] + '</span>');
       el.addEventListener('contextmenu', e => { if (plUnqueue(b, d)) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
       if (why || !afford) el.classList.add('off');
       el.dataset.k = 'item:' + d.id;
@@ -763,6 +789,9 @@ function hudSel() {
     else if (u.autoRet && u.stance !== 3 && u.owner === UI.me) h += '<div class="sub">↶ ' + L('Rückzug bei Schaden an') + '</div>';   /* Fassung 22 */
     if (u.o.t === 'escort') { const e = UI.g.byId.get(u.o.tid); if (e) h += '<div class="sub">⛨ ' + L('Begleitet {0}', L(e.def.name)) + (u.o.eid ? ' · ' + L('wehrt Feind ab') : '') + '</div>'; }
     if (u.dormant) h += '<div class="sub" style="color:var(--acc2)">' + L('Ruht. Ein Restorer daneben erweckt das Schiff mit allem Rang.') + '</div>';
+    if (u.crip) h += '<div class="sub" style="color:var(--acc2)">⚠ ' + L('Manövrierunfähig: treibt, wehrlos. Entern möglich, noch {0} s.', Math.max(0, Math.ceil(u.crip - UI.g.time))) + '</div>';
+    if (u.limp) h += '<div class="sub" style="color:var(--good, #7df9a0)">' + L('Gekapert: schleppt sich zur Werft, dort wird es instand gesetzt.') + '</div>';
+    if (u.fm === 1 && u.owner === UI.me) h += '<div class="sub">⚡ ' + L('Feuermodus: Lahmlegen') + '</div>';
     if (u.derelict) h += '<div class="sub" style="color:var(--bad)">' + L('Wrack ohne Crew. Ein Bauschiff in der Nähe besetzt es neu.') + '</div>';
     else h += '<div class="sub">' + L(O[u.o.t] || u.o.t) + (u.o.t === 'attack' && u.o.sub ? ' → ' + L(SUB_NAMES[u.o.sub]) : '') + (d.wpn.length ? ' · ' + L(STANCES[u.stance | 0]) : '') + (u.kills ? ' · ' + u.kills + ' ' + L('Abschüsse') : '') + '</div>';
     if (u.crewMax) h += '<div class="crew"><span>' + L('Crew') + ' <b>' + Math.round(u.crew) + '</b>/' + u.crewMax + '</span>' + (d.marines ? '<span>' + L('Marines') + ' <b>' + Math.round(u.marines) + '</b></span>' : '') + (u.boarding > 0 ? '<span style="color:var(--bad)">' + L('Geentert') + ' ' + Math.round(u.boarding) + '</span>' : '') + '</div>';
@@ -874,6 +903,9 @@ UI.consume = function (evs) {
       case 'board': if (visAt(g, me, e.x, e.y)) SND.play('board', e.x, e.y); break;
       case 'captured': { const nm = L(e.name); if (e.to === me) { toast(L('{0} geentert und übernommen', nm), 'good', 4000); SND.play('rank', e.x, e.y); } else if (e.from === me) { toast(L('{0} wurde geentert und ist verloren', nm), 'bad', 4000); SND.play('lose'); R.ping(e.x, e.y); } hudSel(); break; }
       case 'derelict': if (mine) { toast(L('{0}: Crew verloren, treibt als Wrack', L(e.name)), 'warn', 4000); R.ping(e.x, e.y); } break;
+      case 'crippled': if (mine) { toast(L('{0} ist manövrierunfähig und treibt!', L(e.name)), 'bad', 4000); R.ping(e.x, e.y, '#ffb347'); } else if (e.by === me) { toast(L('{0} lahmgelegt. Jetzt entern!', L(e.name)), 'good', 4000); SND.play('rank', e.x, e.y); } break;
+      case 'uncrippled': if (mine) toast(L('Crew hat das Schiff wieder flott gemacht'), 'good'); break;
+      case 'repaired': if (mine) toast(L('{0} an der Werft instand gesetzt', L(e.name)), 'good', 3500); break;
       case 'recrew': if (mine) toast(L('Wrack neu besetzt'), 'good'); break;
       case 'boardfail': if (mine) toast(L('Enterkommando abgewehrt'), 'warn'); break;
       case 'dormant': if (mine) { toast(L('{0} »{1}« ruht als Wrack. Restorer hinschicken!', L(e.name), e.hero || ''), 'warn', 4000); R.ping(e.x, e.y, '#f2c14e'); } break;
@@ -950,7 +982,8 @@ function loadPrefs() {
   if (!d.set || (d.set.pwr !== 'save' && d.set.pwr !== 'auto')) SET.pwr = 'auto';
 }
 /* Erststart: schwache Geräte (wenig Speicher oder Kerne) beginnen in 2D; der Leistungswächter (main.js) korrigiert später */
-function gfxGuess() { try { const mem = navigator.deviceMemory || 4, cores = navigator.hardwareConcurrency || 4; if (mem <= 2 || cores <= 4) return '2d'; } catch (e) { /* unbekannt */ } return '3d'; }
+/* Fassung 23: 3D ist Standard, nur ohne WebGL 2D; ruckelt es im Gefecht, schlägt perfWatch (main.js) 2D vor */
+function gfxGuess() { try { const c = document.createElement('canvas'); if (!(c.getContext('webgl2') || c.getContext('webgl'))) return '2d'; } catch (e) { return '2d'; } return '3d'; }
 function savePrefs() { try { localStorage.setItem('ra.prefs', JSON.stringify({ set: SET, menu: MENU })); } catch (e) { /* Speicher gesperrt */ } }
 function applySet() {
   SND.setVol(SET.vol / 100); MUS.setVol(SET.mus / 100);
@@ -1057,7 +1090,7 @@ function setupRender() {
   segInit('resSeg', [['low', 'Knapp'], ['normal', 'Normal'], ['rich', 'Reich']], () => MENU.res, v => { MENU.res = v; savePrefs(); });
   terrSetup(mapId);   /* Fassung 22: Wandernde Gefahren, Zufallskarte neu würfeln */
   slotsRender();
-  setText('slotNote', (mapId !== MENU.map ? L('{0} ist für {1} Spieler nicht ausgelegt – es wird {2} gespielt.', MAPS[MENU.map].name, np, MAPS[mapId].name) + ' ' : '') + L('Tippen wechselt Fraktion, Stärke und Team. Gleiches Team = Verbündete; »–« spielt für sich.'));
+  setText('slotNote', (mapId !== MENU.map ? L('{0} ist für {1} Spieler nicht ausgelegt – es wird {2} gespielt.', L(MAPS[MENU.map].name), np, L(MAPS[mapId].name)) + ' ' : '') + L('Tippen wechselt Fraktion, Stärke und Team. Gleiches Team = Verbündete; »–« spielt für sich.'));
   if (MENU.mode === 'survival') setText('mapDesc', L('Allein gegen endlose Wellen der Brood. Nach jeder Welle eine von drei Belohnungen, alle fünf Wellen ein Leviathan. Rekord mit {0}: Welle {1}.', L(FACTIONS[MENU.faction].name), bestWave(MENU.faction)));
   else if (MENU.mode === 'quarantine') setText('mapDesc', L('Gemeinsam das Siegel in der Kartenmitte halten: 20 Wellen der Brood aus immer mehr Rissen, alle fünf ein Leviathan, zuletzt die Matriarch. Fällt das Siegel, haben alle verloren.'));
   else { const pm0 = generateMap(mapId, np, 7, MENU.size, undefined, randSeedMenu()); setText('mapDesc', L(MAPS[mapId].desc) + ' · ' + L('{0} Spieler', np) + ' · ' + pm0.w + ' × ' + pm0.h); }
