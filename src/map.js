@@ -491,6 +491,7 @@ function genRing(map, np, rng, style) {
       p = P(i, R0 * 0.55, half); site(map, 'ruin', p.x, p.y);
       p = P(i, R0 * 0.38, half * 0.5); field(map, p.x, p.y, 130, rng, 0.9);
       p = P(i, R0 * 0.9, half * 0.55); nebula(map, p.x, p.y, 150, 'ion');
+      p = at(i, R0 * 0.45, 0); field(map, p.x, p.y, 110, rng, 0.85);   /* Fassung 23: Deckung vor jeder Basis (offene Weite begünstigte Mars-Reichweite) */
     });
     bigSites(map, [{ x: cx, y: cy }], rng, 1);
     for (let k = 0; k < Math.min(np, 4); k++) { const a = a0 + (k + 0.5) / Math.min(np, 4) * TAU; oreCluster(map, cx + Math.cos(a) * 430, cy + Math.sin(a) * 430, rng, 2); }
