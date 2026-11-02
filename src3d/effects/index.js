@@ -172,8 +172,14 @@ export const spawn = {
   smoke(x, y, r, n) { smoke(x, y, r, n || 1, 1.6, H.proj + 2, 10); },
   spark(x, y, n, speed, color) { spark(x, y, n || 3, speed || 60, color || '#ffd27a', 0.45, H.proj + 2); },
   ring(x, y, r, color, dur) { ring(x, y, r, color || '#ffffff', dur || 0.6, 2.5); },
-  flash(x, y, r, color, dur) { flash(x, y, r, color || '#ffffff', dur || 0.25); }
+  flash(x, y, r, color, dur) { flash(x, y, r, color || '#ffffff', dur || 0.25); },
+  /* Fassung 24: Brandherd und kleine Explosion für die Schadensstufen */
+  fire(x, y, r) { fire(x, y, r, 0.7, 1, H.proj + 3, 0.5); },
+  burst(x, y, r) { flash(x, y, r, '#ffc070', 0.22, H.proj + 3); spark(x, y, 7, 110, '#ffd27a', 0.5, H.proj + 3); smoke(x, y, r * 0.8, 2, 1.4, H.proj + 3, 10); }
 };
+/* Fassung 24: Mündungsfeuer in Fraktionsfarbe */
+const FCOL = { alliance: '#8fd8ff', mars: '#ffb060', legion: '#ffd27a', nexus: '#d2a8ff', brood: '#b4ff3c', guardian: '#8fe8ff' };
+function facCol(g, o) { const p = g && g.players && g.players[o]; return (p && FCOL[p.faction]) || '#ffe0a0'; }
 
 /* ------------------------------------------------------------ Ereignisse */
 /* Entität am Ereignisort (Schildereignisse tragen nur die Position des Ziels) */
@@ -214,7 +220,11 @@ export function event(e, g, view) {
     /* Fassung 22: Schildwall getroffen / zusammengebrochen */
     case 'wallhit': flash(e.x, e.y, 12, '#dff4ff', 0.18, H.proj); spark(e.x, e.y, 3, 70, '#8fe3ff', 0.3, H.proj); break;
     case 'wallDown': ring(e.x, e.y, 110, '#8fe3ff', 0.8, 3); spark(e.x, e.y, 24, 180, '#bfe9ff', 0.7, H.proj); break;
-    case 'shot':
+    case 'shot': {
+      /* Mündungsfeuer am Bug in Richtung des Schusses (Strahl, Geschoss, Torpedo, Säure) */
+      if (e.ang !== undefined && e.r) { const c = e.kind === 'rail' ? '#dff4ff' : e.kind === 'acid' ? '#b4ff3c' : facCol(g, e.owner), mx = e.x + Math.cos(e.ang) * e.r, my = e.y + Math.sin(e.ang) * e.r, s0 = e.big || e.kind === 'torp' ? 9 : e.kind === 'beam' ? 7 : 5;
+        flash(mx, my, s0, c, 0.09, H.proj, TILE.glow, 1.5); if (e.big || e.kind === 'torp') spark(mx, my, 3, 70, c, 0.25, H.proj, 1.4, 0.2); }
+    }
       if (e.kind === 'rail') { flash(e.x, e.y, 12, '#dff4ff', 0.15, H.proj, TILE.star, 1.4); glow(e.x, e.y, H.proj, 20, 36, '#9fd0ff', 0.25, 0.5); }
       else if (e.kind === 'kin' && e.big) flash(e.x + Math.cos(e.ang) * 10, e.y + Math.sin(e.ang) * 10, 5, '#ffe0a0', 0.1, H.proj);
       break;
@@ -241,6 +251,12 @@ export function event(e, g, view) {
       break;
     case 'strike': { const r = e.r || 150; explode(e.x, e.y, r * 0.45, true, '#ffb070', H.proj, false); ring(e.x, e.y, r * 1.6, '#ff8a5a', 1.3, r * 0.1, 1, 0.5); smoke(e.x, e.y, r * 0.5, 18, 3.2, H.proj, 14); debris(e.x, e.y, 30, 260, 30, H.proj, 1); spark(e.x, e.y, 40, 320, '#ffd27a', 1.1, H.proj, 1.6, 1.5); later.push({ at: now + 0.35, fn: () => fire(e.x, e.y, r * 0.4, 1.2, 6, H.proj + r * 0.15, 0.9) }); shake(16); break; }
     case 'supercharged': ring(e.x, e.y, 80, '#ffb86b', 1.2, 3); break;
+    case 'ready': { /* Fassung 24: Einsprung frisch gebauter Schiffe */
+      const u = g && g.byId ? g.byId.get(e.id) : null; if (!u || !u.def || u.def.role === 'fighter') break;
+      const r = u.def.r || 12, a = u.ang, c = facCol(g, e.owner), bx = u.x - Math.cos(a) * Math.max(60, u.def.len * 1.5), by = u.y - Math.sin(a) * Math.max(60, u.def.len * 1.5);
+      flash(u.x, u.y, r * 1.6, '#ffffff', 0.25, H.proj, TILE.star, 1.3); ring(u.x, u.y, r * 2.2, c, 0.45, 2);
+      line(bx, by, u.x, u.y, r * 0.7, c, 0.4, QMODE.tail, H.proj, H.proj, 1.4, 0.7); break;
+    }
     case 'jump': { const r = e.r || 12; ring(e.x, e.y, r * 2, '#c9a0ff', 0.5, 2.5); flash(e.x, e.y, r * 1.4, '#eadcff', 0.3, H.proj + r * 0.3, TILE.star, 1.2); if (!e.from) spark(e.x, e.y, 8, 90, '#e0c8ff', 0.5, H.proj); break; }
     case 'merge': { const r = e.r || 14; ring(e.x, e.y, r * 2.5, '#eadcff', 0.9, 3); flash(e.x, e.y, r * 1.8, '#ffffff', 0.4, H.proj + r * 0.3, TILE.glow, 1.1); spark(e.x, e.y, 20, 140, '#f3e6ff', 0.7, H.proj); break; }
     case 'bound': line(e.fx, e.fy, e.x, e.y, 3, '#c9a0ff', 0.6, QMODE.soft, H.proj, H.proj, 1, 0.9); ring(e.x, e.y, 50, '#c9a0ff', 0.8, 3); break;

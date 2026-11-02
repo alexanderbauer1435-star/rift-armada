@@ -18,7 +18,7 @@ import { mats, BUILD, BUILDB, BUILDW, bake, drawCount, farGeometry, keepFor } fr
 import { S, supported, initScene, resize, setDetail, render, disposeScene, adapt, sceneChanged, setQuality, quality } from './scene.js';
 import { CAM, setCam, updateCamera, project, unproject, shake } from './camera.js';
 import { buildWorld, updateWorld, disposeWorld } from './world.js';
-import { initEntities, updateEntities, clearEntities, disposeEntities, ghost, hideGhost, setEffects, entityStats, _E, queuePrebuild, prebuild, warm } from './entities.js';
+import { initEntities, updateEntities, clearEntities, disposeEntities, ghost, hideGhost, setEffects, shipEvent, entityStats, _E, queuePrebuild, prebuild, warm } from './entities.js';
 import { initOverlay, ring, line, disc, flushOverlay } from './overlay.js';
 import { initFog, updateFog, disposeFog } from './fog.js';
 import * as effects from './effects/index.js';
@@ -75,6 +75,7 @@ const RA3D = {
     if (!S.ok) return;
     /* Kamerawackeln wie in render.js; Effekte bekommen jedes Ereignis */
     if (e.t === 'die' && e.big && !e.quiet) shake(6); else if (e.t === 'bdie') shake(9); else if (e.t === 'strike') shake(16); else if (e.t === 'gateLance') shake(12); else if (e.t === 'superfire' && e.kind !== 'exodus') shake(8); else if (e.t === 'lance') shake(5); else if (e.t === 'breach') shake(7); else if (e.t === 'wake') shake(8);
+    try { shipEvent(e); } catch (err) { /* nur Optik */ }
     if (FX.ok && typeof effects.event === 'function') { try { effects.event(e, g, S.view); } catch (err) { console.warn('RA3D: effects.event', err); } }
   },
   frame(g, dt, time, view) {

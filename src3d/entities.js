@@ -26,10 +26,13 @@ import { ring, disc, line } from './overlay.js';
 /* Fernmodelle (ein Mesh mit Vertexfarben + Flammen) unterhalb dieser Zoomstufen, je Detailstufe */
 const FAR_SHIP = [1.6, 1.05, 0.8], FAR_STATION = [1.2, 0.85, 0.7];
 const TAU = Math.PI * 2;
-const E = { tpl: new Map(), sets: new Map(), stations: new Map(), prev: new Map(), domes: [], domeN: 0, domeMat: null, ghost: new Map(), ghostCur: [], ruins: new Map(), fx: null, pcol: null, root: null };
+const PT = { x: 0, y: 0 };
+const E = { born: new Map(), now: 0, tpl: new Map(), sets: new Map(), stations: new Map(), prev: new Map(), domes: [], domeN: 0, domeMat: null, ghost: new Map(), ghostCur: [], ruins: new Map(), fx: null, pcol: null, root: null };
 const M4 = new THREE.Matrix4(), M4b = new THREE.Matrix4(), POS = new THREE.Vector3(), SCL = new THREE.Vector3(1, 1, 1), EUL = new THREE.Euler(0, 0, 0, 'YZX'), QUAT = new THREE.Quaternion(), COL = new THREE.Color();
 const WHITE = new THREE.Color(1, 1, 1), TINT = { ion: new THREE.Color(), acid: new THREE.Color(0.75, 1.05, 0.6), gold: new THREE.Color(1.15, 1.0, 0.7) };
 export function setEffects(fx) { E.fx = fx; }
+/* Fassung 24: Ereignisse für die Modelle (Einsprung frisch gebauter Schiffe) */
+export function shipEvent(e) { if (e.t === 'ready' && e.id !== undefined) E.born.set(e.id, E.now); }
 
 export function initEntities() {
   E.root = new THREE.Group(); E.root.name = 'entities'; S.scene.add(E.root);
@@ -49,7 +52,7 @@ function variant(m, kind, tint) {
   const c = cloneMat(m);
   /* 'inst': eigener Klon für InstancedMesh – teilen sich Instanz- und Einzel-Meshes ein Material, prüft three.js bei
      jedem Wechsel das Shaderprogramm neu (getParameters/getProgram je Bild) */
-  if (kind === 'inst') { byKind[key] = c; return c; }
+  if (kind === 'inst') { if (!(c.userData && c.userData.isFlame)) dmgPatch(c); byKind[key] = c; return c; }
   if (kind === 'wreck') {
     if (c.color) c.color.multiplyScalar(c.isMeshBasicMaterial ? 0.12 : 0.4);
     if (c.emissiveIntensity !== undefined) c.emissiveIntensity *= 0.08;
@@ -61,6 +64,31 @@ function variant(m, kind, tint) {
     if (c.emissive && tint) { c.emissive.set(tint); c.emissiveIntensity = 0.3; }
   }
   byKind[key] = c; return c;
+}
+/* Fassung 24: Schadensbild je Instanz (iDmg 0…1 = Stufe/4) und Zerbrechen (iCut = Seite, Mitte x/z, Kurs).
+   Rauchschwarze Flecken wachsen mit der Stufe (Rauschen im Teilraum, wandert also mit dem Schiff), ab Stufe 2 glühende
+   Risse an den Fleckrändern, ab Stufe 3 flackern die Lichter; iCut ≠ 0 verwirft die andere Schiffshälfte mit gezackter,
+   glühender Bruchkante. Kein zusätzlicher Zeichenaufruf: nur Instanzattribute. */
+const DMG_T = { value: 0 }, PROTO_OBC = THREE.Material.prototype.onBeforeCompile;
+const DMG_GLSL = 'uniform float uT; varying float vDmg; varying vec4 vCut; varying vec3 vDP; varying vec2 vWP;\n' +
+  'float dHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }\n' +
+  'float dNoise(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(mix(mix(dHash(i), dHash(i + vec3(1.0, 0.0, 0.0)), f.x), mix(dHash(i + vec3(0.0, 1.0, 0.0)), dHash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y), mix(mix(dHash(i + vec3(0.0, 0.0, 1.0)), dHash(i + vec3(1.0, 0.0, 1.0)), f.x), mix(dHash(i + vec3(0.0, 1.0, 1.0)), dHash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y), f.z); }\n';
+function dmgPatch(c) {
+  const prev = c.onBeforeCompile, base = prev !== PROTO_OBC && c.customProgramCacheKey ? c.customProgramCacheKey() : '', std = !!c.isMeshStandardMaterial;
+  c.onBeforeCompile = function (sh, r) {
+    if (prev !== PROTO_OBC) prev.call(this, sh, r);
+    sh.uniforms.uT = DMG_T;
+    sh.vertexShader = sh.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying float vDmg; varying vec4 vCut; varying vec3 vDP; varying vec2 vWP;\n#ifdef USE_INSTANCING\nattribute float iDmg; attribute vec4 iCut;\n#endif')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvDP = position; vDmg = 0.0; vCut = vec4(0.0); vWP = vec2(0.0);\n#ifdef USE_INSTANCING\nvDmg = iDmg; vCut = iCut; vWP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xz;\n#endif');
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\n' + DMG_GLSL)
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nfloat dCutE = 0.0;\nif (vCut.x != 0.0) { float dd = dot(vWP - vCut.yz, vec2(cos(vCut.w), sin(vCut.w))) * vCut.x + (dNoise(vDP * 0.22) - 0.5) * 9.0; if (dd < 0.0) discard; dCutE = 1.0 - smoothstep(0.0, 3.5, dd); }')
+      .replace('#include <color_fragment>', '#include <color_fragment>\nfloat dMask = 0.0, dCrack = 0.0;\nif (vDmg > 0.01) { float dN = dNoise(vDP * 0.06) * 0.7 + dNoise(vDP * 0.19) * 0.3; float th = 1.0 - vDmg * 0.72; dMask = smoothstep(th, th + 0.07, dN); diffuseColor.rgb *= 1.0 - dMask * 0.74; dCrack = (1.0 - smoothstep(0.0, 0.022, abs(dN - th - 0.012))) * smoothstep(0.4, 0.5, vDmg) * (0.65 + 0.35 * sin(uT * 4.0 + vDP.x * 0.4 + vDP.z * 0.3)); }' +
+        (std ? '' : '\ndiffuseColor.rgb *= mix(1.0, step(0.32, fract(sin(floor(uT * 11.0) + vDP.x * 0.13 + vDP.z * 0.07) * 43758.5)) * 0.9 + 0.1, smoothstep(0.7, 0.95, vDmg));\ndiffuseColor.rgb += vec3(1.3, 0.38, 0.08) * (dCrack * vDmg + dCutE * 0.9);'));
+    if (std) sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(1.0, 0.3, 0.05) * (dCrack * vDmg * 2.0 + dCutE * 1.5 + dMask * smoothstep(0.7, 1.0, vDmg) * 0.12 * (0.6 + 0.4 * sin(uT * 2.3 + vDP.y)));');
+  };
+  c.customProgramCacheKey = () => 'dmg|' + (std ? 1 : 0) + '|' + base;
 }
 /* alle Materialien eines Baums ersetzen (eigene Klone, wenn own = true, für Deckkraft je Objekt) */
 function remat(root, kind, tint, own) { const mine = []; root.traverse(o => { if (o.material) { let m = variant(o.material, kind, tint); if (own) { m = m.clone(); mine.push(m); } o.material = m; } }); return mine; }
@@ -103,18 +131,28 @@ function grow(s, cap) {
   s.parts.forEach((p, j) => {
     const mat = variant(p.far ? farMaterial(s.kind) : s.kind === 'wreck' ? variant(p.mat, 'wreck') : p.mat, 'inst');
     /* Flammen: eigene Geometrie je Menge mit Streckfaktor je Instanz (iFlame) */
-    let geo = p.geo; if (p.flame) { geo = p.geo.clone(); geo.setAttribute('iFlame', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage)); }
+    /* eigene Hülle je Menge: Ecken und Index geteilt, dazu Instanzattribute (Flammenfaktor, Schaden, Bruch) */
+    const geo = new THREE.BufferGeometry(); geo.setIndex(p.geo.index); for (const k in p.geo.attributes) geo.setAttribute(k, p.geo.attributes[k]);
+    for (const gr of p.geo.groups) geo.addGroup(gr.start, gr.count, gr.materialIndex); geo.boundingSphere = p.geo.boundingSphere; geo.boundingBox = p.geo.boundingBox; geo.userData.shared = Object.keys(p.geo.attributes);
+    if (p.flame) geo.setAttribute('iFlame', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage));
+    geo.setAttribute('iDmg', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage));
+    geo.setAttribute('iCut', new THREE.InstancedBufferAttribute(new Float32Array(cap * 4), 4).setUsage(THREE.DynamicDrawUsage));
     const im = new THREE.InstancedMesh(geo, mat, cap); im.frustumCulled = false; im.castShadow = p.shadow && S.detail >= 2; im.receiveShadow = true; im.renderOrder = p.order; im.count = 0;
     im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, WHITE); im.instanceColor.setUsage(THREE.DynamicDrawUsage);
     /* schon in diesem Frame gesetzte Instanzen übernehmen */
-    if (old[j] && keep) { im.instanceMatrix.array.set(old[j].instanceMatrix.array.subarray(0, keep * 16)); if (old[j].instanceColor) im.instanceColor.array.set(old[j].instanceColor.array.subarray(0, keep * 3)); if (p.flame) geo.attributes.iFlame.array.set(old[j].geometry.attributes.iFlame.array.subarray(0, keep)); }
+    if (old[j] && keep) { im.instanceMatrix.array.set(old[j].instanceMatrix.array.subarray(0, keep * 16)); if (old[j].instanceColor) im.instanceColor.array.set(old[j].instanceColor.array.subarray(0, keep * 3)); if (p.flame) geo.attributes.iFlame.array.set(old[j].geometry.attributes.iFlame.array.subarray(0, keep)); geo.attributes.iDmg.array.set(old[j].geometry.attributes.iDmg.array.subarray(0, keep)); geo.attributes.iCut.array.set(old[j].geometry.attributes.iCut.array.subarray(0, keep * 4)); }
     im.visible = false; im.name = 'ships:' + s.kind; E.root.add(im);
     s.ims.push(im);
   });
-  for (const im of old) { E.root.remove(im); if (im.geometry.attributes.iFlame) im.geometry.dispose(); im.dispose(); }
+  for (const im of old) { E.root.remove(im); dropGeo(im.geometry); im.dispose(); }
+}
+/* Hülle freigeben, ohne die geteilten Ecken der Vorlage mitzulöschen */
+function dropGeo(geo) {
+  if (geo.userData.shared) { for (const k of geo.userData.shared) geo.deleteAttribute(k); geo.setIndex(null); }
+  geo.dispose();
 }
 /* eine Instanz (Schiff oder Wrack) anfügen: Lage M4, Farbe COL, Flammenfaktor k (−1 = keine Flammen) */
-function push(s, k, tint) {
+function push(s, k, tint, dmg = 0, cut = 0, cx = 0, cz = 0, ca = 0) {
   if (s.n >= s.cap) grow(s, s.cap * 2);
   const i = s.n++, parts = s.parts;
   for (let j = 0; j < parts.length; j++) {
@@ -122,13 +160,14 @@ function push(s, k, tint) {
     if (!p.node.visible) { M4b.makeScale(0, 0, 0); im.setMatrixAt(i, M4b); continue; }
     M4b.multiplyMatrices(M4, p.node.matrixWorld);
     if (p.flame) im.geometry.attributes.iFlame.setX(i, k < 0 ? 0 : 0.2 + k);
+    const ga = im.geometry.attributes; ga.iDmg.array[i] = dmg; const cu = ga.iCut.array; cu[i * 4] = cut; cu[i * 4 + 1] = cx; cu[i * 4 + 2] = cz; cu[i * 4 + 3] = ca;
     im.setMatrixAt(i, M4b); im.setColorAt(i, tint);
   }
 }
 function finish() {
   for (const s of E.sets.values()) {
     const n = s.n;
-    for (const im of s.ims) { im.count = n; im.visible = n > 0; if (n) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; if (im.geometry.attributes.iFlame) im.geometry.attributes.iFlame.needsUpdate = true; } }
+    for (const im of s.ims) { im.count = n; im.visible = n > 0; if (n) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; const ga = im.geometry.attributes; if (ga.iFlame) ga.iFlame.needsUpdate = true; ga.iDmg.needsUpdate = true; ga.iCut.needsUpdate = true; } }
     s.n = 0;
   }
 }
@@ -297,7 +336,7 @@ function wallField(b, col, gtime, t) {
 export function updateEntities(g, dt, t, view) {
   const fx = E.fx && typeof E.fx.spawn === 'object' ? E.fx.spawn : null, det = S.detail;
   const pcol = view.pcol, vis = view.visible, seen = view.vp < 0 ? () => true : view.seen, vp = view.vp, farShips = CAM.zoom < FAR_SHIP[S.detail], farSt = CAM.zoom < FAR_STATION[S.detail];
-  E.domeN = 0; flameTime(t);
+  E.domeN = 0; flameTime(t); DMG_T.value = t; E.now = t;
   /* Vorlagen animieren (einmal je Typ und Farbe) */
   for (const tp of E.tpl.values()) { if (tp.t !== t) { animate(tp.root, t, dt); tp.root.updateMatrixWorld(true); tp.t = t; } }
   /* Schiffe */
@@ -308,18 +347,33 @@ export function updateEntities(g, dt, t, view) {
     /* je Schiff gemerkt: Farbe, Vorlage, Instanzmengen (keine Schlüssel-Zeichenketten je Bild), Kurs und Rollen */
     const col = pcol(u.owner);
     let pv = E.prev.get(u.id);
-    if (!pv || pv.col !== col || pv.def !== def) { pv = { ang: u.ang, roll: pv ? pv.roll : 0, col, def, tp: tplOf(def, col), sets: [null, null, null, null] }; E.prev.set(u.id, pv); }
+    if (!pv || pv.col !== col || pv.def !== def) { pv = { ang: u.ang, roll: pv ? pv.roll : 0, col, def, tp: tplOf(def, col), sets: [null, null, null, null], v: u.v, surge: 0, dv: -1 }; E.prev.set(u.id, pv); }
     const si = (u.derelict ? 1 : 0) + (farShips ? 2 : 0), set = pv.sets[si] || (pv.sets[si] = setOf(pv.tp, u.derelict ? 'wreck' : 'normal', farShips));
     /* Lage: schweben, rollen in Kurven (aus der Kursänderung) */
     const da = dt > 0 ? angDiff(u.ang, pv.ang) / dt : 0; pv.ang = u.ang;
     const rollT = def.role === 'fighter' || def.swarm ? -da * 0.12 : -da * 0.22; pv.roll += (Math.max(-0.4, Math.min(0.4, rollT)) - pv.roll) * Math.min(1, dt * 6);
     const hover = u.derelict || u.crip ? -1.5 : Math.sin(t * 1.1 + u.id * 0.7) * (def.len < 40 ? 0.5 : 0.9);
     const yOff = (def.id === 'warden' && u.asleep) ? 20 : 0;
-    POS.set(u.x, hover + yOff, u.y); EUL.set(0, Math.PI / 2 - u.ang, u.derelict ? Math.sin(u.id) * 0.25 : u.crip ? Math.sin(t * 0.7 + u.id) * 0.35 : pv.roll); QUAT.setFromEuler(EUL); SCL.set(1, 1, 1);
+    /* Fassung 24: Einsprung frisch gebauter Schiffe – kommt von hinten heran, wächst mit leichtem Überschwingen */
+    let jx = 0, jy = 0, js = 1; const born = E.born.get(u.id);
+    if (born !== undefined) { const a = (t - born) / 0.55; if (a >= 1 || a < 0) E.born.delete(u.id); else { const e = 1 - Math.pow(1 - a, 3); js = 0.15 + 0.85 * e + Math.sin(a * Math.PI) * 0.12; const back = (1 - e) * Math.max(60, def.len * 1.5); jx = -Math.cos(u.ang) * back; jy = -Math.sin(u.ang) * back; } }
+    POS.set(u.x + jx, hover + yOff, u.y + jy); EUL.set(0, Math.PI / 2 - u.ang, u.derelict ? Math.sin(u.id) * 0.25 : u.crip ? Math.sin(t * 0.7 + u.id) * 0.35 : pv.roll); QUAT.setFromEuler(EUL); SCL.set(js, js, js);
     M4.compose(POS, QUAT, SCL);
     /* Flammen: Fahrt, G-Rausch, Sprint; keine bei Wracks und Ruhenden */
     let k = -1;
-    if (!u.derelict && !u.dormant && !u.crip) { const boost = u.abT && u.abT.grush > 0 ? 1.8 : u.sprint > 0 ? 1.4 : 1; k = Math.min(1.6, u.v / Math.max(1, def.speed)) * boost; }
+    /* Schadensstufe 0…4 (unter 20 %, 45 %, 70 %, 88 % Schaden), weich überblendet */
+    const dmgR = u.derelict || def.swarm || def.role === 'fighter' ? 0 : 1 - u.hull / u.hullMax;
+    const stage = dmgR < 0.2 ? 0 : dmgR < 0.45 ? 1 : dmgR < 0.7 ? 2 : dmgR < 0.88 ? 3 : 4;
+    if (pv.dv < 0) pv.dv = stage / 4; else pv.dv += (stage / 4 - pv.dv) * Math.min(1, dt * 2.5);
+    if (!u.derelict && !u.dormant && !u.crip) {
+      const boost = u.abT && u.abT.grush > 0 ? 1.8 : u.sprint > 0 ? 1.4 : 1;
+      /* Fassung 24: Schub folgt der Beschleunigung (Stoß beim Anfahren), Stand = kleine Restflamme, Stufe 4 stottert */
+      const acc = dt > 0 ? (u.v - pv.v) / dt / Math.max(1, def.speed) : 0;
+      pv.surge += (Math.max(0, Math.min(1, acc * 1.6)) - pv.surge) * Math.min(1, dt * (acc > 0 ? 8 : 3));
+      k = Math.min(1.6, u.v / Math.max(1, def.speed)) * boost + pv.surge * 0.9;
+      if (stage === 4 && Math.sin(t * 17 + u.id) + Math.sin(t * 5.3 + u.id * 2) > 1.1) k *= 0.15;
+    }
+    pv.v = u.v;
     /* Farbe je Instanz */
     COL.copy(WHITE);
     const hitAgo = g.time - (u.hitT || -9); if (hitAgo >= 0 && hitAgo < 0.12 && !u.derelict) COL.setScalar(1 + 1.2 * (1 - hitAgo / 0.12));
@@ -327,13 +381,15 @@ export function updateEntities(g, dt, t, view) {
     if (u.acid) COL.multiply(TINT.acid);
     if (u.dormant) COL.multiply(TINT.gold);
     if (u.cloak || (u.abT && u.abT.cloak > 0)) { const f = 0.3 + 0.12 * Math.sin(t * 7 + u.id); COL.multiply(TINT.ion.setRGB(f * 0.8, f * 1.1, f * 1.6)); }
-    push(set, k, COL);
+    push(set, k, COL, u.derelict ? 0.55 : pv.dv);
     if (def.role === 'fighter') continue;
-    /* Schaden: Funken ab 30 %, Rauch ab 60 % */
-    const dmg = u.derelict || def.swarm ? 0 : 1 - u.hull / u.hullMax;
-    if (fx && det > 0 && dmg > 0.3 && Math.random() < (dmg > 0.6 ? 0.08 : 0.03) * (det === 2 ? 1 : 0.5)) {
-      const a = Math.random() * TAU, d = Math.random() * def.r * 0.6, px = u.x + Math.cos(a) * d, py = u.y + Math.sin(a) * d;
-      if (dmg > 0.6 && fx.smoke) fx.smoke(px, py, def.r * 0.35, 1); else if (fx.spark) fx.spark(px, py, 2, 40, '#ffd27a');
+    /* Fassung 24: Schadensstufen auch als Partikel – 1 Funken, 2 Funken + Qualm, 3 Rauchfahne + Brände, 4 Feuer und kleine Explosionen */
+    if (fx && det > 0 && stage > 0 && !u.derelict) {
+      const q = (det === 2 ? 1 : 0.5) * Math.min(60, dt * 60), pt = () => { const a = Math.random() * TAU, d = Math.random() * def.r * 0.6; PT.x = u.x + Math.cos(a) * d; PT.y = u.y + Math.sin(a) * d; return PT; };
+      if (Math.random() < [0, 0.015, 0.04, 0.05, 0.06][stage] * q && fx.spark) { const p = pt(); fx.spark(p.x, p.y, 2 + stage, 40 + stage * 10, '#ffd27a'); }
+      if (stage >= 2 && Math.random() < [0, 0, 0.025, 0.08, 0.13][stage] * q && fx.smoke) { const p = pt(); fx.smoke(p.x, p.y, def.r * (0.2 + stage * 0.07), 1); }
+      if (stage >= 3 && Math.random() < (stage === 4 ? 0.07 : 0.03) * q && fx.fire) { const p = pt(); fx.fire(p.x, p.y, def.r * 0.18); }
+      if (stage === 4 && Math.random() < 0.012 * q && fx.burst) { const p = pt(); fx.burst(p.x, p.y, def.r * 0.35); }
     }
     if (u.crip && fx && fx.spark && Math.random() < 0.08) fx.spark(u.x + (Math.random() - 0.5) * def.r, u.y + (Math.random() - 0.5) * def.r, 3, 40, Math.random() < 0.5 ? '#ffd27a' : '#8fe8ff');
     if (u.derelict && fx && fx.spark && det > 1 && Math.random() < 0.03) fx.spark(u.x + (Math.random() - 0.5) * def.r, u.y + (Math.random() - 0.5) * def.r, 2, 30, '#ffd27a');
@@ -358,8 +414,20 @@ export function updateEntities(g, dt, t, view) {
     if (!seen(w.x, w.y) || !inView(w.x, w.y, 60, 5)) continue;
     const u = g.byId.get(w.id), def = (u && u.def) || (typeof SHIPS !== 'undefined' && SHIPS[w.type]); if (!def) continue;
     const set = setOf(tplOf(def, pcol(w.owner)), 'wreck', farShips), left = w.until - g.time, kf = Math.max(0.05, Math.min(1, left / 20));
+    /* Fassung 24: Kreuzer und Schlachtschiffe brechen in zwei Hälften, die auseinandertreiben und an der Bruchkante glühen */
+    if ((def.cls === 'm' || def.cls === 'l') && !def.swarm && !farShips) {
+      const age = Math.max(0, 120 - left), e = 1 - Math.pow(1 - Math.min(1, age / 4), 2), glowK = Math.max(0, 1 - age / 18);
+      for (const side of [1, -1]) {
+        const a = w.ang + Math.sin(w.id) * 0.3 + side * e * (0.18 + 0.1 * Math.sin(w.id * 3)), sep = e * Math.max(8, def.len * 0.22) * side;
+        const cx = w.x + Math.cos(a) * sep, cz = w.y + Math.sin(a) * sep, roll = side * e * 0.35 + Math.sin(w.id) * 0.2;
+        POS.set(cx, -2 - e * 2, cz); EUL.set(0, Math.PI / 2 - a, roll); QUAT.setFromEuler(EUL); SCL.set(1, 1, 1); M4.compose(POS, QUAT, SCL);
+        COL.setScalar(kf); push(set, -1, COL, 0.35 + 0.65 * glowK, side, cx, cz, a);
+        if (fx && det > 0 && glowK > 0 && Math.random() < 0.05 * glowK * (det === 2 ? 1 : 0.5)) { if (fx.fire && Math.random() < 0.5) fx.fire(cx, cz, def.r * 0.15); else if (fx.smoke) fx.smoke(cx, cz, def.r * 0.25, 1); }
+      }
+      continue;
+    }
     POS.set(w.x, -2, w.y); EUL.set(Math.cos(w.id) * 0.12, Math.PI / 2 - (w.ang + Math.sin(w.id) * 0.3), Math.sin(w.id) * 0.3); QUAT.setFromEuler(EUL); SCL.set(1, 1, 1); M4.compose(POS, QUAT, SCL);
-    COL.setScalar(kf); push(set, -1, COL);
+    COL.setScalar(kf); push(set, -1, COL, 0.4);
   }
   finish();
   for (const [id, m] of E.ruins) if (!ruinLive.has(id)) { if (g.wrecks.some(w => w.id === id && w.ruin)) m.visible = false; else { E.root.remove(m); E.ruins.delete(id); } }
@@ -426,8 +494,8 @@ export function updateEntities(g, dt, t, view) {
 }
 export function clearEntities() {
   if (!E.root) return;
-  for (const s of E.sets.values()) for (const im of s.ims) { E.root.remove(im); im.dispose(); }
-  E.sets.clear(); E.tpl.clear(); E.prev.clear(); FARST.clear(); STPL.clear(); PRE.length = 0;
+  for (const s of E.sets.values()) for (const im of s.ims) { E.root.remove(im); dropGeo(im.geometry); im.dispose(); }
+  E.sets.clear(); E.tpl.clear(); E.prev.clear(); E.born.clear(); FARST.clear(); STPL.clear(); PRE.length = 0;
   for (const e of E.stations.values()) dropStation(e); E.stations.clear();
   for (const m of E.ghost.values()) E.root.remove(m); E.ghost.clear(); E.ghostCur.length = 0;
   for (const m of E.ruins.values()) E.root.remove(m); E.ruins.clear();

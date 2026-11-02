@@ -593,7 +593,7 @@ function fireWeapon(g, s, i, w, t) {
     /* gebrochener Strahl: weitere Ziele im Schussfeld mit halbem Schaden */
     if (w.split > 1) { const ex = []; nearShips(g, s.x, s.y, w.range + 30, e => { if (e !== t && foes(g, s.owner, e.owner) && e.def.role !== 'fighter' && canSee(g, s.owner, e) && tdist(s, e) <= w.range && inArc(s, w, e)) ex.push(e); return ex.length >= w.split - 1; }); if (ex.length) rec.extra = ex.map(e => e.id); }
     s.beams[i] = rec;
-    if (!was) ev(g, 'shot', { x: s.x, y: s.y, kind: 'beam', owner: s.owner, snd: w.snd });
+    if (!was) ev(g, 'shot', { x: s.x, y: s.y, kind: 'beam', owner: s.owner, snd: w.snd, ang: datan2(t.y - s.y, t.x - s.x), r: s.def.r * 0.85 });
     /* Fassung 22: ein feindlicher Schildwall auf der Strecke fängt den Strahl ab (der Strahl endet am Feld) */
     const wc = g.wallL.length ? wallCross(g, s.owner, s.x, s.y, t.x, t.y) : null;
     if (wc) { rec.wx = wc.x; rec.wy = wc.y; rec.extra = null; wallHit(g, wc.b, w.dmg * m2, 'beam', s.owner, wc.x, wc.y); return; }
@@ -605,7 +605,7 @@ function fireWeapon(g, s, i, w, t) {
   if (w.kind === 'torp') {
     const a = datan2(t.y - sy, t.x - sx);
     g.proj.push({ kind: 'torp', x: sx + dcos(a) * (s.k === 2 ? s.def.r : s.def.r * 0.8), y: sy + dsin(a) * (s.k === 2 ? s.def.r : s.def.r * 0.8), ang: a, sp: w.speed, dmg: w.dmg * mul, owner: s.owner, sid: s.id, tid: t.id, life: w.life, hp: w.hp * g.players[s.owner].tfx.torpHp, turn: w.turn, r: 4 });
-    ev(g, 'shot', { x: sx, y: sy, kind: 'torp', owner: s.owner, snd: w.snd });
+    ev(g, 'shot', { x: sx, y: sy, kind: 'torp', owner: s.owner, snd: w.snd, ang: a, r: s.def.r * 0.8 });
     return;
   }
   /* Geschoss oder Railgun: auf die vorausberechnete Position zielen */
@@ -620,7 +620,7 @@ function fireWeapon(g, s, i, w, t) {
   if (w.bite && s.k === 1 && s.abT.lunge > 0) { dm *= 2; s.abT.lunge = 0; }
   const pk = rail ? 'rail' : w.acid ? 'acid' : w.bite ? 'bite' : 'kin';
   g.proj.push({ kind: pk, x: sx + dcos(a) * r0, y: sy + dsin(a) * r0, ang: a, sp: w.speed, dmg: dm, owner: s.owner, sid: s.id, tid: t.id, life: (w.range * 1.3 + 60) / w.speed, pierce, hit: null, r: rail ? 6 : w.acid ? 4 : 3, col: w.col, para: w.para ? 1 : 0, aS: w.antiS || 0, aL: w.antiL || 0 });   /* Fassung 22: Konter der Turmzweige */
-  ev(g, 'shot', { x: sx, y: sy, kind: pk, owner: s.owner, snd: w.snd, ang: a, big: w.dmg >= 20 });
+  ev(g, 'shot', { x: sx, y: sy, kind: pk, owner: s.owner, snd: w.snd, ang: a, big: w.dmg >= 20, r: r0 });
 }
 /* Punktverteidigung: nächster feindlicher Torpedo oder Jäger in Reichweite */
 function firePd(g, s, w, i) {
