@@ -149,13 +149,30 @@ function perfHint(fps) {
   el.querySelector('#phNo').addEventListener('click', close);
   setTimeout(() => { if (el.isConnected) el.remove(); }, 20000);
 }
+/* Fassung 24: Bildratenanzeige (Einstellung »Bildrate anzeigen«) und Rückfall von Ultra auf Hoch bei Dauereinbruch */
+let _fpsT = 0, _fpsN = 0, _ultraLow = 0;
+function fpsMeter(t) {
+  _fpsN++; if (!_fpsT) { _fpsT = t; return; }
+  const span = t - _fpsT; if (span < 1000) return;
+  const fps = Math.round(_fpsN * 1000 / span); _fpsT = t; _fpsN = 0;
+  const box = document.getElementById('fpsBox');
+  if (box && box.hidden === !!SET.fps) box.hidden = !SET.fps;
+  if (box && SET.fps) {
+    let q = SET.qual === 'ultra' ? 'Ultra' : SET.qual === 'low' ? L('Sparsam') : L('Hoch');
+    if (R.mode3d && typeof RA3D !== 'undefined' && RA3D.quality) { try { const k = RA3D.quality(); q += ' · 3D ×' + k.scale.toFixed(2) + (k.bloom ? ' · Bloom' : ''); } catch (e) { /* nichts */ } } else q += ' · 2D';
+    box.textContent = fps + ' FPS · ' + q; box.className = fps < 25 ? 'bad' : fps < 40 ? 'slow' : '';
+  }
+  /* Ultra: drei Sekunden in Folge unter 24 Bildern im laufenden Gefecht → zurück auf Hoch */
+  const live = UI.g && !UI.g.over && !UI.paused && !UI.attract && SET.pwr !== 'save';
+  if (SET.qual === 'ultra' && live && !window.__RA_TEST) { _ultraLow = fps < 24 ? _ultraLow + 1 : 0; if (_ultraLow >= 3) { _ultraLow = 0; SET.qual = 'auto'; applySet(); savePrefs(); toast(L('Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.')); } } else _ultraLow = 0;
+}
 function frame(t) {
   requestAnimationFrame(frame);
   /* Stromsparen: höchstens etwa 30 Bilder je Sekunde */
   if (SET.pwr === 'save' && t - _last < 31) return;
   let dt = (t - _last) / 1000;
   _last = t;
-  perfWatch(dt);
+  perfWatch(dt); fpsMeter(t);
   if (!(dt > 0)) dt = 0.016;
   if (dt > 0.1) dt = 0.1;
   if (UI.cqOpen) { cqFrame(dt); MUS.tick(); return; }

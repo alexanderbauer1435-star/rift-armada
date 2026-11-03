@@ -22,9 +22,9 @@ let later = [];               /* zeitversetzte Wirkungen { at, fn } */
 let now = 0;
 const H = { beam: 4, proj: 4, ground: 0.3, ring: 0.5, disc: 0.2, dome: 0.5 };
 /* Vorräte: [Sprites additiv, Rauch, Quads, Trümmer, Ringe, Kuppeln, Scheiben] */
-const CAP = [1400, 360, 1400, 460, 120, 48, 48];
-const LIM = { 2: CAP, 1: [520, 140, 520, 170, 60, 32, 32], 0: [200, 56, 200, 64, 30, 16, 16] };
-const KF = [0.3, 0.55, 1];
+const CAP = [2100, 540, 2100, 690, 160, 64, 64];   /* Fassung 24: Platz für »Ultra« (Stufe 3) */
+const LIM = { 3: CAP, 2: [1400, 360, 1400, 460, 120, 48, 48], 1: [520, 140, 520, 170, 60, 32, 32], 0: [200, 56, 200, 64, 30, 16, 16] };
+const KF = [0.3, 0.55, 1, 1.5];
 /* Waffenfarbe je Fraktion, wenn die Waffe keine eigene hat (data.js FACTIONS.wpn) */
 const WPN_COL = { alliance: '#7ff6ff', mars: '#ffd27a', legion: '#d9b8ff', nexus: '#f3e6ff', brood: '#b4ff3c', guardian: '#b8ffd8' };
 
@@ -55,9 +55,9 @@ export function init(scene, THREE, kitMats, d) {
   setDetail(d === undefined ? detail : d);
 }
 export function setDetail(d) {
-  detail = Math.max(0, Math.min(2, d | 0)); K = KF[detail];
+  const dd = Math.max(0, Math.min(3, d | 0)); detail = Math.min(2, dd); K = KF[dd];
   if (!P.spr) return;   /* vor init: nur merken */
-  const L = LIM[detail]; P.spr.lim = L[0]; P.smoke.lim = L[1]; P.quad.lim = L[2]; P.chunk.lim = L[3]; P.ring.lim = L[4]; P.dome.lim = L[5]; P.disc.lim = L[6];
+  const L = LIM[dd]; P.spr.lim = L[0]; P.smoke.lim = L[1]; P.quad.lim = L[2]; P.chunk.lim = L[3]; P.ring.lim = L[4]; P.dome.lim = L[5]; P.disc.lim = L[6];
 }
 /* Render-Skalierung des Kerns (0,5…2). Die Mindestbreite gilt in Pixeln des Render-Ziels; bei kleiner Skalierung
    etwas breiter, damit dünne Strahlen und Funken nicht unter einen Pixel fallen und flimmern. */

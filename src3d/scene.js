@@ -38,7 +38,7 @@ export const CAM_DIR = new THREE.Vector3(0, Math.sin(TILT), Math.cos(TILT));
 
 export const S = {
   renderer: null, scene: null, camera: null, composer: null, bloom: null, canvas: null,
-  detail: 1, cssW: 2, cssH: 2, dpr: 1, time: 0, g: null, vp: -1, view: null,
+  detail: 1, ultra: false, want: 1, cssW: 2, cssH: 2, dpr: 1, time: 0, g: null, vp: -1, view: null,
   key: null, rim: null, fill: null, hemi: null, pmrem: null, ok: false, info: { calls: 0, tris: 0 }
 };
 /* Regelung: dev = Geräte-DPR, scale = aktuelle Skalierung, level = Stufe in steps, bloom = Bloom an */
@@ -92,14 +92,15 @@ export function initScene(canvas, opts = {}) {
 /* Grenzen und Stufenleiter aus Fläche, Geräte-DPR und Detailstufe */
 function limits() {
   const area = Math.max(1, S.cssW * S.cssH), capMP = Math.sqrt(MP_MAX / area);
-  let max = Math.min(Q.dev, 2, capMP);
+  /* Fassung 24 »Ultra«: volle Gerätepixel (bis DPR 3, höchstens ~4,5 MP), Start ganz oben mit Bloom */
+  let max = S.ultra ? Math.min(Q.dev, 3, Math.sqrt(4.5e6 / Math.max(1, S.cssW * S.cssH))) : Math.min(Q.dev, 2, capMP);
   if (S.detail < 2) max = Math.min(max, 1.25);
   if (S.detail < 1) max = Math.min(max, 1);
   max = Math.max(S_MIN, max);
   const steps = []; for (let s = max; s > S_MIN * 1.001; s /= STEP) steps.unshift(+s.toFixed(3)); steps.unshift(S_MIN);
   if (steps.length > 1 && steps[1] - steps[0] < 0.04) steps.splice(1, 1);
   Q.max = max; Q.steps = steps; Q.top = steps.length - 1 + (S.detail >= 2 ? 1 : 0);
-  Q.start = Math.min(max, 1.75);
+  Q.start = S.ultra ? max : Math.min(max, 1.75);
 }
 function levelOf(scale) { let best = 0; for (let i = 0; i < Q.steps.length; i++) if (Q.steps[i] <= scale + 1e-3) best = i; return best; }
 /* Stufe anwenden: Skalierung und Bloom */
@@ -139,17 +140,18 @@ export function resize(cssW, cssH, dev) {
   if (dev) Q.dev = Math.max(0.5, Math.min(4, dev));
   limits();
   if (!S.ok) return;
-  if (!Q.init) { Q.init = true; apply(levelOf(Q.start)); return; }
+  if (!Q.init) { Q.init = true; apply(S.ultra ? Q.top : levelOf(Q.start)); return; }
   const want = Q.bloomWant ? Q.top : levelOf(Math.min(Q.scale, Q.max));
   Q.scale = -1; apply(Math.min(want, Q.top));
 }
 
 export function setDetail(d) {
+  const was = S.ultra; S.want = d | 0; S.ultra = (d | 0) >= 3;
   S.detail = Math.max(0, Math.min(2, d | 0));
   if (!S.ok) return;
   limits();
   if (!Q.init) return;
-  const want = Q.bloomWant ? Q.top : levelOf(Math.min(Q.scale, Q.max));
+  const want = S.ultra || Q.bloomWant ? Q.top : levelOf(Math.min(Q.scale, Q.max)); if (S.ultra !== was) Q.block = {};
   Q.scale = -1; apply(Math.min(want, Q.top));
 }
 

@@ -2713,7 +2713,14 @@ const LANGS = {
     "{0} lahmgelegt. Jetzt entern!": "{0} neutralisé. À l'abordage !",
     "Crew hat das Schiff wieder flott gemacht": "L'équipage a remis le vaisseau en état de marche",
     "{0} an der Werft instand gesetzt": "{0} réparé au chantier naval",
-    "Schriftgröße": "Taille du texte"
+    "Schriftgröße": "Taille du texte",
+    "Ultra": "Ultra",
+    " · Bloom": " · Bloom",
+    " FPS · ": " IPS · ",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra est trop exigeant pour cet appareil – qualité réglée sur Élevée.",
+    "starke Geräte": "appareils puissants",
+    "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra : pleine résolution, modèles plus fins et plus d'effets – consomme plus de batterie. Repasse seul sur Élevée si la fréquence d'images est trop basse.",
+    "Bildrate anzeigen": "Afficher les images/s"
   },
   es: {
     "Ziele": "Objetivos",
@@ -5425,7 +5432,14 @@ const LANGS = {
     "{0} lahmgelegt. Jetzt entern!": "{0} inutilizada. ¡Abordad ya!",
     "Crew hat das Schiff wieder flott gemacht": "La tripulación ha vuelto a poner la nave en marcha",
     "{0} an der Werft instand gesetzt": "{0} reparada en el astillero",
-    "Schriftgröße": "Tamaño del texto"
+    "Schriftgröße": "Tamaño del texto",
+    "Ultra": "Ultra",
+    " · Bloom": " · Bloom",
+    " FPS · ": " FPS · ",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra es demasiado para este dispositivo: calidad ajustada a Alta.",
+    "starke Geräte": "equipos potentes",
+    "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: resolución completa, modelos más finos y más efectos; consume más batería. Vuelve solo a Alta si la tasa de fotogramas es demasiado baja.",
+    "Bildrate anzeigen": "Mostrar FPS"
   },
   it: {
     "Ziele": "Obiettivi",
@@ -8137,7 +8151,14 @@ const LANGS = {
     "{0} lahmgelegt. Jetzt entern!": "{0} disabilitata. All'abbordaggio!",
     "Crew hat das Schiff wieder flott gemacht": "L'equipaggio ha rimesso in moto la nave",
     "{0} an der Werft instand gesetzt": "{0} riparata al cantiere",
-    "Schriftgröße": "Dimensione testo"
+    "Schriftgröße": "Dimensione testo",
+    "Ultra": "Ultra",
+    " · Bloom": " · Bloom",
+    " FPS · ": " FPS · ",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra è troppo per questo dispositivo – qualità impostata su Alta.",
+    "starke Geräte": "dispositivi potenti",
+    "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: risoluzione piena, modelli più fini e più effetti – consuma più batteria. Torna da solo su Alta se la frequenza dei fotogrammi è troppo bassa.",
+    "Bildrate anzeigen": "Mostra FPS"
   },
   pt: {
     "Ziele": "Objetivos",
@@ -10849,7 +10870,14 @@ const LANGS = {
     "{0} lahmgelegt. Jetzt entern!": "{0} desativada. Aborde agora!",
     "Crew hat das Schiff wieder flott gemacht": "A tripulação colocou a nave em movimento de novo",
     "{0} an der Werft instand gesetzt": "{0} reparada no estaleiro",
-    "Schriftgröße": "Tamanho do texto"
+    "Schriftgröße": "Tamanho do texto",
+    "Ultra": "Ultra",
+    " · Bloom": " · Bloom",
+    " FPS · ": " FPS · ",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra é demais para este aparelho – qualidade definida como Alta.",
+    "starke Geräte": "aparelhos potentes",
+    "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: resolução total, modelos mais finos e mais efeitos – gasta mais bateria. Volta sozinho para Alta se a taxa de quadros ficar baixa demais.",
+    "Bildrate anzeigen": "Mostrar FPS"
   },
   pl: {
     "Ziele": "Cele",
@@ -13561,6 +13589,13 @@ const LANGS = {
     "{0} lahmgelegt. Jetzt entern!": "{0} unieruchomiony. Do abordażu!",
     "Crew hat das Schiff wieder flott gemacht": "Załoga przywróciła statek do ruchu",
     "{0} an der Werft instand gesetzt": "{0} naprawiony w stoczni",
-    "Schriftgröße": "Rozmiar tekstu"
+    "Schriftgröße": "Rozmiar tekstu",
+    "Ultra": "Ultra",
+    " · Bloom": " · Bloom",
+    " FPS · ": " FPS · ",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra to za dużo dla tego urządzenia – ustawiono jakość Wysoka.",
+    "starke Geräte": "mocne urządzenia",
+    "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: pełna rozdzielczość, dokładniejsze modele i więcej efektów – zużywa więcej baterii. Sam wraca do jakości Wysoka, gdy liczba klatek jest za niska.",
+    "Bildrate anzeigen": "Pokaż FPS"
   },
 };

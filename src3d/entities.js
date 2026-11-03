@@ -335,7 +335,7 @@ function wallField(b, col, gtime, t) {
 /* ------------------------------------------------------------ je Frame */
 export function updateEntities(g, dt, t, view) {
   const fx = E.fx && typeof E.fx.spawn === 'object' ? E.fx.spawn : null, det = S.detail;
-  const pcol = view.pcol, vis = view.visible, seen = view.vp < 0 ? () => true : view.seen, vp = view.vp, farShips = CAM.zoom < FAR_SHIP[S.detail], farSt = CAM.zoom < FAR_STATION[S.detail];
+  const pcol = view.pcol, vis = view.visible, seen = view.vp < 0 ? () => true : view.seen, vp = view.vp, farShips = CAM.zoom < (S.ultra ? 0.5 : FAR_SHIP[S.detail]), farSt = CAM.zoom < (S.ultra ? 0.45 : FAR_STATION[S.detail]);
   E.domeN = 0; flameTime(t); DMG_T.value = t; E.now = t;
   /* Vorlagen animieren (einmal je Typ und Farbe) */
   for (const tp of E.tpl.values()) { if (tp.t !== t) { animate(tp.root, t, dt); tp.root.updateMatrixWorld(true); tp.t = t; } }

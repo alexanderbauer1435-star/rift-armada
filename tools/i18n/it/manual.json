@@ -777,5 +777,12 @@
  "{0} lahmgelegt. Jetzt entern!": "{0} disabilitata. All'abbordaggio!",
  "Crew hat das Schiff wieder flott gemacht": "L'equipaggio ha rimesso in moto la nave",
  "{0} an der Werft instand gesetzt": "{0} riparata al cantiere",
- "Schriftgröße": "Dimensione testo"
+ "Schriftgröße": "Dimensione testo",
+ "Ultra": "Ultra",
+ " · Bloom": " · Bloom",
+ " FPS · ": " FPS · ",
+ "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra è troppo per questo dispositivo – qualità impostata su Alta.",
+ "starke Geräte": "dispositivi potenti",
+ "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: risoluzione piena, modelli più fini e più effetti – consuma più batteria. Torna da solo su Alta se la frequenza dei fotogrammi è troppo bassa.",
+ "Bildrate anzeigen": "Mostra FPS"
 }

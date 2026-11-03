@@ -2712,5 +2712,12 @@ const EN = {
   "{0} lahmgelegt. Jetzt entern!": "{0} disabled. Board it now!",
   "Crew hat das Schiff wieder flott gemacht": "The crew got the ship moving again",
   "{0} an der Werft instand gesetzt": "{0} repaired at the shipyard",
-  "Schriftgröße": "Text size"
+  "Schriftgröße": "Text size",
+  "Ultra": "Ultra",
+  " · Bloom": " · Bloom",
+  " FPS · ": " FPS · ",
+  "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra is too much for this device – quality set to High.",
+  "starke Geräte": "powerful devices",
+  "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: full resolution, finer models and more effects – uses more battery. Falls back to High by itself if the frame rate is too low.",
+  "Bildrate anzeigen": "Show frame rate"
 };

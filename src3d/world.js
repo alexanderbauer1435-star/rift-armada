@@ -26,7 +26,8 @@ const W = { root: null, sky: null, anim: null, nodes: [], nebs: [], sites: new M
    Tiefe Ebene (Y = −2600) mit Nebelschwaden, darüber Sterne als Punkte in fester Pixelgröße (ohne Größen-
    dämpfung) in zwei Tiefen: viele feine bei −2600, wenige helle mit weichem Hof bei −900. Punkte bleiben bei jedem
    Zoom scharf, die Perspektive liefert die Parallaxe. Dazu ein Gasriese neben der Karte, weit hinten. */
-function canvas(w, h, draw) { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); return c; }
+/* Fassung 24 »Ultra«: Himmel und Planeten in doppelter Auflösung (gleiche Zeichnung, skaliert) */
+function canvas(w, h, draw) { const k = S.ultra && w >= 256 ? 2 : 1, c = document.createElement('canvas'); c.width = w * k; c.height = h * k; const x = c.getContext('2d'); if (k > 1) x.scale(k, k); draw(x, w, h); return c; }
 function skyDeep() {
   return canvas(1024, 1024, (x, w, h) => {
     const r = rng(11);

@@ -9,7 +9,7 @@ const UI = {
   g: null, me: -1, P: null, sel: new Set(), selB: 0, mode: 'normal', place: null, box: null, boxMode: false, keys: {}, paused: false, endShown: false, attract: true, kind: '', opts: null,
   speed: 1, tab: 'eco', showRange: false, showAll: false, mark: null, mouse: false, cx: 0, cy: 0, hx: 0, hy: 0, onView: false, rect: null, form: 'wedge', lastTap: 0, lastTapId: 0, hovT: 0, tipT: 0, saveAt: 0, alertT: -99, alertPos: null, camTravel: 0, fsOff: false, fsPause: false, mPage: 'home', items: []
 };
-const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', lang: 'de', gfx: '3d', dmgIcons: true, grally: false, apause: true, slowmo: false, pwr: 'auto', cb: false, vib: true, gfxUser: false };   /* Store-Fassung: pwr Stromsparen, cb Farbenblind, vib Vibration, gfxUser = Grafik selbst gewählt */   /* Fassung 22: dmgIcons – Schadenssymbole; grally, apause, slowmo (play.js) */
+const SET = { vol: 55, mus: 40, voice: true, scale: 1, speed: 1, bars: 'auto', qual: 'auto', fps: false, lang: 'de', gfx: '3d', dmgIcons: true, grally: false, apause: true, slowmo: false, pwr: 'auto', cb: false, vib: true, gfxUser: false };   /* Store-Fassung: pwr Stromsparen, cb Farbenblind, vib Vibration, gfxUser = Grafik selbst gewählt */   /* Fassung 22: dmgIcons – Schadenssymbole; grally, apause, slowmo (play.js) */
 const MENU = { faction: 'alliance', map: 'haven', opp: 1, lvl: 2, res: 'normal', oppF: 'random', mode: 'skirmish', allies: 1, allyLvl: 2 };
 const SCALES = [0.9, 1, 1.15, 1.3], SPEEDS = [0.75, 1, 1.5, 2];
 const $ = id => document.getElementById(id);
@@ -989,7 +989,8 @@ function applySet() {
   SND.setVol(SET.vol / 100); MUS.setVol(SET.mus / 100);
   document.documentElement.style.setProperty('--ui', (15 * SET.scale) + 'px');
   UI.speed = SET.speed; UI.showAll = SET.bars === 'all';
-  R.qScale = SET.qual === 'low' ? 0.6 : 1; R.detail = SET.qual === 'low' ? 1 : 2;
+  R.qScale = SET.qual === 'low' ? 0.6 : 1; R.detail = SET.qual === 'low' ? 1 : SET.qual === 'ultra' ? 3 : 2;   /* Fassung 24: Ultra = Stufe 3 (nur 3D) */
+  const fb = document.getElementById('fpsBox'); if (fb) fb.hidden = !SET.fps;
   if (R.cv) { const got = R.setMode(SET.gfx || '3d'); if (got !== (SET.gfx || '3d') && SET.gfx === '3d') SET.gfx3dFailed = true; if (R.mode3d) RA3D.setDetail(R.detail); R.resize(); }
   if (typeof layout === 'function') layout();
 }
@@ -1008,7 +1009,8 @@ function initSettings() {
     segInit('sBars', [['auto', 'Bei Schaden'], ['all', 'Immer']], () => SET.bars, v => { SET.bars = v; applySet(); savePrefs(); });
     segInit('sVoice', [[true, 'An'], [false, 'Aus']], () => SET.voice !== false, v => { SET.voice = v; savePrefs(); if (v) VOX.test(); else VOX.stop(); });   /* Runde 18 */
     segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; SET.gfxUser = true; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
-    segInit('sQual', [['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); });
+    segInit('sQual', [['ultra', 'Ultra', L('starke Geräte')], ['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); if (v === 'ultra') toast(L('Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.')); });
+    segInit('sFps', [[false, 'Aus'], [true, 'An']], () => !!SET.fps, v => { SET.fps = v; applySet(); savePrefs(); });   /* Fassung 24: Bildratenanzeige */
     segInit('sPwr', [['auto', 'Flüssig'], ['save', 'Akku sparen']], () => SET.pwr, v => { SET.pwr = v; savePrefs(); });
     segInit('sCb', [[false, 'Aus'], [true, 'An']], () => !!SET.cb, v => { SET.cb = v; savePrefs(); if (R.drawMini) try { R.drawMini(); } catch (e) { /* nichts */ } });
     segInit('sVib', [[true, 'An'], [false, 'Aus']], () => SET.vib !== false, v => { SET.vib = v; savePrefs(); if (v) buzz(40); });

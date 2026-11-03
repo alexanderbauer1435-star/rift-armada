@@ -188,9 +188,13 @@ export function hull(prof, mat, opts) { return loft(prof.map(([z, w, h, c, dy]) 
 /* Kasten mit abgerundeten Kanten (Fase) */
 /* Texturmaßstab an die Größe anpassen (gleich große Platten auf großen und kleinen Teilen) */
 export function uvScale(g, su, sv = su) { const uv = g.attributes.uv; if (!uv) return g; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv); return g; }
-export function box(w, h, d, mat, r = Math.min(w, h, d) * 0.12) { const k = Math.max(0.12, Math.max(w, h, d) / 36); return mk(uvScale(new RoundedBoxGeometry(w, h, d, 2, Math.max(0.05, r)), k), mat); }
+/* Fassung 24 »Ultra«: runde Teile feiner (nur Rundungen ab 10 Teilen – Sechs- und Achtkanter bleiben kantig) */
+let FINE = 1;
+export function setFine(on) { FINE = on ? 1.75 : 1; }
+const fs = n => n >= 10 ? Math.round(n * FINE) : n;
+export function box(w, h, d, mat, r = Math.min(w, h, d) * 0.12) { const k = Math.max(0.12, Math.max(w, h, d) / 36); return mk(uvScale(new RoundedBoxGeometry(w, h, d, FINE > 1 ? 3 : 2, Math.max(0.05, r)), k), mat); }
 /* Zylinder entlang Z */
-export function cyl(r1, r2, len, mat, seg = 16, open = false) { const g = uvScale(new THREE.CylinderGeometry(r2, r1, len, seg, 1, open), Math.max(0.1, Math.PI * (r1 + r2) / 36), Math.max(0.1, len / 36)); g.rotateX(Math.PI / 2); return mk(g, mat); }
+export function cyl(r1, r2, len, mat, seg = 16, open = false) { const g = uvScale(new THREE.CylinderGeometry(r2, r1, len, fs(seg), 1, open), Math.max(0.1, Math.PI * (r1 + r2) / 36), Math.max(0.1, len / 36)); g.rotateX(Math.PI / 2); return mk(g, mat); }
 /* einfacher Kasten ohne Fase (12 Dreiecke) für kleine Teile und Greebles; Texturmaßstab wie box */
 export function blk(w, h, d, mat) { const k = Math.max(0.12, Math.max(w, h, d) / 36); return mk(uvScale(new THREE.BoxGeometry(w, h, d), k), mat); }
 /* Drehkörper um die Y-Achse: prof = [[r, y], …]. Reihenfolge so, dass die Außenseite links der Laufrichtung liegt:
@@ -199,7 +203,7 @@ export function blk(w, h, d, mat) { const k = Math.max(0.12, Math.max(w, h, d) /
 export function lathe(prof, mat, seg = 32, opts = {}) {
   const hard = opts.hard !== false, pts = [];
   prof.forEach(([r, y], i) => { const v = new THREE.Vector2(Math.max(0.0001, r), y); pts.push(v); if (hard && i > 0 && i < prof.length - 1) pts.push(v.clone()); });
-  const g = new THREE.LatheGeometry(pts, seg, opts.phi0 || 0, opts.phiLen || Math.PI * 2);
+  const g = new THREE.LatheGeometry(pts, fs(seg), opts.phi0 || 0, opts.phiLen || Math.PI * 2);
   let rmax = 0, y0 = Infinity, y1 = -Infinity; for (const [r, y] of prof) { rmax = Math.max(rmax, r); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
   uvScale(g, Math.max(0.1, Math.PI * 2 * rmax / 36), Math.max(0.1, (y1 - y0 + rmax) / 36));
   return mk(g, mat);
@@ -208,7 +212,7 @@ export function lathe(prof, mat, seg = 32, opts = {}) {
 export function annulus(ri, ro, h, mat, seg = 48) { return lathe([[ri, -h / 2], [ro, -h / 2], [ro, h / 2], [ri, h / 2], [ri, -h / 2]], mat, seg); }
 /* Kreis aus n gleichen Teilen: make(i, winkel) liefert ein Objekt, das bei (r, y, 0) in Richtung +X steht und um Y gedreht wird */
 export function radial(n, r, make, y = 0, a0 = 0) { const g = new THREE.Group(); for (let i = 0; i < n; i++) { const a = a0 + i / n * Math.PI * 2, o = make(i, a); const h = new THREE.Group(); o.position.x += r; o.position.y += y; h.add(o); h.rotation.y = -a; g.add(h); } return g; }
-export function sphere(r, mat, ws = 20, hs = 14) { return mk(uvScale(new THREE.SphereGeometry(r, ws, hs), Math.max(0.1, r * 6.28 / 36), Math.max(0.1, r * 3.14 / 36)), mat); }
+export function sphere(r, mat, ws = 20, hs = 14) { return mk(uvScale(new THREE.SphereGeometry(r, fs(ws), fs(hs)), Math.max(0.1, r * 6.28 / 36), Math.max(0.1, r * 3.14 / 36)), mat); }
 export function at(o, x, y, z, rx = 0, ry = 0, rz = 0) { o.position.set(x, y, z); o.rotation.set(rx, ry, rz); return o; }
 /* Spiegelkopie an der Längsachse (x → −x) */
 export function mirror(o) { const c = o.clone(true); c.position.x = -c.position.x; c.scale.x *= -1; c.rotation.y = -c.rotation.y; c.rotation.z = -c.rotation.z; return c; }

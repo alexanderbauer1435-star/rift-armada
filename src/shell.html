@@ -69,6 +69,8 @@ button { font: inherit; color: inherit; }
 #tabs { display: flex; gap: 0.3em; }
 #tabs button { flex: 1; min-height: 1.9em; padding: 0.2em 0.3em; font-size: 0.92em; }
 #items { display: flex; flex-wrap: wrap; gap: 0.35em; max-height: 36vh; overflow-y: auto; touch-action: pan-y; align-content: flex-start; }
+#fpsBox { position: absolute; left: calc(0.5em + env(safe-area-inset-left)); top: calc(3.6em + env(safe-area-inset-top)); z-index: 29; padding: 0.15em 0.5em; border-radius: 0.4em; background: rgba(4, 8, 18, 0.72); color: #8fe8ff; font: 600 calc(var(--ui) * 0.8) 'Barlow Condensed', sans-serif; letter-spacing: 0.04em; pointer-events: none; white-space: nowrap; }
+#fpsBox.slow { color: #ffb347; } #fpsBox.bad { color: #ff6a5a; }
 #perfHint { position: absolute; left: 50%; top: calc(4.2em + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 30; padding: 0.7em 1em; max-width: min(28em, 92vw); font-size: var(--ui); display: flex; flex-direction: column; gap: 0.5em; text-align: center; }
 #perfHint .row { display: flex; gap: 0.5em; justify-content: center; flex-wrap: wrap; }
 .item .role { position: absolute; left: 0.3em; top: 0.15em; font-size: 0.85em; line-height: 1; color: var(--acc); opacity: 0.85; pointer-events: none; }
@@ -888,6 +890,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     <div class="row"><span class="lbl">Grafik</span><div class="seg" id="sGfx"></div></div>
     <div class="row"><span class="lbl">Qualität</span><div class="seg" id="sQual"></div></div>
     <div class="row"><span class="lbl">Bildrate</span><div class="seg" id="sPwr"></div></div>
+    <div class="row"><span class="lbl">Bildrate anzeigen</span><div class="seg" id="sFps"></div></div><!-- Fassung 24 -->
     <div class="row"><span class="lbl">Farbenblind-Modus</span><div class="seg" id="sCb"></div></div>
     <div class="row"><span class="lbl">Vibration</span><div class="seg" id="sVib"></div></div>
     <div class="row"><span class="lbl">Schadenssymbole</span><div class="seg" id="sDmg"></div></div><!-- Fassung 22 -->
@@ -936,5 +939,6 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
   <div class="ovl" id="loading" hidden><div class="win"><h2>Lädt …</h2><p class="fine">Die Karte wird aufgebaut.</p></div></div>
 </div>
 <!--SCRIPT-->
+<div id="fpsBox" hidden></div>
 </body>
 </html>

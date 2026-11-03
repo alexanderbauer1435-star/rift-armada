@@ -14,7 +14,7 @@ import * as THREE from 'three';
 import './models/factions/alliance.js'; import './models/factions/mars.js'; import './models/factions/legion.js'; import './models/factions/nexus.js'; import './models/factions/brood.js'; import './models/factions/guardian.js'; import './models/factions/siege.js'; import './models/factions/support.js';
 import './models/stations/alliance.js'; import './models/stations/mars.js'; import './models/stations/legion.js'; import './models/stations/nexus.js'; import './models/stations/brood.js'; import './models/stations/seal.js'; import './models/stations/extra22.js';
 import './models/world/nature.js'; import './models/world/sites.js';
-import { mats, BUILD, BUILDB, BUILDW, bake, drawCount, farGeometry, keepFor } from './models/kit.js';
+import { mats, BUILD, BUILDB, BUILDW, bake, drawCount, farGeometry, keepFor, setFine } from './models/kit.js';
 import { S, supported, initScene, resize, setDetail, render, disposeScene, adapt, sceneChanged, setQuality, quality } from './scene.js';
 import { CAM, setCam, updateCamera, project, unproject, shake } from './camera.js';
 import { buildWorld, updateWorld, disposeWorld } from './world.js';
@@ -51,10 +51,10 @@ const RA3D = {
   setAuto(on) { setQuality({ auto: on }); },
   quality, setQuality,
   setDetail(d) {
-    const before = S.detail; setDetail(d);
-    if (FX.ok && typeof effects.setDetail === 'function') effects.setDetail(S.detail);
+    const before = S.detail, ub = S.ultra; setDetail(d); setFine(S.ultra);
+    if (FX.ok && typeof effects.setDetail === 'function') effects.setDetail(S.ultra ? 3 : S.detail);
     /* Vorlagen und Karte hängen an der Detailstufe (Kennzeichen, die lebendig bleiben) → neu aufbauen */
-    if (S.ok && S.detail !== before && S.g) { clearEntities(); buildWorld(S.g); queuePrebuild(S.g); idlePrebuild(); }
+    if (S.ok && (S.detail !== before || S.ultra !== ub) && S.g) { clearEntities(); buildWorld(S.g); queuePrebuild(S.g); idlePrebuild(); }
   },
   setGame(g, vp) {
     if (!S.ok) return;
@@ -81,7 +81,7 @@ const RA3D = {
   frame(g, dt, time, view) {
     if (!S.ok || !g) return;
     S.g = g; S.view = view; S.time = time; S.vp = view.vp;
-    if (view.detail !== undefined && view.detail !== S.detail) RA3D.setDetail(view.detail);
+    if (view.detail !== undefined && view.detail !== S.want) RA3D.setDetail(view.detail);
     const P = PROF, now = () => performance.now(); let t0 = now(), t1;
     adapt(t0);
     updateCamera(dt);
