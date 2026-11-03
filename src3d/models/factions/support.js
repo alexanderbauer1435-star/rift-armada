@@ -48,7 +48,7 @@ function pods(M, g, z0, n, x, y, w) {
 
 function sup(id, b, k, extra) { register(id, (M, def) => { const g = new THREE.Group(); g.add(base(M, def, b, k)); extra(M, g); return g; }); }
 /* Minenleger */
-sup('tripwire', 'lancer', 1.12, (M, g) => mineRack(M, g, -24, 3, 7.5, 2.2, 2.2));
+/* Tripwire (Allianz): seit Fassung 25 eigenes Modell in factions/alliance.js */
 sup('caltrop', 'hedgehog', 1.1, (M, g) => { mineRack(M, g, -26, 3, 8.5, 2.4, 2.4); g.add(at(box(2, 0.6, 12, M.hazard || M.trim), 0, 4, -4)); });
 sup('censer', 'paladin', 1.05, (M, g) => { mineRack(M, g, -24, 3, 8, 2.2, 2.2); g.add(at(cyl(2.2, 3.2, 3, M.gold || M.trim, 12), 0, 4.2, -4)); g.add(at(sphere(1.2, M.glow, 10, 8), 0, 6, -4)); });
 sup('geode', 'prism', 1.0, (M, g) => { mineRack(M, g, -24, 3, 8.5, 1.8, 2.3); g.add(at(sphere(1.4, M.core || M.glow, 10, 8), 0, 3.5, -6)); });

@@ -21,7 +21,7 @@ function siege(id, base, k, z0, len, r, y0) {
     return g;
   });
 }
-siege('catapult', 'lancer', 1.25, -4, 26, 1.7, 3.2);
+/* Catapult (Allianz): seit Fassung 25 eigenes Modell in factions/alliance.js */
 siege('mortar', 'hedgehog', 1.2, -6, 22, 2.1, 3.6);
 siege('ballista', 'paladin', 1.15, -4, 28, 1.6, 3.2);
 siege('lodestar', 'prism', 1.05, -6, 26, 1.7, 3.4);
