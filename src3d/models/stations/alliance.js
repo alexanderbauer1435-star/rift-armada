@@ -592,8 +592,10 @@ reg('refinery', (M, d, lv) => {
 /* ================================================================== Reaktor
    Fusionsreaktorblock: achteckiger Panzersockel, darauf der Einschlussbehälter – acht Panzerpfeiler, zwischen
    denen der blaue Kern durch Schlitze leuchtet, oben ein Rost über dem hellsten Kernpunkt (von oben gut sichtbar).
-   Kühlflügel als Kreuz. Stufen: I zwei Kühlflügel und vier Kühlmitteltanks, II vier Flügel und Leitungsrahmen,
-   III längere Flügel, höherer Kern, vier Kondensatortürme mit leuchtender Krone und ein drehender Magnetring. */
+   Stufen bauen sichtbar an: I zwei Kühlflügel und zwei liegende Kühlmitteltanks. II vier Flügel, an den Diagonalen
+   Leitungen zu vier stehenden Kühlmitteltanks, um den Kern ein Einschlusskragen mit vier blauen Spulen.
+   III längere Flügel, zweite Kernstufe (der Behälter wächst nach oben, Rost und Glutpunkt auf der Spitze), vier hohe
+   Kondensatortürme außen an den Diagonalen mit leuchtender Krone und Leitung zum Tank, drehender Magnetring. */
 reg('reactor', (M, d, lv) => {
   const g = new THREE.Group(), F = sm(M);
   g.add(lathe([[0.01, -11], [7, -10], [15, -5], [17, -3], [17, 1], [15.5, 2.2], [0.01, 2.2]], F.hull, 8, { phi0: PI / 8 }));
@@ -606,7 +608,7 @@ reg('reactor', (M, d, lv) => {
     f.add(at(slits(F, 9, 0.3), 0, -0.6, 15.75));
   }
   /* Einschlussbehälter */
-  const cH = lv >= 3 ? 15 : 12.5, yT = 2.2 + cH;
+  const cH = 12.5, yT = 2.2 + cH;
   const core = cyl(4.3, 4.3, cH, F.core, 12); at(core, 0, 2.2 + cH / 2, 0, -PI / 2); g.add(core);
   for (let k = 0; k < 8; k++) {
     const p = new THREE.Group(); rad(p, k * PI / 4 + PI / 8, 6.3, 2.2 + cH / 2); g.add(p);
@@ -615,29 +617,49 @@ reg('reactor', (M, d, lv) => {
   }
   g.add(lathe([[4.4, 2.2], [8.6, 2.2], [8.6, 4.4], [7.6, 5], [4.4, 5], [4.4, 2.2]], F.hull, 8, { phi0: PI / 8 }));
   g.add(lathe([[4.4, yT - 1.6], [8.4, yT - 1.6], [8.4, yT + 0.2], [7.4, yT + 1], [4.4, yT + 1], [4.4, yT - 1.6]], F.hull, 8, { phi0: PI / 8 }));
-  const hot = cyl(2.4, 2.4, 0.3, F.coreHot, 12); at(hot, 0, yT + 0.2, 0, -PI / 2); hot.userData.pulse = { amp: 0.06, speed: 1.3 }; g.add(hot);
-  for (let i = 0; i < 2; i++) { const b = blk(9, 0.5, 0.7, F.dark); b.position.y = yT + 1.1; b.rotation.y = PI / 4 + i * PI / 2; g.add(b); }
+  /* Stufe III: zweite Kernstufe auf dem Deckel */
+  const y2 = lv >= 3 ? yT + 1 + 6 : yT;
+  if (lv >= 3) {
+    const c2 = cyl(2.9, 2.9, 6, F.core, 12); at(c2, 0, yT + 4, 0, -PI / 2); g.add(c2);
+    for (let k = 0; k < 4; k++) { const p = new THREE.Group(); rad(p, k * PI / 2 + PI / 4, 4.1, yT + 4); g.add(p); p.add(cb(2.0, 6, 1.8, F.armor, 0.35)); }
+    g.add(lathe([[3, y2 - 1.2], [5.6, y2 - 1.2], [5.6, y2 + 0.2], [4.9, y2 + 0.8], [3, y2 + 0.8], [3, y2 - 1.2]], F.hull, 8, { phi0: PI / 8 }));
+  }
+  const hr = lv >= 3 ? 1.9 : 2.4, hot = cyl(hr, hr, 0.3, F.coreHot, 12); at(hot, 0, y2 + 0.2, 0, -PI / 2); hot.userData.pulse = { amp: 0.06, speed: 1.3 }; g.add(hot);
+  const gl = lv >= 3 ? 6.4 : 9;
+  for (let i = 0; i < 2; i++) { const b = blk(gl, 0.5, 0.7, F.dark); b.position.y = y2 + 1.1; b.rotation.y = PI / 4 + i * PI / 2; g.add(b); }
   g.add(at(lamp(M, 0.4, 'red', 0.2), 6.2, yT + 1.4, 0)); g.add(at(lamp(M, 0.4, 'red', 0.2), -6.2, yT + 1.4, 0));
   /* Kühlflügel */
-  const wings = lv >= 2 ? [0, PI / 2, PI, 3 * PI / 2] : [0, PI], wl = lv >= 3 ? 13.5 : 11.5;
+  const wings = lv >= 2 ? [0, PI / 2, PI, 3 * PI / 2] : [0, PI], wl = lv >= 3 ? 14 : 11.5;
   for (const a of wings) { const r = radWing(M, wl, 7.5); rad(r, a, 15.2, 0.4); g.add(r); const c = cb(3, 3, 3, F.armor, 0.5); rad(c, a, 15.2, 0.6); g.add(c); }
   if (lv === 1) for (const a of [PI / 2, 3 * PI / 2]) { const o = new THREE.Group(); rad(o, a, 12, 4); g.add(o); o.add(at(cyl(1.6, 1.6, 7, F.olive, 10), 0, 0, 0, 0, PI / 2)); for (const x of [-2.6, 2.6]) o.add(at(cyl(1.8, 1.8, 0.5, F.dark, 10), x, 0, 0, 0, PI / 2)); o.add(at(cb(6, 1.6, 2, F.armor, 0.3), 0, -1.6, 0)); }
-  if (lv >= 2) for (let k = 0; k < 4; k++) {
-    /* Leitungsrahmen an den Diagonalen */
-    const o = new THREE.Group(); rad(o, PI / 4 + k * PI / 2, 0); g.add(o);
-    o.add(at(cyl(0.7, 0.7, 6, F.olive, 8), 0, 3.4, 11)); o.add(at(cb(2.4, 2.4, 2.4, F.armor, 0.4), 0, 3.4, 14.4));
-    if (lv >= 3) {
-      o.add(at(cb(3.6, 9, 3.6, F.armor, 0.6), 0, 6.7, 14.6));
-      o.add(at(mesh(new THREE.BoxGeometry(3.8, 0.6, 3.8), F.rail, false), 0, 9.5, 14.6));
-      o.add(at(cb(2.6, 1, 2.6, F.hull, 0.3), 0, 11.7, 14.6));
-      o.add(at(slits(F, 2.6, 0.3), 0, 6, 16.45));
+  if (lv >= 2) {
+    /* Leitungen und stehende Kühlmitteltanks an den Diagonalen */
+    for (let k = 0; k < 4; k++) {
+      const o = new THREE.Group(); rad(o, PI / 4 + k * PI / 2, 0); g.add(o);
+      o.add(at(cyl(0.7, 0.7, 6, F.olive, 8), 0, 3.4, 9.6)); o.add(at(cb(2.4, 2.4, 2.4, F.armor, 0.4), 0, 3.4, 12.4));
+      /* schlanker Tank (achtkantig, wenige Dreiecke): Körper, zwei Panzerbänder, Teamring, Ventilplatte */
+      o.add(at(cyl(2.6, 2.6, 8, k % 2 ? F.olive : F.hull, 8), 0, 6.4, 14.4, -PI / 2));
+      for (const y of [4.4, 7.6]) o.add(at(cyl(2.85, 2.85, 0.6, F.armor, 8), 0, y, 14.4, -PI / 2));
+      o.add(at(cyl(2.75, 2.75, 0.4, F.team, 8), 0, 9.0, 14.4, -PI / 2));
+      o.add(at(cb(2.4, 0.6, 2.4, F.armor, 0.15), 0, 10.6, 14.4)); o.add(at(blk(0.5, 1.0, 0.5, F.dark), 0.6, 11.3, 14.0));
+      if (lv >= 3) {
+        /* Kondensatorturm außen mit leuchtender Krone */
+        o.add(at(cb(3.4, 3, 3.4, F.armor, 0.5), 0, 0.6, 21.6)); o.add(beam(F.dark, [0, 1.6, 17], [0, 1.6, 20], 0.9));
+        o.add(at(cb(3, 11, 3, F.armor, 0.6), 0, 7.4, 21.6));
+        o.add(at(mesh(new THREE.BoxGeometry(3.2, 0.6, 3.2), F.rail, false), 0, 10.6, 21.6));
+        o.add(at(cb(2.4, 1, 2.4, F.hull, 0.3), 0, 13.4, 21.6)); o.add(at(lamp(M, 0.35, 'light'), 0, 14.2, 21.6));
+      }
     }
+    /* Einschlusskragen mit blauen Spulen auf halber Kernhöhe */
+    const yk = 2.2 + cH * 0.45;
+    g.add(lathe([[7.6, yk - 0.9], [9.8, yk - 0.9], [9.8, yk + 0.9], [7.6, yk + 0.9], [7.6, yk - 0.9]], F.armor, 8, { phi0: PI / 8 }));
+    for (let k = 0; k < 4; k++) { const b = new THREE.Group(); rad(b, k * PI / 2 + PI / 4, 9.4, yk); g.add(b); b.add(cb(2.2, 2.6, 1.4, F.hull, 0.3)); b.add(at(mesh(new THREE.BoxGeometry(1.6, 1.8, 0.2), F.rail, false), 0, 0, 0.72)); }
   }
   if (lv >= 3) {
     /* drehender Magnetring */
-    const mr = new THREE.Group(); mr.position.y = 2.2 + cH * 0.62; mr.userData.spin = { axis: 'y', speed: 0.35 }; g.add(mr);
-    mr.add(lathe([[9.4, -0.5], [10.8, -0.5], [10.8, 0.5], [9.4, 0.5], [9.4, -0.5]], F.armor, 12));
-    for (let k = 0; k < 6; k++) { const b = new THREE.Group(); rad(b, k * TAU / 6, 10.1); b.add(cb(2.2, 2, 2, F.hull, 0.4)); b.add(at(mesh(new THREE.BoxGeometry(1.4, 1.2, 0.2), F.rail, false), 0, 0, -1.05)); mr.add(b); }
+    const mr = new THREE.Group(); mr.position.y = 2.2 + cH * 0.85; mr.userData.spin = { axis: 'y', speed: 0.35 }; g.add(mr);
+    mr.add(lathe([[10.4, -0.5], [11.8, -0.5], [11.8, 0.5], [10.4, 0.5], [10.4, -0.5]], F.armor, 12));
+    for (let k = 0; k < 4; k++) { const b = new THREE.Group(); rad(b, k * PI / 2, 11.1); b.add(cb(2.2, 2, 2, F.hull, 0.4)); b.add(at(mesh(new THREE.BoxGeometry(1.4, 1.2, 0.2), F.rail, false), 0, 0, -1.05)); mr.add(b); }
   }
   numTop(g, 'ACS-R 31', 0, 2.65, -12.4, 1.4);
   return g;
@@ -700,120 +722,177 @@ reg('lab', (M, d, lv) => {
 });
 
 /* ================================================================== Lanzenturm
-   Gepanzerter Geschützturm auf einem achteckigen Pylon: Panzersockel mit Fensterschlitzen und Teamband, darauf
-   der Drehkopf (lance) mit Strahlwaffen-Läufen und blauen Mündungen. Stufe I: ein Lauf, Zielschüssel.
-   Stufe II: zwei Läufe, Kondensatorblöcke (blau) rund um den Pylon. Stufe III: zwei schwere Läufe mit Spulenring,
-   vier Kondensatoren, Panzerkranz mit Schildemittern. */
+   Kompakter, runder Panzerbunker (16-eckig, deutlich anders als die achteckigen Plattformen): steiles Glacis aus
+   zwölf geneigten Panzerplatten, darüber ein Kragen mit Fensterschlitzen und Teamring, oben der Drehkopf (lance) mit
+   Strahlwaffen-Läufen und blauen Mündungen. Stufe I: ein Lauf, Zielschüssel und Mast. Stufe II: zwei Läufe, zwei
+   Kondensatortrommeln (blau) auf dem Bunkerdach. Stufe III: zwei schwere Läufe, vier Kondensatoren, Schildemitter
+   in den Glacis-Lücken. */
 reg('turret', (M, d, lv) => {
   const g = new THREE.Group(), F = sm(M), s = [0, 3.4, 3.6, 4.1][lv];
-  g.add(lathe([[0.01, -10], [4.5, -9.5], [11, -4.5], [13, -2.5], [13, 1.5], [12, 2.5], [7.5, 2.5], [7.5, 4.4], [6.2, 5], [0.01, 5]], F.hull, 8, { phi0: PI / 8 }));
-  g.add(lathe([[12.8, -2], [13.6, -1.6], [13.6, 0.6], [12.8, 1], [12.8, -2]], F.armor, 8, { phi0: PI / 8 }));
-  g.add(at(cyl(0.9, 1.8, 4.5, F.dark, 8), 0, -12, 0, -PI / 2));
-  for (let k = 0; k < 8; k++) {
-    const f = new THREE.Group(); rad(f, k * PI / 4, 0); g.add(f);
-    f.add(at(slits(F, 6, 0.3, 'x', 1.3), 0, -0.4, 12.02)); f.add(at(cb(6.8, 0.4, 3.4, k % 2 ? F.olive : F.armor, 0.1), 0, 2.7, 9.6)); f.add(at(tb(M, 7.2, 0.18, 0.7), 0, 2.6, 11.5));
-    if (k % 2) f.add(at(cb(2.2, 1.2, 1.6, F.dark, 0.2), 2.4, 3.5, 9.4));
+  /* Bunkerkörper (rund) und Kiel */
+  g.add(lathe([[0.01, -8.5], [4.2, -8], [9.6, -4.2], [11.2, -2.4], [11.2, 0.4], [9.4, 4.4], [7.6, 5], [0.01, 5]], F.hull, 16));
+  g.add(lathe([[10.9, -2.9], [11.9, -2.6], [11.9, -1.6], [10.9, -1.3], [10.9, -2.9]], F.armor, 16));
+  g.add(lathe([[11.1, 0.0], [11.4, 0.0], [11.4, 0.45], [11.1, 0.45], [11.1, 0.0]], F.team, 16));
+  g.add(at(cyl(0.9, 1.8, 4.5, F.dark, 8), 0, -10.4, 0, -PI / 2));
+  /* Glacis: zwölf geneigte Panzerplatten mit Fugen, jede zweite mit Fensterschlitz darunter */
+  for (let k = 0; k < 12; k++) {
+    const f = new THREE.Group(); rad(f, k * TAU / 12 + PI / 12, 0); g.add(f);
+    f.add(at(cb(5.0, 0.7, 4.6, k % 3 ? F.armor : F.olive, 0.15), 0, 2.5, 10.6, 1.15));
+    if (k % 2) f.add(at(slits(F, 3.6, 0.3, 'x', 1.2), 0, -0.6, 11.25));
   }
-  /* Munitions-/Kondensatorblöcke */
+  /* Dachkragen mit Teamring, Lukendeckel */
+  g.add(lathe([[5.6, 4.8], [7.9, 4.8], [7.9, 5.6], [7.2, 6.0], [5.6, 6.0], [5.6, 4.8]], F.armor, 16));
+  g.add(lathe([[7.85, 5.0], [8.05, 5.0], [8.05, 5.4], [7.85, 5.4], [7.85, 5.0]], F.team, 16));
+  /* Kondensatortrommeln auf dem Dach (blau leuchtender Gürtel) */
   const nc = lv === 1 ? 0 : lv === 2 ? 2 : 4;
   for (let k = 0; k < nc; k++) {
     const o = new THREE.Group(); rad(o, k * TAU / nc + (nc === 2 ? PI / 2 : PI / 4), 0); g.add(o);
-    o.add(at(cb(4.6, 5, 4.6, F.armor, 0.6), 0, 5.4, 11.4)); o.add(at(mesh(new THREE.BoxGeometry(4.8, 0.5, 4.8), F.rail, false), 0, 6.2, 11.4)); o.add(at(cb(3.8, 0.8, 3.8, F.hull, 0.2), 0, 8.3, 11.4));
-    o.add(at(cyl(0.5, 0.5, 6, F.olive, 6), 0, 3.4, 7.5)); o.add(at(lamp(M, 0.25, 'light'), 1.7, 8.9, 12.7));
+    o.add(at(cyl(1.9, 2.1, 5.6, F.armor, 8), 0, 6.2, 9.0, -PI / 2)); o.add(at(cyl(2.15, 2.15, 0.6, F.rail, 8), 0, 6.6, 9.0, -PI / 2)); o.add(at(cb(3.2, 0.7, 3.2, F.hull, 0.2), 0, 9.3, 9.0));
+    o.add(at(cb(1.6, 1.0, 3.4, F.dark, 0.2), 0, 4.6, 6.6)); o.add(at(lamp(M, 0.25, 'light'), 0, 9.9, 9.0));
   }
-  if (lv >= 3) for (let k = 0; k < 4; k++) { const e = emitterS(M, 4.6, 2, 3, 1); rad(e, k * PI / 2, 13.2, -0.6); g.add(e); }
-  if (lv === 1) { for (let k = 0; k < 2; k++) { const o = new THREE.Group(); rad(o, PI / 2 + k * PI, 0); g.add(o); o.add(at(cb(5, 1.6, 4, F.armor, 0.4), 0, 3.6, 10.2)); o.add(at(cb(4.2, 0.5, 3.2, F.olive, 0.1), 0, 4.65, 10.2)); o.add(at(tb(M, 4.4, 0.2, 0.4), 0, 4.75, 12.1)); } const dd = dishT(M, 1.9, 0.8, 10); dd.position.set(-5.4, 2.9, -8.2); dd.userData.spin = { axis: 'y', speed: 0.4 }; g.add(dd); g.add(at(mast(M, 5, 0.14), 5.6, 2.9, -8)); }
-  else g.add(at(mast(M, 6, 0.16), 0, 2.5, -10.4));
-  const t = lance(M, s, lv >= 2 ? 2 : 1, lv >= 3, 0.3, lv >= 3 ? 3.9 : 4); t.position.y = 5; g.add(t);
-  numZ(g, 'ODP-' + (10 + lv), 0, 0.9, 12.1, 1.1);
+  if (lv >= 3) for (let k = 0; k < 4; k++) { const e = emitterS(M, 3.6, 1.8, 3, 1); rad(e, k * PI / 2, 11.6, -0.9); g.add(e); }
+  if (lv === 1) {
+    const dd = dishT(M, 1.9, 0.8, 10); dd.position.set(-5.2, 5.2, -5.2); dd.userData.spin = { axis: 'y', speed: 0.4 }; g.add(dd);
+    g.add(at(mast(M, 5, 0.14), 5.4, 5.2, -5.4));
+    for (const sx of [-1, 1]) g.add(at(cb(3.4, 1.2, 2.4, F.armor, 0.3), sx * 6.4, 5.6, 1.5));
+  } else g.add(at(mast(M, 6, 0.16), 0, 5.2, -7.0));
+  const t = lance(M, s, lv >= 2 ? 2 : 1, lv >= 3, 0.3, lv >= 3 ? 3.9 : 4); t.position.y = 5.6; g.add(t);
+  numZ(g, 'ODP-' + (10 + lv), 0, -2.0, 12.2, 1.0);
   return g;
 });
 
 /* ================================================================== Schildgenerator
-   Emitterturm: achteckiger Panzersockel, Generatorblock mit tiefblauen Emitterfeldern an allen Seiten, darauf eine
-   facettierte Schildkuppel (dunkelblau) unter einem Panzerkäfig, auf der Spitze ein pulsierender Emitterkern.
-   Stufe I: Turm mit vier Feldern. Stufe II: drehender Emitterring mit sechs Platten, vier Außenemitter auf
-   Auslegern. Stufe III: zweiter gegenläufiger Ring, acht Außenemitter, Kuppel größer. */
+   Sechseckige Emitterplattform (Grundriss Sechseck statt Achteck): an den Ecken hohe Emitterpylone mit tiefblauen
+   Feldplatten nach innen und leuchtender Spitze, auf den Seiten Deckplatten mit Teamstreifen. In der Mitte der
+   Generatorblock mit Emitterfeldern, darauf eine facettierte Schildkuppel (dunkelblau) unter einem Panzerkäfig und
+   ein pulsierender Emitterkern. Stufe I: drei Pylone (jede zweite Ecke). Stufe II: sechs Pylone, drehender
+   Emitterring mit sechs Platten. Stufe III: Pylone höher mit Querstegen zum Nachbarn, zweiter gegenläufiger Ring,
+   größere Kuppel, drei Außenemitter auf Auslegern. */
 reg('shield', (M, d, lv) => {
-  const g = new THREE.Group(), F = sm(M);
-  g.add(lathe([[0.01, -10], [5.5, -9.5], [13, -4], [15.5, -2.5], [15.5, 1.5], [14.5, 2.6], [0.01, 2.6]], F.hull, 8, { phi0: PI / 8 }));
-  g.add(lathe([[15.3, -2], [16.1, -1.5], [16.1, 0.6], [15.3, 1.1], [15.3, -2]], F.armor, 8, { phi0: PI / 8 }));
-  g.add(at(cyl(0.9, 1.7, 4.5, F.dark, 8), 0, -11.8, 0, -PI / 2));
-  for (let k = 0; k < 8; k++) {
-    const f = new THREE.Group(); rad(f, k * PI / 4, 0); g.add(f);
-    f.add(at(slits(F, 7, 0.3, 'x', 1.3), 0, -0.4, 14.33)); f.add(at(cb(7.8, 0.4, 3.6, k % 2 ? F.olive : F.armor, 0.1), 0, 2.8, 11.6)); f.add(at(tb(M, 8.2, 0.18, 0.7), 0, 2.7, 13.7));
+  const g = new THREE.Group(), F = sm(M), R = 15.5, ap = R * Math.cos(PI / 6);
+  /* Ecke k des Sechsecks in rad()-Winkeln (lathe legt Ecken bei phi = k·60° auf (sin, cos)) */
+  const cA = k => PI / 2 - k * PI / 3, sA = k => PI / 2 - (k + 0.5) * PI / 3;
+  g.add(lathe([[0.01, -9], [6, -8.5], [13, -3.5], [R, -2.2], [R, 1.6], [R - 1, 2.6], [0.01, 2.6]], F.hull, 6));
+  g.add(lathe([[R - 0.2, -1.9], [R + 0.7, -1.4], [R + 0.7, 0.6], [R - 0.2, 1.1], [R - 0.2, -1.9]], F.armor, 6));
+  g.add(at(cyl(0.9, 1.7, 4.5, F.dark, 8), 0, -10.8, 0, -PI / 2));
+  for (let k = 0; k < 6; k++) {
+    const f = new THREE.Group(); rad(f, sA(k), 0); g.add(f);
+    f.add(at(slits(F, 9, 0.3, 'x', 1.3), 0, -0.3, ap + 0.62));
+    f.add(at(cb(10.5, 0.4, 4.2, k % 2 ? F.olive : F.armor, 0.1), 0, 2.8, ap - 3.2));
+    f.add(at(tb(M, 9.5, 0.18, 0.7), 0, 2.75, ap - 0.6));
   }
-  /* Generatorblock mit Emitterfeldern, Pufferbänke an den Diagonalen */
+  /* Eckpylone */
+  const np = lv === 1 ? 3 : 6, ph = lv >= 3 ? 11 : 8.5, rp = R - 1.6;
+  for (let i = 0; i < np; i++) {
+    const k = lv === 1 ? i * 2 : i, o = new THREE.Group(); rad(o, cA(k), rp); g.add(o);
+    o.add(at(cb(3.6, 2.2, 3.6, F.armor, 0.5), 0, 3.6, 0));
+    o.add(at(cb(2.4, ph, 2.4, F.hull, 0.4), 0, 4.6 + ph / 2, 0.2));
+    o.add(at(mesh(new THREE.BoxGeometry(1.8, ph * 0.62, 0.2), F.shield, false), 0, 4.8 + ph * 0.5, -1.05));
+    o.add(at(cb(3.0, 0.6, 3.0, F.olive, 0.15), 0, 4.9 + ph, 0.2));
+    o.add(at(mesh(new THREE.OctahedronGeometry(0.9, 0), F.core, false), 0, 6.1 + ph, 0.2));
+    o.add(at(tb(M, 0.2, ph * 0.4, 1.4), 1.25, 4.6 + ph * 0.4, 0.2));
+  }
+  if (lv >= 3) for (let k = 0; k < 6; k++) {
+    /* Querstege zwischen benachbarten Pylonspitzen */
+    const a0 = cA(k), a1 = cA(k + 1), y = 4.6 + ph - 0.6;
+    g.add(beam(F.armor, [Math.cos(a0) * rp, y, Math.sin(a0) * rp], [Math.cos(a1) * rp, y, Math.sin(a1) * rp], 0.6));
+  }
+  /* Generatorblock mit Emitterfeldern */
   const bh = 7;
   g.add(at(cb(9, bh, 9, F.armor, 1), 0, 2.6 + bh / 2, 0));
   for (let k = 0; k < 4; k++) { const e = emitterS(M, 6.5, 4.2, 4, 3); e.position.set(0, 2.6 + bh / 2, 0); e.rotation.y = k * PI / 2; e.translateZ(4.75); g.add(e); }
   g.add(at(cb(10.5, 0.8, 10.5, F.hull, 0.3), 0, 2.6 + bh + 0.4, 0));
-  for (let k = 0; k < 4; k++) { const o = new THREE.Group(); rad(o, k * PI / 2 + PI / 4, 0); g.add(o); o.add(at(cb(3.6, 2.2, 4.4, F.armor, 0.4), 0, 3.7, 9.2)); o.add(at(mesh(new THREE.BoxGeometry(2.4, 0.3, 3), F.rail, false), 0, 4.85, 9.2)); for (let i = 0; i < 3; i++) o.add(at(blk(3.8, 0.4, 0.5, F.dark), 0, 4.9, 8 + i * 1.2)); o.add(at(cyl(0.5, 0.5, 4, F.olive, 6), 0, 3.4, 6.2)); }
   /* Kuppel mit Käfig und Kern */
   const dr = lv >= 3 ? 5.2 : 4.4, yd = 2.6 + bh + 0.8;
-  const dome = lathe([[0.01, 0], [dr, 0], [dr * 0.92, dr * 0.42], [dr * 0.66, dr * 0.78], [dr * 0.3, dr * 0.96], [0.01, dr]], F.dome, 8, { phi0: PI / 8 }); dome.position.y = yd; g.add(dome);
-  for (let k = 0; k < 8; k++) { const b = new THREE.Group(); rad(b, k * PI / 4 + PI / 8, 0, yd); g.add(b); b.add(beam(F.armor, [0, 0.2, dr * 1.02], [0, dr * 0.84, dr * 0.5], 0.7, 0.5)); b.add(at(cb(1.6, 1.2, 1.6, F.armor, 0.3), 0, 0.5, dr * 1.02)); }
-  g.add(lathe([[dr * 0.42, yd + dr * 0.86], [dr * 0.5, yd + dr * 0.92], [dr * 0.42, yd + dr * 0.98], [dr * 0.42, yd + dr * 0.86]], F.hull, 8, { phi0: PI / 8 }));
+  const dome = lathe([[0.01, 0], [dr, 0], [dr * 0.92, dr * 0.42], [dr * 0.66, dr * 0.78], [dr * 0.3, dr * 0.96], [0.01, dr]], F.dome, 6); dome.position.y = yd; g.add(dome);
+  for (let k = 0; k < 6; k++) { const b = new THREE.Group(); rad(b, cA(k), 0, yd); g.add(b); b.add(beam(F.armor, [0, 0.2, dr * 1.02], [0, dr * 0.84, dr * 0.5], 0.7, 0.5)); b.add(at(cb(1.6, 1.2, 1.6, F.armor, 0.3), 0, 0.5, dr * 1.02)); }
+  g.add(lathe([[dr * 0.42, yd + dr * 0.86], [dr * 0.5, yd + dr * 0.92], [dr * 0.42, yd + dr * 0.98], [dr * 0.42, yd + dr * 0.86]], F.hull, 6));
   const core = mesh(new THREE.IcosahedronGeometry(dr * 0.28, 1), F.core, false); core.position.y = yd + dr * 1.1; core.userData.pulse = { amp: 0.12, speed: 1.6 }; g.add(core);
   g.add(at(lamp(M, 0.3, 'red', 0.2), 4.9, yd + 0.4, 4.9));
   /* Emitterringe */
-  const rings = lv === 1 ? [] : lv === 2 ? [[8.6, 0.25, 6]] : [[8.6, 0.25, 6], [10.8, -0.18, 8]];
+  const rings = lv === 1 ? [] : lv === 2 ? [[8.6, 0.25, 6]] : [[8.6, 0.25, 6], [10.4, -0.18, 6]];
   rings.forEach(([rr, sp, n], j) => {
-    const R = new THREE.Group(); R.position.y = yd + 1.4 + j * 2.6; R.userData.spin = { axis: 'y', speed: sp }; g.add(R);
-    R.add(lathe([[rr - 0.4, -0.3], [rr + 0.4, -0.3], [rr + 0.4, 0.3], [rr - 0.4, 0.3], [rr - 0.4, -0.3]], F.armor, 12));
-    for (let k = 0; k < n; k++) { const b = new THREE.Group(); rad(b, k * TAU / n, rr); R.add(b); b.add(cb(2.6, 2.2, 1, F.hull, 0.3)); b.add(at(mesh(new THREE.BoxGeometry(2, 1.5, 0.2), F.shield, false), 0, 0, -0.6)); }
+    const Rg = new THREE.Group(); Rg.position.y = yd + 1.4 + j * 2.6; Rg.userData.spin = { axis: 'y', speed: sp }; g.add(Rg);
+    Rg.add(lathe([[rr - 0.4, -0.3], [rr + 0.4, -0.3], [rr + 0.4, 0.3], [rr - 0.4, 0.3], [rr - 0.4, -0.3]], F.armor, 12));
+    for (let k = 0; k < n; k++) { const b = new THREE.Group(); rad(b, k * TAU / n, rr); Rg.add(b); b.add(cb(2.6, 2.2, 1, F.hull, 0.3)); b.add(at(mesh(new THREE.BoxGeometry(2, 1.5, 0.2), F.shield, false), 0, 0, -0.6)); }
   });
-  /* Außenemitter auf Auslegern (Stufe II vier, Stufe III acht, weiter außen) */
-  const no = lv === 1 ? 0 : lv === 2 ? 4 : 8, ro = lv >= 3 ? 21.5 : 19;
-  for (let k = 0; k < no; k++) {
-    const o = new THREE.Group(); rad(o, k * TAU / no + PI / no, 0); g.add(o);
-    o.add(at(cb(2.6, 2, ro - 10, F.armor, 0.4), 0, 3.6, (ro + 11) / 2 - 1.5)); o.add(at(cb(3.4, 5.4, 2.6, F.hull, 0.5), 0, 5.6, ro));
-    o.add(at(mesh(new THREE.BoxGeometry(2.4, 3.6, 0.2), F.shield, false), 0, 6.2, ro - 1.35));
-    o.add(at(cb(3.8, 0.6, 3, F.olive, 0.15), 0, 8.6, ro)); o.add(at(tb(M, 3.5, 0.3, 0.2), 0, 4, ro + 1.35)); o.add(at(lamp(M, 0.3, 'light'), 0, 9.2, ro));
-    for (const sx of [-1, 1]) o.add(at(cb(0.5, 1.4, 1.6, F.dark, 0.1), sx * 1.95, 3, ro - 3.4));
+  /* Stufe III: drei Außenemitter auf Auslegern über den Sechseckseiten */
+  if (lv >= 3) for (let i = 0; i < 3; i++) {
+    const o = new THREE.Group(); rad(o, sA(i * 2 + 1), 0); g.add(o); const ro = 21.5;
+    o.add(at(cb(2.6, 2, ro - ap + 1, F.armor, 0.4), 0, 1.2, (ro + ap) / 2 - 1)); o.add(at(cb(3.4, 5.4, 2.6, F.hull, 0.5), 0, 3.2, ro));
+    o.add(at(mesh(new THREE.BoxGeometry(2.4, 3.6, 0.2), F.shield, false), 0, 3.8, ro - 1.35));
+    o.add(at(cb(3.8, 0.6, 3, F.olive, 0.15), 0, 6.2, ro)); o.add(at(tb(M, 3.5, 0.3, 0.2), 0, 1.6, ro + 1.35)); o.add(at(lamp(M, 0.3, 'light'), 0, 6.8, ro));
   }
-  numTop(g, 'ACS-SG ' + lv, 0, 2.85, -9.8, 1.2);
+  numTop(g, 'ACS-SG ' + lv, -ap + 3.2, 3.05, 0, 1.2, PI / 2);
   return g;
 });
 
 /* ================================================================== Kommandorelais
-   Kommunikationsmast: kleiner achteckiger Sockel mit Funkraum, darauf ein hoher Gittermast mit Plattformen,
-   Richtfunkschüsseln und Dipolantennen, oben ein langsames rotes Warnlicht. Stufe I: Mast mit einer Schüssel und
-   zwei Auslegern. Stufe II: höherer Mast, zweite Plattform mit zwei weiteren Schüsseln, Antennenkranz.
-   Stufe III: dritte Plattform mit großer Schüssel, drehender Datenring mit Teamfarbe. */
+   Hoher Kommunikationsturm auf kleinem quadratischem Sockel (Grundriss Quadrat): Funkraum, vier Stützstreben von den
+   Sockelecken zum Gittermast, am Mast Plattformen mit Richtfunkschüsseln, oben Warnlicht und Spitzenantenne. Von oben
+   klein, aber die höchste Station der Allianz. Stufe I: Mast 20, eine Plattform mit zwei Schüsseln, zwei
+   Dipol-Ausleger am Sockel. Stufe II: Mast 26, zweite Plattform, Rahe mit Dipolen, zwei Gerätemodule am Sockel,
+   Abspannungen zu vier Ankerblöcken. Stufe III: Mast 32, dritte Plattform mit großer Schüssel, drehender Datenring
+   in Teamfarbe, vier Eckantennen und ein Kommandomodul mit Fensterband. */
 reg('relay', (M, d, lv) => {
-  const g = new THREE.Group(), F = sm(M), H = [0, 9, 12, 15][lv];
-  g.add(lathe([[0.01, -8], [5, -7.5], [11, -3], [12.5, -2], [12.5, 1], [11.5, 2], [0.01, 2]], F.hull, 8, { phi0: PI / 8 }));
-  g.add(lathe([[12.3, -1.6], [13, -1.2], [13, 0.4], [12.3, 0.8], [12.3, -1.6]], F.armor, 8, { phi0: PI / 8 }));
-  g.add(at(cyl(0.7, 1.4, 3.5, F.dark, 8), 0, -9.4, 0, -PI / 2));
-  for (let k = 0; k < 8; k++) { const f = new THREE.Group(); rad(f, k * PI / 4, 0); g.add(f); f.add(at(slits(F, 6, 0.3, 'x', 1.2), 0, -0.4, 11.55)); f.add(at(cb(6.4, 0.4, 2.8, k % 2 ? F.olive : F.armor, 0.1), 0, 2.2, 9.4)); f.add(at(tb(M, 6.6, 0.18, 0.6), 0, 2.1, 11.1)); }
+  const g = new THREE.Group(), F = sm(M), H = [0, 20, 26, 32][lv], B = 9.5, y0 = 5.6;
+  /* quadratischer Sockel (Seiten parallel zu X/Z) */
+  g.add(lathe([[0.01, -7], [4.5, -6.5], [B - 1, -2.6], [B, -1.6], [B, 1.2], [B - 0.8, 2], [0.01, 2]], F.hull, 4, { phi0: PI / 4 }));
+  g.add(lathe([[B - 0.2, -1.3], [B + 0.6, -0.9], [B + 0.6, 0.5], [B - 0.2, 0.9], [B - 0.2, -1.3]], F.armor, 4, { phi0: PI / 4 }));
+  g.add(at(cyl(0.7, 1.4, 3.5, F.dark, 8), 0, -8.4, 0, -PI / 2));
+  const ap = B * Math.SQRT1_2;
+  for (let k = 0; k < 4; k++) { const f = new THREE.Group(); rad(f, k * PI / 2, 0); g.add(f); f.add(at(slits(F, 8, 0.3, 'x', 1.2), 0, -0.2, ap + 0.47)); f.add(at(cb(8.6, 0.4, 2.4, k % 2 ? F.olive : F.armor, 0.1), 0, 2.2, ap - 1.6)); f.add(at(tb(M, 8.8, 0.18, 0.5), 0, 2.1, ap - 0.2)); }
   /* Funkraum */
-  g.add(at(cb(8, 3.2, 8, F.armor, 0.8), 0, 3.6, 0)); g.add(at(cb(9, 0.5, 9, F.hull, 0.2), 0, 5.4, 0));
-  for (let k = 0; k < 4; k++) { const f = new THREE.Group(); f.rotation.y = k * PI / 2; g.add(f); f.add(at(slits(F, 6, 0.35, 'x', 1.1), 0, 3.8, 4.02)); f.add(at(tb(M, 7, 0.4, 0.2), 0, 2.7, 4.02)); }
-  /* Gittermast mit Plattformen */
-  const m = truss(F.armor, H, 3, 3, 3, 0.3); m.rotation.x = -PI / 2; m.position.y = 5.6 + H / 2; g.add(m);
+  g.add(at(cb(6.4, 3.2, 6.4, F.armor, 0.8), 0, 3.6, 0)); g.add(at(cb(7.2, 0.5, 7.2, F.hull, 0.2), 0, 5.4, 0));
+  for (let k = 0; k < 4; k++) { const f = new THREE.Group(); f.rotation.y = k * PI / 2; g.add(f); f.add(at(slits(F, 5, 0.35, 'x', 1.1), 0, 3.8, 3.22)); f.add(at(tb(M, 5.6, 0.4, 0.2), 0, 2.7, 3.22)); }
+  /* Gittermast mit Stützstreben */
+  const m = truss(F.armor, H, 3, 3, 3, 0.3); m.rotation.x = -PI / 2; m.position.y = y0 + H / 2; g.add(m);
   g.add(at(cb(4.2, 1, 4.2, F.olive, 0.2), 0, 6, 0));
-  const plats = lv === 1 ? [[H * 0.7, 2.4]] : lv === 2 ? [[H * 0.42, 2.6], [H * 0.86, 2.2]] : [[H * 0.3, 2.6], [H * 0.6, 2.2], [H * 0.92, 3]];
-  plats.forEach(([y, dr], j) => {
-    const yy = 5.6 + y;
-    g.add(at(cb(5.4, 0.6, 5.4, F.hull, 0.2), 0, yy, 0)); g.add(at(tb(M, 5.6, 0.2, 0.3), 0, yy, 2.75)); g.add(at(tb(M, 5.6, 0.2, 0.3), 0, yy, -2.75));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) { g.add(beam(F.dark, [sx * (ap - 1.2), 2.4, sz * (ap - 1.2)], [sx * 1.5, y0 + H * 0.3, sz * 1.5], 0.5)); g.add(at(cb(1.6, 0.8, 1.6, F.armor, 0.2), sx * (ap - 1.2), 2.4, sz * (ap - 1.2))); }
+  const plats = lv === 1 ? [[0.62, 2.4]] : lv === 2 ? [[0.42, 2.6], [0.8, 2.2]] : [[0.34, 2.6], [0.62, 2.2], [0.9, 3.4]];
+  plats.forEach(([fy, dr], j) => {
+    const yy = y0 + H * fy;
+    g.add(at(cb(5.6, 0.6, 5.6, F.hull, 0.2), 0, yy, 0)); g.add(at(tb(M, 5.8, 0.2, 0.3), 0, yy, 2.85)); g.add(at(tb(M, 5.8, 0.2, 0.3), 0, yy, -2.85));
     const nd = j === plats.length - 1 && lv >= 3 ? 1 : 2;
     for (let i = 0; i < nd; i++) { const dd = dishT(M, dr, 1.1, 10); const a = j * 1.1 + i * PI; dd.position.set(Math.cos(a) * 2.6, yy + 0.3, Math.sin(a) * 2.6); dd.userData.sway = { axis: 'y', base: -a + PI / 2, amp: 0.4, speed: 0.1 + j * 0.03, phase: j }; g.add(dd); }
     if (nd === 1) { g.add(at(cb(2.4, 1.4, 2.4, F.armor, 0.3), -2.4, yy + 1, 0)); g.add(at(lamp(M, 0.3, 'green', 0.2), -2.4, yy + 2, 0)); }
   });
-  /* Dipol-Ausleger und Richtfunkschüsseln am Sockel */
+  /* Dipol-Ausleger am Sockel */
   for (const s of [-1, 1]) {
     const o = new THREE.Group(); rad(o, s > 0 ? PI / 2 : 3 * PI / 2, 0); g.add(o);
-    o.add(at(cb(1.6, 1, 11, F.armor, 0.2), 0, 3, 9)); o.add(at(cb(2.4, 1.6, 2.4, F.hull, 0.3), 0, 3.2, 14.6)); o.add(at(tb(M, 2.6, 0.3, 0.2), 0, 3.2, 15.85));
-    for (let i = 0; i < 4; i++) o.add(at(blk(0.18, 2.6 + i * 0.5, 0.18, F.dark), 0, 4.8 + i * 0.25, 6.5 + i * 2));
-    o.add(at(lamp(M, 0.22, 'light'), 0, 4.3, 14.6));
+    o.add(at(cb(1.4, 0.9, 7.5, F.armor, 0.2), 0, 2.9, 7.6)); o.add(at(cb(2.2, 1.4, 2.2, F.hull, 0.3), 0, 3.0, 11.6)); o.add(at(tb(M, 2.4, 0.3, 0.2), 0, 3.0, 12.75));
+    for (let i = 0; i < 3; i++) o.add(at(blk(0.18, 2.4 + i * 0.5, 0.18, F.dark), 0, 4.6 + i * 0.25, 6.2 + i * 2));
+    o.add(at(lamp(M, 0.22, 'light'), 0, 4.0, 11.6));
   }
-  for (const s of [-1, 1]) { const dd = dishT(M, 2.2, 0.9, 10); dd.position.set(s * 7.4, 2.6, 0); dd.rotation.y = s * PI / 2; dd.userData.sway = { axis: 'y', base: s * PI / 2, amp: 0.3, speed: 0.08, phase: s }; g.add(dd); }
-  if (lv >= 2) for (let k = 0; k < 6; k++) { const a = k / 6 * TAU, r = 2.2, y = 5.6 + H * 0.15; g.add(at(blk(0.15, 3, 0.15, F.dark), Math.cos(a) * r, y + 1.5, Math.sin(a) * r)); g.add(beam(F.dark, [Math.cos(a) * 1.5, y, Math.sin(a) * 1.5], [Math.cos(a) * r, y, Math.sin(a) * r], 0.15)); }
-  if (lv >= 3) { const R = new THREE.Group(); R.position.y = 5.6 + H * 0.76; R.userData.spin = { axis: 'y', speed: 0.3 }; g.add(R); R.add(lathe([[4.2, -0.25], [5, -0.25], [5, 0.25], [4.2, 0.25], [4.2, -0.25]], F.team, 12)); for (let k = 0; k < 3; k++) { const b = new THREE.Group(); rad(b, k * TAU / 3, 4.6); R.add(b); b.add(cb(1.2, 1, 0.8, F.hull, 0.2)); } }
-  g.add(at(cb(1.6, 1, 1.6, F.armor, 0.2), 0, 5.6 + H + 0.5, 0)); g.add(at(lamp(M, 0.45, 'red', 0.25), 0, 5.6 + H + 1.4, 0));
-  g.add(at(blk(0.2, 3, 0.2, F.dark), 0, 5.6 + H + 2.5, 0)); g.add(at(lamp(M, 0.25, 'light'), 0, 5.6 + H + 4.1, 0));
-  numTop(g, 'ACS-CR ' + lv, 0, 2.25, -7.4, 0.9);
+  if (lv >= 2) {
+    /* Rahe mit Dipolen hoch am Mast */
+    const yr = y0 + H * 0.7;
+    g.add(at(cb(14, 0.5, 0.7, F.armor, 0.15), 0, yr, 0));
+    for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) g.add(at(blk(0.15, 2.4 + (i % 2), 0.15, F.dark), sx * (3 + i * 1.8), yr + 1.3, 0));
+    for (const sx of [-1, 1]) g.add(at(lamp(M, 0.25, sx > 0 ? 'green' : 'red', 0.25), sx * 7.1, yr + 0.5, 0));
+    /* Gerätemodule an den freien Sockelseiten */
+    for (const sz of [-1, 1]) { g.add(at(cb(5.4, 2.6, 3, F.olive, 0.4), 0, 3.4, sz * (ap - 0.4))); g.add(at(slits(F, 4, 0.3), 0, 3.6, sz * (ap + 1.12))); g.add(at(cb(5.8, 0.4, 3.4, F.armor, 0.1), 0, 4.9, sz * (ap - 0.4))); }
+    /* Abspannungen zu Ankerblöcken an den Diagonalen */
+    for (let k = 0; k < 4; k++) {
+      const a = PI / 4 + k * PI / 2, rA = 15, A = [Math.cos(a) * rA, 0.2, Math.sin(a) * rA];
+      g.add(at(cb(2.6, 1.8, 2.6, F.armor, 0.4), A[0], A[1], A[2])); g.add(at(lamp(M, 0.25, 'light'), A[0], A[1] + 1.2, A[2]));
+      g.add(beam(F.armor, [Math.cos(a) * (ap + 0.6), 0.2, Math.sin(a) * (ap + 0.6)], [A[0], A[1], A[2]], 0.7));
+      g.add(beam(F.dark, [A[0], A[1] + 0.9, A[2]], [Math.cos(a) * 1.6, y0 + H * 0.55, Math.sin(a) * 1.6], 0.16));
+    }
+  }
+  if (lv >= 3) {
+    const R = new THREE.Group(); R.position.y = y0 + H * 0.78; R.userData.spin = { axis: 'y', speed: 0.3 }; g.add(R);
+    R.add(lathe([[4.6, -0.3], [5.6, -0.3], [5.6, 0.3], [4.6, 0.3], [4.6, -0.3]], F.team, 12));
+    for (let k = 0; k < 4; k++) { const b = new THREE.Group(); rad(b, k * TAU / 4, 5.1); R.add(b); b.add(cb(1.4, 1.2, 1, F.hull, 0.2)); }
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) g.add(at(mast(M, 7, 0.16), sx * (ap - 0.6), 2.2, sz * (ap - 0.6)));
+    /* Kommandomodul unter der obersten Plattform */
+    const yc = y0 + H * 0.9 - 3.2;
+    g.add(at(cb(5, 2.6, 5, F.armor, 0.5), 0, yc, 0));
+    for (let k = 0; k < 4; k++) { const f = new THREE.Group(); f.rotation.y = k * PI / 2; g.add(f); f.add(at(slits(F, 4, 0.4, 'x', 1, 0.8), 0, yc + 0.3, 2.52)); }
+  }
+  g.add(at(cb(1.6, 1, 1.6, F.armor, 0.2), 0, y0 + H + 0.5, 0)); g.add(at(lamp(M, 0.45, 'red', 0.25), 0, y0 + H + 1.4, 0));
+  g.add(at(blk(0.2, 4, 0.2, F.dark), 0, y0 + H + 3, 0)); g.add(at(lamp(M, 0.25, 'light'), 0, y0 + H + 5.1, 0));
+  if (lv >= 2) numTop(g, 'ACS-CR ' + lv, 0, 5.15, -ap + 0.4, 0.9); else numTop(g, 'ACS-CR ' + lv, 0, 2.45, -ap + 1.6, 0.9);
   return g;
 });
 
@@ -889,5 +968,101 @@ reg('super', (M, d, lv) => {
     for (let k = 0; k < 16; k++) { const b = new THREE.Group(); rad(b, (k + 0.5) * PI / 8, R + 6.5, -0.3); g.add(b); b.add(cb(2.4, 2.2, 3, F.hull, 0.3)); if (k % 2) b.add(at(lamp(M, 0.3, 'light'), 0, 1.4, 0)); }
     for (let k = 0; k < 8; k++) { const a = (k + 0.5) * PI / 4; g.add(beam(F.dark, [Math.cos(a) * (rm + 3.5), -0.3, Math.sin(a) * (rm + 3.5)], [Math.cos(a) * (R + 5.4), -0.3, Math.sin(a) * (R + 5.4)], 1)); }
   }
+  return g;
+});
+
+/* ------------------------------------------------------------ eigene Modelle für Schildwall und Frühwarnstation
+   extra22.js registriert wall/radar für alle Fraktionen aus dem (verkleinerten) Relais. Die Allianz hat eigene
+   Modelle; extra22.js trägt die allgemeinen nur ein, wenn eine Fraktion keines hat. */
+function regLate(role, fn) { reg(role, fn); }   /* extra22.js überspringt Rollen, die schon ein eigenes Modell haben */
+
+/* ================================================================== Frühwarnstation
+   Dreibeiniger Gitterturm (Grundriss Dreieck): dreieckige Sockelplatte mit Fußblöcken, drei schräge Gurte laufen zur
+   Turmspitze zusammen, dazwischen Ringe aus Querstreben und Diagonalen. Oben eine Plattform mit der großen,
+   drehenden Radarschüssel (Speisehorn mit blauem Licht). Stufe I: Schüssel 9, drei Fußantennen. Stufe II: Schüssel
+   10, Sensorbalken (dreht gegenläufig) unter der Schüssel, Gerätecontainer am Fuß. Stufe III: Schüssel 11, zweiter
+   Sensorbalken, Leuchtring um den Turm und Fußantennen an allen Ecken. */
+regLate('radar', (M, d, lv) => {
+  const g = new THREE.Group(), F = sm(M), RB = 13, RT = 2.6, yb = 2, yt = 19 + lv;
+  const leg = k => PI / 2 + k * TAU / 3;
+  /* Sockelplatte (Dreieck) mit Kiel */
+  g.add(lathe([[0.01, -6], [4, -5.5], [RB + 2, -1.4], [RB + 3, -0.6], [RB + 3, 1.2], [RB + 2.2, 2], [0.01, 2]], F.hull, 3, { phi0: 0 }));
+  g.add(at(cyl(0.8, 1.6, 4, F.dark, 8), 0, -7.6, 0, -PI / 2));
+  for (let k = 0; k < 3; k++) {
+    /* Deckplatten und Teamstreifen auf den Dreieckseiten (Seitenmitte gegenüber der Ecke) */
+    const f = new THREE.Group(); rad(f, leg(k) + PI, 0); g.add(f); const apo = (RB + 3) * 0.5;
+    f.add(at(cb(9, 0.4, 3.2, k % 2 ? F.olive : F.armor, 0.1), 0, 2.2, apo - 2.4)); f.add(at(tb(M, 9.5, 0.18, 0.6), 0, 2.15, apo - 0.4));
+    f.add(at(slits(F, 8, 0.3, 'x', 1.2), 0, 0.2, apo + 0.05));
+  }
+  /* Beine und Verbände */
+  const P = (k, t) => { const a = leg(k), r = RB + (RT - RB) * t; return [Math.cos(a) * r, yb + (yt - yb) * t, Math.sin(a) * r]; };
+  for (let k = 0; k < 3; k++) {
+    g.add(beam(F.armor, P(k, 0), P(k, 1), 1.0));
+    const [fx0, , fz0] = P(k, 0); g.add(at(cb(3.6, 2.2, 3.6, F.armor, 0.5), fx0, yb + 0.6, fz0)); g.add(at(lamp(M, 0.3, 'light'), fx0, yb + 2.0, fz0));
+    const ts = [0, 0.33, 0.62, 0.86];
+    for (let i = 1; i < ts.length; i++) g.add(beam(F.dark, P(k, ts[i]), P((k + 1) % 3, ts[i]), 0.5));
+    for (let i = 0; i < ts.length - 1; i++) g.add(beam(F.dark, P(k, ts[i]), P((k + 1) % 3, ts[i + 1]), 0.32));
+  }
+  /* Kabelschacht in der Mitte */
+  g.add(at(cyl(0.9, 1.2, yt - yb, F.olive, 8), 0, (yt + yb) / 2, 0, -PI / 2));
+  /* Plattform und Schüssel */
+  g.add(at(cb(7.5, 1.2, 7.5, F.hull, 0.4), 0, yt + 0.4, 0)); g.add(at(tb(M, 7.7, 0.25, 0.4), 0, yt + 0.4, 3.8));
+  g.add(at(cb(4, 1.6, 4, F.armor, 0.4), 0, yt + 1.6, 0));
+  const dk = dishT(M, 8 + lv, 0.95, 16); dk.position.y = yt + 2.2; dk.userData.spin = { axis: 'y', speed: 0.9 }; g.add(dk);
+  dk.add(at(lamp(M, 0.6, M.glow), 0, (8 + lv) * 1.1 + 0.5, (8 + lv) * 0.5));
+  if (lv >= 2) for (let j = 0; j < lv - 1; j++) {
+    /* Sensorbalken: flaches Phasenfeld auf Drehteller, gegenläufig */
+    const sb = new THREE.Group(); sb.position.y = yt - 3.2 - j * 4.5; sb.userData.spin = { axis: 'y', speed: -0.6 - j * 0.3 }; g.add(sb);
+    sb.add(at(cyl(1.4, 1.4, 0.8, F.dark, 8), 0, 0, 0, -PI / 2));
+    sb.add(at(cb(12 - j * 2, 1.8, 1.0, F.armor, 0.2), 0, 0.9, 0));
+    sb.add(at(mesh(new THREE.BoxGeometry(10.6 - j * 2, 1.1, 0.2), F.shield, false), 0, 0.9, 0.55));
+  }
+  /* Fußantennen */
+  const na = lv >= 3 ? 6 : 3;
+  for (let i = 0; i < na; i++) { const a = leg(i) + (lv >= 3 ? (i % 2 ? PI : 0) : PI); const r = lv >= 3 && i % 2 === 0 ? RB + 1.6 : (RB + 3) * 0.5 - 0.8; const an = mast(M, 6 + (i % 2) * 3, 0.16); an.position.set(Math.cos(a) * r, 2.2, Math.sin(a) * r); g.add(an); }
+  if (lv >= 2) { const c = new THREE.Group(); rad(c, leg(0) + PI, 0); g.add(c); c.add(at(cb(5, 2.6, 3, F.olive, 0.4), 0, 3.5, 3.0)); c.add(at(slits(F, 4, 0.3), 0, 3.7, 4.52)); c.add(at(cb(5.4, 0.4, 3.4, F.armor, 0.1), 0, 5.0, 3.0)); }
+  if (lv >= 3) { const ring = mesh(new THREE.TorusGeometry(10, 0.35, 6, 32), M.glowSoft || M.glow, false); ring.rotation.x = PI / 2; ring.position.y = yb + (yt - yb) * 0.3; g.add(ring); }
+  numTop(g, 'ACS-EW ' + lv, 0, 2.45, -(RB + 3) * 0.5 + 2.4, 0.9);
+  return g;
+});
+
+/* ================================================================== Schildwall
+   Langgestreckter Emitterblock (Grundriss Rechteck, Längsachse X): gepanzerter Sockel mit Kiel, an beiden Enden
+   Emitterpylone mit Feldspulen und leuchtender Spitze, auf den Längsseiten tiefblaue Emitterfelder, in der Mitte über
+   dem Block der schwebende Emitterkristall (pulsiert). Das Feld selbst zeichnet entities.js. Stufe I: Grundform.
+   Stufe II: Spulenringe um die Pylone, Kondensatorbänke auf dem Deck. Stufe III: drehender Ring um den Kristall und
+   höhere Pylone. */
+regLate('wall', (M, d, lv) => {
+  const g = new THREE.Group(), F = sm(M), L = 25, W = 8, ph = lv >= 3 ? 10 : 8;
+  /* Sockel: Rumpf entlang X (hl läuft entlang Z, daher gedreht) */
+  const S = new THREE.Group(); S.rotation.y = PI / 2; g.add(S);
+  S.add(hl([[-L / 2, W, 4.2, 0.6, 1.4, 1.5], [L / 2, W, 4.2, 0.6, 1.4, 1.5]], F.hull));
+  S.add(hl([[-L / 2 + 3, W - 3, 2.6, 0.4, 1.4, -2.4], [L / 2 - 3, W - 3, 2.6, 0.4, 1.4, -2.4]], F.armor));
+  g.add(at(cyl(0.8, 1.5, 3.5, F.dark, 8), 0, -5.2, 0, -PI / 2));
+  deck(F, g, -L / 2 + 4.5, L / 2 - 4.5, -W / 2 + 0.8, W / 2 - 0.8, 3.6, 4, 1, 3, 0.5);
+  for (const s of [-1, 1]) g.add(at(tb(M, L - 9, 0.2, 0.5), 0, 3.7, s * (W / 2 - 0.4)));
+  /* Emitterfelder auf den Längsseiten */
+  for (const s of [-1, 1]) {
+    const e = emitterS(M, L - 10, 1.6, 6, 1); e.position.set(0, 1.9, s * (W / 2 + 0.2)); e.rotation.y = s > 0 ? 0 : PI; g.add(e);
+    g.add(at(slits(F, L - 10, 0.25), 0, 3.05, s * (W / 2 + 0.05)));
+  }
+  /* Emitterpylone an den Enden */
+  for (const sx of [-1, 1]) {
+    const x = sx * (L / 2 - 2.2);
+    g.add(at(cb(4.4, 3, W + 0.6, F.armor, 0.6), x, 4.4, 0));
+    g.add(at(cb(3, ph, 3, F.hull, 0.5), x, 5.6 + ph / 2, 0));
+    g.add(at(mesh(new THREE.BoxGeometry(0.2, ph * 0.6, 2), F.shield, false), x - sx * 1.6, 6 + ph * 0.5, 0));
+    for (let i = 0; i < 2; i++) g.add(at(cb(3.8, 0.6, 3.8, i ? F.olive : F.armor, 0.15), x, 7 + ph * (0.35 + i * 0.4), 0));
+    const tip = mesh(new THREE.OctahedronGeometry(1.1, 0), M.glow, false); tip.position.set(x, 7.4 + ph, 0); tip.userData.pulse = { amp: 0.15, speed: 2.4 }; g.add(tip);
+    g.add(at(lamp(M, 0.3, sx > 0 ? 'green' : 'red', 0.25), x + sx * 2.3, 6.2, W / 2));
+    if (lv >= 2) for (let i = 0; i < 2; i++) { const r = mesh(new THREE.TorusGeometry(2.4, 0.4, 6, 12), M.trim); r.rotation.x = PI / 2; r.position.set(x, 7.5 + ph * (0.3 + i * 0.35), 0); g.add(r); }
+  }
+  if (lv >= 2) for (const sx of [-1, 1]) { const ar = archerS(M, 4, 4.6, 2, 2); ar.position.set(sx * 5.6, 3.9, 0); g.add(ar); }
+  /* schwebender Emitterkristall */
+  const top = new THREE.Group(); top.position.y = 10; g.add(top);
+  const crys = mesh(new THREE.OctahedronGeometry(2.6 + lv * 0.3, 0), M.glow, false); crys.scale.set(1, 1.6, 1); crys.userData.pulse = { amp: 0.12, speed: 3, base: 1 }; top.add(crys);
+  g.add(at(cyl(1.6, 2.2, 1.2, F.dark, 8), 0, 4.6, 0, -PI / 2)); g.add(at(mesh(new THREE.CylinderGeometry(1.2, 1.2, 0.2, 8), F.rail, false), 0, 5.3, 0));
+  if (lv >= 3) { const r2 = mesh(new THREE.TorusGeometry(5.2, 0.35, 6, 24), M.glow, false); r2.rotation.x = PI / 2; r2.userData.spin = { axis: 'z', speed: 0.8 }; top.add(r2); }
+  numTop(g, 'ACS-SW ' + lv, 0, 4.35, W / 2 - 1.0, 0.8);
   return g;
 });

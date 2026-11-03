@@ -511,94 +511,127 @@ reg('spear', M => {
   return g;
 });
 
-/* HAMMER – Schlachtschiff: breiter Plattenblock, Hammerkopf-Bug, Breitseiten-Galerien, gestufter Aufbau */
+/* HAMMER – Schlachtschiff, Nahkämpfer: Umriss von oben ein »T«. Vorn der breite Hammerkopf (fast doppelte Rumpfbreite)
+   mit gepanzertem Rammsporn und Warnstreifen-Stirn, an den Kopfenden Sponsons mit Zwillingskanonen. Dahinter ein
+   schmaler Hals/Rumpf mit drei schweren Zwillingstürmen in Reihe (überhöhend), Breitseiten-Kanonen und einem niedrigen
+   Kommandoblock, hinten ein wieder breiterer Antriebsblock mit drei Fackeln und Rippenfeldern. */
 reg('hammer', M => {
   UV = 1 / 17; const g = new THREE.Group(), X = xm(M);
-  const P = [[-32, 15, 15, 11, 1.6], [-6, 17, 17, 12.4, 1.8], [24, 17, 17, 12.4, 1.8], [27, 15.6, 15.6, 11.4, 1.6]];
+  /* Rumpf (Hals): schmal, damit Kopf und Antrieb als Umriss hervortreten */
+  const P = [[-30, 15, 14, 11, 1.6], [-8, 14, 12.5, 11.4, 1.6], [16, 13, 11.5, 10.6, 1.5], [22, 14, 12.5, 11, 1.5]];
   g.add(H(P, M.hull));
-  /* Hammerkopf */
-  const PB = [[26.5, 23, 23, 9.6, 1.6], [31, 27, 27, 10, 1.8], [37.5, 27, 27, 10, 1.8], [41, 21, 21, 7.4, 1.5]];
+  /* Hammerkopf: schräge Rückseite, volle Breite, abgeschrägte Stirn */
+  const PB = [[20, 16, 15, 9.6, 1.6, .2], [25.5, 44, 40, 10.4, 2.0, .3], [34, 46, 42, 10.6, 2.0, .3], [37.5, 40, 36, 8.6, 1.8, 0]];
   g.add(H(PB, M.hull2));
-  for (const y of [-2.6, 0, 2.6]) g.add(at(slab(18, 2.2, 1.2, M.hull, .3, .94, .9), 0, y, 41.2));
-  for (const s of [-1, 1]) { g.add(at(slab(1.2, 8.6, 9, M.hull, .3), s * 13.9, 0, 34)); g.add(at(hazBar(M, .3, 8.6, .6), s * 14.55, 0, 30.2)); g.add(at(slab(5.5, .5, 8, M.hull, .15), s * 9, 5.25, 34)); }
-  topNum(g, '7701', 0, 5.02, 34.3, 3.2, true);
-  /* Breitseiten-Galerien mit Autokanonen auf Sockeln, Panzerreihen darüber und darunter */
-  for (const s of [-1, 1]) g.add(at(bar(1.4, 3.6, 44, M.dark), s * 8.3, .4, -3));
-  const proto = bake(cannon(M, 1.35, 2, 3.8, 8, M.hull)), r = rng(5);
-  for (const s of [-1, 1]) for (let k = 0; k < 5; k++) { const z = -20 + k * 8.6; g.add(at(slab(1.2, 2.6, 3.6, M.hull2, .2), s * 9.1, .4, z)); const c = proto.clone(); c.userData.sway = Object.assign({}, proto.userData.sway, { phase: r() * 6 }); mount(g, c, s * 9.6, .4, z, -s * HP); }
-  flankPlates(M, g, P, 4.0, 3.0, -30, 24, 6, .6, .7);
-  flankPlates(M, g, P, -3.6, 3.0, -30, 24, 6, .6, .7, M.hull);
-  /* Rückenaufbau in Stufen */
-  const T1 = [[-28, 11, 12, 2.6, .6, 7.5], [18, 11, 12, 2.6, .6, 7.5], [22, 7, 9, 2.0, .5, 7.2]];
+  /* Rammsporn: Keil aus dem Kopf, Stahlschneide, Warnstreifen */
+  const PR = [[35, 20, 18, 8.4, 1.4], [39.5, 12, 11, 6.2, 1.1, -.3], [42, 3.4, 3.4, 2.6, .6, -.6]];
+  g.add(H(PR, M.hull));
+  g.add(at(slab(1.2, 6.4, 6.6, X.steel, .3, .3, .7), 0, -.2, 39.6));
+  for (const s of [-1, 1]) g.add(at(hazBar(M, .5, 7.6, 3.4, .35), s * 7.4, 0, 37.2, 0, s * .75));
+  /* Stirnpanzer und Kopfplatten */
+  for (const s of [-1, 1]) {
+    g.add(at(slab(13, 6.6, 1.4, M.hull, .3, .94, .9), s * 15.5, -.2, 37.9, 0, -s * .06));
+    g.add(at(slab(15, .6, 8, M.hull, .2, .95), s * 14, 5.55, 30));
+    g.add(at(hazBar(M, 15.4, .3, .9, .35), s * 14, 5.4, 25.6));
+  }
+  topNum(g, '7701', 0, 5.6, 31, 3.0, true);
+  /* Sponsons an den Kopfenden: Panzerblock mit Warnkante, Zwillingskanone nach vorn, Lichter */
+  const sp = bake(cannon(M, 1.9, 2, 4.4, 8, M.hull)), r = rng(5);
+  for (const s of [-1, 1]) {
+    g.add(at(slab(5.4, 12, 12, M.hull, .6, .9, .9), s * 22.2, 0, 30.4));
+    g.add(at(hazBar(M, 5.6, .5, 12.2, .4), s * 22.2, 6.1, 30.4));
+    g.add(at(hazBar(M, 5.6, .5, 12.2, .4), s * 22.2, -6.1, 30.4));
+    for (const sy of [1, -1]) { const c = sp.clone(); c.userData.sway = Object.assign({}, sp.userData.sway, { phase: r() * 6 }); mount(g, c, s * 22.2, sy * 6.35, 31, sy > 0 ? 0 : PI); }
+    g.add(at(bar(.12, .9, 10, M.trim), s * 24.95, 2.2, 30.4));
+  }
+  /* Breitseiten am Hals: drei Autokanonen je Seite auf Sockeln, Panzerreihen */
+  for (const s of [-1, 1]) g.add(at(bar(1.4, 3.6, 34, M.dark), s * 7.2, .4, -2));
+  const proto = bake(cannon(M, 1.35, 2, 3.8, 8, M.hull));
+  for (const s of [-1, 1]) for (let k = 0; k < 3; k++) { const z = -14 + k * 11; g.add(at(slab(1.2, 2.6, 3.6, M.hull2, .2), s * 7.95, .4, z)); const c = proto.clone(); c.userData.sway = Object.assign({}, proto.userData.sway, { phase: r() * 6 }); mount(g, c, s * 8.45, .4, z, -s * HP); }
+  flankPlates(M, g, P, 3.9, 2.8, -29, 19, 5, .6, .7);
+  flankPlates(M, g, P, -3.4, 2.8, -29, 19, 5, .6, .7, M.hull);
+  /* niedriger Kommandoblock hinten, Rückendeck */
+  const T1 = [[-28, 10, 11.5, 2.4, .6, 6.7], [14, 9.5, 11, 2.4, .6, 6.5], [19, 6, 8, 1.8, .5, 6.3]];
   g.add(H(T1, M.hull2));
-  const T2 = [[-26, 7, 8.4, 3.2, .6, 10.3], [-7, 7, 8.4, 3.2, .6, 10.3], [-4, 4.8, 6.6, 2.4, .5, 10.0]];
-  g.add(H(T2, M.hull));
-  const TW = [[-24, 5, 6, 4.2, .7, 13.9], [-15, 5, 6, 4.2, .7, 13.9], [-13, 3.6, 5, 3.0, .5, 13.6]];
-  g.add(H(TW, M.hull2));
-  slitsBoth(M, g, TW, -18.5, 14.3, 7, .5, 1.2); g.add(at(bar(3.4, .5, .1, M.glass), 0, 14.4, -12.96));
-  g.add(band(TW, -21.5, .7, .06, M.trim));
-  const a = antenna(M, 7, .2); a.position.set(1.2, 16, -21); g.add(a); const d = dish(M, 2.2); d.position.set(-1.2, 16, -19); g.add(d);
-  /* schwere Rückentürme */
-  for (const [z, y] of [[14, 8.8], [4, 11.9]]) { const c = cannon(M, 2.6, 2, 4.4, z | 0, M.hull); c.position.set(0, y, z); g.add(c); }
-  const cv = cannon(M, 1.9, 2, 4, 21, M.hull); mount(g, cv, 0, -8.4, 14, PI);
-  topPlates(M, g, T1, 17, 21.5, 1, 0, 6, .5);
-  greeb(M, g, -5, 5, -27, -26, 8.8, 6, 3, 1.2);
+  const TW = [[-27, 8, 9, 4.4, .8, 9.9], [-17, 8, 9, 4.4, .8, 9.9], [-14.5, 5, 7, 3.0, .6, 9.6]];
+  g.add(H(TW, M.hull));
+  slitsBoth(M, g, TW, -21, 10.4, 7, .5, 1.2); g.add(at(bar(4.2, .5, .1, M.glass), 0, 10.4, -14.46));
+  g.add(band(TW, -24.5, .7, .06, M.trim));
+  const a = antenna(M, 7, .2); a.position.set(2.4, 12.1, -25); g.add(a); const d = dish(M, 2.2); d.position.set(-2.2, 12.1, -22); g.add(d);
+  /* drei schwere Zwillingstürme in Reihe, der mittlere überhöht */
+  for (const [z, y, s] of [[13, 7.9, 3.0], [2, 10.4, 3.2], [-8, 7.9, 3.0]]) {
+    if (y > 9) g.add(at(slab(7.4, 2.6, 7.4, M.hull2, .5), 0, 9.0, z));
+    const c = cannon(M, s, 2, 4.6, z + 40, M.hull); c.position.set(0, y, z); if (z < -5) c.userData.sway.base = PI; g.add(c);
+  }
+  const cv = cannon(M, 1.9, 2, 4, 21, M.hull); mount(g, cv, 0, -7.6, 10, PI);
   /* Kiel */
-  g.add(H([[-28, 9, 6, 2.4, .5, -7.2], [20, 9, 6, 2.4, .5, -7.2], [24, 6, 4, 1.6, .4, -6.8]], M.hull2));
-  /* PDCs an den Ecken */
-  pdcs(M, g, [corner(P, 22, 1, 1), corner(P, 22, -1, 1), corner(P, 22, 1, -1), corner(P, 22, -1, -1), corner(P, -29, 1, 1), corner(P, -29, -1, 1), corner(P, -29, 1, -1), corner(P, -29, -1, -1)], 1.3, 6);
-  /* Antrieb: drei Fackeln, Rippenfelder */
-  const PD = [[-41, 14, 14, 10, 1.8], [-36, 16, 16, 11.4, 2.0], [-32, 15, 15, 11, 1.6]];
+  g.add(H([[-28, 8, 5.6, 2.2, .5, -6.6], [16, 8, 5.6, 2.2, .5, -6.6], [20, 5, 3.6, 1.5, .4, -6.2]], M.hull2));
+  /* PDCs an den Ecken des Antriebsblocks und des Kopfes */
+  pdcs(M, g, [corner(P, 19, 1, 1), corner(P, 19, -1, 1), corner(P, 19, 1, -1), corner(P, 19, -1, -1), corner(P, -28, 1, 1), corner(P, -28, -1, 1), corner(P, -28, 1, -1), corner(P, -28, -1, -1)], 1.3, 6);
+  /* Antrieb: breiterer Block, drei Fackeln, Rippenfelder seitlich und oben */
+  const PD = [[-41, 18, 18, 10, 1.8], [-36, 21, 21, 11.6, 2.0], [-31.5, 20, 19, 11.4, 1.8], [-29.5, 15, 14, 11, 1.6]];
   g.add(H(PD, M.hull2)); g.add(band(PD, -35, .8, .1, X.hazard, .4));
-  for (const [x, rr] of [[0, 3.4], [-5.4, 2.3], [5.4, 2.3]]) { const e = torch(M, rr, rr * 7.5); e.position.set(x, 0, -41); g.add(e); }
-  for (const sy of [-1, 1]) { const f = finArray(M, 5, 3.4, 7, 1.7); f.position.set(0, sy * 5.6, -36.5); if (sy < 0) f.rotation.z = PI; g.add(f); }
-  numAt(g, 'MCRN 7701', 14.52, 0, 35.5, 1.5);
-  for (const s of [-1, 1]) for (const y of [-1.25, 2.05]) g.add(at(glowLine(M, .1, .1, 42), s * 8.95, y, -3));
-  emblem(M, g, side(P, -26, 0).x + .72, 4.0, -26, 1.2);
-  lights(M, g, [[13.5, 4.8, 37], [-13.5, 4.8, 37], [13.5, -4.8, 37], [-13.5, -4.8, 37], [0, 6.9, -40]], .35, .7);
+  for (const [x, rr] of [[0, 3.4], [-6.2, 2.4], [6.2, 2.4]]) { const e = torch(M, rr, rr * 7.5); e.position.set(x, 0, -41); g.add(e); }
+  for (const sy of [-1, 1]) { const f = finArray(M, 5, 3.4, 7, 1.9); f.position.set(0, sy * 5.7, -36.5); if (sy < 0) f.rotation.z = PI; g.add(f); }
+  for (const s of [-1, 1]) { const w = radPanel(M, 5.5, 6.5); w.rotation.z = -s * HP; w.position.set(s * 10.4, 0, -36.2); g.add(w); }
+  numAt(g, 'MCRN 7701', 24.95, -4.3, 30.4, 1.3);
+  for (const s of [-1, 1]) for (const y of [-1.25, 2.05]) g.add(at(glowLine(M, .1, .1, 32), s * 7.85, y, -2));
+  emblem(M, g, side(P, -24, 0).x + .72, 3.9, -24, 1.2);
+  lights(M, g, [[24.6, 6.4, 36.2], [-24.6, 6.4, 36.2], [24.6, -6.4, 36.2], [-24.6, -6.4, 36.2], [0, 6.9, -40], [16, 1, -36]], .35, .7);
   return g;
 });
 
-/* OLYMPUS – Flaggschiff: hoher, gestufter Rumpf, zwei Spinal-Railguns, vier Railgun-Türme, Kommandoturm mit Zielmarkierer, Kühlflügel */
+/* OLYMPUS – Flaggschiff: von oben eine Pfeilspitze mit breiten Schultern, aus dem Bug ragt weit die schwere
+   Spinal-Railgun (Lauf mit Spulenringen, liegt vorn frei auf dem Rücken). Mittschiffs ein hoher, dreifach
+   gestufter Kommandoturm (Zikkurat) mit Brücke, Zielmarkierer, Schüssel und Antennen – das höchste Bauwerk der
+   Flotte. Vier Railgun-Türme, Breitseiten auf den Schultern, große Kühlflügel und fünf Fackeln hinten. */
 reg('olympus', M => {
   UV = 1 / 17; const g = new THREE.Group(), X = xm(M);
-  const P = [[-34, 12, 11, 16, 1.8], [16, 13, 11.6, 16, 2.0], [30, 9.6, 8.4, 12, 1.6, -1.6], [40, 6.4, 5.6, 6.6, 1.0, -2.4]];
+  const P = [[-34, 16, 14, 14, 1.8], [-16, 25, 21, 15, 2.0], [-1, 25, 21, 15, 2.0], [12, 18, 15, 12.0, 1.7, -1.2], [24, 9.5, 8.5, 6.6, 1.1, -2.6], [30, 5, 4.4, 4.0, .7, -3.0]];
   g.add(H(P, M.hull));
-  /* zwei Spinal-Railguns aus dem Bug */
-  for (const s of [-1, 1]) { const rg = rail(M, 20, 1.25, 3.0); rg.position.set(s * 1.7, -2.6, 26); g.add(rg); }
-  g.add(at(slab(7.2, 1.2, 4, M.hull2, .3, .8), 0, -.4, 40.5));
-  /* Aufbau: Deck, Kommandoturm, Zielmarkierer */
-  const T1 = [[-30, 9, 11, 2.6, .5, 9.3], [6, 9, 11, 2.6, .5, 9.3], [10, 6, 9, 2, .4, 9.0]];
-  g.add(H(T1, M.hull2));
-  const TW = [[-27, 6, 7, 6, .8, 13.6], [-15, 6, 7, 6, .8, 13.6], [-12, 4, 6, 4.2, .6, 13.0]];
-  g.add(H(TW, M.hull));
-  slitsBoth(M, g, TW, -18.5, 14.6, 6, .5, 1.2); g.add(at(bar(3.6, .6, .1, M.glass), 0, 13.5, -11.96));
-  g.add(band(TW, -24.5, .9, .06, M.trim));
-  const dd = dish(M, 2.8); dd.position.set(0, 16.6, -23); g.add(dd);
+  /* schwere Spinal-Railgun: im Rumpf verankert, vorn freiliegend, Mündung weit vor dem Bug */
+  const rg = rail(M, 42, 2.3, 3.0); rg.position.set(0, 1.9, 4); g.add(rg);
+  g.add(at(slab(7.0, 4.4, 6, M.hull2, .5, .8, .8), 0, 1.0, 26));
+  for (const s of [-1, 1]) g.add(at(hazBar(M, .5, 3.8, 5.6, .3), s * 3.6, 1.0, 26));
+  for (const s of [-1, 1]) g.add(at(slab(3.0, 2.4, 14, M.hull2, .4, .8), s * 4.4, topY(P, 13) - .2, 13));
+  /* Zikkurat-Kommandoturm: drei Stufen, Brücke, Mastblock */
+  const L1 = [[-31, 15, 17, 3.2, .7, 9.0], [-5, 13, 15, 3.2, .7, 9.0], [-1, 8, 11, 2.4, .5, 8.8]];
+  const L2 = [[-29, 11, 13, 3.2, .6, 12.2], [-9, 10, 12, 3.2, .6, 12.2], [-6, 7, 9, 2.4, .5, 12.0]];
+  const L3 = [[-27, 7.5, 9.5, 3.4, .6, 15.5], [-13, 7, 9, 3.4, .6, 15.5], [-11, 5, 6.6, 2.6, .5, 15.3]];
+  g.add(H(L1, M.hull2)); g.add(H(L2, M.hull)); g.add(H(L3, M.hull2));
+  g.add(band(L1, -26, .9, .06, X.hazard, .3)); g.add(band(L2, -12, .6, .06, M.trim));
+  slitsBoth(M, g, L1, -16, 9.6, 14, .45, 1.2); slitsBoth(M, g, L2, -19, 12.8, 9, .45, 1.2); slitsBoth(M, g, L3, -20, 16.1, 6, .5, 1.2);
+  const BR = [[-25, 6, 7, 3.8, .7, 19.1], [-16, 6, 7, 3.8, .7, 19.1], [-14.5, 4.2, 5.6, 2.6, .5, 18.9]];
+  g.add(H(BR, M.hull)); g.add(at(bar(4.4, .7, .1, M.glass), 0, 19.3, -14.46));
+  slitsBoth(M, g, BR, -20, 19.6, 6, .5, 1.3);
+  g.add(at(slab(3.4, 5.4, 3.4, M.hull2, .5), 0, 23.6, -22));
+  const dd = dish(M, 2.8); dd.position.set(-2.4, 21, -24.5); g.add(dd);
   const tgt = new THREE.Group(); tgt.add(at(slab(1.4, 1.4, 2.6, M.hull2, .25), 0, 0, 0)); tgt.add(at(cyl(.45, .5, 1, M.dark, 8), 0, 0, 1.6)); tgt.add(at(mesh(new THREE.CircleGeometry(.4, 8), X.lens, false), 0, 0, 2.11));
-  tgt.add(at(cyl(.12, .12, 2.4, M.dark, 6), 0, -1.2, 0, HP)); tgt.position.set(0, 18.6, -16.5); tgt.userData.sway = { axis: 'y', amp: .6, speed: .3 }; g.add(tgt);
-  const a = antenna(M, 8, .22); a.position.set(2.2, 16.6, -26); g.add(a); const a2 = antenna(M, 6, .2); a2.position.set(-2.2, 16.6, -26.5); g.add(a2);
+  tgt.add(at(cyl(.12, .12, 2.4, M.dark, 6), 0, -1.2, 0, HP)); tgt.position.set(0, 27.6, -21.5); tgt.userData.sway = { axis: 'y', amp: .6, speed: .3 }; g.add(tgt);
+  const a = antenna(M, 8, .22); a.position.set(1.0, 26.3, -23.2); g.add(a); const a2 = antenna(M, 6, .2); a2.position.set(2.6, 21, -24.5); g.add(a2);
+  lights(M, g, [[0, 26.4, -20.2]], .3, .6);
   /* Kiel-Flosse */
-  g.add(H([[-30, 4, 2.4, 5, .5, -10], [4, 4, 2.4, 5, .5, -10], [12, 2, 1.2, 2.4, .3, -8.6]], M.hull2));
-  /* Railgun-Türme */
+  g.add(H([[-30, 4, 2.4, 5, .5, -9.6], [4, 4, 2.4, 5, .5, -9.6], [12, 2, 1.2, 2.4, .3, -8.2]], M.hull2));
+  /* Railgun-Türme: zwei auf dem Vorschiff, zwei unten */
   const rt = bake(railTurret(M, 1.5, 9, 3)), r = rng(8);
-  for (const [z, y, flip] of [[1, 10.6, 0], [20, topY(P, 20), 0], [-2, -8, 1], [20, botY(P, 20), 1]]) { const c = rt.clone(); c.userData.sway = Object.assign({}, rt.userData.sway, { phase: r() * 6 }); mount(g, c, 0, y, z, flip ? PI : 0); }
-  /* Breitseiten-Autokanonen auf Sockeln und Panzerreihen */
-  const cp = bake(cannon(M, 1.25, 2, 3.4, 13, M.hull));
-  for (const s of [-1, 1]) for (let k = 0; k < 4; k++) { const z = -24 + k * 11, q = side(P, z, .8), c = cp.clone(); c.userData.sway = Object.assign({}, cp.userData.sway, { phase: r() * 6 }); g.add(at(slab(1.0, 2.6, 3.4, M.hull2, .2), s * (q.x + .3), .8, z)); mount(g, c, s * (q.x + .75), .8, z, -s * HP); }
-  flankPlates(M, g, P, 5.0, 3.6, -32, 14, 5, .6, .7);
-  flankPlates(M, g, P, -4.2, 3.4, -32, 14, 5, .6, .7, M.hull2);
+  for (const [z, y, flip] of [[3, topY(P, 3), 0], [-5, 10.6, 0], [3, botY(P, 3), 1], [16, botY(P, 16), 1]]) { const c = rt.clone(); c.userData.sway = Object.assign({}, rt.userData.sway, { phase: r() * 6 }); mount(g, c, 0, y, z, flip ? PI : 0); }
+  /* Breitseiten-Autokanonen auf den Schultern */
+  const cp = bake(cannon(M, 1.35, 2, 3.4, 13, M.hull));
+  for (const s of [-1, 1]) for (const z of [-20, -11, -2, 7]) { const q = side(P, z, .8), c = cp.clone(); c.userData.sway = Object.assign({}, cp.userData.sway, { phase: r() * 6 }); g.add(at(slab(1.0, 2.6, 3.4, M.hull2, .2), s * (q.x + .3), .8, z)); mount(g, c, s * (q.x + .75), .8, z, -s * HP); }
+  for (const s of [-1, 1]) for (const z of [-15.5, -6.5]) { const q = side(P, z, 5.4); const c = cp.clone(); c.userData.sway = Object.assign({}, cp.userData.sway, { phase: r() * 6 }); mount(g, c, s * (q.x - 1.6), topY(P, z) - .1, z, 0); }
+  flankPlates(M, g, P, 4.6, 3.4, -32, 10, 5, .6, .7);
+  flankPlates(M, g, P, -4.0, 3.2, -32, 10, 5, .6, .7, M.hull2);
   /* schwere PDCs */
-  pdcs(M, g, [corner(P, 12, 1, 1), corner(P, 12, -1, 1), corner(P, 12, 1, -1), corner(P, 12, -1, -1), corner(P, -31, 1, 1), corner(P, -31, -1, 1), corner(P, -31, 1, -1), corner(P, -31, -1, -1)], 1.4, 12);
+  pdcs(M, g, [corner(P, 10, 1, 1), corner(P, 10, -1, 1), corner(P, 10, 1, -1), corner(P, 10, -1, -1), corner(P, -31, 1, 1), corner(P, -31, -1, 1), corner(P, -31, 1, -1), corner(P, -31, -1, -1)], 1.4, 12);
   /* Antrieb: fünf Fackeln, große Kühlflügel */
-  const PD = [[-44, 12, 12, 14, 2.0], [-38, 14, 13, 16.6, 2.2], [-34, 12, 11, 16, 1.8]];
+  const PD = [[-44, 13, 13, 12, 2.0], [-38, 15, 14, 14.6, 2.2], [-34, 16, 14, 14, 1.8]];
   g.add(H(PD, M.hull2)); g.add(band(PD, -37, 1, .1, X.hazard, .45));
   const e = torch(M, 3.6, 30); e.position.z = -44; g.add(e);
-  for (const sx of [-1, 1]) for (const sy of [-1, 1]) { const t = torch(M, 2.0, 15); t.position.set(sx * 3.8, sy * 4.2, -43.8); g.add(t); }
-  for (const s of [-1, 1]) { const w = radPanel(M, 14, 12); w.rotation.z = -s * HP; w.position.set(s * 6.2, 0, -26); g.add(w); const l = navLight(M, .4, 'light', .8); l.position.set(0, 14.2, 6); w.add(l); g.add(at(hazBar(M, 1.6, 1.4, 12.4, .4), s * 6.6, 0, -26)); }
-  nums(g, 'MCRN OLYMPUS', P, 23, .9, 2.6, .05);
-  for (const s of [-1, 1]) { const q = side(P, -9, 2.75); const l = glowLine(M, .1, .12, 44); l.position.set(s * (q.x + .03), 2.75, -9); l.rotation.z = -s * q.a; g.add(l); }
-  emblem(M, g, side(P, -6, 9.8).x, 9.8, -6, 1.6);
+  for (const sx of [-1, 1]) for (const sy of [-1, 1]) { const t = torch(M, 2.0, 15); t.position.set(sx * 4.2, sy * 3.8, -43.8); g.add(t); }
+  for (const s of [-1, 1]) { const w = radPanel(M, 14, 12); w.rotation.z = -s * HP; w.position.set(s * 7.6, 0, -30); g.add(w); const l = navLight(M, .4, 'light', .8); l.position.set(0, 14.2, 6); w.add(l); g.add(at(hazBar(M, 1.6, 1.4, 12.4, .4), s * 8.0, 0, -30)); }
+  nums(g, 'MCRN OLYMPUS', P, 19, .2, 2.0, .05);
+  for (const s of [-1, 1]) { const q = side(P, -12, 2.75); const l = glowLine(M, .1, .12, 32); l.position.set(s * (q.x + .03), 2.75, -12); l.rotation.z = -s * q.a; g.add(l); }
+  emblem(M, g, side(P, -26, 4.6).x + .75, 4.6, -26.5, 1.5);
   return g;
 });
 
@@ -718,44 +751,63 @@ reg('boarder', M => {
   return g;
 });
 
-/* DROPSHIP – Marine-Träger: Rumpf mit Rampenbucht, je Seite sechs Enterkapseln auf Gestellen */
+/* DROPSHIP – Marine-Träger: kurzer, kastiger Rumpf mit Bugrampe, links und rechts offene Startbuchten (Gestell mit
+   Querschotten, bernsteinfarben beleuchteter Buchtboden), in denen je vier Enterkapseln quer liegen – die Stahl-
+   Bohrspitzen zeigen nach außen. Von oben ein breites »H« mit Kammprofil, deutlich anders als die langen Kampfschiffe. */
 reg('dropship', M => {
   UV = 1 / 15; const g = new THREE.Group(), X = xm(M);
-  const P = [[-17, 7.6, 6.4, 6.6, .9], [8, 8.0, 6.6, 6.8, .95], [15, 6.0, 5.2, 5.6, .8, -.2], [20.5, 3.6, 3.2, 3.0, .5, -.6]];
+  const P = [[-16, 9.2, 8.2, 8.0, 1.0], [9, 9.2, 8.2, 8.0, 1.0], [14, 7.4, 6.6, 6.8, .9, -.2], [19.5, 4.4, 4.0, 3.8, .6, -.6]];
   g.add(H(P, M.hull));
-  topPlates(M, g, P, -16, 7, 4, .45, 4.8, .5);
-  g.add(at(slab(4.4, .7, 5, M.dark, .2), 0, -3.6, 6));
+  topPlates(M, g, P, -15, 9, 4, .45, 5.6, .5);
+  g.add(at(bar(.6, .4, 22, M.dark), 0, topY(P, -3) + .65, -3));
+  g.add(at(slab(5.2, .7, 6, M.dark, .2), 0, -4.3, 4));
   /* Bugrampe: leuchtende Bucht, Brücke */
-  g.add(at(bar(2.8, 1.8, .2, X.bay), 0, -.9, 20.1)); g.add(at(hazBar(M, 3.2, .3, .3, .15), 0, .2, 20.2));
-  const ramp = slab(2.8, .25, 3.2, M.hull2, .08); ramp.position.set(0, -2.2, 21.3); ramp.rotation.x = .55; g.add(ramp); g.add(at(glowLine(M, 2.4, .05, .1), 0, -1.72, 20.4));
-  for (const s of [-1, 1]) g.add(beam([s * 1.2, -1.7, 20.0], [s * 1.2, -2.9, 22.4], .14, M.dark));
-  g.add(at(slab(4.2, .8, 4.2, M.hull2, .2, .8), 0, 2.6, 13.5, -.1)); g.add(at(bar(3.0, .35, .1, M.glass), 0, 2.6, 15.62));
-  /* Enterkapsel: heller Rumpf, Stahl-Bohrspitze, Warnband, roter Streifen, Triebwerk */
+  g.add(at(bar(3.0, 2.0, .2, X.bay), 0, -1.0, 19.1)); g.add(at(hazBar(M, 3.4, .3, .3, .15), 0, .2, 19.2));
+  const ramp = slab(3.0, .25, 3.2, M.hull2, .08); ramp.position.set(0, -2.3, 20.3); ramp.rotation.x = .55; g.add(ramp); g.add(at(glowLine(M, 2.6, .05, .1), 0, -1.82, 19.4));
+  for (const s of [-1, 1]) g.add(beam([s * 1.3, -1.8, 19.0], [s * 1.3, -3.0, 21.4], .14, M.dark));
+  g.add(at(slab(5.0, .9, 4.6, M.hull2, .2, .8), 0, 3.2, 12.6, -.1)); g.add(at(bar(3.4, .38, .1, M.glass), 0, 3.25, 14.95));
+  /* Enterkapsel (entlang +Z gebaut, Spitze vorn): heller Rumpf, Stahl-Bohrspitze, Warnband, Heckdüse ohne Strahl */
   const pod = new THREE.Group();
-  const PP = [[-3.4, 1.8, 1.8, 1.8, .4], [2.4, 2.0, 2.0, 2.0, .45], [3.2, 1.5, 1.5, 1.5, .35]];
+  const PP = [[-3.0, 2.0, 2.0, 2.0, .45], [1.8, 2.2, 2.2, 2.2, .5], [2.6, 1.7, 1.7, 1.7, .4]];
   pod.add(H(PP, M.hull));
-  pod.add(loft([{ z: 3.2, pts: ngon(8, .9, .9, PI / 8) }, { z: 5.0, pts: ngon(8, .1, .1, PI / 8) }], X.steel, { uv: 1 / 6 }));
-  pod.add(band(PP, 1.3, .55, .05, X.hazard, .15));
-  pod.add(band(PP, -2.2, .4, .05, M.dark));
-  const pe = engine(M, .55, .6, 2, X.torchDisc); pe.position.z = -3.4; pod.add(pe);
-  pod.add(at(bar(.14, .1, 2.8, M.trim), 0, 1.0, -.4));
+  pod.add(loft([{ z: 2.6, pts: ngon(8, 1.0, 1.0, PI / 8) }, { z: 4.5, pts: ngon(8, .1, .1, PI / 8) }], X.steel, { uv: 1 / 6 }));
+  pod.add(band(PP, .9, .55, .05, X.hazard, .15));
+  pod.add(band(PP, -2.0, .4, .05, M.dark));
+  pod.add(at(cyl(.55, .75, .7, M.dark, 8), 0, 0, -3.3));
+  pod.add(at(bar(.14, .1, 2.8, M.trim), 0, 1.12, -.4));
+  const podB = bake(pod);
+  /* Startbuchten: Boden, Außenholme, Querschotte, Kapseln, Ausleger zum Rumpf */
+  const zs = [-10.5, -4.5, 1.5, 7.5];
   for (const s of [-1, 1]) {
-    for (const y of [-1.7, 1.7]) {
-      g.add(at(bar(.55, .55, 24, M.dark), s * 4.7, y, -1));
-      for (const z of [9.5, 1.5, -6.5]) { const p = pod.clone(); p.position.set(s * 5.9, y, z); g.add(p); g.add(at(bar(1.8, .45, .7, M.hull2), s * 4.6, y, z)); }
+    const xc = s * 9.6;
+    g.add(at(slab(8.2, .9, 25, M.hull2, .3), xc, -2.9, -1.5));
+    g.add(at(slab(7.6, .7, 25, M.dark, .2), xc, -3.7, -1.5));
+    g.add(at(hazBar(M, .9, .9, 25.2, .3), s * 13.6, -2.0, -1.5));
+    /* niedrige Querschotte (Kapseln bleiben von oben sichtbar), an den Enden hohe Rahmen */
+    for (let k = 0; k <= zs.length; k++) {
+      const z = -13.5 + k * 6, end = k === 0 || k === zs.length, hh = end ? 5.2 : 2.4;
+      g.add(at(slab(8.0, hh, .8, M.hull, .2), xc, -2.4 + hh / 2, z));
+      g.add(at(hazBar(M, 8.1, .35, .9, .25), xc, -2.2 + hh, z));
     }
-    g.add(at(slab(.7, 4.2, .7, M.hull2, .15), s * 4.7, 0, 11.4)); g.add(at(slab(.7, 4.2, .7, M.hull2, .15), s * 4.7, 0, -12.4));
+    for (const z of zs) {
+      g.add(at(bar(5.8, .1, 3.4, X.bay), xc, -2.42, z));
+      const p = podB.clone(); p.position.set(s * 9.6, .2, z); p.rotation.y = s * HP; g.add(p);
+      for (const x of [7.4, 11.4]) g.add(at(bar(1.0, 1.3, 2.4, M.dark), s * x, -1.8, z));
+    }
+    for (const z of [-11, 8.5]) g.add(at(slab(1.4, 2.4, 3.2, M.hull2, .3), s * 5.3, 1.2, z));
+    lights(M, g, [[s * 13.4, 3.6, 11.2], [s * 13.4, 3.6, -14.2]], .22, 1.1);
   }
   /* Bewaffnung */
-  pdcs(M, g, [[0, topY(P, 17) + .02, 17, 0]], .95, 3);
-  const c = cannon(M, 1.0, 2, 2.8, 7); c.position.set(0, topY(P, -9) + .5, -9); g.add(c);
+  pdcs(M, g, [[0, topY(P, 16.5) + .02, 16.5, 0]], .95, 3);
+  const c = cannon(M, 1.1, 2, 2.8, 7); c.position.set(0, topY(P, -10) + .5, -10); g.add(c);
   /* Antrieb */
-  const PD = [[-22, 6.4, 6.4, 6.0, .8], [-17, 7.6, 6.4, 6.6, .9]];
-  g.add(H(PD, M.hull2)); g.add(band(PD, -19, .6, .08, X.hazard, .3));
-  for (const s of [-1, 1]) { const e = torch(M, 1.5, 12); e.position.set(s * 1.8, 0, -22); g.add(e); }
-  const fa = finArray(M, 3, 2.2, 3.6, 1.1); fa.position.set(0, topY(PD, -20), -20); g.add(fa);
-  nums(g, 'MCRN 6024', P, 14, .6, .6, .02);
-  lights(M, g, [[6, 2.8, 13.0], [-6, 2.8, 13.0], [6, -2.8, -10.2], [-6, -2.8, -10.2]], .2, 1.1);
+  const PD = [[-22, 7.8, 7.8, 7.0, .9], [-16, 9.2, 8.2, 8.0, 1.0]];
+  g.add(H(PD, M.hull2)); g.add(band(PD, -18.6, .6, .08, X.hazard, .3));
+  for (const s of [-1, 1]) { const e = torch(M, 1.6, 12); e.position.set(s * 2.0, 0, -22); g.add(e); }
+  const fa = finArray(M, 3, 2.2, 3.6, 1.2); fa.position.set(0, topY(PD, -19.5), -19.5); g.add(fa);
+  for (const s of [-1, 1]) { const w = radPanel(M, 3.4, 3.4); w.rotation.z = -s * HP; w.position.set(s * 4.2, -.6, -19.4); g.add(w); }
+  nums(g, 'MCRN 6024', P, 13.6, .6, .55, .02);
+  lights(M, g, [[0, -4.1, -20], [0, 4.2, 17]], .2, 1.1);
   return g;
 });
 

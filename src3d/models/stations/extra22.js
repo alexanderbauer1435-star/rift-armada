@@ -100,8 +100,9 @@ function specTurret(f, spec) {
   };
 }
 for (const f of FACS) {
-  registerB(f, 'wall', (M, d, lv) => wallModel(f, M, d, lv));
-  registerB(f, 'radar', (M, d, lv) => radarModel(f, M, d, lv));
+  /* Fassung 24: eigene Modelle einer Fraktion (z. B. Allianz) haben Vorrang */
+  if (!BUILDB[f + ':wall']) registerB(f, 'wall', (M, d, lv) => wallModel(f, M, d, lv));
+  if (!BUILDB[f + ':radar']) registerB(f, 'radar', (M, d, lv) => radarModel(f, M, d, lv));
   registerB(f, 'dock', (M, d, lv) => dockModel(f, M, d, lv));
   if (BUILDB[f + ':turret']) for (const sp of ['flak', 'heavy', 'jam']) registerB(f, 'turret:' + sp, specTurret(f, sp));
 }
