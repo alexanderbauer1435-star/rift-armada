@@ -31,6 +31,52 @@ const E = { born: new Map(), now: 0, tpl: new Map(), sets: new Map(), stations: 
 const M4 = new THREE.Matrix4(), M4b = new THREE.Matrix4(), POS = new THREE.Vector3(), SCL = new THREE.Vector3(1, 1, 1), EUL = new THREE.Euler(0, 0, 0, 'YZX'), QUAT = new THREE.Quaternion(), COL = new THREE.Color();
 const WHITE = new THREE.Color(1, 1, 1), TINT = { ion: new THREE.Color(), acid: new THREE.Color(0.75, 1.05, 0.6), gold: new THREE.Color(1.15, 1.0, 0.7) };
 export function setEffects(fx) { E.fx = fx; }
+/* Fassung 24: Verkehr in der Basis – kleine Pendelshuttles fliegen in flachen Bögen zwischen fertigen eigenen Stationen
+   (je Spieler bis zu 6, Zahl wächst mit der Basis). Rein optisch, zwei Instanz-Meshes (Rumpf in Teamfarbe, Leuchtpunkt). */
+const TR = { body: null, glow: null, list: [], cap: 64, M: new THREE.Matrix4(), Q: new THREE.Quaternion(), P: new THREE.Vector3(), S: new THREE.Vector3(1, 1, 1), C: new THREE.Color(), up: new THREE.Vector3(0, 1, 0), e: new THREE.Euler() };
+function trafficInit() {
+  const g = new THREE.BoxGeometry(2.4, 1.3, 5.2); g.translate(0, 0, 0.4); const nose = new THREE.ConeGeometry(1.0, 2.2, 6).rotateX(Math.PI / 2).translate(0, 0, 3.9);
+  const geo = mergeTwo(g, nose);
+  TR.body = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: '#c9d2dc', metalness: 0.5, roughness: 0.45, emissive: '#223344', emissiveIntensity: 0.4 }), TR.cap);
+  TR.glow = new THREE.InstancedMesh(new THREE.SphereGeometry(0.9, 8, 6), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, blending: THREE.AdditiveBlending, depthWrite: false }), TR.cap);
+  for (const m of [TR.body, TR.glow]) { m.frustumCulled = false; m.count = 0; m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.setColorAt(0, TR.C.set('#ffffff')); E.root.add(m); }
+}
+function mergeTwo(a, b) {
+  const ga = a.toNonIndexed(), gb = b.toNonIndexed(), out = new THREE.BufferGeometry();
+  for (const k of ['position', 'normal']) { const A = ga.attributes[k].array, B = gb.attributes[k].array, C = new Float32Array(A.length + B.length); C.set(A); C.set(B, A.length); out.setAttribute(k, new THREE.BufferAttribute(C, 3)); }
+  return out;
+}
+function traffic(g, dt, seen, pcol) {
+  if (!TR.body) trafficInit();
+  if (!TR.body.parent) { E.root.add(TR.body); E.root.add(TR.glow); }
+  /* fertige Stationen je Spieler */
+  const by = new Map();
+  for (const b of g.bldgs) { if (b.dead || !b.done || b.role === 'wall' || b.role === 'turret' || b.owner < 0) continue; let a = by.get(b.owner); if (!a) by.set(b.owner, a = []); a.push(b); }
+  for (const [o, arr] of by) {
+    if (arr.length < 2) continue;
+    const want = Math.min(6, Math.floor(arr.length / 2)), have = TR.list.reduce((n, s) => n + (s.o === o ? 1 : 0), 0);
+    if (have < want && TR.list.length < TR.cap && Math.random() < dt * 0.8) {
+      const a = arr[Math.random() * arr.length | 0]; let b = arr[Math.random() * arr.length | 0];
+      if (a !== b && Math.hypot(a.x - b.x, a.y - b.y) < 1300) { const d = Math.hypot(a.x - b.x, a.y - b.y); TR.list.push({ o, a: a.id, b: b.id, ax: a.x, ay: a.y, bx: b.x, by: b.y, ra: a.def.r * 0.7, rb: b.def.r * 0.7, t: 0, dur: Math.max(4, d / 42), side: Math.random() < 0.5 ? -1 : 1 }); }
+    }
+  }
+  let n = 0;
+  for (let i = TR.list.length - 1; i >= 0; i--) {
+    const s = TR.list[i]; s.t += dt;
+    const A = g.byId && g.byId.get(s.a), B = g.byId && g.byId.get(s.b);
+    if (s.t >= s.dur || !A || !B || A.dead || B.dead) { TR.list.splice(i, 1); continue; }
+    const k = s.t / s.dur, e = k * k * (3 - 2 * k), dx = s.bx - s.ax, dy = s.by - s.ay, L = Math.hypot(dx, dy) || 1, ux = dx / L, uy = dy / L;
+    const x0 = s.ax + ux * s.ra, y0 = s.ay + uy * s.ra, x1 = s.bx - ux * s.rb, y1 = s.by - uy * s.rb, bow = Math.sin(Math.PI * e) * L * 0.18 * s.side;
+    const x = x0 + (x1 - x0) * e - uy * bow, y = y0 + (y1 - y0) * e + ux * bow, h = 10 + Math.sin(Math.PI * e) * 22;
+    if (!seen(x, y) || !inView(x, y, 10, 5)) continue;
+    const de = 0.01, e2 = Math.min(1, e + de), bow2 = Math.sin(Math.PI * e2) * L * 0.18 * s.side, nx = x0 + (x1 - x0) * e2 - uy * bow2 - x, ny = y0 + (y1 - y0) * e2 + ux * bow2 - y;
+    TR.e.set(0, Math.atan2(nx, ny), 0); TR.Q.setFromEuler(TR.e); TR.P.set(x, h, y); TR.S.setScalar(Math.min(1, k * 8, (1 - k) * 8) * 0.9 + 0.1);
+    TR.M.compose(TR.P, TR.Q, TR.S); TR.body.setMatrixAt(n, TR.M); TR.C.set(pcol(s.o)).lerp(WHITE, 0.55); TR.body.setColorAt(n, TR.C);
+    TR.P.set(x - Math.sin(TR.e.y) * 2.8, h, y - Math.cos(TR.e.y) * 2.8); TR.S.setScalar(0.8 + 0.3 * Math.random()); TR.M.compose(TR.P, TR.Q, TR.S); TR.glow.setMatrixAt(n, TR.M); TR.C.set(pcol(s.o)).multiplyScalar(2.2); TR.glow.setColorAt(n, TR.C);
+    n++;
+  }
+  for (const m of [TR.body, TR.glow]) { m.count = n; m.visible = n > 0; if (n) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; } }
+}
 /* Fassung 24: Ereignisse für die Modelle (Einsprung frisch gebauter Schiffe) */
 export function shipEvent(e) { if (e.t === 'ready' && e.id !== undefined) E.born.set(e.id, E.now); }
 
@@ -75,20 +121,54 @@ const DMG_GLSL = 'uniform float uT; varying float vDmg; varying vec4 vCut; varyi
   'float dNoise(vec3 x) { vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return mix(mix(mix(dHash(i), dHash(i + vec3(1.0, 0.0, 0.0)), f.x), mix(dHash(i + vec3(0.0, 1.0, 0.0)), dHash(i + vec3(1.0, 1.0, 0.0)), f.x), f.y), mix(mix(dHash(i + vec3(0.0, 0.0, 1.0)), dHash(i + vec3(1.0, 0.0, 1.0)), f.x), mix(dHash(i + vec3(0.0, 1.0, 1.0)), dHash(i + vec3(1.0, 1.0, 1.0)), f.x), f.y), f.z); }\n';
 function dmgPatch(c) {
   const prev = c.onBeforeCompile, base = prev !== PROTO_OBC && c.customProgramCacheKey ? c.customProgramCacheKey() : '', std = !!c.isMeshStandardMaterial;
+  /* Positionslichter (rot/grün, MeshBasic): blinken je Schiff versetzt (Phase aus der Instanznummer) */
+  const k = c.color, nav = !std && k && ((k.r > 2.5 && k.g < 1.2 && k.b < 1.2) || (k.g > 2.5 && k.r < 1.2 && k.b < 1.8));
   c.onBeforeCompile = function (sh, r) {
     if (prev !== PROTO_OBC) prev.call(this, sh, r);
     sh.uniforms.uT = DMG_T;
     sh.vertexShader = sh.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying float vDmg; varying vec4 vCut; varying vec3 vDP; varying vec2 vWP;\n#ifdef USE_INSTANCING\nattribute float iDmg; attribute vec4 iCut;\n#endif')
-      .replace('#include <project_vertex>', '#include <project_vertex>\nvDP = position; vDmg = 0.0; vCut = vec4(0.0); vWP = vec2(0.0);\n#ifdef USE_INSTANCING\nvDmg = iDmg; vCut = iCut; vWP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xz;\n#endif');
+      .replace('#include <common>', '#include <common>\nvarying float vDmg; varying vec4 vCut; varying vec3 vDP; varying vec2 vWP; varying float vPh;\n#ifdef USE_INSTANCING\nattribute float iDmg; attribute vec4 iCut;\n#endif')
+      .replace('#include <project_vertex>', '#include <project_vertex>\nvDP = position; vDmg = 0.0; vCut = vec4(0.0); vWP = vec2(0.0); vPh = fract(float(gl_InstanceID) * 0.618034);\n#ifdef USE_INSTANCING\nvDmg = iDmg; vCut = iCut; vWP = (modelMatrix * instanceMatrix * vec4(transformed, 1.0)).xz;\n#endif');
     sh.fragmentShader = sh.fragmentShader
-      .replace('#include <common>', '#include <common>\n' + DMG_GLSL)
+      .replace('#include <common>', '#include <common>\nvarying float vPh;\n' + DMG_GLSL)
       .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nfloat dCutE = 0.0;\nif (vCut.x != 0.0) { float dd = dot(vWP - vCut.yz, vec2(cos(vCut.w), sin(vCut.w))) * vCut.x + (dNoise(vDP * 0.22) - 0.5) * 9.0; if (dd < 0.0) discard; dCutE = 1.0 - smoothstep(0.0, 3.5, dd); }')
       .replace('#include <color_fragment>', '#include <color_fragment>\nfloat dMask = 0.0, dCrack = 0.0;\nif (vDmg > 0.01) { float dN = dNoise(vDP * 0.06) * 0.7 + dNoise(vDP * 0.19) * 0.3; float th = 1.0 - vDmg * 0.72; dMask = smoothstep(th, th + 0.07, dN); diffuseColor.rgb *= 1.0 - dMask * 0.74; dCrack = (1.0 - smoothstep(0.0, 0.022, abs(dN - th - 0.012))) * smoothstep(0.4, 0.5, vDmg) * (0.65 + 0.35 * sin(uT * 4.0 + vDP.x * 0.4 + vDP.z * 0.3)); }' +
-        (std ? '' : '\ndiffuseColor.rgb *= mix(1.0, step(0.32, fract(sin(floor(uT * 11.0) + vDP.x * 0.13 + vDP.z * 0.07) * 43758.5)) * 0.9 + 0.1, smoothstep(0.7, 0.95, vDmg));\ndiffuseColor.rgb += vec3(1.3, 0.38, 0.08) * (dCrack * vDmg + dCutE * 0.9);'));
+        (nav ? '\ndiffuseColor.rgb *= 0.12 + 0.88 * step(0.62, fract(uT * 0.85 + vPh));' : '') + (std ? '' : '\ndiffuseColor.rgb *= mix(1.0, step(0.32, fract(sin(floor(uT * 11.0) + vDP.x * 0.13 + vDP.z * 0.07) * 43758.5)) * 0.9 + 0.1, smoothstep(0.7, 0.95, vDmg));\ndiffuseColor.rgb += vec3(1.3, 0.38, 0.08) * (dCrack * vDmg + dCutE * 0.9);'));
     if (std) sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(1.0, 0.3, 0.05) * (dCrack * vDmg * 2.0 + dCutE * 1.5 + dMask * smoothstep(0.7, 1.0, vDmg) * 0.12 * (0.6 + 0.4 * sin(uT * 2.3 + vDP.y)));');
   };
-  c.customProgramCacheKey = () => 'dmg|' + (std ? 1 : 0) + '|' + base;
+  c.customProgramCacheKey = () => 'dmg|' + (std ? 1 : 0) + (nav ? 'n' : '') + '|' + base;
+}
+/* Fassung 24: Zusammenbau. Stationen im Bau füllen sich von der Mitte nach außen (radial), Schiffe im Werftdock vom Heck
+   zum Bug (entlang uBA); an der Front glüht eine Schweißkante. Darüber ein Gerüst (Drahtgitter derselben Geometrie),
+   das nur dort steht, wo noch nicht gebaut ist (uInv = 1). Eigene Materialklone je Station/Dock (Uniforms je Bau). */
+function buildUniforms() { return { uBP: { value: 0 }, uBC: { value: new THREE.Vector3() }, uBA: { value: new THREE.Vector3() }, uBR: { value: 50 } }; }
+function buildPatch(c, U, inv) {
+  const prev = c.onBeforeCompile, base = prev !== PROTO_OBC && c.customProgramCacheKey ? c.customProgramCacheKey() : '', std = !!c.isMeshStandardMaterial;
+  c.onBeforeCompile = function (sh, r) {
+    if (prev !== PROTO_OBC) prev.call(this, sh, r);
+    Object.assign(sh.uniforms, U);
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vBW;')
+      .replace('#include <project_vertex>', '#include <project_vertex>\n{ vec4 bw = vec4(transformed, 1.0);\n#ifdef USE_INSTANCING\nbw = instanceMatrix * bw;\n#endif\nvBW = (modelMatrix * bw).xyz; }');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uBP; uniform vec3 uBC; uniform vec3 uBA; uniform float uBR; varying vec3 vBW;')
+      .replace('#include <clipping_planes_fragment>', '#include <clipping_planes_fragment>\nbool bLin = dot(uBA, uBA) > 0.5; vec3 bq = vBW - uBC; float bd = bLin ? dot(bq, uBA) : length(bq.xz);\nfloat bE = bLin ? (-uBR + 2.0 * uBR * uBP) : (uBR * 1.12 * uBP);\nbE += (fract(sin(dot(floor(vBW * 0.35), vec3(12.9898, 78.233, 37.719))) * 43758.5453) - 0.5) * (uBR * 0.07 + 1.0);\n' +
+        (inv ? 'if (bd < bE) discard;\n' : 'if (bd > bE) discard;\n') + 'float bG = 1.0 - smoothstep(0.0, uBR * 0.05 + 1.5, abs(bE - bd));');
+    if (inv) return;
+    if (std) sh.fragmentShader = sh.fragmentShader.replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vec3(1.0, 0.72, 0.38) * bG * 2.6;');
+    else sh.fragmentShader = sh.fragmentShader.replace('#include <color_fragment>', '#include <color_fragment>\ndiffuseColor.rgb += vec3(1.0, 0.72, 0.38) * bG * 1.6;');
+  };
+  c.customProgramCacheKey = () => 'build|' + (inv ? 1 : 0) + '|' + (std ? 1 : 0) + '|' + base;
+  return c;
+}
+/* Modell auf Zusammenbau umstellen: eigene Klone, Flammen aus, Gerüst darüber; gibt die Uniforms zurück */
+function toBuild(root, color) {
+  const U = buildUniforms(), wire = buildPatch(new THREE.MeshBasicMaterial({ color: new THREE.Color(color || '#9fd0ff').lerp(new THREE.Color('#ffffff'), 0.4), wireframe: true, transparent: true, opacity: 0.28, depthWrite: false }), U, true), meshes = [];
+  root.traverse(o => { if (o.isMesh) meshes.push(o); else if (o.isSprite || o.isPoints) o.visible = false; });
+  for (const o of meshes) {
+    if (o.material && o.material.userData && o.material.userData.isFlame) { o.visible = false; continue; }
+    o.material = buildPatch(cloneMat(o.material), U, false); o.castShadow = false;
+    const w = new THREE.Mesh(o.geometry, wire); w.renderOrder = 3; w.userData.scaffold = 1; o.add(w);
+  }
+  return U;
 }
 /* alle Materialien eines Baums ersetzen (eigene Klone, wenn own = true, für Deckkraft je Objekt) */
 function remat(root, kind, tint, own) { const mine = []; root.traverse(o => { if (o.material) { let m = variant(o.material, kind, tint); if (own) { m = m.clone(); mine.push(m); } o.material = m; } }); return mine; }
@@ -200,7 +280,7 @@ function stationEntry(b, color) { return { m: null, far: null, key: stationKey(b
 function fullStation(e) {
   if (e.m) return e.m;
   const m = buildStation(e.f, e.def, e.lv, e.color, e.spec);
-  if (!e.done) remat(m, 'ghost', e.color, false);
+  if (!e.done) { e.bU = toBuild(m, e.color); const bb = new THREE.Box3().setFromObject(m); e.bR = Math.max(8, bb.max.x, -bb.min.x, bb.max.z, -bb.min.z); }
   m.traverse(o => { if (o.userData.berth && !e.berth) e.berth = o; });
   m.visible = false; E.root.add(m); e.m = m; e.charge = -1; e.aimA = undefined;
   return m;
@@ -218,14 +298,15 @@ function dropStation(e) { if (e.m) E.root.remove(e.m); if (e.far) E.root.remove(
 /* Schiff im Bauplatz der Werft (eigene halbdurchsichtige Materialien je Werft) */
 function berthShip(e, type, def, color) {
   if (e.berthType === type) return;
-  if (e.berthM) { e.berth.remove(e.berthM); e.berthM = null; e.berthMats = null; }
+  if (e.berthM) { e.berth.remove(e.berthM); e.berthM = null; e.berthMats = null; e.berthU = null; }
   e.berthType = type;
   if (!type || !e.berth || !def) return;
   const m = tplOf(def, color).root.clone(true);
   m.traverse(o => { if (o.isSprite || o.isPoints || (o.material && o.material.userData.isFlame)) o.visible = false; o.castShadow = false; });
-  e.berthMats = remat(m, 'ghost', '', true);
+  /* Fassung 24: Schiff entsteht im Dock – Gerüst, dann Platte für Platte vom Heck zum Bug */
+  e.berthU = toBuild(m, color); e.berthMats = null;
   const max = (e.berth.userData.berth && e.berth.userData.berth.len) || 60, k = Math.min(1, max / def.len);
-  m.scale.setScalar(k); e.berth.add(m); e.berthM = m;
+  m.scale.setScalar(k); e.berth.add(m); e.berthM = m; e.berthLen = def.len * k;
 }
 
 /* ------------------------------------------------------------ Vorbauen im Leerlauf
@@ -453,7 +534,9 @@ export function updateEntities(g, dt, t, view) {
       continue;
     }
     if (!b.done) {
-      m.scale.set(1, 0.08 + 0.92 * b.prog, 1);
+      /* Fassung 24: Zusammenbau von der Mitte nach außen, Schweißfunken an der Front */
+      if (e.bU) { e.bU.uBP.value = Math.max(0.03, b.prog); e.bU.uBC.value.set(b.x, 0, b.y); e.bU.uBR.value = e.bR || b.def.r; m.scale.set(1, 1, 1); } else m.scale.set(1, 0.08 + 0.92 * b.prog, 1);
+      if (e.bU && b.bld && v && fx && fx.spark && det > 0 && Math.random() < 0.5) { const a = Math.random() * TAU, rr = (e.bR || b.def.r) * 1.12 * Math.max(0.03, b.prog); fx.spark(b.x + Math.cos(a) * rr, b.y + Math.sin(a) * rr, 2, 40, '#ffe2a0'); }
       ring(b.x, b.y, b.def.r, '#c8dcff', 1.5, { dash: 6, alpha: 0.5 });
       ring(b.x, b.y, b.def.r, col, 3, { a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * b.prog });
       if (b.bld && v && fx && fx.spark && det > 0 && Math.random() < 0.25) fx.spark(b.x + (Math.random() - 0.5) * b.def.r, b.y + (Math.random() - 0.5) * b.def.r, 1, 30, '#ffe9a0');
@@ -469,6 +552,11 @@ export function updateEntities(g, dt, t, view) {
       let def = null; if (q0) { const any = g.ships.find(u => u.type === q0); def = any ? any.def : shipDef(q0); }
       berthShip(e, def ? q0 : '', def, col);
       if (e.berthMats) { const op = 0.15 + 0.6 * (b.qp || 0); for (const mm of e.berthMats) mm.opacity = op; }
+      if (e.berthU && e.berthM) {
+        const U = e.berthU, bm = e.berthM; bm.updateMatrixWorld(true); bm.getWorldPosition(U.uBC.value); U.uBA.value.set(0, 0, 1).transformDirection(bm.matrixWorld); U.uBA.value.y = 0; U.uBA.value.normalize();
+        U.uBR.value = (e.berthLen || 40) * 0.55; U.uBP.value = Math.max(0.02, Math.min(1, b.qp || 0));
+        if (v && fx && fx.spark && det > 0 && Math.random() < 0.35) { const d = -U.uBR.value + 2 * U.uBR.value * U.uBP.value, c = U.uBC.value, a = U.uBA.value, sx = (Math.random() - 0.5) * U.uBR.value * 0.4; fx.spark(c.x + a.x * d - a.z * sx, c.z + a.z * d + a.x * sx, 2, 35, '#ffe2a0'); }
+      }
     }
     if (b.upg) ring(b.x, b.y, b.def.r + 6, '#ffffff', 2, { dash: 4, a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * (b.upg.prog || 0) });
     if (b.role === 'super' && v) { const full = b.charge >= 1; ring(b.x, b.y, b.def.r + 4, '#ffb86b', 3, { alpha: full ? 0.6 + 0.3 * Math.sin(t * 5) : 0.55, a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * Math.min(1, b.charge || 0) }); if (full && b.owner === vp) disc(b.x, b.y, b.def.r * 1.6, '#ffb070', 0.14 + 0.08 * Math.sin(t * 4)); }
@@ -479,6 +567,7 @@ export function updateEntities(g, dt, t, view) {
     animate(m, t, dt);
   }
   for (const [id, e] of E.stations) if (!live.has(id)) { dropStation(e); E.stations.delete(id); }
+  if (det > 0) traffic(g, dt, seen, pcol); else if (TR.body) { TR.body.visible = false; TR.glow.visible = false; }
   /* Fassung 22: Schildwälle (stehend: Feld; eigener ohne Feld: gestrichelte Linie) */
   WALLS.n = 0;
   for (const b of g.bldgs) {
@@ -495,7 +584,7 @@ export function updateEntities(g, dt, t, view) {
 export function clearEntities() {
   if (!E.root) return;
   for (const s of E.sets.values()) for (const im of s.ims) { E.root.remove(im); dropGeo(im.geometry); im.dispose(); }
-  E.sets.clear(); E.tpl.clear(); E.prev.clear(); E.born.clear(); FARST.clear(); STPL.clear(); PRE.length = 0;
+  E.sets.clear(); E.tpl.clear(); E.prev.clear(); E.born.clear(); TR.list.length = 0; if (TR.body) { E.root.remove(TR.body); E.root.remove(TR.glow); } FARST.clear(); STPL.clear(); PRE.length = 0;
   for (const e of E.stations.values()) dropStation(e); E.stations.clear();
   for (const m of E.ghost.values()) E.root.remove(m); E.ghost.clear(); E.ghostCur.length = 0;
   for (const m of E.ruins.values()) E.root.remove(m); E.ruins.clear();
