@@ -34,8 +34,26 @@ function col(hex) { let c = COLS.get(hex); if (!c) { const k = new T.Color(hex);
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 /* ------------------------------------------------------------ Aufbau */
+/* Fassung 24 »Ultra«: Explosionen, Einschläge und Mündungsfeuer beleuchten die Rümpfe ringsum. Feste Zahl von
+   Punktlichtern (Shader bleiben gleich), die jeweils hellsten/jüngsten Ereignisse belegen sie; außerhalb von Ultra
+   unsichtbar (keine Kosten). peak = Helligkeit in 50 Einheiten Abstand, gemessen am Hauptlicht (2,6). */
+const LT = { n: 8, list: [], on: false, scene: null };
+function lightsSet(on) {
+  if (on && !LT.list.length && LT.scene) for (let i = 0; i < LT.n; i++) { const l = new T.PointLight('#ffffff', 0, 400, 2); l.position.set(0, -9999, 0); LT.scene.add(l); LT.list.push({ l, t: 1, life: 1, peak: 0 }); }
+  LT.on = on; for (const e of LT.list) { e.l.visible = on; e.l.intensity = 0; e.t = e.life; }
+}
+function light(x, y, h, hex, peak, dist, life) {
+  if (!LT.on) return;
+  let best = null, bv = 1e9; for (const e of LT.list) { const left = e.t >= e.life ? 0 : e.peak * Math.pow(1 - e.t / e.life, 2); if (left < bv) { bv = left; best = e; } }
+  if (!best || bv > peak) return;
+  best.l.color.set(hex); best.l.position.set(x, h + 30, y); best.l.distance = dist; best.t = 0; best.life = life; best.peak = peak;
+}
+function lightsStep(dt) {
+  if (!LT.on) return;
+  for (const e of LT.list) { if (e.t >= e.life) { e.l.intensity = 0; continue; } e.t += dt; const k = Math.min(1, e.t / e.life), rise = Math.min(1, e.t / 0.04); e.l.intensity = e.peak * 700 * rise * Math.pow(1 - k, 2); }
+}
 export function init(scene, THREE, kitMats, d) {
-  T = THREE; useThree(THREE);
+  T = THREE; useThree(THREE); LT.scene = scene;
   atlas = makeAtlas();
   root = new T.Group(); root.name = 'effects'; root.matrixAutoUpdate = false; scene.add(root);
   B.smoke = new SpriteBuf(CAP[1] + 120, atlas, 'normal', 8);
@@ -56,6 +74,7 @@ export function init(scene, THREE, kitMats, d) {
 }
 export function setDetail(d) {
   const dd = Math.max(0, Math.min(3, d | 0)); detail = Math.min(2, dd); K = KF[dd];
+  if (T) lightsSet(dd === 3); if (B.dome && B.dome.mesh.material.uniforms) B.dome.mesh.material.uniforms.uRip.value = dd === 3 ? 1 : 0;
   if (!P.spr) return;   /* vor init: nur merken */
   const L = LIM[dd]; P.spr.lim = L[0]; P.smoke.lim = L[1]; P.quad.lim = L[2]; P.chunk.lim = L[3]; P.ring.lim = L[4]; P.dome.lim = L[5]; P.disc.lim = L[6];
 }
@@ -199,9 +218,9 @@ export function event(e, g, view) {
   const pc = o => (view && view.pcol && o !== undefined && o >= 0) ? view.pcol(o) : '#ffffff';
   const shake = k => { if (view && view.shake) view.shake(k); };
   switch (e.t) {
-    case 'die': if (!e.quiet) { const r = e.r || 12; explode(e.x, e.y, r, e.big, pc(e.owner), H.proj + r * 0.25); if (e.big) { shake(6); later.push({ at: now + rnd(0.5, 0.9), fn: () => { fire(e.x + rnd(-r, r) * 0.5, e.y + rnd(-r, r) * 0.5, r * 0.5, 0.6, 2, H.proj + r * 0.3); smoke(e.x, e.y, r, 3, 2.2, H.proj + r * 0.3); } }); } } break;
+    case 'die': if (!e.quiet) { const r = e.r || 12; light(e.x, e.y, H.proj, '#ffa050', e.big ? 3.2 : 1.6, e.big ? 320 : 170, e.big ? 1.1 : 0.6); explode(e.x, e.y, r, e.big, pc(e.owner), H.proj + r * 0.25); if (e.big) { shake(6); later.push({ at: now + rnd(0.5, 0.9), fn: () => { fire(e.x + rnd(-r, r) * 0.5, e.y + rnd(-r, r) * 0.5, r * 0.5, 0.6, 2, H.proj + r * 0.3); smoke(e.x, e.y, r, 3, 2.2, H.proj + r * 0.3); } }); } } break;
     case 'bdie': {
-      const r = e.r || 40, pcol = pc(e.owner);
+      const r = e.r || 40, pcol = pc(e.owner); light(e.x, e.y, H.proj, '#ff9a48', 4, 420, 1.6);
       explode(e.x, e.y, r * 0.8, true, pcol, H.proj + r * 0.2);
       smoke(e.x, e.y, r, 14, 2.8, H.proj + r * 0.3);
       for (let i = 0; i < 3; i++) { const a = Math.random() * TAU, dd = r * rnd(0.3, 0.8); later.push({ at: now + 0.22 + i * 0.28, fn: () => explode(e.x + Math.cos(a) * dd, e.y + Math.sin(a) * dd, r * (0.35 + 0.15 * i), i === 2, pcol, H.proj + r * 0.3, false) }); }
@@ -210,6 +229,7 @@ export function event(e, g, view) {
     }
     case 'hit': {
       const k = e.kind || 'kin', hh = H.proj;
+      if (k === 'torp') light(e.x, e.y, hh, '#ffb060', 1.4, 160, 0.35); else if (k === 'rail' || (k === 'beam' && Math.random() < 0.3)) light(e.x, e.y, hh, (HIT[k] || HIT.kin)[0], k === 'rail' ? 1.0 : 0.6, 110, 0.18);
       if (k === 'torp') explode(e.x, e.y, 10, false, '#ffb060', hh);
       else if (k === 'torpdie') { flash(e.x, e.y, 9, '#ffd080', 0.25, hh); spark(e.x, e.y, 5, 80, '#ffd27a', 0.3, hh); }
       else { const d = HIT[k] || HIT.kin; spark(e.x, e.y, d[2], d[1], d[0], k === 'acid' ? 0.5 : 0.4, hh, 1.5, 1.4); flash(e.x, e.y, k === 'rail' ? 10 : k === 'beam' ? 6 : 7, d[0], k === 'rail' ? 0.2 : 0.14, hh, k === 'rail' ? TILE.star : TILE.glow, k === 'rail' ? 1.3 : 1.1); }
@@ -223,7 +243,7 @@ export function event(e, g, view) {
     case 'shot': {
       /* Mündungsfeuer am Bug in Richtung des Schusses (Strahl, Geschoss, Torpedo, Säure) */
       if (e.ang !== undefined && e.r) { const c = e.kind === 'rail' ? '#dff4ff' : e.kind === 'acid' ? '#b4ff3c' : facCol(g, e.owner), mx = e.x + Math.cos(e.ang) * e.r, my = e.y + Math.sin(e.ang) * e.r, s0 = e.big || e.kind === 'torp' ? 9 : e.kind === 'beam' ? 7 : 5;
-        flash(mx, my, s0, c, 0.09, H.proj, TILE.glow, 1.5); if (e.big || e.kind === 'torp') spark(mx, my, 3, 70, c, 0.25, H.proj, 1.4, 0.2); }
+        flash(mx, my, s0, c, 0.09, H.proj, TILE.glow, 1.5); if (e.big || e.kind === 'torp' || e.kind === 'rail') light(mx, my, H.proj, c, 0.7, 120, 0.12); if (e.big || e.kind === 'torp') spark(mx, my, 3, 70, c, 0.25, H.proj, 1.4, 0.2); }
     }
       if (e.kind === 'rail') { flash(e.x, e.y, 12, '#dff4ff', 0.15, H.proj, TILE.star, 1.4); glow(e.x, e.y, H.proj, 20, 36, '#9fd0ff', 0.25, 0.5); }
       else if (e.kind === 'kin' && e.big) flash(e.x + Math.cos(e.ang) * 10, e.y + Math.sin(e.ang) * 10, 5, '#ffe0a0', 0.1, H.proj);
@@ -249,7 +269,7 @@ export function event(e, g, view) {
       else if (e.kind === 'sunbreak') { ring(e.x, e.y, (e.r || 260) * 1.1, '#ffb070', 1.4, 5); flash(e.x, e.y, (e.r || 260) * 0.5, '#fff2d0', 0.5, H.proj + 10, TILE.glow, 1.2); shake(6); }
       else { ring(e.x, e.y, (e.r || 200) * 1.2, '#eadcff', 1.2, 3); flash(e.x, e.y, 60, '#ffffff', 0.4, H.proj + 6, TILE.star, 1.2); }
       break;
-    case 'strike': { const r = e.r || 150; explode(e.x, e.y, r * 0.45, true, '#ffb070', H.proj, false); ring(e.x, e.y, r * 1.6, '#ff8a5a', 1.3, r * 0.1, 1, 0.5); smoke(e.x, e.y, r * 0.5, 18, 3.2, H.proj, 14); debris(e.x, e.y, 30, 260, 30, H.proj, 1); spark(e.x, e.y, 40, 320, '#ffd27a', 1.1, H.proj, 1.6, 1.5); later.push({ at: now + 0.35, fn: () => fire(e.x, e.y, r * 0.4, 1.2, 6, H.proj + r * 0.15, 0.9) }); shake(16); break; }
+    case 'strike': { const r = e.r || 150; light(e.x, e.y, H.proj, '#ffb070', 5, 600, 1.8); explode(e.x, e.y, r * 0.45, true, '#ffb070', H.proj, false); ring(e.x, e.y, r * 1.6, '#ff8a5a', 1.3, r * 0.1, 1, 0.5); smoke(e.x, e.y, r * 0.5, 18, 3.2, H.proj, 14); debris(e.x, e.y, 30, 260, 30, H.proj, 1); spark(e.x, e.y, 40, 320, '#ffd27a', 1.1, H.proj, 1.6, 1.5); later.push({ at: now + 0.35, fn: () => fire(e.x, e.y, r * 0.4, 1.2, 6, H.proj + r * 0.15, 0.9) }); shake(16); break; }
     case 'supercharged': ring(e.x, e.y, 80, '#ffb86b', 1.2, 3); break;
     case 'ready': { /* Fassung 24: Einsprung frisch gebauter Schiffe */
       const u = g && g.byId ? g.byId.get(e.id) : null; if (!u || !u.def || u.def.role === 'fighter') break;
@@ -284,7 +304,7 @@ export function event(e, g, view) {
 /* ------------------------------------------------------------ Frame */
 export function frame(g, dt, time, view, cam) {
   if (!T) return;
-  dt = Math.min(dt || 0, 0.1); now = time;
+  dt = Math.min(dt || 0, 0.1); now = time; lightsStep(dt);
   /* zeitversetzte Wirkungen */
   if (later.length) { let w = 0; for (let i = 0; i < later.length; i++) { const q = later[i]; if (time >= q.at) q.fn(); else later[w++] = q; } later.length = w; }
   for (const k in B) B[k].begin(time);

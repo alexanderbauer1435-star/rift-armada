@@ -30,6 +30,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export const TILT = 0.95, FOV = 35;
@@ -83,7 +84,11 @@ export function initScene(canvas, opts = {}) {
   S.composer = new EffectComposer(r, rt); S.composer.addPass(new RenderPass(S.scene, S.camera));
   S.bloom = new UnrealBloomPass(new THREE.Vector2(256, 256), 0.5, 0.4, 1.25);
   const bs = S.bloom.setSize.bind(S.bloom); S.bloom.setSize = (w, h) => bs(Math.max(16, Math.round(w / 2)), Math.max(16, Math.round(h / 2)));
-  S.composer.addPass(S.bloom); S.composer.addPass(new OutputPass());
+  /* Fassung 24: ungültige oder überlaufende Farbwerte (NaN/Inf aus additiven Effekten im Halbfloat-Ziel) vor dem Bloom
+     abfangen – sonst verschmiert der Bloom sie zu einem grauen Schleier über das ganze Bild */
+  S.clean = new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); if (any(isnan(c)) || any(isinf(c))) c = vec4(0.0, 0.0, 0.0, 1.0); gl_FragColor = clamp(c, 0.0, 48.0); }' });
+  S.composer.addPass(S.clean); S.composer.addPass(S.bloom); S.composer.addPass(new OutputPass());
   S.ok = true;
   setDetail(S.detail);
   return true;

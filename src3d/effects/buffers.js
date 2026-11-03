@@ -256,15 +256,21 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * wp;
 }`;
 const DOME_FRAG = `
+uniform float uRip;
 varying vec3 vN; varying vec3 vP; varying vec3 vHit; varying vec4 vCol;
 void main() {
   vec3 n = normalize(vN); vec3 v = normalize(cameraPosition - vP);
   float fres = pow(1.0 - max(0.0, dot(n, v)), 2.5);
-  float spot = pow(max(0.0, dot(n, vHit)), 16.0);
+  /* Fassung 24: vHit.y = Alter 0…1 des Treffers; uRip = 1 (Ultra): Welle läuft vom Treffpunkt über die Kuppel */
+  vec3 hd = normalize(vec3(vHit.x, 0.2, vHit.z)); float age = vHit.y, cd = dot(n, hd);
+  float spot = pow(max(0.0, cd), 16.0);
+  float ad = acos(clamp(cd, -1.0, 1.0)), front = age * 2.6;
+  float r1 = (ad - front) * 6.0, r2 = (ad - front * 0.6) * 8.0;
+  float rip = uRip * (exp(-r1 * r1) + 0.45 * exp(-r2 * r2)) * (1.0 - age);
   float az = atan(n.z, n.x), el = asin(clamp(n.y, -1.0, 1.0));
-  float grid = smoothstep(0.86, 1.0, max(abs(sin(az * 9.0)), abs(sin(el * 9.0)))) * 0.22 * (0.3 + spot);
-  float a = (fres * 0.4 + spot * 0.9 + grid + 0.04) * vCol.a;
-  vec3 c = vCol.rgb * (0.75 + 0.35 * spot + 0.2 * fres);
+  float grid = smoothstep(0.86, 1.0, max(abs(sin(az * 9.0)), abs(sin(el * 9.0)))) * 0.22 * (0.3 + spot + rip * 3.0);
+  float a = (fres * 0.4 + spot * 0.9 * (1.0 - uRip * 0.35) + grid + rip * 0.8 + 0.04) * vCol.a;
+  vec3 c = vCol.rgb * (0.75 + 0.35 * spot + 0.2 * fres + 0.5 * rip);
   /* Deckel: Beitrag je Kanal ≤ 0,55 (additiv über hellen Rümpfen/Wracks bleibt er unter der Bloom-Schwelle 1,25) */
   float m = max(max(c.r, c.g), c.b) * a; if (m > 0.55) a *= 0.55 / m;
   gl_FragColor = vec4(c, a);
@@ -276,7 +282,7 @@ export class DomeBuf {
     const geo = new T.SphereGeometry(1, 28, 12, 0, Math.PI * 2, 0, Math.PI * 0.55);
     this.hit = new Float32Array(cap * 3); this.col = new Float32Array(cap * 4);
     geo.setAttribute('iHit', this.aHit = dyn(this.hit, 3)); geo.setAttribute('iCol', this.aCol = dyn(this.col, 4));
-    const mat = new T.ShaderMaterial({ vertexShader: DOME_VERT, fragmentShader: DOME_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, side: T.FrontSide });
+    const mat = new T.ShaderMaterial({ uniforms: { uRip: { value: 0 } }, vertexShader: DOME_VERT, fragmentShader: DOME_FRAG, transparent: true, depthWrite: false, depthTest: true, blending: T.AdditiveBlending, side: T.FrontSide });
     this.mesh = new T.InstancedMesh(geo, mat, cap); trackViewport(this.mesh); this.mesh.frustumCulled = false; this.mesh.renderOrder = order; this.mesh.instanceMatrix.setUsage(T.DynamicDrawUsage);
     this.M = new T.Matrix4(); this.P = new T.Vector3(); this.Q = new T.Quaternion(); this.S = new T.Vector3();
   }

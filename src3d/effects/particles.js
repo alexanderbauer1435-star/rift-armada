@@ -130,7 +130,7 @@ export function stepDomes(P, dt, buf) {
     if (t >= life) { P.release(i); continue; }
     d[o + DP.t] = t;
     const k = t / life, a = Math.min(1, k * 8) * Math.pow(1 - k, 1.6);
-    buf.write(d[o + DP.x], d[o + DP.h], d[o + DP.z], d[o + DP.r], d[o + DP.hx], 0.2, d[o + DP.hz], d[o + DP.cr], d[o + DP.cg], d[o + DP.cb], a);
+    buf.write(d[o + DP.x], d[o + DP.h], d[o + DP.z], d[o + DP.r], d[o + DP.hx], k, d[o + DP.hz], d[o + DP.cr], d[o + DP.cg], d[o + DP.cb], a);
   }
 }
 

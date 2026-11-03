@@ -7,7 +7,7 @@
    (Beobachter, vp < 0), bleiben Ebene und Rahmen unsichtbar.
    ===================================================================== */
 import * as THREE from 'three';
-import { S } from './scene.js';
+import { S, Q } from './scene.js';
 
 const F = { group: null, plane: null, tex: null, canvas: null, border: [] };
 const Y = 40, VIS = 64;
@@ -18,10 +18,14 @@ export function initFog(g) {
   const w = g.vw * VIS, h = g.vh * VIS;
   const geo = new THREE.PlaneGeometry(w, h); geo.rotateX(-Math.PI / 2);
   const mat = new THREE.MeshBasicMaterial({ transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false });
+  /* Fassung 24: Abdunkeln im Bloom-Weg (lineare Mischung) an die sRGB-Mischung angleichen, sonst wirkt der Nebel heller */
+  const lin = { value: 0 }; F.lin = lin;
+  const darken = m => { m.onBeforeCompile = sh => { sh.uniforms.uLin = lin; sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uLin;').replace('#include <opaque_fragment>', '#include <opaque_fragment>\ngl_FragColor.a = mix(gl_FragColor.a, 1.0 - pow(max(1.0 - gl_FragColor.a, 0.0), 2.2), uLin);'); }; m.customProgramCacheKey = () => 'fogLin'; return m; };
+  darken(mat);
   F.plane = new THREE.Mesh(geo, mat); F.plane.position.set(w / 2, Y, h / 2); F.plane.renderOrder = 100; F.plane.frustumCulled = false; F.plane.visible = false;
   grp.add(F.plane);
   /* Rahmen außerhalb der Karte */
-  const far = 6000, bm = new THREE.MeshBasicMaterial({ color: '#020308', transparent: true, opacity: 0.92, depthTest: false, depthWrite: false, fog: false, toneMapped: false });
+  const far = 6000, bm = darken(new THREE.MeshBasicMaterial({ color: '#020308', transparent: true, opacity: 0.92, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
   const mw = g.map.w, mh = g.map.h;
   const slab = (x, z, sw, sh) => { const q = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh).rotateX(-Math.PI / 2), bm); q.position.set(x, Y, z); q.renderOrder = 100; q.frustumCulled = false; grp.add(q); F.border.push(q); };
   slab(mw / 2, -far / 2, mw + far * 2, far); slab(mw / 2, mh + far / 2, mw + far * 2, far); slab(-far / 2, mh / 2, far, mh); slab(mw + far / 2, mh / 2, far, mh);
@@ -31,7 +35,7 @@ export function updateFog(view) {
   if (!F.group) return;
   const cv = view && view.fog;
   const on = !!cv && view.vp >= 0;
-  F.plane.visible = on; for (const b of F.border) b.visible = on;
+  F.plane.visible = on; for (const b of F.border) b.visible = on; if (F.lin) F.lin.value = Q.bloom ? 1 : 0;
   if (!on) return;
   if (F.canvas !== cv) {
     if (F.tex) F.tex.dispose();

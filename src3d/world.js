@@ -85,7 +85,47 @@ function buildSky(map) {
   const t3 = new THREE.CanvasTexture(planetCanvas(map.id === 'ashfall' ? 3 : 2)); t3.colorSpace = THREE.SRGBColorSpace;
   const pl = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t3, transparent: true, depthWrite: false, fog: false }));
   pl.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), CAM_DIR); pl.scale.setScalar(1700); pl.position.set(map.w * 1.12, -2500, -map.h * 0.12); pl.renderOrder = -9; g.add(pl);
+  /* Fassung 24 »Ultra«: der Gasriese als echte, langsam drehende Kugel mit Wolkenbändern, Atmosphärensaum und Ring */
+  if (S.ultra) { pl.visible = false; g.add(liveGiant(map.id === 'ashfall' ? 3 : 2, pl.position, pl.quaternion)); }
   return g;
+}
+
+/* Atmosphärensaum: etwas größere Kugel, additiv, nur am Rand sichtbar (Fresnel) */
+function atmoMat(hex, k = 1) {
+  return new THREE.ShaderMaterial({ uniforms: { uCol: { value: new THREE.Color(hex) }, uK: { value: k } }, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, fog: false,
+    vertexShader: 'varying vec3 vN; varying vec3 vV; void main() { vec4 mv = modelViewMatrix * vec4(position, 1.0); vN = normalize(normalMatrix * normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform vec3 uCol; uniform float uK; varying vec3 vN; varying vec3 vV; void main() { float d = max(0.0, dot(normalize(vN), normalize(vV))); float f = pow(1.0 - d, 2.6) * smoothstep(0.0, 0.18, d); gl_FragColor = vec4(uCol * f * 1.6 * uK, f * uK);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}' });
+}
+function bandsCanvas(seed, cols) {
+  return canvas(1024, 512, (x, w, h) => {
+    const r = rng(seed + 5); x.fillStyle = `rgb(${cols[1].join(',')})`; x.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 2) { const t = 0.5 + 0.5 * Math.sin(y * 0.07 + r() * 0.5) * Math.sin(y * 0.021 + 1.3), a = cols[0], b = cols[2]; x.fillStyle = `rgba(${(a[0] + (b[0] - a[0]) * t) | 0},${(a[1] + (b[1] - a[1]) * t) | 0},${(a[2] + (b[2] - a[2]) * t) | 0},${0.45 + r() * 0.4})`; x.fillRect(0, y, w, 2); }
+    for (let i = 0; i < 260; i++) { const px = r() * w, py = h * (0.15 + r() * 0.7), rw = 8 + r() * 60, c = r() < 0.5 ? cols[2] : cols[0]; x.fillStyle = `rgba(${c.join(',')},${0.08 + r() * 0.18})`; x.beginPath(); x.ellipse(px, py, rw, rw * 0.22, 0, 0, TAU); x.fill(); }
+    const sx = w * (0.2 + r() * 0.6), sy = h * 0.62; x.fillStyle = `rgba(${cols[0].map(v => Math.min(255, v + 40)).join(',')},0.55)`; x.beginPath(); x.ellipse(sx, sy, 36, 14, 0, 0, TAU); x.fill();
+  });
+}
+function cloudCanvas(seed) {
+  return canvas(1024, 512, (x, w, h) => { const r = rng(seed + 77); x.clearRect(0, 0, w, h); for (let i = 0; i < 700; i++) { const px = r() * w, py = h * (0.08 + r() * 0.84), rw = 10 + r() * 90; x.fillStyle = `rgba(255,255,255,${0.03 + r() * 0.08})`; x.beginPath(); x.ellipse(px, py, rw, rw * (0.12 + r() * 0.15), 0, 0, TAU); x.fill(); } });
+}
+function liveGiant(seed, pos, quat) {
+  const cols = seed % 2 ? [[210, 150, 90], [150, 90, 60], [240, 200, 150]] : [[120, 150, 200], [70, 90, 150], [190, 210, 230]];
+  const R = 1700 * 108 / 512, grp = new THREE.Group(); grp.position.copy(pos); grp.quaternion.copy(quat); grp.renderOrder = -9;
+  const tilt = Math.acos(0.28), axis = new THREE.Vector3(0, Math.sin(tilt), -Math.cos(tilt)).normalize();
+  const body = new THREE.Group(); body.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), axis); grp.add(body);
+  const bt = new THREE.CanvasTexture(bandsCanvas(seed, cols)); bt.colorSpace = THREE.SRGBColorSpace; bt.anisotropy = 8;
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(R, 96, 64), new THREE.MeshStandardMaterial({ map: bt, emissiveMap: bt, emissive: '#ffffff', emissiveIntensity: 0.35, roughness: 0.85, metalness: 0, fog: false })); body.add(ball);
+  const ct = new THREE.CanvasTexture(cloudCanvas(seed));
+  const cloud = new THREE.Mesh(new THREE.SphereGeometry(R * 1.012, 96, 64), new THREE.MeshStandardMaterial({ color: '#ffffff', alphaMap: ct, map: ct, transparent: true, depthWrite: false, roughness: 1, fog: false })); body.add(cloud);
+  const atmo = new THREE.Mesh(new THREE.SphereGeometry(R * 1.07, 64, 48), atmoMat(seed % 2 ? '#ffb070' : '#8fc8ff', 1.4)); grp.add(atmo);
+  /* Ring: Bänder in der Ebene senkrecht zur Achse */
+  const rc = canvas(512, 8, (x, w) => { const r = rng(seed + 9); for (let i = 0; i < w; i++) { const a = (0.3 + 0.6 * r()) * Math.sin(i / w * Math.PI) * (i % 37 < 3 ? 0.2 : 1); x.fillStyle = `rgba(${cols[2].join(',')},${a})`; x.fillRect(i, 0, 1, 8); } });
+  const rt = new THREE.CanvasTexture(rc); rt.colorSpace = THREE.SRGBColorSpace;
+  const rg = new THREE.RingGeometry(R * 1.35, R * 2.1, 160, 1); const uv = rg.attributes.uv, p = rg.attributes.position;
+  for (let i = 0; i < uv.count; i++) { const d = Math.hypot(p.getX(i), p.getY(i)); uv.setXY(i, (d - R * 1.35) / (R * 0.75), 0.5); }
+  const ring = new THREE.Mesh(rg, new THREE.MeshStandardMaterial({ map: rt, emissiveMap: rt, emissive: '#ffffff', emissiveIntensity: 0.4, transparent: true, side: THREE.DoubleSide, depthWrite: false, roughness: 0.9, fog: false }));
+  ring.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), axis); ring.renderOrder = -8; grp.add(ring);
+  W.giant = { ball, cloud, axis: new THREE.Vector3(0, 1, 0) };
+  return grp;
 }
 
 /* ------------------------------------------------------------ Kartenobjekte */
@@ -128,6 +168,8 @@ export function buildWorld(g) {
   g.nodes.forEach((n, i) => {
     const m = bake(buildW({ kind: n.kind, r: n.r, seed: n.seed || i * 131 + 7, big: n.r > 70 }, M), { face: 'cam', faceDir: CAM_DIR, keep: keepFor('world', S.detail) });
     shadows(m); put(anim, m, n.x, n.y, -(n.ang || 0)); W.nodes.push({ n, m, dead: false });
+    /* Fassung 24 »Ultra«: große Eiskörper mit dünnem, leuchtendem Dunstsaum */
+    if (S.ultra && n.kind === 'ice' && n.r > 60) { const a = new THREE.Mesh(new THREE.SphereGeometry(n.r * 1.1, 48, 32), atmoMat('#9fd8ff', 0.55)); a.renderOrder = 2; put(anim, a, n.x, n.y); }
   });
   /* Felder: alle zusammen verschmelzen (Staub je Material, Splitter je Feld, Stäubchen gesamt) */
   W.fieldsN = map.fields.length;
@@ -217,7 +259,9 @@ export function updateWorld(g, dt, t, view) {
   /* Nebelzonen treiben */
   /* Nebelmodelle (BUILDW.neb): nur im Bild sichtbar und animiert */
   for (const e of W.nebs) if (e.m) e.m.visible = inView(e.n.x, e.n.y, e.n.r * 1.2, 20);
-  for (const e of W.nebs) if (e.grp) { const n = e.n, tt = t * 0.15 + n.x * 0.01; e.grp.children.forEach((d, k) => { d.position.x = Math.cos(tt + k * 2.1) * n.r * 0.18; d.position.z = Math.sin(tt * 1.3 + k * 2.1) * n.r * 0.18; }); }
+  for (const e of W.nebs) if (e.grp) { const n = e.n, tt = t * 0.15 + n.x * 0.01; e.grp.children.forEach((d, k) => { d.position.x = Math.cos(tt + k * 2.1) * n.r * 0.18; d.position.z = Math.sin(tt * 1.3 + k * 2.1) * n.r * 0.18; if (S.ultra) { d.rotation.y = t * 0.02 * (k % 2 ? -1 : 1) * (1 + k * 0.4); const sc = n.r * (1 - k * 0.22) * (1 + 0.06 * Math.sin(t * 0.3 + k * 1.7 + n.x * 0.003)); d.scale.setScalar(sc); } }); }
+  /* Fassung 24 »Ultra«: Gasriese dreht sich, die Wolken schneller */
+  if (W.giant) { W.giant.ball.rotateOnAxis(W.giant.axis, dt * 0.012); W.giant.cloud.rotateOnAxis(W.giant.axis, dt * 0.022); }
   /* Fassung 22: gesprengte Felsen ausblenden, angeschlagene rot getönt */
   if ((g.rockN || 0) !== W.rockN) { W.rockN = g.rockN || 0; const z = new THREE.Matrix4().makeScale(0, 0, 0); g.map.rocks.forEach((o, i) => { const rf = W.rockRef[i]; if (o.gone && rf && !rf.gone) { rf.gone = 1; rf.im.setMatrixAt(rf.j, z); rf.im.instanceMatrix.needsUpdate = true; } }); }
   if (g.rocks && W.rockDmg) for (const e of g.rocks) { const o = g.map.rocks[e.ri], rf = W.rockRef[e.ri], d = o && o.dmg || 0; if (!rf || rf.gone || Math.abs(d - W.rockDmg[e.ri]) < 0.04) continue; W.rockDmg[e.ri] = d; const c = new THREE.Color(1, 1 - 0.45 * d, 1 - 0.6 * d); rf.im.setColorAt(rf.j, c); rf.im.instanceColor.needsUpdate = true; }
@@ -250,5 +294,5 @@ export function updateWorld(g, dt, t, view) {
 export function disposeWorld() {
   if (!W.root) return;
   S.scene.remove(W.root);
-  W.root = null; W.sky = null; W.anim = null; W.nodes = []; W.nebs = []; W.sites.clear(); W.gates.clear();
+  W.root = null; W.sky = null; W.giant = null; W.anim = null; W.nodes = []; W.nebs = []; W.sites.clear(); W.gates.clear();
 }

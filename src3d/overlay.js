@@ -9,7 +9,7 @@
    Strichelung: opts.dash = Strichlänge in Pixeln (true = 6), opts.march lässt die Striche wandern.
    ===================================================================== */
 import * as THREE from 'three';
-import { S } from './scene.js';
+import { S, Q } from './scene.js';
 import { project } from './camera.js';
 
 const Y = 0.5, TAU = Math.PI * 2;
@@ -19,7 +19,10 @@ export function initOverlay() {
   alloc(24000);
   const mat = new THREE.ShaderMaterial({
     vertexShader: 'attribute vec4 col; varying vec4 vCol; void main() { vCol = col; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-    fragmentShader: 'varying vec4 vCol; void main() { gl_FragColor = vCol;\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
+    /* Fassung 24: im Bloom-Weg (lineares Ziel) mischt die Karte linear – halbtransparente Flächen wirkten dort etwa dreimal
+       so hell (grauer Schleier); uLin = 1 gleicht die Deckkraft an die sRGB-Mischung des direkten Wegs an */
+    uniforms: { uLin: { value: 0 } },
+    fragmentShader: 'uniform float uLin; varying vec4 vCol; void main() { gl_FragColor = vCol; gl_FragColor.a = mix(vCol.a, pow(max(vCol.a, 0.0), 2.2), uLin);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
     transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide
   });
   O.mesh = new THREE.Mesh(O.geo, mat); O.mesh.frustumCulled = false; O.mesh.renderOrder = 50; O.mesh.name = 'overlay';
@@ -78,6 +81,7 @@ export function disc(x, y, r, color, alpha = 0.2) {
 }
 /* am Ende des Frames: Puffer hochladen und leeren */
 export function flushOverlay() {
+  if (O.mesh) O.mesh.material.uniforms.uLin.value = Q.bloom ? 1 : 0;
   const g = O.geo; if (!g) return;
   g.setDrawRange(0, O.n);
   if (O.n) { const p = g.attributes.position, c = g.attributes.col; p.clearUpdateRanges(); c.clearUpdateRanges(); p.addUpdateRange(0, O.n * 3); c.addUpdateRange(0, O.n * 4); p.needsUpdate = true; c.needsUpdate = true; }

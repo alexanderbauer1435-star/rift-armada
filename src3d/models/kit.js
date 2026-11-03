@@ -18,6 +18,30 @@ function canvas(w, h, draw) { const c = document.createElement('canvas'); c.widt
 function tex(c, srgb, rep) { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 8; if (rep) t.repeat.set(rep, rep); return t; }
 /* Plattenmuster (Graustufen): Platten mit Fugen, Nieten, Lüftungsschlitze. Dient als Helligkeit und als Relief. */
 function panelCanvas(seed, density = 1, style = 'plate') {
+  const base = panelBase(seed, density, style);
+  if (FINE <= 1) return base;
+  /* Fassung 24 »Ultra«: doppelte Auflösung und eine zweite, feine Lage – Teilfugen und Nieten (Platten),
+     Poren und Adern (Brood), Facettenlinien (Nexus); wirkt als Farbe und als Relief */
+  const r = rng(seed + 991);
+  return canvas(1024, 1024, (x, w, h) => {
+    x.imageSmoothingEnabled = true; x.drawImage(base, 0, 0, w, h);
+    if (style === 'organic') {
+      for (let i = 0; i < 2600; i++) { const v = r() < 0.5 ? 70 : 210; x.fillStyle = `rgba(${v},${v},${v},${0.18 + r() * 0.2})`; x.beginPath(); x.arc(r() * w, r() * h, 0.8 + r() * 2.2, 0, 7); x.fill(); }
+      x.strokeStyle = 'rgba(50,50,50,0.35)'; x.lineWidth = 1; for (let i = 0; i < 140; i++) { let px = r() * w, py = r() * h; x.beginPath(); x.moveTo(px, py); for (let k = 0; k < 6; k++) { px += (r() - 0.5) * 40; py += (r() - 0.5) * 40; x.lineTo(px, py); } x.stroke(); }
+    } else if (style === 'crystal') {
+      for (let i = 0; i < 260; i++) { const px = r() * w, py = r() * h, a = r() * 3.14, l = 20 + r() * 90; x.strokeStyle = r() < 0.5 ? 'rgba(255,255,255,0.22)' : 'rgba(40,40,40,0.28)'; x.lineWidth = 1; x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke(); }
+    } else {
+      const cell = 32 * density;
+      for (let gy = 0; gy < h; gy += cell) for (let gx = 0; gx < w; gx += cell) {
+        if (r() < 0.35) { x.fillStyle = 'rgba(60,60,60,0.5)'; if (r() < 0.5) x.fillRect(gx + cell / 2, gy + 2, 1.2, cell - 4); else x.fillRect(gx + 2, gy + cell / 2, cell - 4, 1.2); }
+        if (r() < 0.3) { x.fillStyle = 'rgba(225,225,225,0.55)'; for (let k = 0; k < 4; k++) { x.beginPath(); x.arc(gx + 4 + (k % 2) * (cell - 8), gy + 4 + (k >> 1) * (cell - 8), 1.3, 0, 7); x.fill(); } }
+        if (r() < 0.06) { x.fillStyle = 'rgba(40,40,40,0.55)'; for (let k = 0; k < 5; k++) x.fillRect(gx + 6, gy + 6 + k * 4, cell - 12, 1.4); }
+      }
+      x.strokeStyle = 'rgba(235,235,235,0.12)'; x.lineWidth = 0.8; for (let i = 0; i < 220; i++) { const px = r() * w, py = r() * h, a = r() * 3.14, l = 6 + r() * 26; x.beginPath(); x.moveTo(px, py); x.lineTo(px + Math.cos(a) * l, py + Math.sin(a) * l); x.stroke(); }
+    }
+  });
+}
+function panelBase(seed, density = 1, style = 'plate') {
   const r = rng(seed);
   return canvas(512, 512, (x, w, h) => {
     x.fillStyle = '#b4b4b4'; x.fillRect(0, 0, w, h);
@@ -79,17 +103,17 @@ export const PAL = {
 export function mats(f, team) {
   /* Spielerfarbe: nur »trim« hängt an ihr – alle übrigen Materialien (und ihre teuren Texturen) teilt der Satz mit
      dem Grundsatz der Fraktion; so kostet eine neue Spielerfarbe kein Neuerzeugen der Plattentexturen. */
-  if (team && PAL[f] && team !== PAL[f].trim) return cached('m|' + f + '|' + team, () => {
+  if (team && PAL[f] && team !== PAL[f].trim) return cached('m|' + f + '|' + team + (FINE > 1 ? '|u' : ''), () => {
     /* abgeleitete Zwischenspeicher der Modelle (M._halo, M._ast … – teils mit der Teamfarbe) nicht übernehmen */
     const B = mats(f), M = {}; for (const k in B) if (k[0] !== '_' || k.startsWith('_win')) M[k] = B[k];
     M.trim = new THREE.MeshStandardMaterial({ color: team, metalness: 0.4, roughness: 0.3, emissive: team, emissiveIntensity: 0.35 });
     return M;
   });
-  return cached('m|' + f + '|', () => {
+  return cached('m|' + f + '|' + (FINE > 1 ? 'u' : ''), () => {
     const P = PAL[f], trim = P.trim, style = f === 'brood' ? 'organic' : f === 'nexus' ? 'crystal' : 'plate';
     const pc = panelCanvas(f.length * 77 + 5, f === 'mars' ? 1.3 : 1, style);
-    const bump = tex(pc, false, 1);
-    const std = (color, o) => new THREE.MeshStandardMaterial(Object.assign({ map: tex(tint(pc, color, f === 'mars' ? 1.25 : 1), true), bumpMap: bump, bumpScale: 0.6, roughnessMap: bump, metalness: 0.55, roughness: 0.45 }, o));
+    const bump = tex(pc, false, 1), bk = FINE > 1 ? 1.35 : 1;
+    const std = (color, o) => new THREE.MeshStandardMaterial(Object.assign({ map: tex(tint(pc, color, f === 'mars' ? 1.25 : 1), true), bumpMap: bump, bumpScale: 0.6 * bk, roughnessMap: bump, metalness: 0.55, roughness: 0.45 }, o));
     const M = {
       hull: std(P.hull, f === 'nexus' ? { metalness: 0.15, roughness: 0.12, transparent: true, opacity: 0.92, emissive: new THREE.Color(P.trim), emissiveIntensity: 0.18 } : f === 'brood' ? { metalness: 0.2, roughness: 0.35 } : {}),
       hull2: std(P.hull2, f === 'brood' ? { metalness: 0.15, roughness: 0.5 } : {}),
