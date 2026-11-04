@@ -66,7 +66,7 @@ const AI_DOLE = { ice: 8, ore: 4 };
 /* Schalter für Messläufe (tools/balance/matrix.js, Umgebung AIOPT='{"caut":0}') */
 var AI_OPT = { caut: 1, fit: 1, focus: 1, raid: 1 };
 /* Fenster für den ersten Angriff je Stärke (Sekunden): Leicht spät, Schwer früher – innerhalb des Fensters zufällig */
-const AI_FIRST = { 1: [540, 900], 2: [420, 780], 3: [300, 600] };
+const AI_FIRST = { 1: [420, 600], 2: [300, 480], 3: [240, 360] };   /* Fassung 24: früher Druck (vorher 9–15 / 7–13 / 5–10 min) */
 function aiThink(g, pi) {
   const p = g.players[pi], A = p.ai, cfg = A.cfg, f = p.faction, t = g.time;
   /* Brood: alles ist Biomasse (Eis); Erz-Schwellen gelten dann für Eis */
@@ -302,7 +302,7 @@ function aiThink(g, pi) {
     } else {
       /* sammeln vor der Basis; Verwundete zur Werft */
       const rp = { x: anchor.x + dcos(dirA) * 300, y: anchor.y + dsin(dirA) * 300 };
-      if (A.lvl >= 2 && AI_OPT.raid) aiRaid(g, pi, fleet, anchor, rp);
+      if (A.lvl >= 1 && AI_OPT.raid) aiRaid(g, pi, fleet, anchor, rp);   /* Fassung 24: auch Leicht stört früh (mit zwei Schiffen) */
       const idle = fleet.filter(u => u.o.t === 'idle' && hyp(u.x - rp.x, u.y - rp.y) > 220 && !(A.raid && A.raid.ids.indexOf(u.id) >= 0));
       if (idle.length) cmdMove(g, idle, rp.x, rp.y, false, 'wedge');
       const hurtS = fleet.filter(u => u.hull < u.hullMax * 0.5 && u.o.t === 'idle' && yards.length);
@@ -391,7 +391,7 @@ function aiRaid(g, pi, fleet, anchor, rp) {
     if (!al.length || hurt || t - A.raid.t0 > 120) { if (al.length) cmdMove(g, al, rp.x, rp.y, false, 'wedge'); A.raid = null; A.raidT = t; }
     return;
   }
-  if (t < A.first * 0.55 || t - (A.raidT || 0) < 100 + (pi * 37) % 60) return;
+  if (t < Math.max(170, A.first * 0.4) || t - (A.raidT || 0) < 100 + (pi * 37) % 60) return;   /* Fassung 24: Störtrupps ab etwa 3 Minuten */
   let best = null, bd = 1e9;
   for (const b of g.bldgs) {
     if (b.dead || !foes(g, pi, b.owner) || g.players[b.owner].neutral || !(b.role === 'refinery' || b.role === 'relay' || (b.role === 'base' && b.lv < 2))) continue;
@@ -400,9 +400,14 @@ function aiRaid(g, pi, fleet, anchor, rp) {
     if (g.bldgs.some(o => !o.dead && o.owner === b.owner && (o.role === 'turret' || o.role === 'flak' || o.role === 'spore') && hyp(o.x - b.x, o.y - b.y) < 450)) continue;
     const d = hyp(b.x - anchor.x, b.y - anchor.y); if (d < bd) { bd = d; best = b; }
   }
-  if (!best) { A.raidT = t; return; }
-  const fast = fleet.filter(u => u.def.cls === 's' && u.o.t === 'idle').sort((a, b) => b.def.speed - a.def.speed).slice(0, 3);
+  /* Fassung 24: früh gibt es selten entlegene Stationen – dann sichtbare Frachter des Gegners abseits von Türmen jagen */
+  let prey = null;
+  if (!best) { let pd = 1e9; for (const e of g.ships) { if (e.dead || !e.def.cargo || !foes(g, pi, e.owner) || g.players[e.owner].neutral) continue; const q = g.players[e.owner]; if (!canSee(g, pi, e) && !(q.start && hyp(e.x - q.start.x, e.y - q.start.y) < 1000)) continue; if (g.bldgs.some(o => !o.dead && o.owner === e.owner && (o.role === 'turret' || o.role === 'flak' || o.role === 'spore' || (o.role === 'base' && o.lv >= 2)) && hyp(o.x - e.x, o.y - e.y) < 500)) continue; const d = hyp(e.x - anchor.x, e.y - anchor.y); if (d < pd) { pd = d; prey = e; } } }
+  if (!best && !prey) { A.raidT = t; return; }
+  const fast = fleet.filter(u => u.def.cls === 's' && u.o.t === 'idle' && armed(u)).sort((a, b) => b.def.speed - a.def.speed).slice(0, A.lvl >= 2 ? 3 : 2);
   if (fast.length < 2) return;
+  /* Frachter: Angriffsmarsch in ihre Erntezone (unterwegs wird alles Gegnerische beschossen) */
+  if (prey) { cmdMove(g, fast, prey.x, prey.y, true, 'wedge'); A.raid = { ids: fast.map(u => u.id), t0: t, tid: prey.id }; return; }
   cmdMove(g, fast, best.x, best.y, true, 'wedge'); A.raid = { ids: fast.map(u => u.id), t0: t, tid: best.id };
 }
 
