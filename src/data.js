@@ -732,10 +732,11 @@ for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'legion' && s.role ==
 /* Fassung 22 (Messung f22d): Legion nur noch 13 % auf beiden Karten – Kampfschiffe 6 % billiger, Waffen +6 % */
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'legion' && s.role === 'war') { for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.94); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.06).toFixed(2) })); } }
 /* Fassung 24 (Messung ai24, früher KI-Druck, Riss-Arena + Zerbrochener Mond, 120 Partien): Mars 67 %, Nexus 21 %,
-   Brood 35 % – Mars-Kampfschiffe 7 % teurer, Nexus-Kampfschiffe Rumpf +8 % und Waffen +5 %, Brood-Kampfschiffe 4 % billiger */
+   Brood 35 % – Mars-Kampfschiffe 12 % teurer, Nexus-Kampfschiffe Rumpf +14 % und Waffen +8 %, Brood-Kampfschiffe 4 % billiger
+   (Nachmessung f24a mit 7 % / 8 % / 5 %: Mars 60 %, Nexus 31 % – nachgeschärft) */
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.role !== 'war') continue;
-  if (s.f === 'mars') for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 1.07);
-  if (s.f === 'nexus') { s.hull = Math.round(s.hull * 1.08); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.05).toFixed(2) })); }
+  if (s.f === 'mars') for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 1.12);
+  if (s.f === 'nexus') { s.hull = Math.round(s.hull * 1.14); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.08).toFixed(2) })); }
   if (s.f === 'brood') for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.96);
 }
 /* Brood: Biomasse aus allem – die Grube verwertet 15 % mehr (gleicht die anfällige Ausbreitung aus) */
