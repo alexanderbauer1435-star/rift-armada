@@ -34,26 +34,30 @@ function col(hex) { let c = COLS.get(hex); if (!c) { const k = new T.Color(hex);
 const rnd = (a, b) => a + Math.random() * (b - a);
 
 /* ------------------------------------------------------------ Aufbau */
-/* Fassung 24 »Ultra«: Explosionen, Einschläge und Mündungsfeuer beleuchten die Rümpfe ringsum. Feste Zahl von
-   Punktlichtern (Shader bleiben gleich), die jeweils hellsten/jüngsten Ereignisse belegen sie; außerhalb von Ultra
-   unsichtbar (keine Kosten). peak = Helligkeit in 50 Einheiten Abstand, gemessen am Hauptlicht (2,6). */
-const LT = { n: 8, list: [], on: false, scene: null };
-function lightsSet(on) {
-  if (on && !LT.list.length && LT.scene) for (let i = 0; i < LT.n; i++) { const l = new T.PointLight('#ffffff', 0, 400, 2); l.position.set(0, -9999, 0); LT.scene.add(l); LT.list.push({ l, t: 1, life: 1, peak: 0 }); }
-  LT.on = on; for (const e of LT.list) { e.l.visible = on; e.l.intensity = 0; e.t = e.life; }
-}
+/* Fassung 24 »Ultra«: Explosionen, Einschläge und Mündungsfeuer hellen die Schiffe ringsum auf. Keine echten
+   Punktlichter (die kosteten jeden Bildpunkt jeder Oberfläche acht Lichtberechnungen), sondern höchstens acht
+   gedachte Lichtquellen, die entities.js je Schiff in dessen Instanzfarbe einrechnet (glowAt) – fast kostenlos. */
+const LT = { n: 8, list: [], on: false };
+for (let i = 0; i < 8; i++) LT.list.push({ x: 0, z: 0, r: 1, g: 1, b: 1, t: 1, life: 1, peak: 0, dist: 100, k: 0 });
+function lightsSet(on) { LT.on = on; for (const e of LT.list) { e.t = e.life; e.k = 0; } }
 function light(x, y, h, hex, peak, dist, life) {
   if (!LT.on) return;
   let best = null, bv = 1e9; for (const e of LT.list) { const left = e.t >= e.life ? 0 : e.peak * Math.pow(1 - e.t / e.life, 2); if (left < bv) { bv = left; best = e; } }
   if (!best || bv > peak) return;
-  best.l.color.set(hex); best.l.position.set(x, h + 30, y); best.l.distance = dist; best.t = 0; best.life = life; best.peak = peak;
+  const c = col(hex); best.r = c[0]; best.g = c[1]; best.b = c[2]; best.x = x; best.z = y; best.dist = dist; best.t = 0; best.life = life; best.peak = peak; void h;
 }
 function lightsStep(dt) {
   if (!LT.on) return;
-  for (const e of LT.list) { if (e.t >= e.life) { e.l.intensity = 0; continue; } e.t += dt; const k = Math.min(1, e.t / e.life), rise = Math.min(1, e.t / 0.04); e.l.intensity = e.peak * 700 * rise * Math.pow(1 - k, 2); }
+  for (const e of LT.list) { if (e.t >= e.life) { e.k = 0; continue; } e.t += dt; const k = Math.min(1, e.t / e.life), rise = Math.min(1, e.t / 0.04); e.k = e.peak * rise * Math.pow(1 - k, 2); }
+}
+/* Aufhellung an einem Ort (out = [r, g, b], wird addiert) */
+export function glowAt(x, y, out) {
+  if (!LT.on) return false; let any = false;
+  for (const e of LT.list) { if (e.k <= 0.01) continue; const dx = x - e.x, dy = y - e.z, d2 = dx * dx + dy * dy, R = e.dist; if (d2 > R * R) continue; const f = e.k * 0.35 * (1 - Math.sqrt(d2) / R); out[0] += e.r * f; out[1] += e.g * f; out[2] += e.b * f; any = true; }
+  return any;
 }
 export function init(scene, THREE, kitMats, d) {
-  T = THREE; useThree(THREE); LT.scene = scene;
+  T = THREE; useThree(THREE);
   atlas = makeAtlas();
   root = new T.Group(); root.name = 'effects'; root.matrixAutoUpdate = false; scene.add(root);
   B.smoke = new SpriteBuf(CAP[1] + 120, atlas, 'normal', 8);

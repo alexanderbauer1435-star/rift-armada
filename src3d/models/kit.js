@@ -214,7 +214,7 @@ export function hull(prof, mat, opts) { return loft(prof.map(([z, w, h, c, dy]) 
 export function uvScale(g, su, sv = su) { const uv = g.attributes.uv; if (!uv) return g; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv); return g; }
 /* Fassung 24 »Ultra«: runde Teile feiner (nur Rundungen ab 10 Teilen – Sechs- und Achtkanter bleiben kantig) */
 let FINE = 1;
-export function setFine(on) { FINE = on ? 1.75 : 1; }
+export function setFine(on) { FINE = on ? 1.4 : 1; }   /* 1,75 kostete +38 % Dreiecke; 1,4 sieht kaum anders aus */
 const fs = n => n >= 10 ? Math.round(n * FINE) : n;
 export function box(w, h, d, mat, r = Math.min(w, h, d) * 0.12) { const k = Math.max(0.12, Math.max(w, h, d) / 36); return mk(uvScale(new RoundedBoxGeometry(w, h, d, FINE > 1 ? 3 : 2, Math.max(0.05, r)), k), mat); }
 /* Zylinder entlang Z */

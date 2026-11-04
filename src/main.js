@@ -162,9 +162,9 @@ function fpsMeter(t) {
     if (R.mode3d && typeof RA3D !== 'undefined' && RA3D.quality) { try { const k = RA3D.quality(); q += ' · 3D ×' + k.scale.toFixed(2) + (k.bloom ? ' · Bloom' : ''); } catch (e) { /* nichts */ } } else q += ' · 2D';
     box.textContent = fps + ' FPS · ' + q; box.className = fps < 25 ? 'bad' : fps < 40 ? 'slow' : '';
   }
-  /* Ultra: drei Sekunden in Folge unter 24 Bildern im laufenden Gefecht → zurück auf Hoch */
+  /* Ultra: fünf Sekunden in Folge unter 40 Bildern im laufenden Spiel → zurück auf Hoch (Ultra soll nur flüssig laufen) */
   const live = UI.g && !UI.g.over && !UI.paused && !UI.attract && SET.pwr !== 'save';
-  if (SET.qual === 'ultra' && live && !window.__RA_TEST) { _ultraLow = fps < 24 ? _ultraLow + 1 : 0; if (_ultraLow >= 3) { _ultraLow = 0; SET.qual = 'auto'; applySet(); savePrefs(); toast(L('Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.')); } } else _ultraLow = 0;
+  if (SET.qual === 'ultra' && live && !window.__RA_TEST) { _ultraLow = fps < 40 ? _ultraLow + 1 : 0; if (_ultraLow >= 5) { _ultraLow = 0; SET.qual = 'auto'; applySet(); savePrefs(); toast(L('Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.')); } } else _ultraLow = 0;
 }
 function frame(t) {
   requestAnimationFrame(frame);

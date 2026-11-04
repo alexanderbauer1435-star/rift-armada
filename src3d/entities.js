@@ -26,7 +26,7 @@ import { ring, disc, line } from './overlay.js';
 /* Fernmodelle (ein Mesh mit Vertexfarben + Flammen) unterhalb dieser Zoomstufen, je Detailstufe */
 const FAR_SHIP = [1.6, 1.05, 0.8], FAR_STATION = [1.2, 0.85, 0.7];
 const TAU = Math.PI * 2;
-const PT = { x: 0, y: 0 };
+const PT = { x: 0, y: 0 }, GL = [0, 0, 0];
 const E = { born: new Map(), now: 0, tpl: new Map(), sets: new Map(), stations: new Map(), prev: new Map(), domes: [], domeN: 0, domeMat: null, ghost: new Map(), ghostCur: [], ruins: new Map(), fx: null, pcol: null, root: null };
 const M4 = new THREE.Matrix4(), M4b = new THREE.Matrix4(), POS = new THREE.Vector3(), SCL = new THREE.Vector3(1, 1, 1), EUL = new THREE.Euler(0, 0, 0, 'YZX'), QUAT = new THREE.Quaternion(), COL = new THREE.Color();
 const WHITE = new THREE.Color(1, 1, 1), TINT = { ion: new THREE.Color(), acid: new THREE.Color(0.75, 1.05, 0.6), gold: new THREE.Color(1.15, 1.0, 0.7) };
@@ -461,6 +461,8 @@ export function updateEntities(g, dt, t, view) {
     if (u.ion) { const f = 0.75 + 0.25 * Math.sin(t * 23 + u.id); COL.multiply(TINT.ion.setRGB(0.8 * f + 0.2, 0.7 * f + 0.2, 1.1)); }
     if (u.acid) COL.multiply(TINT.acid);
     if (u.dormant) COL.multiply(TINT.gold);
+    /* Fassung 24 »Ultra«: Gefechtslicht als Aufhellung der Instanzfarbe */
+    if (S.ultra && E.fx && E.fx.glowAt) { GL[0] = GL[1] = GL[2] = 0; if (E.fx.glowAt(u.x, u.y, GL)) { COL.r += GL[0]; COL.g += GL[1]; COL.b += GL[2]; } }
     if (u.cloak || (u.abT && u.abT.cloak > 0)) { const f = 0.3 + 0.12 * Math.sin(t * 7 + u.id); COL.multiply(TINT.ion.setRGB(f * 0.8, f * 1.1, f * 1.6)); }
     push(set, k, COL, u.derelict ? 0.55 : pv.dv);
     if (def.role === 'fighter') continue;
