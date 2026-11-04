@@ -55,9 +55,17 @@ export function supported() {
   try { const c = document.createElement('canvas'); return !!(window.WebGL2RenderingContext && c.getContext('webgl2')); } catch (e) { return false; }
 }
 
+/* Fassung 24: Leistungsklasse der Grafikeinheit (vor dem Anlegen des Kontexts geprüft, weil die Kantenglättung eine
+   Eigenschaft des Kontexts ist). »low« = sehr einfache oder alte Karten und Software-Rasterung: ohne Kantenglättung,
+   Auflösung höchstens 1, Start bei 0,85, kein Bloom. */
+const WEAK = /GT ?7[1-4]0|GT ?6[1-4]0|GT ?5[2-4]0|GT ?4[2-4]0|GeForce (8|9)\d00|GeForce 210|GT ?1030|Radeon (HD [5-8]\d{3}|R[57] 2\d0)|Intel\(R\) HD Graphics( [2-5]\d{2,3})?(?!\s*6)|GMA|Mali-(4|T[67])|Adreno \(TM\) [3-5]\d\d|PowerVR|swiftshader|llvmpipe|softpipe|basic render/i;
+function gpuProbe() {
+  try { const c = document.createElement('canvas'), gl = c.getContext('webgl2') || c.getContext('webgl'); if (!gl) return ''; const x = gl.getExtension('WEBGL_debug_renderer_info'); const n = String((x && gl.getParameter(x.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) || ''); const lose = gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext(); return n; } catch (e) { return ''; }
+}
 export function initScene(canvas, opts = {}) {
   Q.dev = Math.max(0.5, window.devicePixelRatio || 1);
-  Q.msaa = Q.dev < 1.5;
+  S.gpu = gpuProbe(); S.low = WEAK.test(S.gpu) && !(typeof window !== 'undefined' && window.__RA_TEST);
+  Q.msaa = Q.dev < 1.5 && !S.low;
   try {
     S.canvas = canvas;
     /* preserveDrawingBuffer nur für Prüfbilder (Playwright liest sonst einen unfertigen Puffer) */
@@ -100,12 +108,13 @@ function limits() {
   /* Fassung 24 »Ultra«: volle Gerätepixel (bis DPR 3, höchstens ~4,5 MP), Start ganz oben mit Bloom */
   let max = S.ultra ? Math.min(Q.dev, 3, Math.sqrt(4.5e6 / Math.max(1, S.cssW * S.cssH))) : Math.min(Q.dev, 2, capMP);
   if (S.detail < 2) max = Math.min(max, 1.25);
+  if (S.low) max = Math.min(max, 1);
   if (S.detail < 1) max = Math.min(max, 1);
   max = Math.max(S_MIN, max);
   const steps = []; for (let s = max; s > S_MIN * 1.001; s /= STEP) steps.unshift(+s.toFixed(3)); steps.unshift(S_MIN);
   if (steps.length > 1 && steps[1] - steps[0] < 0.04) steps.splice(1, 1);
-  Q.max = max; Q.steps = steps; Q.top = steps.length - 1 + (S.detail >= 2 ? 1 : 0);
-  Q.start = S.ultra ? max : Math.min(max, 1.75);
+  Q.max = max; Q.steps = steps; Q.top = steps.length - 1 + (S.detail >= 2 && !S.low ? 1 : 0);
+  Q.start = S.low ? Math.min(max, 0.85) : S.ultra ? max : Math.min(max, 1.75);
 }
 function levelOf(scale) { let best = 0; for (let i = 0; i < Q.steps.length; i++) if (Q.steps[i] <= scale + 1e-3) best = i; return best; }
 /* Stufe anwenden: Skalierung und Bloom */
@@ -145,7 +154,7 @@ export function resize(cssW, cssH, dev) {
   if (dev) Q.dev = Math.max(0.5, Math.min(4, dev));
   limits();
   if (!S.ok) return;
-  if (!Q.init) { Q.init = true; apply(S.ultra ? Q.top : levelOf(Q.start)); return; }
+  if (!Q.init) { Q.init = true; apply(S.ultra && !S.low ? Q.top : levelOf(Q.start)); return; }
   const want = Q.bloomWant ? Q.top : levelOf(Math.min(Q.scale, Q.max));
   Q.scale = -1; apply(Math.min(want, Q.top));
 }

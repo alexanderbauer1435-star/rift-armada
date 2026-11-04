@@ -2721,5 +2721,6 @@ const EN = {
   "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: full resolution, finer models and more effects – uses more battery. Falls back to High by itself if the frame rate is too low.",
   "Bildrate anzeigen": "Show frame rate",
   "Flotten und Stationen werden vorbereitet.": "Preparing fleets and stations.",
-  "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Your browser is rendering 3D without the graphics card. Please turn on hardware acceleration in the browser settings – or choose 2D."
+  "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Your browser is rendering 3D without the graphics card. Please turn on hardware acceleration in the browser settings – or choose 2D.",
+  "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "This graphics card is too weak for Ultra – High is recommended."
 };

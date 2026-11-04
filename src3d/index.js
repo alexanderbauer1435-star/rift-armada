@@ -68,8 +68,8 @@ const RA3D = {
   /* Fassung 24: welche Grafikeinheit rechnet? soft = Software-Rasterung (keine Hardwarebeschleunigung im Browser) */
   gpu() {
     if (!S.ok) return null;
-    try { const gl = S.renderer.getContext(), x = gl.getExtension('WEBGL_debug_renderer_info'), name = String((x && gl.getParameter(x.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) || '');
-      return { name, soft: /swiftshader|llvmpipe|softpipe|basic render|software|microsoft basic/i.test(name) }; } catch (e) { return null; }
+    try { const gl = S.renderer.getContext(), x = gl.getExtension('WEBGL_debug_renderer_info'), name = String((x && gl.getParameter(x.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) || S.gpu || '');
+      return { name, low: !!S.low, soft: /swiftshader|llvmpipe|softpipe|basic render|software|microsoft basic/i.test(name) }; } catch (e) { return null; }
   },
   /* Fassung 24: Ladebildschirm vor der Schlacht – alle Vorlagen der Partie in Scheiben zu ~40 ms bauen und auf die
      Übersetzung der Shader warten (höchstens 12 s Bauen + 6 s Shader, der Rest im Leerlauf); onP(0…1) meldet den Fortschritt */

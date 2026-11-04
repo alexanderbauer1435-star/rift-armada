@@ -786,5 +786,6 @@
  "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: resolución completa, modelos más finos y más efectos; consume más batería. Vuelve solo a Alta si la tasa de fotogramas es demasiado baja.",
  "Bildrate anzeigen": "Mostrar FPS",
  "Flotten und Stationen werden vorbereitet.": "Preparando flotas y estaciones.",
- "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "El navegador calcula el 3D sin la tarjeta gráfica. Activa la aceleración por hardware en los ajustes del navegador, o elige 2D."
+ "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "El navegador calcula el 3D sin la tarjeta gráfica. Activa la aceleración por hardware en los ajustes del navegador, o elige 2D.",
+ "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "Esta tarjeta gráfica es demasiado débil para Ultra; se recomienda Alta."
 }
