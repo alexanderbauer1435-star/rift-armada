@@ -156,7 +156,7 @@ for (const f of ['alliance', 'mars', 'legion', 'nexus', 'brood']) {
 
 /* ---- 7. KI baut die neuen Stationen; Gleichschritt; Speichern und Laden ---- */
 {
-  const opts = { map: 'haven', seed: 21, players: [{ faction: 'alliance', ai: 3 }, { faction: 'mars', ai: 2 }] };
+  const opts = { map: 'haven', seed: 21, players: [{ faction: 'alliance', ai: 3 }, { faction: 'mars', ai: 3 }] };   /* Fassung 24: Schwer gegen Schwer (früherer Druck) */
   const run = () => { const g = X.createGame(opts), hs = []; step(g, 900, gg => { if (gg.tick % 300 === 0) hs.push(X.stateHash(gg)); }); return { g, hs }; };
   const A = run(), B = run();
   ok(A.hs.length > 10 && A.hs.every((h, i) => h === B.hs[i]), 'Gleichschritt (' + A.hs.length + ' Prüfsummen über 900 s)');
@@ -166,7 +166,7 @@ for (const f of ['alliance', 'mars', 'legion', 'nexus', 'brood']) {
   ok(has('radar') && has('dock'), 'KI (Mittel, Schwer) baut Frühwarnstation und Reparaturdock');
   ok(!has('wall'), 'KI baut keine Schildwälle (Werkzeug des Spielers, ' + all.filter(b => b.role === 'wall').length + ')');   /* Fassung 22 */
   /* Zweigwahl der KI nach dem Gesehenen */
-  const g = A.g, me = g.players[0], t0 = g.bldgs.find(b => !b.dead && b.owner === 0 && b.role === 'turret');
+  const g = A.g, me = g.players[0], t0 = g.bldgs.find(b => !b.dead && b.owner === 0 && b.role === 'turret') || g.bldgs.find(b => !b.dead && b.owner === 0) || { x: 800, y: 800 };   /* Fassung 24: Turm kann schon gefallen sein */
   const T = X.addBldg(g, 'turret', 0, t0.x + 900, t0.y + 900, true);
   me.ai.seen = { s: 0.8, m: 0.15, l: 0.05 }; const s1 = C.aiTurretSpec(g, 0, T);
   me.ai.seen = { s: 0.1, m: 0.3, l: 0.6 }; const s2 = C.aiTurretSpec(g, 0, T);

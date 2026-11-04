@@ -167,7 +167,7 @@ function scene(seed) {
 /* ---------------------------------------------------------------- 6. KI (Mittel und Schwer) nutzt die Unterstützer, deterministisch */
 {
   const run = () => {
-    const g = X.createGame({ map: 'haven', seed: 7, players: [{ faction: 'alliance', ai: 3 }, { faction: 'mars', ai: 2 }] });
+    const g = X.createGame({ map: 'haven', seed: 7, players: [{ faction: 'alliance', ai: 3 }, { faction: 'mars', ai: 3 }] });   /* Fassung 24: Schwer gegen Schwer – mit dem früheren Druck endet Schwer gegen Mittel vor den Unterstützern */
     const seen = {}; let laid = 0, heal = 0;
     while (!g.over && g.time < 900) { X.stepGame(g); for (const e of g.ev) if (e.t === 'mines') laid++; g.ev.length = 0; if (g.tick % 30 === 0) for (const u of g.ships) if (!u.dead && (u.def.heal || u.def.mines || u.def.troop)) { seen[u.type] = 1; if (u.heals && u.heals.length) heal++; } }
     return { h: X.stateHash(g), seen: Object.keys(seen).sort().join(','), laid, heal };

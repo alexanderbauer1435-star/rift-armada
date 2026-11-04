@@ -428,8 +428,8 @@ function aiSupport(g, pi, ships, fleet, yards, anchor, dirA) {
     A.supT = t;
     const yardL = Math.max(...yards.map(b => b.lv)), queued = id => yards.reduce((n, y) => n + y.q.filter(q => q.id === id).length, 0);
     const can = d => d && yardL >= d.yard && !trainReq(g, pi, d.id) && canPay(p, shipCost(p, d)) && p.cpUse + p.queued + d.cp <= p.cpMax;
-    if (can(dHeal) && heals.length + queued(dHeal.id) < Math.floor(fleet.length / 10)) aiTrain(g, pi, dHeal.id);
-    else if (A.lvl >= 2 && t > 300 && can(dMine) && p.ice > 900 && layers.length + queued(dMine.id) < (A.lvl >= 3 && t > 900 ? 2 : 1)) aiTrain(g, pi, dMine.id);
+    if (can(dHeal) && heals.length + queued(dHeal.id) < Math.floor((fleet.length + 4) / 10)) aiTrain(g, pi, dHeal.id);   /* Fassung 24: erstes schon ab 6 Kampfschiffen (Partien laufen schneller) */
+    else if (A.lvl >= 2 && t > 240 && can(dMine) && p.ice > 900 && layers.length + queued(dMine.id) < (A.lvl >= 3 && t > 900 ? 2 : 1)) aiTrain(g, pi, dMine.id);
     else if (A.lvl >= 2 && t > 480 && can(dTroop) && p.ice > 1300 && A.preyT && t - A.preyT < 120 && troops.length + queued(dTroop.id) < 1) aiTrain(g, pi, dTroop.id);
   }
   /* Reparaturschiffe: zum Schwerpunkt der Angriffsflotte (oder der Flotte am Sammelpunkt), etwas dahinter */
