@@ -323,21 +323,26 @@ export function queuePrebuild(g) {
     const f = p.faction, col = pcol(p.id); if (seen.has(f + col)) continue; seen.add(f + col);
     const list = typeof SHIPS !== 'undefined' ? Object.values(SHIPS).filter(d => d.f === f) : SHIPJ.ships.filter(d => d.f === f);
     for (const d of list) if (d.id && BUILD[d.id]) PRE.push(() => { const t = tplOf(d, col); warm(setOf(t, 'normal', false).ims.concat(d.role === 'fighter' ? [] : setOf(t, 'wreck', false).ims)); });
-    for (const d of SDATA.bldgs) if (d.f === f && BUILDB[f + ':' + d.id]) PRE.push(() => { const T = stationTpl(f, d, 1, col), G = cloneStation(T); remat(G, 'ghost', col, false); warm([T, G]); });
+    for (const d of SDATA.bldgs) if (d.f === f && BUILDB[f + ':' + d.id]) PRE.push(() => { const T = stationTpl(f, d, 1, col), G = cloneStation(T); toBuild(G, col); warm([T, G]); });
     LATER.push([f, col]);
   }
-  /* zuletzt die Stufen 2 und 3 (Ausbau kommt erst im Lauf der Partie) */
+  /* zuletzt die Stufen 2 und 3 (Ausbau kommt erst im Lauf der Partie; der Ladebildschirm wartet nicht auf sie) */
+  const n0 = PRE.length;
   for (const [f, col] of LATER) for (const lv of [2, 3]) for (const d of SDATA.bldgs) if (d.f === f && BUILDB[f + ':' + d.id]) PRE.push(() => warm([stationTpl(f, d, lv, col)]));
-  LATER.length = 0;
+  LATER.length = 0; PRE_LATE.n = PRE.length - n0;
 }
 /* Shader der Objekte im Hintergrund übersetzen (compileAsync nutzt KHR_parallel_shader_compile, falls vorhanden):
    sonst übersetzt three.js beim ersten Zeichnen synchron – unter Windows/ANGLE oft 50–200 ms je Programm */
+/* Fassung 24: Ladebildschirm – offene Übersetzungen sammeln, preload() wartet auf sie */
+const WP = [], PRE_LATE = { n: 0 };
+export function pending() { return Math.max(0, PRE.length - PRE_LATE.n); }
+export function warmWait(ms) { const all = Promise.all(WP.splice(0)); return Promise.race([all, new Promise(r => setTimeout(r, ms))]); }
 export function warm(list) {
   const r = S.renderer; if (!r || !r.compileAsync) return;
   for (const o of list) {
     /* compile() geht nur über sichtbare Objekte: alles kurz sichtbar machen */
     const hid = []; o.traverse(c => { if (!c.visible) { hid.push(c); c.visible = true; } });
-    try { r.compileAsync(o, S.camera, S.scene).catch(() => {}); } catch (e) { /* ältere Fassung */ }
+    try { WP.push(r.compileAsync(o, S.camera, S.scene).catch(() => {})); } catch (e) { /* ältere Fassung */ }
     for (const c of hid) c.visible = false;
   }
 }

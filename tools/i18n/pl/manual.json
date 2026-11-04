@@ -784,5 +784,7 @@
  "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra to za dużo dla tego urządzenia – ustawiono jakość Wysoka.",
  "starke Geräte": "mocne urządzenia",
  "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: pełna rozdzielczość, dokładniejsze modele i więcej efektów – zużywa więcej baterii. Sam wraca do jakości Wysoka, gdy liczba klatek jest za niska.",
- "Bildrate anzeigen": "Pokaż FPS"
+ "Bildrate anzeigen": "Pokaż FPS",
+ "Flotten und Stationen werden vorbereitet.": "Przygotowywanie flot i stacji.",
+ "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Przeglądarka liczy grafikę 3D bez karty graficznej. Włącz akcelerację sprzętową w ustawieniach przeglądarki – albo wybierz 2D."
 }

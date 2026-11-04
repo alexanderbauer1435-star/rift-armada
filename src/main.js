@@ -106,7 +106,21 @@ function startAttract() {
   _acc = 0;
   MUS.start('menu');
 }
-function launch(fn) { const el = $('loading'); if (!el.hidden) return; el.hidden = false; setTimeout(() => { try { fn(); } finally { el.hidden = true; } }, 50); }
+function launch(fn) {
+  const el = $('loading'); if (!el.hidden) return; el.hidden = false; loadBar(0);
+  setTimeout(() => {
+    let wait = false;
+    try {
+      fn();
+      /* Fassung 24: Ladebildschirm – Modelle und Shader der Partie vorab vorbereiten, dann erst starten (nicht im Mehrspieler) */
+      if (R.mode3d && typeof RA3D !== 'undefined' && RA3D.preload && UI.g && UI.kind !== 'mp' && !window.__RA_TEST) {
+        wait = true; UI.loading = true;
+        RA3D.preload(loadBar).then(() => { UI.loading = false; _acc = 0; _last = 0; el.hidden = true; });
+      }
+    } finally { if (!wait) el.hidden = true; }
+  }, 50);
+}
+function loadBar(k) { const b = $('loadBar'); if (b) b.style.width = Math.round(Math.max(0, Math.min(1, k)) * 100) + '%'; const t = $('loadPct'); if (t) t.textContent = Math.round(k * 100) + ' %'; }
 function toMenu() {
   $('menu').hidden = false; UI.mPage = 'home';
   appOrient(false);
@@ -150,7 +164,7 @@ function perfHint(fps) {
   setTimeout(() => { if (el.isConnected) el.remove(); }, 20000);
 }
 /* Fassung 24: Bildratenanzeige (Einstellung »Bildrate anzeigen«) und Rückfall von Ultra auf Hoch bei Dauereinbruch */
-let _fpsT = 0, _fpsN = 0, _ultraLow = 0;
+let _fpsT = 0, _fpsN = 0, _ultraLow = 0, _gpu = null, _gpuWarn = false;
 function fpsMeter(t) {
   _fpsN++; if (!_fpsT) { _fpsT = t; return; }
   const span = t - _fpsT; if (span < 1000) return;
@@ -160,8 +174,12 @@ function fpsMeter(t) {
   if (box && SET.fps) {
     let q = SET.qual === 'ultra' ? 'Ultra' : SET.qual === 'low' ? L('Sparsam') : L('Hoch');
     if (R.mode3d && typeof RA3D !== 'undefined' && RA3D.quality) { try { const k = RA3D.quality(); q += ' · 3D ×' + k.scale.toFixed(2) + (k.bloom ? ' · Bloom' : ''); } catch (e) { /* nichts */ } } else q += ' · 2D';
-    box.textContent = fps + ' FPS · ' + q; box.className = fps < 25 ? 'bad' : fps < 40 ? 'slow' : '';
+    if (!_gpu && R.mode3d && RA3D.gpu) _gpu = RA3D.gpu();
+    const gn = _gpu && _gpu.name ? _gpu.name.replace(/^ANGLE \(|\)$/g, '').replace(/Direct3D11.*|vs_\d.*|\(0x[0-9A-F]+\)/gi, '').slice(0, 60) : '';
+    box.textContent = fps + ' FPS · ' + q + (gn ? ' · ' + gn : ''); box.className = fps < 25 ? 'bad' : fps < 40 ? 'slow' : '';
   }
+  /* Ohne Hardwarebeschleunigung (Software-Rasterung) einmal deutlich darauf hinweisen */
+  if (!_gpuWarn && R.mode3d && RA3D.gpu && UI.g && !UI.attract) { _gpuWarn = true; const gi = _gpu || RA3D.gpu(); if (gi && gi.soft) toast(L('Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.'), 'bad', 9000); }
   /* Ultra: fünf Sekunden in Folge unter 40 Bildern im laufenden Spiel → zurück auf Hoch (Ultra soll nur flüssig laufen) */
   const live = UI.g && !UI.g.over && !UI.paused && !UI.attract && SET.pwr !== 'save';
   if (SET.qual === 'ultra' && live && !window.__RA_TEST) { _ultraLow = fps < 40 ? _ultraLow + 1 : 0; if (_ultraLow >= 5) { _ultraLow = 0; SET.qual = 'auto'; applySet(); savePrefs(); toast(L('Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.')); } } else _ultraLow = 0;
@@ -176,6 +194,7 @@ function frame(t) {
   if (!(dt > 0)) dt = 0.016;
   if (dt > 0.1) dt = 0.1;
   if (UI.cqOpen) { cqFrame(dt); MUS.tick(); return; }
+  if (UI.loading) return;   /* Fassung 24: Ladebildschirm */
   const g = UI.g;
   if (!g) return;
   /* Fassung 22: aktive Pause (UI.apause, play.js) hält nur die Simulation an – Kamera und Bedienung bleiben */

@@ -18,7 +18,7 @@ import { mats, BUILD, BUILDB, BUILDW, bake, drawCount, farGeometry, keepFor, set
 import { S, supported, initScene, resize, setDetail, render, disposeScene, adapt, sceneChanged, setQuality, quality } from './scene.js';
 import { CAM, setCam, updateCamera, project, unproject, shake } from './camera.js';
 import { buildWorld, updateWorld, disposeWorld } from './world.js';
-import { initEntities, updateEntities, clearEntities, disposeEntities, ghost, hideGhost, setEffects, shipEvent, entityStats, _E, queuePrebuild, prebuild, warm } from './entities.js';
+import { initEntities, updateEntities, clearEntities, disposeEntities, ghost, hideGhost, setEffects, shipEvent, entityStats, _E, queuePrebuild, prebuild, warm, pending, warmWait } from './entities.js';
 import { initOverlay, ring, line, disc, flushOverlay } from './overlay.js';
 import { initFog, updateFog, disposeFog } from './fog.js';
 import * as effects from './effects/index.js';
@@ -64,6 +64,27 @@ const RA3D = {
     if (FX.ok && typeof effects.clear === 'function') effects.clear();
     /* alle schon vorhandenen Shader (Karte, Effekt-Puffer, Nebel, Überlagerung) im Hintergrund übersetzen */
     warm([S.scene]);
+  },
+  /* Fassung 24: welche Grafikeinheit rechnet? soft = Software-Rasterung (keine Hardwarebeschleunigung im Browser) */
+  gpu() {
+    if (!S.ok) return null;
+    try { const gl = S.renderer.getContext(), x = gl.getExtension('WEBGL_debug_renderer_info'), name = String((x && gl.getParameter(x.UNMASKED_RENDERER_WEBGL)) || gl.getParameter(gl.RENDERER) || '');
+      return { name, soft: /swiftshader|llvmpipe|softpipe|basic render|software|microsoft basic/i.test(name) }; } catch (e) { return null; }
+  },
+  /* Fassung 24: Ladebildschirm vor der Schlacht – alle Vorlagen der Partie in Scheiben zu ~40 ms bauen und auf die
+     Übersetzung der Shader warten (höchstens 12 s Bauen + 6 s Shader, der Rest im Leerlauf); onP(0…1) meldet den Fortschritt */
+  preload(onP) {
+    return new Promise(res => {
+      if (!S.ok) { res(); return; }
+      const total = Math.max(1, pending()), t0 = performance.now();
+      const tick = () => {
+        const end = performance.now() + 40; prebuild(() => end - performance.now()); const left = pending();
+        if (onP) try { onP(0.9 * (1 - left / total)); } catch (e) { /* Anzeige optional */ }
+        if (left && performance.now() - t0 < 12000) requestAnimationFrame(tick);
+        else { warm([S.scene]); warmWait(6000).then(() => { if (onP) try { onP(1); } catch (e) { /* nichts */ } idlePrebuild(); res(); }); }
+      };
+      requestAnimationFrame(tick);
+    });
   },
   setCam(cx, cy, zoom, cssW, cssH, dpr) { setCam(cx, cy, zoom, cssW, cssH, dpr); },
   project(x, y) { return project(x, y); },

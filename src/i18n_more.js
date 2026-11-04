@@ -2720,7 +2720,9 @@ const LANGS = {
     "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra est trop exigeant pour cet appareil – qualité réglée sur Élevée.",
     "starke Geräte": "appareils puissants",
     "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra : pleine résolution, modèles plus fins et plus d'effets – consomme plus de batterie. Repasse seul sur Élevée si la fréquence d'images est trop basse.",
-    "Bildrate anzeigen": "Afficher les images/s"
+    "Bildrate anzeigen": "Afficher les images/s",
+    "Flotten und Stationen werden vorbereitet.": "Préparation des flottes et des stations.",
+    "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Le navigateur calcule la 3D sans carte graphique. Activez l'accélération matérielle dans les réglages du navigateur – ou choisissez la 2D."
   },
   es: {
     "Ziele": "Objetivos",
@@ -5439,7 +5441,9 @@ const LANGS = {
     "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra es demasiado para este dispositivo: calidad ajustada a Alta.",
     "starke Geräte": "equipos potentes",
     "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: resolución completa, modelos más finos y más efectos; consume más batería. Vuelve solo a Alta si la tasa de fotogramas es demasiado baja.",
-    "Bildrate anzeigen": "Mostrar FPS"
+    "Bildrate anzeigen": "Mostrar FPS",
+    "Flotten und Stationen werden vorbereitet.": "Preparando flotas y estaciones.",
+    "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "El navegador calcula el 3D sin la tarjeta gráfica. Activa la aceleración por hardware en los ajustes del navegador, o elige 2D."
   },
   it: {
     "Ziele": "Obiettivi",
@@ -8158,7 +8162,9 @@ const LANGS = {
     "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra è troppo per questo dispositivo – qualità impostata su Alta.",
     "starke Geräte": "dispositivi potenti",
     "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: risoluzione piena, modelli più fini e più effetti – consuma più batteria. Torna da solo su Alta se la frequenza dei fotogrammi è troppo bassa.",
-    "Bildrate anzeigen": "Mostra FPS"
+    "Bildrate anzeigen": "Mostra FPS",
+    "Flotten und Stationen werden vorbereitet.": "Preparazione di flotte e stazioni.",
+    "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Il browser calcola il 3D senza scheda grafica. Attiva l'accelerazione hardware nelle impostazioni del browser – oppure scegli 2D."
   },
   pt: {
     "Ziele": "Objetivos",
@@ -10877,7 +10883,9 @@ const LANGS = {
     "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra é demais para este aparelho – qualidade definida como Alta.",
     "starke Geräte": "aparelhos potentes",
     "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: resolução total, modelos mais finos e mais efeitos – gasta mais bateria. Volta sozinho para Alta se a taxa de quadros ficar baixa demais.",
-    "Bildrate anzeigen": "Mostrar FPS"
+    "Bildrate anzeigen": "Mostrar FPS",
+    "Flotten und Stationen werden vorbereitet.": "Preparando frotas e estações.",
+    "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "O navegador está calculando o 3D sem a placa de vídeo. Ative a aceleração de hardware nas configurações do navegador – ou escolha 2D."
   },
   pl: {
     "Ziele": "Cele",
@@ -13596,6 +13604,8 @@ const LANGS = {
     "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.": "Ultra to za dużo dla tego urządzenia – ustawiono jakość Wysoka.",
     "starke Geräte": "mocne urządzenia",
     "Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.": "Ultra: pełna rozdzielczość, dokładniejsze modele i więcej efektów – zużywa więcej baterii. Sam wraca do jakości Wysoka, gdy liczba klatek jest za niska.",
-    "Bildrate anzeigen": "Pokaż FPS"
+    "Bildrate anzeigen": "Pokaż FPS",
+    "Flotten und Stationen werden vorbereitet.": "Przygotowywanie flot i stacji.",
+    "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Przeglądarka liczy grafikę 3D bez karty graficznej. Włącz akcelerację sprzętową w ustawieniach przeglądarki – albo wybierz 2D."
   },
 };

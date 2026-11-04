@@ -279,6 +279,8 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 @media (max-width: 640px) { #secMap { grid-template-columns: 1fr; } #secMap > #rowPrev { grid-row: auto; grid-column: 1; } #mapPrev { width: min(300px, 78vw); } }
 #setup .row { justify-content: flex-start; }
 #loading { z-index: 20; }
+.loadTrack { height: 0.5em; border-radius: 0.25em; background: rgba(255, 255, 255, 0.1); overflow: hidden; margin: 0.8em 0 0.3em; min-width: 14em; }
+#loadBar { height: 100%; width: 0; background: linear-gradient(90deg, #4ea1ff, #8fe8ff); transition: width 0.15s; }
 #help .win { max-width: min(96vw, 44em); }
 #help .win p, #help .win li { font-size: 1em; line-height: 1.38; margin: 0.45em 0; }
 #help .win p b { color: var(--acc); }
@@ -936,7 +938,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     <p><b>Tastatur:</b> WASD/Pfeile verschieben, Rad zoomt, Rechtsklick befiehlt, Strg+Rechtsklick Angriffsmarsch, H Halt, G Stellung, X Erkunden, 1–5 Gruppen, Umschalt+Ziffer speichert, P Pause.</p>
     <div class="row"><button class="key arm" id="helpClose">Schließen</button></div>
   </div></div>
-  <div class="ovl" id="loading" hidden><div class="win"><h2>Lädt …</h2><p class="fine">Die Karte wird aufgebaut.</p></div></div>
+  <div class="ovl" id="loading" hidden><div class="win"><h2>Lädt …</h2><p class="fine">Flotten und Stationen werden vorbereitet.</p><div class="loadTrack"><div id="loadBar"></div></div><p class="fine" id="loadPct">0 %</p></div></div>
 </div>
 <!--SCRIPT-->
 <div id="fpsBox" hidden></div>
