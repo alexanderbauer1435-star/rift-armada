@@ -738,6 +738,10 @@ for (const id in SHIPS) { const s = SHIPS[id]; if (s.role !== 'war') continue;
   if (s.f === 'mars') for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 1.12);
   if (s.f === 'nexus') { s.hull = Math.round(s.hull * 1.14); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.08).toFixed(2) })); }
   if (s.f === 'brood') for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.96);
+  /* Nachmessung f24b (160 Partien): Mars 56 %, aber Mars–Legion 13:0, Nexus–Brood 1:8 – Legion Rumpf +7 % und 3 % billiger;
+     Nexus-Waffen +20 % gegen kleine Schiffe (die Brood besteht fast nur aus kleinen) */
+  if (s.f === 'legion') { s.hull = Math.round(s.hull * 1.07); for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.97); }
+  if (s.f === 'nexus') s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { antiS: Math.max(w.antiS || 1, 1.2) }));
 }
 /* Brood: Biomasse aus allem – die Grube verwertet 15 % mehr (gleicht die anfällige Ausbreitung aus) */
 /* (Runde 18: mit doppelten Vorkommen kein Brood-Bonus mehr nötig) */
