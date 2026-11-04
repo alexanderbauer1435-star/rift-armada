@@ -35,7 +35,7 @@ export function updateFog(view) {
   if (!F.group) return;
   const cv = view && view.fog;
   const on = !!cv && view.vp >= 0;
-  F.plane.visible = on; for (const b of F.border) b.visible = on; if (F.lin) F.lin.value = Q.bloom ? 1 : 0;
+  F.plane.visible = on; for (const b of F.border) b.visible = on; if (F.lin) F.lin.value = Q.bloom || Q.rt ? 1 : 0;
   if (!on) return;
   if (F.canvas !== cv) {
     if (F.tex) F.tex.dispose();

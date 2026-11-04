@@ -81,7 +81,7 @@ export function disc(x, y, r, color, alpha = 0.2) {
 }
 /* am Ende des Frames: Puffer hochladen und leeren */
 export function flushOverlay() {
-  if (O.mesh) O.mesh.material.uniforms.uLin.value = Q.bloom ? 1 : 0;
+  if (O.mesh) O.mesh.material.uniforms.uLin.value = Q.bloom || Q.rt ? 1 : 0;
   const g = O.geo; if (!g) return;
   g.setDrawRange(0, O.n);
   if (O.n) { const p = g.attributes.position, c = g.attributes.col; p.clearUpdateRanges(); c.clearUpdateRanges(); p.addUpdateRange(0, O.n * 3); c.addUpdateRange(0, O.n * 4); p.needsUpdate = true; c.needsUpdate = true; }

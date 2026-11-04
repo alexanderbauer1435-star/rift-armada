@@ -31,6 +31,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { FXAAShader } from 'three/examples/jsm/shaders/FXAAShader.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 
 export const TILT = 0.95, FOV = 35;
@@ -97,6 +98,15 @@ export function initScene(canvas, opts = {}) {
   S.clean = new ShaderPass({ uniforms: { tDiffuse: { value: null } }, vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: 'uniform sampler2D tDiffuse; varying vec2 vUv; void main() { vec4 c = texture2D(tDiffuse, vUv); if (any(isnan(c)) || any(isinf(c))) c = vec4(0.0, 0.0, 0.0, 1.0); gl_FragColor = clamp(c, 0.0, 48.0); }' });
   S.composer.addPass(S.clean); S.composer.addPass(S.bloom); S.composer.addPass(new OutputPass());
+  /* Fassung 24: schwache Karten – statt Mehrfachabtastung (4 × Speicher je Bildpunkt) eine billige Kantenglättung als
+     Nachbearbeitung (FXAA): Szene in ein 8-Bit-sRGB-Ziel, dann FXAA mit Tone-Mapping direkt auf den Bildschirm */
+  if (S.low) {
+    const rt2 = new THREE.WebGLRenderTarget(4, 4, { type: THREE.UnsignedByteType }); rt2.texture.colorSpace = THREE.SRGBColorSpace;
+    S.fx = new EffectComposer(r, rt2); S.fx.addPass(new RenderPass(S.scene, S.camera));
+    const fs = FXAAShader.fragmentShader.replace('gl_FragColor = ApplyFXAA( tDiffuse, resolution.xy, vUv );', 'gl_FragColor = ApplyFXAA( tDiffuse, resolution.xy, vUv ); gl_FragColor.a = 1.0;\n#include <tonemapping_fragment>\n#include <colorspace_fragment>');
+    S.fxaa = new ShaderPass(new THREE.ShaderMaterial({ uniforms: THREE.UniformsUtils.clone(FXAAShader.uniforms), vertexShader: FXAAShader.vertexShader, fragmentShader: fs }));
+    S.fx.addPass(S.fxaa);
+  }
   S.ok = true;
   setDetail(S.detail);
   return true;
@@ -110,11 +120,13 @@ function limits() {
   if (S.detail < 2) max = Math.min(max, 1.25);
   if (S.low) max = Math.min(max, 1);
   if (S.detail < 1) max = Math.min(max, 1);
-  max = Math.max(S_MIN, max);
-  const steps = []; for (let s = max; s > S_MIN * 1.001; s /= STEP) steps.unshift(+s.toFixed(3)); steps.unshift(S_MIN);
+  /* schwache Karten: nie unter 0,8 (darunter wird das Bild matschig) */
+  const smin = S.low ? Math.min(0.8, max) : S_MIN;
+  max = Math.max(smin, max);
+  const steps = []; for (let s = max; s > smin * 1.001; s /= STEP) steps.unshift(+s.toFixed(3)); steps.unshift(smin);
   if (steps.length > 1 && steps[1] - steps[0] < 0.04) steps.splice(1, 1);
   Q.max = max; Q.steps = steps; Q.top = steps.length - 1 + (S.detail >= 2 && !S.low ? 1 : 0);
-  Q.start = S.low ? Math.min(max, 0.85) : S.ultra ? max : Math.min(max, 1.75);
+  Q.start = S.low ? max : S.ultra ? max : Math.min(max, 1.75);
 }
 function levelOf(scale) { let best = 0; for (let i = 0; i < Q.steps.length; i++) if (Q.steps[i] <= scale + 1e-3) best = i; return best; }
 /* Stufe anwenden: Skalierung und Bloom */
@@ -132,6 +144,7 @@ function setScale(sc) {
   if (!S.ok) return;
   S.renderer.setPixelRatio(sc); S.renderer.setSize(S.cssW, S.cssH, false);
   S.composer.setPixelRatio(sc); S.composer.setSize(S.cssW, S.cssH);
+  if (S.fx) { S.fx.setPixelRatio(sc); S.fx.setSize(S.cssW, S.cssH); S.fxaa.material.uniforms.resolution.value.set(1 / Math.max(1, S.cssW * sc), 1 / Math.max(1, S.cssH * sc)); }
   S.camera.aspect = S.cssW / S.cssH; S.camera.updateProjectionMatrix();
   for (const fn of SCALE_CB) fn(sc);
 }
@@ -197,7 +210,8 @@ export function quality() { return { auto: Q.auto, scale: +Q.scale.toFixed(3), m
 export function render() {
   if (!S.ok) return;
   const info = S.renderer.info; info.autoReset = false; info.reset();
-  if (Q.bloom) S.composer.render(); else S.renderer.render(S.scene, S.camera);
+  Q.rt = Q.bloom || !!S.fx;
+  if (Q.bloom) S.composer.render(); else if (S.fx) S.fx.render(); else S.renderer.render(S.scene, S.camera);
   S.info.calls = info.render.calls; S.info.tris = info.render.triangles;
 }
 
