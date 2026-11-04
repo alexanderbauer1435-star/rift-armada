@@ -154,10 +154,11 @@ function orderMove(us, x, y, am) {
 }
 function finishBox(add) {
   const b = UI.box; UI.box = null;
-  if (!b || Math.abs(b.x1 - b.x0) < 6 || Math.abs(b.y1 - b.y0) < 6) return;
+  /* Fassung 24: winziger oder leerer Rahmen (Maus beim Klick leicht verrutscht) hebt die Auswahl auf wie ein Klick ins Leere */
+  if (!b || Math.abs(b.x1 - b.x0) < 6 || Math.abs(b.y1 - b.y0) < 6) { if (b && !add && (UI.sel.size || UI.selB || UI.selS)) { desel(); SND.play('click'); } return; }
   const g = UI.g, a = R.s2w(Math.min(b.x0, b.x1), Math.min(b.y0, b.y1)), c = R.s2w(Math.max(b.x0, b.x1), Math.max(b.y0, b.y1));
   const us = g.ships.filter(u => !u.dead && u.owner === UI.me && u.def.role !== 'fighter' && u.x >= a.x && u.x <= c.x && u.y >= a.y && u.y <= c.y);
-  if (!us.length) return;
+  if (!us.length) { if (!add && (UI.sel.size || UI.selB || UI.selS)) { desel(); SND.play('click'); } return; }
   /* Kampfschiffe vor Frachtern: Wer Frachter und Flotte zugleich erfasst, meint meistens die Flotte */
   const war = us.filter(u => armed(u));
   const pick = war.length ? war : us;
@@ -335,7 +336,10 @@ function initInput() {
       case 'lpend': {
         /* Maus: Linksklick ins Leere hebt die Auswahl auf (Befehle mit Rechtsklick); Wrack und Vorkommen bleiben anklickbar */
         const w = R.s2w(p.x, p.y);
-        if (UI.mode === 'normal' && UI.g && !pickAt(w.x, w.y) && !(nearWreck(UI.g, w.x, w.y, 70 / Math.max(0.3, R.cam.z)) && selShips().some(u => u.def.cargo))) { if (UI.sel.size || UI.selB || UI.selS) { desel(); SND.play('click'); } break; }
+        /* Fassung 24: auch über Fels, Vorkommen, Feld oder fremden Objekten: mit Maus wählt Links nur eigene Einheiten, Befehle gehen per Rechtsklick */
+        const ph = UI.mode === 'normal' && UI.g ? pickAt(w.x, w.y) : null, own = ph && (ph.k === 1 || ph.k === 2) && ph.owner === UI.me;
+        if (UI.mode === 'normal' && UI.g && !own && (UI.sel.size || UI.selB || UI.selS) && !(nearWreck(UI.g, w.x, w.y, 70 / Math.max(0.3, R.cam.z)) && selShips().some(u => u.def.cargo) && !ph)) { desel(); SND.play('click'); break; }
+        if (UI.mode === 'normal' && UI.g && !ph && !(nearWreck(UI.g, w.x, w.y, 70 / Math.max(0.3, R.cam.z)) && selShips().some(u => u.def.cargo))) { if (UI.sel.size || UI.selB || UI.selS) { desel(); SND.play('click'); } break; }
         tap(p.x, p.y); break;
       }
       case 'rpan': if (!moved) { const us = selShips(); if (UI.mode === 'place') { endMode(); hudCmds(); break; } if (UI.mode !== 'normal') { endMode(); break; } if (us.length) { const w = R.s2w(p.x, p.y), hit = pickAt(w.x, w.y); if (ctrl) orderMove(us, w.x, w.y, true); else order(us, hit, w.x, w.y); } } break;
