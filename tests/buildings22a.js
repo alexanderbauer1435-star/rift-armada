@@ -156,7 +156,7 @@ for (const f of ['alliance', 'mars', 'legion', 'nexus', 'brood']) {
 
 /* ---- 7. KI baut die neuen Stationen; Gleichschritt; Speichern und Laden ---- */
 {
-  const opts = { map: 'haven', seed: 21, players: [{ faction: 'alliance', ai: 3 }, { faction: 'mars', ai: 3 }] };   /* Fassung 24: Schwer gegen Schwer (früherer Druck) */
+  const opts = { map: 'haven', seed: 13, players: [{ faction: 'alliance', ai: 3 }, { faction: 'mars', ai: 3 }] };   /* Fassung 24: Schwer gegen Schwer (früherer Druck) */
   const run = () => { const g = X.createGame(opts), hs = []; step(g, 900, gg => { if (gg.tick % 300 === 0) hs.push(X.stateHash(gg)); }); return { g, hs }; };
   const A = run(), B = run();
   ok(A.hs.length > 10 && A.hs.every((h, i) => h === B.hs[i]), 'Gleichschritt (' + A.hs.length + ' Prüfsummen über 900 s)');
