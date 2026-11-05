@@ -736,13 +736,14 @@ for (const id in SHIPS) { const s = SHIPS[id]; if (s.f === 'legion' && s.role ==
    (Nachmessung f24a mit 7 % / 8 % / 5 %: Mars 60 %, Nexus 31 % – nachgeschärft) */
 for (const id in SHIPS) { const s = SHIPS[id]; if (s.role !== 'war') continue;
   if (s.f === 'mars') for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 1.12);
-  if (s.f === 'nexus') { s.hull = Math.round(s.hull * 1.10); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.06).toFixed(2) })); }
-  if (s.f === 'brood') { for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.96); s.hull = Math.round(s.hull * 1.07); }   /* f24c: Brood 27 % – Rumpf +7 % */
+  if (s.f === 'nexus') { s.hull = Math.round(s.hull * 1.08); s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { dmg: +(w.dmg * 1.06).toFixed(2) })); }
+  if (s.f === 'brood') { for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.92); s.hull = Math.round(s.hull * 1.07); }   /* f24c: Brood 27 % – Rumpf +7 %; f24d: Brood 31 % – 8 % billiger statt 4 % */
   /* Nachmessung f24b (160 Partien): Mars 56 %, aber Mars–Legion 13:0, Nexus–Brood 1:8 – Legion Rumpf +7 % und 3 % billiger;
      Nexus-Waffen +20 % gegen kleine Schiffe (die Brood besteht fast nur aus kleinen)
-     Nachmessung f24c: Nexus 56 %, Brood 27 % – Nexus-Rumpf zurück auf +10 %, Waffen +6 %; Brood-Rumpf +7 % */
+     Nachmessung f24c: Nexus 56 %, Brood 27 % – Nexus-Rumpf zurück auf +10 %, Waffen +6 %; Brood-Rumpf +7 %
+     Nachmessung f24d: Nexus 58 % (Bonus gegen Kleine wirkt stark) – gegen Kleine nur +10 %, Rumpf +8 %; Brood 8 % billiger */
   if (s.f === 'legion') { s.hull = Math.round(s.hull * 1.07); for (const k in s.cost) s.cost[k] = Math.round(s.cost[k] * 0.97); }
-  if (s.f === 'nexus') s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { antiS: Math.max(w.antiS || 1, 1.2) }));
+  if (s.f === 'nexus') s.wpn = s.wpn.map(w => w.kind === 'pd' ? w : Object.assign({}, w, { antiS: Math.max(w.antiS || 1, 1.1) }));
 }
 /* Brood: Biomasse aus allem – die Grube verwertet 15 % mehr (gleicht die anfällige Ausbreitung aus) */
 /* (Runde 18: mit doppelten Vorkommen kein Brood-Bonus mehr nötig) */
