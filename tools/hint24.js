@@ -28,7 +28,7 @@ const F = path.resolve(process.argv[2] || 'build/rift-armada.html'), OUT = proce
   out.push(['Hinweis Trümmerfeld', h1.cur === 'debris' && h1.vis]);
   await p.screenshot({ path: OUT + '/hint24-debris.jpg', type: 'jpeg', quality: 90 });
   /* 2) OK schließt; Hinweis kommt nicht wieder */
-  await p.click('#hintOk'); await p.waitForTimeout(1500);
+  await p.evaluate(() => document.getElementById('hintOk').click()); await p.waitForTimeout(1500);
   const h2 = await p.evaluate(() => ({ cur: UI.hintCur, vis: !document.getElementById('hintCard').hidden, seen: !!(SET.seenTips || {}).debris }));
   out.push(['OK schließt, gemerkt', !h2.vis && h2.seen && h2.cur !== 'debris']);
   /* 3) Antippen im Feld ohne Auswahl → Erklärung */
