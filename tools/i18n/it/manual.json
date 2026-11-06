@@ -806,5 +806,16 @@
  "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo di detriti: copertura (−25 % danni), difficile da individuare, più lento",
  "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Le navi in un campo di detriti hanno copertura (−25 % danni) e sono difficili da individuare, ma sono più lente. I caccia non ne beneficiano.",
  "Lizenzen:": "Licenze:",
- "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utilizza three.js (licenza MIT, © 2010–2024 three.js authors), il carattere Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, per l'app Android, Capacitor (licenza MIT, © 2017–present Drifty Co.). Navi, stazioni, mappe, immagini, musica e suoni sono stati creati appositamente per il gioco. Tutti i nomi, le fazioni e i personaggi sono di fantasia."
+ "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utilizza three.js (licenza MIT, © 2010–2024 three.js authors), il carattere Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, per l'app Android, Capacitor (licenza MIT, © 2017–present Drifty Co.). Navi, stazioni, mappe, immagini, musica e suoni sono stati creati appositamente per il gioco. Tutti i nomi, le fazioni e i personaggi sono di fantasia.",
+ "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra è troppo per questo dispositivo – qualità impostata su Alta. Per mantenere comunque Ultra: Impostazioni → Qualità con frame rate basso → Mantieni.",
+ "Voll": "Completo",
+ "Einfach": "Semplici",
+ "Halten": "Mantieni",
+ "Qualität bei niedriger Bildrate": "Qualità con frame rate basso",
+ "Modelldetail": "Dettaglio modelli",
+ "Leuchteffekt (Bloom)": "Effetto bagliore (bloom)",
+ "Lichthöfe": "Aloni luminosi",
+ "Schatten": "Ombre",
+ "Triebwerksspuren": "Scie dei motori",
+ "Explosionen": "Esplosioni"
 }

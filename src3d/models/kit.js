@@ -677,8 +677,8 @@ function matColor(m) {
 }
 export function farMaterial(kind = 'normal') {
   let m = FAR.mat.get(kind); if (m) return m;
-  m = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.45, roughness: 0.5, flatShading: false }); m.name = 'far|' + kind; m.userData.uEmis = { value: kind === 'wreck' ? 0.08 : 1 };
-  if (kind === 'wreck') { m.color.setScalar(0.4); m.roughness = 0.8; }
+  m = new THREE.MeshStandardMaterial({ vertexColors: true, metalness: 0.22, roughness: 0.52, flatShading: false }); m.name = 'far|' + kind;   /* Fassung 25: weniger Metall – sonst wirken die Detailstufen dunkler als das volle Modell */ m.userData.uEmis = { value: kind === 'wreck' ? 0.08 : 1 };
+  if (kind === 'wreck') { m.color.setScalar(0.4); m.roughness = 0.8; } else m.color.setScalar(1.3);
   m.onBeforeCompile = (sh) => {
     sh.uniforms.uEmis = m.userData.uEmis;
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 ecol; varying vec3 vEcol;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvEcol = ecol;');
@@ -721,4 +721,66 @@ export function farGeometry(model, minR = 1.5) {
   geo.setAttribute('position', new THREE.BufferAttribute(P, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(N, 3)); geo.setAttribute('color', new THREE.BufferAttribute(C, 3)); geo.setAttribute('ecol', new THREE.BufferAttribute(E, 3));
   geo.computeBoundingSphere();
   return geo;
+}
+
+/* Fassung 25: Vereinfachung für Detailstufen – Eckpunkt-Bündelung auf einem Raster (schnell, O(n)) über der flachen
+   Dreieckssuppe aus farGeometry (position, normal, color, ecol, nicht indiziert). Eckpunkte in derselben Rasterzelle
+   verschmelzen auf ihren Mittelpunkt; Dreiecke mit zwei Ecken in einer Zelle fallen weg, doppelte (gleich orientierte)
+   ebenso. Die Zellgröße wird per Halbierung gesucht, bis die Dreieckszahl ungefähr dem Ziel entspricht. Dünne Teile
+   (Flügel, Platten) bleiben als Fläche in der Mitte erhalten; Farben bleiben je Dreieck. */
+function clusterOnce(P, N, cell, mn, out) {
+  const n = P.length / 3, cid = new Int32Array(n), map = new Map(); let k = 0;
+  const inv = 1 / cell;
+  for (let i = 0; i < n; i++) {
+    const x = Math.floor((P[i * 3] - mn.x) * inv), y = Math.floor((P[i * 3 + 1] - mn.y) * inv), z = Math.floor((P[i * 3 + 2] - mn.z) * inv);
+    const key = x + y * 2048 + z * 4194304; let c = map.get(key); if (c === undefined) { c = k++; map.set(key, c); } cid[i] = c;
+  }
+  const keep = [], seen = new Set();
+  for (let t = 0; t < n / 3; t++) {
+    const a = cid[t * 3], b = cid[t * 3 + 1], c = cid[t * 3 + 2];
+    if (a === b || b === c || a === c) continue;
+    /* gleiche Orientierung = gleiche zyklische Folge: kleinste Zelle nach vorn drehen */
+    let p = a, q = b, r = c; if (q < p && q < r) { p = b; q = c; r = a; } else if (r < p && r < q) { p = c; q = a; r = b; }
+    const key = p + ',' + q + ',' + r; if (seen.has(key)) continue; seen.add(key); keep.push(t);
+  }
+  if (out) { out.cid = cid; out.k = k; }
+  return keep;
+}
+export function decimateGeometry(geo, target) {
+  const P = geo.attributes.position.array, N = geo.attributes.normal.array, C = geo.attributes.color.array, Ec = geo.attributes.ecol ? geo.attributes.ecol.array : null;
+  const tris = P.length / 9; if (tris <= target * 1.15) return geo;
+  if (!geo.boundingBox) geo.computeBoundingBox();
+  const bb = geo.boundingBox, mn = bb.min, size = Math.max(bb.max.x - mn.x, bb.max.y - mn.y, bb.max.z - mn.z, 1e-3);
+  let lo = size / 400, hi = size / 3, best = null, bestCell = hi;
+  for (let it = 0; it < 12; it++) {
+    const cell = Math.sqrt(lo * hi), keep = clusterOnce(P, N, cell, mn, null);
+    if (keep.length > target) lo = cell; else { hi = cell; best = keep; bestCell = cell; }
+    if (best && Math.abs(best.length - target) < target * 0.12) break;
+  }
+  const out = {}; const keep = clusterOnce(P, N, bestCell, mn, out); const cid = out.cid, k = out.k;
+  /* Mittelpunkte und gemittelte Normalen je Zelle */
+  const cp = new Float32Array(k * 3), cn = new Float32Array(k * 3), cc = new Uint32Array(k);
+  for (let i = 0; i < cid.length; i++) { const c = cid[i]; cp[c * 3] += P[i * 3]; cp[c * 3 + 1] += P[i * 3 + 1]; cp[c * 3 + 2] += P[i * 3 + 2]; cn[c * 3] += N[i * 3]; cn[c * 3 + 1] += N[i * 3 + 1]; cn[c * 3 + 2] += N[i * 3 + 2]; cc[c]++; }
+  for (let c = 0; c < k; c++) { const m = 1 / Math.max(1, cc[c]); cp[c * 3] *= m; cp[c * 3 + 1] *= m; cp[c * 3 + 2] *= m; const l = Math.hypot(cn[c * 3], cn[c * 3 + 1], cn[c * 3 + 2]) || 1; cn[c * 3] /= l; cn[c * 3 + 1] /= l; cn[c * 3 + 2] /= l; }
+  const m = keep.length * 3, P2 = new Float32Array(m * 3), N2 = new Float32Array(m * 3), C2 = new Float32Array(m * 3), E2 = new Float32Array(m * 3);
+  const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), fn = new THREE.Vector3();
+  let w = 0;
+  for (const t of keep) {
+    const i0 = t * 3, c0 = cid[i0], c1 = cid[i0 + 1], c2 = cid[i0 + 2];
+    /* Flächennormale als Rückfall, wenn die gemittelte Zellnormale gegen die Fläche zeigt (Kanten verschmolzen) */
+    e1.set(cp[c1 * 3] - cp[c0 * 3], cp[c1 * 3 + 1] - cp[c0 * 3 + 1], cp[c1 * 3 + 2] - cp[c0 * 3 + 2]); e2.set(cp[c2 * 3] - cp[c0 * 3], cp[c2 * 3 + 1] - cp[c0 * 3 + 1], cp[c2 * 3 + 2] - cp[c0 * 3 + 2]); fn.crossVectors(e1, e2).normalize();
+    for (let j = 0; j < 3; j++) {
+      const i = i0 + j, c = cid[i];
+      P2[w * 3] = cp[c * 3]; P2[w * 3 + 1] = cp[c * 3 + 1]; P2[w * 3 + 2] = cp[c * 3 + 2];
+      let nx = cn[c * 3], ny = cn[c * 3 + 1], nz = cn[c * 3 + 2]; if (nx * fn.x + ny * fn.y + nz * fn.z < 0.35) { nx = fn.x; ny = fn.y; nz = fn.z; }
+      N2[w * 3] = nx; N2[w * 3 + 1] = ny; N2[w * 3 + 2] = nz;
+      C2[w * 3] = C[i * 3]; C2[w * 3 + 1] = C[i * 3 + 1]; C2[w * 3 + 2] = C[i * 3 + 2];
+      if (Ec) { E2[w * 3] = Ec[i * 3]; E2[w * 3 + 1] = Ec[i * 3 + 1]; E2[w * 3 + 2] = Ec[i * 3 + 2]; }
+      w++;
+    }
+  }
+  const g2 = new THREE.BufferGeometry();
+  g2.setAttribute('position', new THREE.BufferAttribute(P2, 3)); g2.setAttribute('normal', new THREE.BufferAttribute(N2, 3)); g2.setAttribute('color', new THREE.BufferAttribute(C2, 3)); g2.setAttribute('ecol', new THREE.BufferAttribute(E2, 3));
+  g2.computeBoundingSphere(); g2.computeBoundingBox();
+  return g2;
 }

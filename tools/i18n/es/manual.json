@@ -806,5 +806,16 @@
  "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo de escombros: cobertura (−25 % de daño), difícil de detectar, más lento",
  "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Las naves dentro de un campo de escombros tienen cobertura (−25 % de daño) y son difíciles de detectar, pero se mueven más despacio. Los cazas no se benefician.",
  "Lizenzen:": "Licencias:",
- "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utiliza three.js (licencia MIT, © 2010–2024 three.js authors), la fuente Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) y, para la app de Android, Capacitor (licencia MIT, © 2017–present Drifty Co.). Naves, estaciones, mapas, imágenes, música y sonidos se crearon expresamente para el juego. Todos los nombres, facciones y personajes son ficticios."
+ "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utiliza three.js (licencia MIT, © 2010–2024 three.js authors), la fuente Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) y, para la app de Android, Capacitor (licencia MIT, © 2017–present Drifty Co.). Naves, estaciones, mapas, imágenes, música y sonidos se crearon expresamente para el juego. Todos los nombres, facciones y personajes son ficticios.",
+ "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra es demasiado para este dispositivo: calidad ajustada a Alta. Para mantener Ultra de todos modos: Ajustes → Calidad con pocos FPS → Mantener.",
+ "Voll": "Completo",
+ "Einfach": "Simples",
+ "Halten": "Mantener",
+ "Qualität bei niedriger Bildrate": "Calidad con pocos FPS",
+ "Modelldetail": "Detalle de modelos",
+ "Leuchteffekt (Bloom)": "Efecto de brillo (bloom)",
+ "Lichthöfe": "Halos de luz",
+ "Schatten": "Sombras",
+ "Triebwerksspuren": "Estelas de motores",
+ "Explosionen": "Explosiones"
 }

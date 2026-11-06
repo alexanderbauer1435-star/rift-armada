@@ -35,6 +35,8 @@ function place() {
   /* Leuchten folgen dem Zielpunkt (nur die Richtung zählt) */
   const T = V2.set(CAM.cx, 0, ty), L = S.key;
   L.target.position.copy(T); L.position.copy(KEY_DIR).multiplyScalar(1600).add(T);
+  /* Fassung 25: Schattenkamera deckt den sichtbaren Ausschnitt ab (Breite aus Abstand und Seitenverhältnis) */
+  if (L.castShadow) { const sc = L.shadow.camera, h = d * Math.tan(c.fov * Math.PI / 360) * Math.max(1, c.aspect) * 1.25 + 120; if (Math.abs(sc.right - h) > h * 0.05) { sc.left = -h; sc.right = h; sc.top = h; sc.bottom = -h; sc.updateProjectionMatrix(); } }
   S.rim.target.position.copy(T); S.rim.position.copy(RIM_DIR).multiplyScalar(1000).add(T);
   S.fill.target.position.copy(T); S.fill.position.copy(FILL_DIR).multiplyScalar(1000).add(T);
 }

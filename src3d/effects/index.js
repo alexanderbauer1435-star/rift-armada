@@ -71,6 +71,8 @@ export function init(scene, THREE, kitMats, d) {
   B.quad = new QuadBuf(CAP[2] + 700, 10);
   B.spr = new SpriteBuf(CAP[0] + 600, atlas, 'add', 11);
   B.dome = new DomeBuf(CAP[5] + 16, 12);
+  B.rib = new QuadBuf(3200, 9);              /* Fassung 25: Triebwerksbänder */
+  B.halo = new SpriteBuf(900, atlas, 'add', 10);   /* Fassung 25: Lichthöfe der Triebwerke */
   for (const k in B) root.add(B[k].mesh);
   P.spr = new Pool(CAP[0], SP.F); P.smoke = new Pool(CAP[1], SP.F); P.quad = new Pool(CAP[2], QP.F); P.chunk = new Pool(CAP[3], CP.F);
   P.ring = new Pool(CAP[4], RP.F); P.dome = new Pool(CAP[5], DP.F); P.disc = new Pool(CAP[6], KP.F);
@@ -190,6 +192,45 @@ function explode(x, y, r, big, hex, h = H.proj, outer = true) {
 /* Sprühspur (Säure), Glutspur (Torpedo, Masse) */
 function trail(x, y, h, hex, size, life, vx, vh, vz, mul = 1, tile = TILE.ember) { spr(P.spr, x, h, y, vx, vh, vz, life, size, size * 0.4, col(hex), 0.7, tile, CM.fixed, 2, mul, 0, 1.2); }
 
+/* ------------------------------------------------------------ Fassung 25: Einstellungen, Lichthöfe, Triebwerksbänder */
+const GFX = { halos: true, trails: true, bigBoom: true }, ST = { bloom: false };
+export function setGfx(g) { GFX.halos = g.halos !== false; GFX.trails = g.trails !== false; GFX.bigBoom = g.booms !== false; }
+export function state(o) { ST.bloom = !!o.bloom; }
+/* Lichthof nur ohne Bloom (sonst übernimmt der Bloom das Leuchten) */
+const haloOn = () => GFX.halos && !ST.bloom && detail > 0;
+const HQ = [], TQ = [];
+/* vom Kern (entities) je Bild gemeldet, im nächsten effects.frame geschrieben */
+export function engineHalo(x, h, y, size, c, a) { if (haloOn()) HQ.push(x, h, y, size, c[0], c[1], c[2], a); }
+export function ribbon(x0, h0, y0, x1, h1, y1, w, c, a) { if (GFX.trails && detail > 0) TQ.push(x0, h0, y0, x1, h1, y1, w, c[0], c[1], c[2], a); }
+export function trailsOn() { return GFX.trails && detail > 0; }
+export function rgb(hex) { return col(hex); }
+function flushQueues() {
+  for (let i = 0; i < HQ.length; i += 8) B.halo.write(HQ[i], HQ[i + 1], HQ[i + 2], HQ[i + 3], 0, TILE.glow, HQ[i + 4], HQ[i + 5], HQ[i + 6], HQ[i + 7]);
+  for (let i = 0; i < TQ.length; i += 11) B.rib.write(TQ[i], TQ[i + 1], TQ[i + 2], TQ[i + 3], TQ[i + 4], TQ[i + 5], TQ[i + 6], QMODE.flat, TQ[i + 7], TQ[i + 8], TQ[i + 9], TQ[i + 10]);
+  HQ.length = 0; TQ.length = 0;
+}
+/* glühende Trümmerteile, die lange treiben (große Explosionen) */
+function embers(x, y, n, speed, r, h) {
+  n = Math.round(n * K);
+  for (let i = 0; i < n; i++) {
+    const j = P.chunk.alloc(); if (j < 0) return;
+    const d = P.chunk.d, o = j * CP.F, a = Math.random() * TAU, v = speed * rnd(0.3, 1);
+    d[o + CP.x] = x + Math.cos(a) * r * 0.3; d[o + CP.h] = h + rnd(-r * 0.1, r * 0.3); d[o + CP.z] = y + Math.sin(a) * r * 0.3;
+    d[o + CP.vx] = Math.cos(a) * v; d[o + CP.vh] = rnd(-3, 3); d[o + CP.vz] = Math.sin(a) * v;
+    d[o + CP.rx] = Math.random() * TAU; d[o + CP.ry] = Math.random() * TAU; d[o + CP.rz] = Math.random() * TAU;
+    d[o + CP.wx] = rnd(-1.5, 1.5); d[o + CP.wy] = rnd(-1.5, 1.5); d[o + CP.wz] = rnd(-1.5, 1.5);
+    d[o + CP.t] = 0; d[o + CP.life] = rnd(5, 9); d[o + CP.s] = rnd(0.8, 2.2) * Math.max(0.8, Math.min(2.6, r / 12)); d[o + CP.glow] = rnd(1.6, 2.6); d[o + CP.shade] = rnd(0.1, 0.2);
+  }
+}
+/* Fassung 25: große Schiffe – Druckwellenring, Nachexplosionen über gut eine Sekunde, glühende Trümmer, die treiben */
+function bigBoom(x, y, r, hex, h) {
+  ring(x, y, r * 6, '#ffffff', 0.55, r * 0.22, 1.6, 0.8, r * 0.6);
+  ring(x, y, r * 4.2, hex || '#ffb060', 1.1, r * 0.35, 1, 0.45, r * 0.4);
+  flash(x, y, r * 2.6, '#fff4e0', 0.3, h + r * 0.3, TILE.glow, 1.2, 0.7);
+  embers(x, y, 12, 26, r, h);
+  for (let i = 0; i < 4; i++) { const a = Math.random() * TAU, dd = r * rnd(0.4, 1.1); later.push({ at: now + 0.25 + i * rnd(0.22, 0.38), fn: () => { explode(x + Math.cos(a) * dd, y + Math.sin(a) * dd, r * rnd(0.35, 0.55), false, hex, h, false); light(x + Math.cos(a) * dd, y + Math.sin(a) * dd, h, '#ffa050', 1.4, 160, 0.35); } }); }
+}
+
 /* ------------------------------------------------------------ öffentliche spawn-Funktionen (Kern: Rauchfahnen, Funken an Wracks) */
 export const spawn = {
   smoke(x, y, r, n) { smoke(x, y, r, n || 1, 1.6, H.proj + 2, 10); },
@@ -222,7 +263,7 @@ export function event(e, g, view) {
   const pc = o => (view && view.pcol && o !== undefined && o >= 0) ? view.pcol(o) : '#ffffff';
   const shake = k => { if (view && view.shake) view.shake(k); };
   switch (e.t) {
-    case 'die': if (!e.quiet) { const r = e.r || 12; light(e.x, e.y, H.proj, '#ffa050', e.big ? 3.2 : 1.6, e.big ? 320 : 170, e.big ? 1.1 : 0.6); explode(e.x, e.y, r, e.big, pc(e.owner), H.proj + r * 0.25); if (e.big) { shake(6); later.push({ at: now + rnd(0.5, 0.9), fn: () => { fire(e.x + rnd(-r, r) * 0.5, e.y + rnd(-r, r) * 0.5, r * 0.5, 0.6, 2, H.proj + r * 0.3); smoke(e.x, e.y, r, 3, 2.2, H.proj + r * 0.3); } }); } } break;
+    case 'die': if (!e.quiet) { const r = e.r || 12; light(e.x, e.y, H.proj, '#ffa050', e.big ? 3.2 : 1.6, e.big ? 320 : 170, e.big ? 1.1 : 0.6); explode(e.x, e.y, r, e.big, pc(e.owner), H.proj + r * 0.25); if (haloOn()) glow(e.x, e.y, H.proj + r * 0.3, r * 4, r * 7, '#ffb060', e.big ? 0.9 : 0.5, 0.32); if (e.big && GFX.bigBoom && detail > 0) bigBoom(e.x, e.y, r, pc(e.owner), H.proj + r * 0.25); if (e.big) { shake(6); later.push({ at: now + rnd(0.5, 0.9), fn: () => { fire(e.x + rnd(-r, r) * 0.5, e.y + rnd(-r, r) * 0.5, r * 0.5, 0.6, 2, H.proj + r * 0.3); smoke(e.x, e.y, r, 3, 2.2, H.proj + r * 0.3); } }); } } break;
     case 'bdie': {
       const r = e.r || 40, pcol = pc(e.owner); light(e.x, e.y, H.proj, '#ff9a48', 4, 420, 1.6);
       explode(e.x, e.y, r * 0.8, true, pcol, H.proj + r * 0.2);
@@ -233,6 +274,7 @@ export function event(e, g, view) {
     }
     case 'hit': {
       const k = e.kind || 'kin', hh = H.proj;
+      if (haloOn() && (k === 'torp' || k === 'rail' || Math.random() < 0.35)) glow(e.x, e.y, hh, k === 'torp' ? 34 : 18, k === 'torp' ? 52 : 26, (HIT[k] || HIT.kin)[0], k === 'torp' ? 0.4 : 0.18, 0.25);
       if (k === 'torp') light(e.x, e.y, hh, '#ffb060', 1.4, 160, 0.35); else if (k === 'rail' || (k === 'beam' && Math.random() < 0.3)) light(e.x, e.y, hh, (HIT[k] || HIT.kin)[0], k === 'rail' ? 1.0 : 0.6, 110, 0.18);
       if (k === 'torp') explode(e.x, e.y, 10, false, '#ffb060', hh);
       else if (k === 'torpdie') { flash(e.x, e.y, 9, '#ffd080', 0.25, hh); spark(e.x, e.y, 5, 80, '#ffd27a', 0.3, hh); }
@@ -247,7 +289,7 @@ export function event(e, g, view) {
     case 'shot': {
       /* Mündungsfeuer am Bug in Richtung des Schusses (Strahl, Geschoss, Torpedo, Säure) */
       if (e.ang !== undefined && e.r) { const c = e.kind === 'rail' ? '#dff4ff' : e.kind === 'acid' ? '#b4ff3c' : facCol(g, e.owner), mx = e.x + Math.cos(e.ang) * e.r, my = e.y + Math.sin(e.ang) * e.r, s0 = e.big || e.kind === 'torp' ? 9 : e.kind === 'beam' ? 7 : 5;
-        flash(mx, my, s0, c, 0.09, H.proj, TILE.glow, 1.5); if (e.big || e.kind === 'torp' || e.kind === 'rail') light(mx, my, H.proj, c, 0.7, 120, 0.12); if (e.big || e.kind === 'torp') spark(mx, my, 3, 70, c, 0.25, H.proj, 1.4, 0.2); }
+        flash(mx, my, s0, c, 0.09, H.proj, TILE.glow, 1.5); if (haloOn()) glow(mx, my, H.proj, s0 * 3, s0 * 4.5, c, 0.16, 0.22); if (e.big || e.kind === 'torp' || e.kind === 'rail') light(mx, my, H.proj, c, 0.7, 120, 0.12); if (e.big || e.kind === 'torp') spark(mx, my, 3, 70, c, 0.25, H.proj, 1.4, 0.2); }
     }
       if (e.kind === 'rail') { flash(e.x, e.y, 12, '#dff4ff', 0.15, H.proj, TILE.star, 1.4); glow(e.x, e.y, H.proj, 20, 36, '#9fd0ff', 0.25, 0.5); }
       else if (e.kind === 'kin' && e.big) flash(e.x + Math.cos(e.ang) * 10, e.y + Math.sin(e.ang) * 10, 5, '#ffe0a0', 0.1, H.proj);
@@ -312,6 +354,7 @@ export function frame(g, dt, time, view, cam) {
   /* zeitversetzte Wirkungen */
   if (later.length) { let w = 0; for (let i = 0; i < later.length; i++) { const q = later[i]; if (time >= q.at) q.fn(); else later[w++] = q; } later.length = w; }
   for (const k in B) B[k].begin(time);
+  flushQueues();
   stepSprites(P.spr, dt, B.spr, B.fire); stepSprites(P.smoke, dt, B.smoke); stepQuads(P.quad, dt, B.quad); stepRings(P.ring, dt, B.ring);
   stepChunks(P.chunk, dt, B.chunk); stepDomes(P.dome, dt, B.dome); stepDiscs(P.disc, dt, B.disc);
   if (g) {
@@ -349,6 +392,7 @@ function beamsOf(list, g, dt, time, view) {
       B.quad.write(sx, h0, sy, tx, h1, ty, bw * 0.65, QMODE.flat, 1.6, 1.6, 1.6, 0.95);
       B.spr.write(sx, h0, sy, bw * 7, 0, TILE.glow, c[0], c[1], c[2], 0.8);
       B.spr.write(tx, h1, ty, bw * 9 * pulse, time * 3, TILE.glow, c[0], c[1], c[2], 0.75);
+      if (haloOn()) { B.quad.write(sx, h0, sy, tx, h1, ty, bw * 14 * pulse, QMODE.flat, c[0], c[1], c[2], 0.05); B.spr.write(tx, h1, ty, bw * 26 * pulse, 0, TILE.glow, c[0], c[1], c[2], 0.22); }
       B.spr.write(tx, h1, ty, bw * 2.5, 0, TILE.dot, 1.4, 1.4, 1.4, 0.8);
       if (detail > 0 && Math.random() < 20 * dt * K) spark(tx, ty, 1, 70, wpnColOf(g, s, wp), 0.3, h1, 1.3, 1.2);
     }

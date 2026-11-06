@@ -2740,7 +2740,18 @@ const LANGS = {
     "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Champ de débris : couverture (−25 % de dégâts), difficile à repérer, plus lent",
     "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Les vaisseaux dans un champ de débris sont à couvert (−25 % de dégâts) et difficiles à repérer, mais plus lents. Les chasseurs n'en profitent pas.",
     "Lizenzen:": "Licences :",
-    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utilise three.js (licence MIT, © 2010–2024 three.js authors), la police Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) et, pour l'application Android, Capacitor (licence MIT, © 2017–present Drifty Co.). Vaisseaux, stations, cartes, images, musique et sons ont été créés spécialement pour le jeu. Tous les noms, factions et personnages sont fictifs."
+    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utilise three.js (licence MIT, © 2010–2024 three.js authors), la police Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) et, pour l'application Android, Capacitor (licence MIT, © 2017–present Drifty Co.). Vaisseaux, stations, cartes, images, musique et sons ont été créés spécialement pour le jeu. Tous les noms, factions et personnages sont fictifs.",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra est trop exigeant pour cet appareil – qualité réglée sur Élevée. Pour garder Ultra quand même : Paramètres → Qualité à faible fréquence d'images → Conserver.",
+    "Voll": "Complet",
+    "Einfach": "Simples",
+    "Halten": "Conserver",
+    "Qualität bei niedriger Bildrate": "Qualité à faible fréquence d'images",
+    "Modelldetail": "Détail des modèles",
+    "Leuchteffekt (Bloom)": "Effet de lueur (bloom)",
+    "Lichthöfe": "Halos lumineux",
+    "Schatten": "Ombres",
+    "Triebwerksspuren": "Traînées des réacteurs",
+    "Explosionen": "Explosions"
   },
   es: {
     "Ziele": "Objetivos",
@@ -5479,7 +5490,18 @@ const LANGS = {
     "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo de escombros: cobertura (−25 % de daño), difícil de detectar, más lento",
     "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Las naves dentro de un campo de escombros tienen cobertura (−25 % de daño) y son difíciles de detectar, pero se mueven más despacio. Los cazas no se benefician.",
     "Lizenzen:": "Licencias:",
-    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utiliza three.js (licencia MIT, © 2010–2024 three.js authors), la fuente Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) y, para la app de Android, Capacitor (licencia MIT, © 2017–present Drifty Co.). Naves, estaciones, mapas, imágenes, música y sonidos se crearon expresamente para el juego. Todos los nombres, facciones y personajes son ficticios."
+    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utiliza three.js (licencia MIT, © 2010–2024 three.js authors), la fuente Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) y, para la app de Android, Capacitor (licencia MIT, © 2017–present Drifty Co.). Naves, estaciones, mapas, imágenes, música y sonidos se crearon expresamente para el juego. Todos los nombres, facciones y personajes son ficticios.",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra es demasiado para este dispositivo: calidad ajustada a Alta. Para mantener Ultra de todos modos: Ajustes → Calidad con pocos FPS → Mantener.",
+    "Voll": "Completo",
+    "Einfach": "Simples",
+    "Halten": "Mantener",
+    "Qualität bei niedriger Bildrate": "Calidad con pocos FPS",
+    "Modelldetail": "Detalle de modelos",
+    "Leuchteffekt (Bloom)": "Efecto de brillo (bloom)",
+    "Lichthöfe": "Halos de luz",
+    "Schatten": "Sombras",
+    "Triebwerksspuren": "Estelas de motores",
+    "Explosionen": "Explosiones"
   },
   it: {
     "Ziele": "Obiettivi",
@@ -8218,7 +8240,18 @@ const LANGS = {
     "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo di detriti: copertura (−25 % danni), difficile da individuare, più lento",
     "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Le navi in un campo di detriti hanno copertura (−25 % danni) e sono difficili da individuare, ma sono più lente. I caccia non ne beneficiano.",
     "Lizenzen:": "Licenze:",
-    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utilizza three.js (licenza MIT, © 2010–2024 three.js authors), il carattere Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, per l'app Android, Capacitor (licenza MIT, © 2017–present Drifty Co.). Navi, stazioni, mappe, immagini, musica e suoni sono stati creati appositamente per il gioco. Tutti i nomi, le fazioni e i personaggi sono di fantasia."
+    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utilizza three.js (licenza MIT, © 2010–2024 three.js authors), il carattere Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, per l'app Android, Capacitor (licenza MIT, © 2017–present Drifty Co.). Navi, stazioni, mappe, immagini, musica e suoni sono stati creati appositamente per il gioco. Tutti i nomi, le fazioni e i personaggi sono di fantasia.",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra è troppo per questo dispositivo – qualità impostata su Alta. Per mantenere comunque Ultra: Impostazioni → Qualità con frame rate basso → Mantieni.",
+    "Voll": "Completo",
+    "Einfach": "Semplici",
+    "Halten": "Mantieni",
+    "Qualität bei niedriger Bildrate": "Qualità con frame rate basso",
+    "Modelldetail": "Dettaglio modelli",
+    "Leuchteffekt (Bloom)": "Effetto bagliore (bloom)",
+    "Lichthöfe": "Aloni luminosi",
+    "Schatten": "Ombre",
+    "Triebwerksspuren": "Scie dei motori",
+    "Explosionen": "Esplosioni"
   },
   pt: {
     "Ziele": "Objetivos",
@@ -10957,7 +10990,18 @@ const LANGS = {
     "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo de destroços: cobertura (−25 % de dano), difícil de detectar, mais lento",
     "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Naves dentro de um campo de destroços têm cobertura (−25 % de dano) e são difíceis de detectar, mas ficam mais lentas. Caças não se beneficiam.",
     "Lizenzen:": "Licenças:",
-    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada usa three.js (licença MIT, © 2010–2024 three.js authors), a fonte Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, no app Android, Capacitor (licença MIT, © 2017–present Drifty Co.). Naves, estações, mapas, imagens, música e sons foram criados especialmente para o jogo. Todos os nomes, facções e personagens são fictícios."
+    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada usa three.js (licença MIT, © 2010–2024 three.js authors), a fonte Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, no app Android, Capacitor (licença MIT, © 2017–present Drifty Co.). Naves, estações, mapas, imagens, música e sons foram criados especialmente para o jogo. Todos os nomes, facções e personagens são fictícios.",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra é demais para este aparelho – qualidade ajustada para Alta. Para manter Ultra mesmo assim: Configurações → Qualidade com taxa de quadros baixa → Manter.",
+    "Voll": "Completo",
+    "Einfach": "Simples",
+    "Halten": "Manter",
+    "Qualität bei niedriger Bildrate": "Qualidade com taxa de quadros baixa",
+    "Modelldetail": "Detalhe dos modelos",
+    "Leuchteffekt (Bloom)": "Efeito de brilho (bloom)",
+    "Lichthöfe": "Halos de luz",
+    "Schatten": "Sombras",
+    "Triebwerksspuren": "Rastros dos motores",
+    "Explosionen": "Explosões"
   },
   pl: {
     "Ziele": "Cele",
@@ -13696,6 +13740,17 @@ const LANGS = {
     "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Pole szczątków: osłona (−25 % obrażeń), trudno wykryć, wolniejszy ruch",
     "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Okręty w polu szczątków mają osłonę (−25 % obrażeń) i trudno je wykryć, ale są wolniejsze. Myśliwce z tego nie korzystają.",
     "Lizenzen:": "Licencje:",
-    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada korzysta z three.js (licencja MIT, © 2010–2024 three.js authors), kroju Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) oraz, w aplikacji na Androida, z Capacitor (licencja MIT, © 2017–present Drifty Co.). Statki, stacje, mapy, obrazy, muzyka i dźwięki zostały stworzone specjalnie dla gry. Wszystkie nazwy, frakcje i postacie są fikcyjne."
+    "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada korzysta z three.js (licencja MIT, © 2010–2024 three.js authors), kroju Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) oraz, w aplikacji na Androida, z Capacitor (licencja MIT, © 2017–present Drifty Co.). Statki, stacje, mapy, obrazy, muzyka i dźwięki zostały stworzone specjalnie dla gry. Wszystkie nazwy, frakcje i postacie są fikcyjne.",
+    "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra to za dużo dla tego urządzenia – ustawiono jakość Wysoka. Aby mimo to zachować Ultra: Ustawienia → Jakość przy niskiej liczbie klatek → Zachowaj.",
+    "Voll": "Pełny",
+    "Einfach": "Proste",
+    "Halten": "Zachowaj",
+    "Qualität bei niedriger Bildrate": "Jakość przy niskiej liczbie klatek",
+    "Modelldetail": "Szczegółowość modeli",
+    "Leuchteffekt (Bloom)": "Efekt poświaty (bloom)",
+    "Lichthöfe": "Aureole świetlne",
+    "Schatten": "Cienie",
+    "Triebwerksspuren": "Smugi silników",
+    "Explosionen": "Eksplozje"
   },
 };

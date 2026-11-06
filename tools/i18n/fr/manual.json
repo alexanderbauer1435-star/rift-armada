@@ -806,5 +806,16 @@
  "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Champ de débris : couverture (−25 % de dégâts), difficile à repérer, plus lent",
  "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Les vaisseaux dans un champ de débris sont à couvert (−25 % de dégâts) et difficiles à repérer, mais plus lents. Les chasseurs n'en profitent pas.",
  "Lizenzen:": "Licences :",
- "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utilise three.js (licence MIT, © 2010–2024 three.js authors), la police Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) et, pour l'application Android, Capacitor (licence MIT, © 2017–present Drifty Co.). Vaisseaux, stations, cartes, images, musique et sons ont été créés spécialement pour le jeu. Tous les noms, factions et personnages sont fictifs."
+ "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada utilise three.js (licence MIT, © 2010–2024 three.js authors), la police Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) et, pour l'application Android, Capacitor (licence MIT, © 2017–present Drifty Co.). Vaisseaux, stations, cartes, images, musique et sons ont été créés spécialement pour le jeu. Tous les noms, factions et personnages sont fictifs.",
+ "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra est trop exigeant pour cet appareil – qualité réglée sur Élevée. Pour garder Ultra quand même : Paramètres → Qualité à faible fréquence d'images → Conserver.",
+ "Voll": "Complet",
+ "Einfach": "Simples",
+ "Halten": "Conserver",
+ "Qualität bei niedriger Bildrate": "Qualité à faible fréquence d'images",
+ "Modelldetail": "Détail des modèles",
+ "Leuchteffekt (Bloom)": "Effet de lueur (bloom)",
+ "Lichthöfe": "Halos lumineux",
+ "Schatten": "Ombres",
+ "Triebwerksspuren": "Traînées des réacteurs",
+ "Explosionen": "Explosions"
 }

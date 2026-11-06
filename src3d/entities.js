@@ -16,10 +16,10 @@
    ab 30 % kommen über effects.spawn (falls vorhanden). Das Spiel wird nie beschrieben.
    ===================================================================== */
 import * as THREE from 'three';
-import { BUILD, BUILDB, mats, animate, bake, keepFor, flameTime, applyAim, applyCharge, farGeometry, farMaterial, cloneMat, cloneStation } from './models/kit.js';
+import { BUILD, BUILDB, mats, animate, bake, keepFor, flameTime, applyAim, applyCharge, farGeometry, farMaterial, cloneMat, cloneStation, decimateGeometry } from './models/kit.js';
 import SDATA from './models/stations.json';
 import SHIPJ from './models/ships.json';
-import { S, CAM_DIR } from './scene.js';
+import { S, CAM_DIR, FOV } from './scene.js';
 import { inView, CAM } from './camera.js';
 import { ring, disc, line } from './overlay.js';
 
@@ -194,17 +194,78 @@ function tplOf(def, color) {
   root.updateMatrixWorld(true);
   t = { key, root, parts, def, color, t: -1, farParts: null }; E.tpl.set(key, t); return t;
 }
-/* Fernmodell erst bei Bedarf (aus einem frischen, ungebackenen Aufbau; kleine Teile fallen weg) + die Flammen */
-function farPartsOf(t) {
-  if (!t.farParts) { const farGeo = farGeometry(buildShip(t.def, t.color), Math.max(1.2, t.def.len * 0.03)); t.farParts = [{ node: t.root, geo: farGeo, mat: null, flame: false, shadow: true, order: 0, far: true }].concat(t.parts.filter(p => p.flame)); }
-  return t.farParts;
+/* Fassung 25: Triebwerkslage je Vorlage (Mitte und Spannweite der Flammen im Vorlagenraum) für Lichthof und Band */
+const ENG_COL = { alliance: '#7fd8ff', mars: '#ffb060', legion: '#ffd98a', nexus: '#d9b8ff', brood: '#b4ff3c', guardian: '#b8ffd8' };
+const V3 = new THREE.Vector3();
+function engOf(t) {
+  if (t.eng !== undefined) return t.eng;
+  const fl = t.parts.filter(p => p.flame); if (!fl.length) return (t.eng = null);
+  let x = 0, y = 0, z = 0, n = 0; const pts = [];
+  for (const p of fl) { if (!p.geo.boundingSphere) p.geo.computeBoundingSphere(); V3.copy(p.geo.boundingSphere.center).applyMatrix4(p.node.matrixWorld); pts.push(V3.clone()); x += V3.x; y += V3.y; z += V3.z; n++; }
+  x /= n; y /= n; z /= n; let sp = 0; for (const q of pts) sp = Math.max(sp, Math.hypot(q.x - x, q.z - z));
+  return (t.eng = { x, y, z, sp, n });
 }
-function setOf(tpl, kind, far) {
-  const key = tpl.key + '|' + kind + (far ? '|far' : '');
+const TR_N = 20, TR_DT = 0.06;
+/* Band hinter dem Schiff: Verlauf der Triebwerksmitte, Segmente werden zum Ende schmaler und blasser */
+function ribbonStep(pv, u, def, t, k, c) {
+  const fx = E.fx; let tr = pv.tr;
+  if (!tr) tr = pv.tr = { p: new Float32Array(TR_N * 3), t: new Float32Array(TR_N), n: 0, h: 0, last: -1 };
+  if (t - tr.last >= TR_DT || tr.n === 0) { tr.h = (tr.h + 1) % TR_N; tr.p[tr.h * 3] = V3.x; tr.p[tr.h * 3 + 1] = V3.y; tr.p[tr.h * 3 + 2] = V3.z; tr.t[tr.h] = t; tr.n = Math.min(TR_N, tr.n + 1); tr.last = t; }
+  else { tr.p[tr.h * 3] = V3.x; tr.p[tr.h * 3 + 1] = V3.y; tr.p[tr.h * 3 + 2] = V3.z; }
+  const life = 0.8 + Math.min(0.6, def.len / 250), w0 = Math.max(def.len * 0.09, (pv.tp.eng ? pv.tp.eng.sp : 0) * 1.8 + 3), a0 = 0.5 * Math.min(1, k * 1.3);
+  if (a0 < 0.02) return;
+  let i = tr.h;
+  for (let j = 0; j < tr.n - 1; j++) {
+    const i2 = (i - 1 + TR_N) % TR_N, age = t - tr.t[i2]; if (age > life) break;
+    const f = 1 - age / life;
+    fx.ribbon(tr.p[i * 3], tr.p[i * 3 + 1], tr.p[i * 3 + 2], tr.p[i2 * 3], tr.p[i2 * 3 + 1], tr.p[i2 * 3 + 2], w0 * (0.35 + 0.65 * f), c, a0 * f * f);
+    i = i2;
+  }
+}
+
+/* Fassung 25: drei Detailstufen je Schiffstyp – 0 voll, 1 ≈ 40 %, 2 ≈ 15 % der Dreiecke. Stufe 1 und 2 entstehen bei
+   Bedarf aus einem frischen, ungebackenen Aufbau (farGeometry: kleine Teile fallen weg, eine Geometrie, Farben je
+   Ecke) und werden per Rasterbündelung vereinfacht. Flammen bleiben als eigene Teile erhalten. */
+const LOD_K = [1, 0.4, 0.15];
+function trisOf(geo) { return (geo.index ? geo.index.count : geo.attributes.position.count) / 3; }
+function lodGeo(t, lvl) {
+  if (!t.lodBase) { t.lodBase = farGeometry(buildShip(t.def, t.color), Math.max(1.2, t.def.len * 0.03)); t.fullTris = 0; for (const p of t.parts) if (!p.flame) t.fullTris += trisOf(p.geo); }
+  t.lodGeo = t.lodGeo || [];
+  if (!t.lodGeo[lvl]) { const want = Math.max(lvl === 2 ? 60 : 160, t.fullTris * LOD_K[lvl]); t.lodGeo[lvl] = decimateGeometry(lvl === 2 && t.lodGeo[1] ? t.lodGeo[1] : t.lodBase, want); }
+  return t.lodGeo[lvl];
+}
+function lodPartsOf(t, lvl) {
+  t.lodParts = t.lodParts || [];
+  if (!t.lodParts[lvl]) t.lodParts[lvl] = [{ node: t.root, geo: lodGeo(t, lvl), mat: null, flame: false, shadow: lvl === 2, order: 0, far: true }].concat(t.parts.filter(p => p.flame));
+  return t.lodParts[lvl];
+}
+/* Schattenwerfer der Stufen 0 und 1: die einfachste Stufe, nur für die Schattenkamera (Ebene 1) */
+function shadowPart(t) { return t.shPart || (t.shPart = { node: t.root, geo: lodGeo(t, 2), mat: null, flame: false, shadow: true, order: 0, far: true, shadowOnly: true });
+}
+function setOf(tpl, kind, lvl) {
+  lvl = lvl === true ? 1 : (lvl | 0);
+  const key = tpl.key + '|' + kind + (lvl ? '|l' + lvl : '');
   let s = E.sets.get(key); if (s) return s;
-  s = { tpl, kind, far: !!far, parts: far ? farPartsOf(tpl) : tpl.parts, n: 0, cap: 0, ims: [], last: 0 };
+  s = { tpl, kind, far: lvl > 0, lvl, parts: (lvl ? lodPartsOf(tpl, lvl) : tpl.parts).concat(lvl < 2 ? [shadowPart(tpl)] : []), n: 0, cap: 0, ims: [], last: 0 };
   grow(s, 16); E.sets.set(key, s); return s;
 }
+/* Stufe aus der Größe auf dem Bildschirm (Länge in CSS-Pixeln), mit Rückstellbereich gegen Flackern */
+const LOD_T = { px: 0 };
+function lodPrep() {
+  const g = S.gfx || {}, bias = g.lod === 'lo' ? 2.2 : g.lod === 'mid' ? 1.5 : g.lod === 'max' ? 0.45 : 1;
+  LOD_T.k = S.cssH / (2 * Math.tan(FOV * Math.PI / 360));
+  const m = g.lod === 'full' ? 0 : (S.ultra ? 0.6 : S.detail < 2 ? 1.4 : 1) * bias; LOD_T.t0 = 120 * m; LOD_T.t1 = 46 * m;
+  LOD_T.cam = S.camera.position;
+}
+function lodPick(x, y, z, len, prev) {
+  const c = LOD_T.cam, d = Math.max(1, Math.hypot(c.x - x, c.y - y, c.z - z)), px = len * LOD_T.k / d;
+  const up = prev === undefined ? 1 : 1.12, dn = prev === undefined ? 1 : 0.9;
+  if (prev === 0) return px < LOD_T.t0 * dn ? (px < LOD_T.t1 * dn ? 2 : 1) : 0;
+  if (prev === 2) return px > LOD_T.t1 * up ? (px > LOD_T.t0 * up ? 0 : 1) : 2;
+  if (prev === 1) return px > LOD_T.t0 * up ? 0 : px < LOD_T.t1 * dn ? 2 : 1;
+  return px >= LOD_T.t0 ? 0 : px >= LOD_T.t1 ? 1 : 2;
+}
+export function lodStats() { let n = [0, 0, 0]; for (const s of E.sets.values()) if (s.kind === 'normal') n[s.lvl] += s.last || 0; return n; }
 function grow(s, cap) {
   const old = s.ims, keep = Math.min(s.n, s.cap);
   s.ims = []; s.cap = cap;
@@ -217,7 +278,7 @@ function grow(s, cap) {
     if (p.flame) geo.setAttribute('iFlame', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('iDmg', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('iCut', new THREE.InstancedBufferAttribute(new Float32Array(cap * 4), 4).setUsage(THREE.DynamicDrawUsage));
-    const im = new THREE.InstancedMesh(geo, mat, cap); im.frustumCulled = false; im.castShadow = p.shadow && S.detail >= 2; im.receiveShadow = true; im.renderOrder = p.order; im.count = 0;
+    const im = new THREE.InstancedMesh(geo, mat, cap); im.frustumCulled = false; im.castShadow = !!p.shadowOnly || (p.far && p.shadow); im.receiveShadow = !p.shadowOnly; if (p.shadowOnly) im.layers.set(1); im.renderOrder = p.order; im.count = 0;
     im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, WHITE); im.instanceColor.setUsage(THREE.DynamicDrawUsage);
     /* schon in diesem Frame gesetzte Instanzen übernehmen */
     if (old[j] && keep) { im.instanceMatrix.array.set(old[j].instanceMatrix.array.subarray(0, keep * 16)); if (old[j].instanceColor) im.instanceColor.array.set(old[j].instanceColor.array.subarray(0, keep * 3)); if (p.flame) geo.attributes.iFlame.array.set(old[j].geometry.attributes.iFlame.array.subarray(0, keep)); geo.attributes.iDmg.array.set(old[j].geometry.attributes.iDmg.array.subarray(0, keep)); geo.attributes.iCut.array.set(old[j].geometry.attributes.iCut.array.subarray(0, keep * 4)); }
@@ -246,7 +307,7 @@ function push(s, k, tint, dmg = 0, cut = 0, cx = 0, cz = 0, ca = 0) {
 }
 function finish() {
   for (const s of E.sets.values()) {
-    const n = s.n;
+    const n = s.n; s.last = n;
     for (const im of s.ims) { im.count = n; im.visible = n > 0; if (n) { im.instanceMatrix.needsUpdate = true; if (im.instanceColor) im.instanceColor.needsUpdate = true; const ga = im.geometry.attributes; if (ga.iFlame) ga.iFlame.needsUpdate = true; ga.iDmg.needsUpdate = true; ga.iCut.needsUpdate = true; } }
     s.n = 0;
   }
@@ -281,7 +342,7 @@ function fullStation(e) {
   if (e.m) return e.m;
   const m = buildStation(e.f, e.def, e.lv, e.color, e.spec);
   if (!e.done) { e.bU = toBuild(m, e.color); const bb = new THREE.Box3().setFromObject(m); e.bR = Math.max(8, bb.max.x, -bb.min.x, bb.max.z, -bb.min.z); }
-  m.traverse(o => { if (o.userData.berth && !e.berth) e.berth = o; });
+  m.traverse(o => { if (o.userData.berth && !e.berth) e.berth = o; if (o.isMesh) o.castShadow = false; });
   m.visible = false; E.root.add(m); e.m = m; e.charge = -1; e.aimA = undefined;
   return m;
 }
@@ -291,10 +352,20 @@ function farStation(e) {
   const key = e.f + '|' + e.def.id + (e.spec ? ':' + e.spec : '') + '|' + e.lv + '|' + e.color;
   let geo = FARST.get(key);
   if (!geo) { const fn = (e.spec && BUILDB[e.f + ':' + e.def.id + ':' + e.spec]) || BUILDB[e.f + ':' + e.def.id], M = mats(e.f, e.color); const raw = fn ? fn(M, e.def, e.lv) : new THREE.Group(); geo = farGeometry(raw, Math.max(1.5, e.def.r * 0.03)); FARST.set(key, geo); }
-  const m = new THREE.Mesh(geo, farMaterial('normal')); m.castShadow = S.detail >= 2; m.receiveShadow = true; m.visible = false; E.root.add(m); e.far = m;
+  const m = new THREE.Mesh(geo, farMaterial('normal')); m.castShadow = false; m.receiveShadow = true; m.visible = false; E.root.add(m); e.far = m;
   return m;
 }
-function dropStation(e) { if (e.m) E.root.remove(e.m); if (e.far) E.root.remove(e.far); }
+/* Fassung 25: Schattenwerfer je Station – vereinfachtes Fernmodell auf Ebene 1 (nur die Schattenkamera sieht sie) */
+const SHST = new Map(), SHMAT = new THREE.MeshBasicMaterial({ color: '#000000' });
+function shStation(e) {
+  if (e.sh) return e.sh;
+  const key = e.f + '|' + e.def.id + (e.spec ? ':' + e.spec : '') + '|' + e.lv;
+  let geo = SHST.get(key);
+  if (!geo) { const f = farStation(e).geometry; geo = decimateGeometry(f, Math.max(200, f.attributes.position.count / 3 * 0.3)); SHST.set(key, geo); }
+  const m = new THREE.Mesh(geo, SHMAT); m.layers.set(1); m.castShadow = true; m.receiveShadow = false; m.visible = false; E.root.add(m); e.sh = m;
+  return m;
+}
+function dropStation(e) { if (e.m) E.root.remove(e.m); if (e.far) E.root.remove(e.far); if (e.sh) E.root.remove(e.sh); }
 /* Schiff im Bauplatz der Werft (eigene halbdurchsichtige Materialien je Werft) */
 function berthShip(e, type, def, color) {
   if (e.berthType === type) return;
@@ -322,7 +393,7 @@ export function queuePrebuild(g) {
     if (!p || p.neutral) continue;
     const f = p.faction, col = pcol(p.id); if (seen.has(f + col)) continue; seen.add(f + col);
     const list = typeof SHIPS !== 'undefined' ? Object.values(SHIPS).filter(d => d.f === f) : SHIPJ.ships.filter(d => d.f === f);
-    for (const d of list) if (d.id && BUILD[d.id]) PRE.push(() => { const t = tplOf(d, col); warm(setOf(t, 'normal', false).ims.concat(d.role === 'fighter' ? [] : setOf(t, 'wreck', false).ims)); });
+    for (const d of list) if (d.id && BUILD[d.id]) PRE.push(() => { const t = tplOf(d, col); const ims = []; for (const l of [0, 1, 2]) { ims.push(...setOf(t, 'normal', l).ims); if (d.role !== 'fighter') ims.push(...setOf(t, 'wreck', l).ims); } warm(ims); });   /* Fassung 25: alle drei Detailstufen samt Shadern */
     for (const d of SDATA.bldgs) if (d.f === f && BUILDB[f + ':' + d.id]) PRE.push(() => { const T = stationTpl(f, d, 1, col), G = cloneStation(T); toBuild(G, col); warm([T, G]); });
     LATER.push([f, col]);
   }
@@ -421,7 +492,8 @@ function wallField(b, col, gtime, t) {
 /* ------------------------------------------------------------ je Frame */
 export function updateEntities(g, dt, t, view) {
   const fx = E.fx && typeof E.fx.spawn === 'object' ? E.fx.spawn : null, det = S.detail;
-  const pcol = view.pcol, vis = view.visible, seen = view.vp < 0 ? () => true : view.seen, vp = view.vp, farShips = CAM.zoom < (S.ultra ? 0.5 : FAR_SHIP[S.detail]), farSt = CAM.zoom < (S.ultra ? 0.45 : FAR_STATION[S.detail]);
+  const pcol = view.pcol, vis = view.visible, seen = view.vp < 0 ? () => true : view.seen, vp = view.vp, farSt = CAM.zoom < (S.ultra ? 0.45 : FAR_STATION[S.detail]);
+  lodPrep();
   E.domeN = 0; flameTime(t); DMG_T.value = t; E.now = t;
   /* Vorlagen animieren (einmal je Typ und Farbe) */
   for (const tp of E.tpl.values()) { if (tp.t !== t) { animate(tp.root, t, dt); tp.root.updateMatrixWorld(true); tp.t = t; } }
@@ -433,8 +505,9 @@ export function updateEntities(g, dt, t, view) {
     /* je Schiff gemerkt: Farbe, Vorlage, Instanzmengen (keine Schlüssel-Zeichenketten je Bild), Kurs und Rollen */
     const col = pcol(u.owner);
     let pv = E.prev.get(u.id);
-    if (!pv || pv.col !== col || pv.def !== def) { pv = { ang: u.ang, roll: pv ? pv.roll : 0, col, def, tp: tplOf(def, col), sets: [null, null, null, null], v: u.v, surge: 0, dv: -1 }; E.prev.set(u.id, pv); }
-    const si = (u.derelict ? 1 : 0) + (farShips ? 2 : 0), set = pv.sets[si] || (pv.sets[si] = setOf(pv.tp, u.derelict ? 'wreck' : 'normal', farShips));
+    if (!pv || pv.col !== col || pv.def !== def) { pv = { ang: u.ang, roll: pv ? pv.roll : 0, col, def, tp: tplOf(def, col), sets: [null, null, null, null, null, null], lvl: undefined, v: u.v, surge: 0, dv: -1 }; E.prev.set(u.id, pv); }
+    pv.lvl = lodPick(u.x, 0, u.y, def.len, pv.lvl);
+    const si = (u.derelict ? 1 : 0) + pv.lvl * 2, set = pv.sets[si] || (pv.sets[si] = setOf(pv.tp, u.derelict ? 'wreck' : 'normal', pv.lvl));
     /* Lage: schweben, rollen in Kurven (aus der Kursänderung) */
     const da = dt > 0 ? angDiff(u.ang, pv.ang) / dt : 0; pv.ang = u.ang;
     const rollT = def.role === 'fighter' || def.swarm ? -da * 0.12 : -da * 0.22; pv.roll += (Math.max(-0.4, Math.min(0.4, rollT)) - pv.roll) * Math.min(1, dt * 6);
@@ -470,6 +543,15 @@ export function updateEntities(g, dt, t, view) {
     if (S.ultra && E.fx && E.fx.glowAt) { GL[0] = GL[1] = GL[2] = 0; if (E.fx.glowAt(u.x, u.y, GL)) { COL.r += GL[0]; COL.g += GL[1]; COL.b += GL[2]; } }
     if (u.cloak || (u.abT && u.abT.cloak > 0)) { const f = 0.3 + 0.12 * Math.sin(t * 7 + u.id); COL.multiply(TINT.ion.setRGB(f * 0.8, f * 1.1, f * 1.6)); }
     push(set, k, COL, u.derelict ? 0.55 : pv.dv);
+    /* Fassung 25: Lichthof am Triebwerk und Triebwerksband */
+    if (E.fx && E.fx.engineHalo && k > 0.05) {
+      const en = engOf(pv.tp);
+      if (en) {
+        V3.set(en.x, en.y, en.z).applyMatrix4(M4); const c = E.fx.rgb(ENG_COL[def.f] || '#8fe3ff');
+        if (def.role !== 'fighter' || pv.lvl === 0) E.fx.engineHalo(V3.x, V3.y, V3.z, (def.len * 0.22 + en.sp * 1.5) * (0.55 + 0.45 * Math.min(1.4, k)), c, 0.4 * Math.min(1, k + 0.2));
+        if (def.role !== 'fighter' && !def.swarm && E.fx.trailsOn()) ribbonStep(pv, u, def, t, k, c);
+      }
+    } else if (pv.tr) pv.tr.n = 0;
     if (def.role === 'fighter') continue;
     /* Fassung 24: Schadensstufen auch als Partikel – 1 Funken, 2 Funken + Qualm, 3 Rauchfahne + Brände, 4 Feuer und kleine Explosionen */
     if (fx && det > 0 && stage > 0 && !u.derelict) {
@@ -501,9 +583,9 @@ export function updateEntities(g, dt, t, view) {
     if (w.ruin) { if (seen(w.x, w.y) && inView(w.x, w.y, w.r * 1.4, w.r * 0.6)) { ruinLive.add(w.id); ruinStep(w, g, pcol(w.owner), t); } continue; } /* Fassung 22 */
     if (!seen(w.x, w.y) || !inView(w.x, w.y, 60, 5)) continue;
     const u = g.byId.get(w.id), def = (u && u.def) || (typeof SHIPS !== 'undefined' && SHIPS[w.type]); if (!def) continue;
-    const set = setOf(tplOf(def, pcol(w.owner)), 'wreck', farShips), left = w.until - g.time, kf = Math.max(0.05, Math.min(1, left / 20));
+    const wl = lodPick(w.x, 0, w.y, def.len), set = setOf(tplOf(def, pcol(w.owner)), 'wreck', wl), left = w.until - g.time, kf = Math.max(0.05, Math.min(1, left / 20));
     /* Fassung 24: Kreuzer und Schlachtschiffe brechen in zwei Hälften, die auseinandertreiben und an der Bruchkante glühen */
-    if ((def.cls === 'm' || def.cls === 'l') && !def.swarm && !farShips) {
+    if ((def.cls === 'm' || def.cls === 'l') && !def.swarm && wl === 0) {
       const age = Math.max(0, 120 - left), e = 1 - Math.pow(1 - Math.min(1, age / 4), 2), glowK = Math.max(0, 1 - age / 18);
       for (const side of [1, -1]) {
         const a = w.ang + Math.sin(w.id) * 0.3 + side * e * (0.18 + 0.1 * Math.sin(w.id * 3)), sep = e * Math.max(8, def.len * 0.22) * side;
@@ -529,11 +611,12 @@ export function updateEntities(g, dt, t, view) {
     let e = E.stations.get(b.id);
     if (!e || e.key !== key) { if (e) dropStation(e); e = stationEntry(b, col); E.stations.set(b.id, e); }
     const sh = seen(b.x, b.y) && inView(b.x, b.y, b.def.r * 1.4, b.def.r * 0.6);
-    if (!sh) { if (e.m) e.m.visible = false; if (e.far) e.far.visible = false; continue; }
+    if (!sh) { if (e.m) e.m.visible = false; if (e.far) e.far.visible = false; if (e.sh) e.sh.visible = false; continue; }
     /* fern und fertig: Fernmodell (ein Draw-Call), sonst Vollmodell */
     const useFar = farSt && b.done, m = useFar ? farStation(e) : fullStation(e);
     if (useFar) { if (e.m) e.m.visible = false; } else if (e.far) e.far.visible = false;
     m.visible = true; m.position.set(b.x, 0, b.y);
+    if (S.gfx.shadows && b.done) { const p = shStation(e); p.visible = true; p.position.set(b.x, 0, b.y); } else if (e.sh) e.sh.visible = false;
     const v = vis(b);
     if (useFar) {
       if (b.upg) ring(b.x, b.y, b.def.r + 6, '#ffffff', 2, { dash: 4, a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * (b.upg.prog || 0) });
@@ -599,4 +682,4 @@ export function clearEntities() {
 }
 export function disposeEntities() { clearEntities(); if (E.root) { S.scene.remove(E.root); E.root = null; } }
 export const _E = E;
-export function entityStats() { let sets = 0, inst = 0; for (const s of E.sets.values()) { sets++; inst += s.ims.length; } return { tpl: E.tpl.size, sets, ims: inst, stations: E.stations.size, pre: PRE.length }; }
+export function entityStats() { let sets = 0, inst = 0; for (const s of E.sets.values()) { sets++; inst += s.ims.length; } return { tpl: E.tpl.size, sets, ims: inst, stations: E.stations.size, pre: PRE.length, lod: lodStats() }; }

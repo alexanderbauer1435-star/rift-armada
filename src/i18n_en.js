@@ -2739,5 +2739,16 @@ const EN = {
   "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Debris field: cover (−25 % damage), hard to detect, slower",
   "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Ships inside a debris field have cover (−25 % damage) and are hard to detect, but move slower. Fighters don't benefit.",
   "Lizenzen:": "Licences:",
-  "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada uses three.js (MIT licence, © 2010–2024 three.js authors), the Barlow Condensed typeface (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) and, for the Android app, Capacitor (MIT licence, © 2017–present Drifty Co.). Ships, stations, maps, images, music and sounds were created specifically for the game. All names, factions and characters are fictional."
+  "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada uses three.js (MIT licence, © 2010–2024 three.js authors), the Barlow Condensed typeface (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) and, for the Android app, Capacitor (MIT licence, © 2017–present Drifty Co.). Ships, stations, maps, images, music and sounds were created specifically for the game. All names, factions and characters are fictional.",
+  "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra is too much for this device – quality set to High. To keep Ultra anyway: Settings → Quality at low frame rate → Keep.",
+  "Voll": "Full",
+  "Einfach": "Simple",
+  "Halten": "Keep",
+  "Qualität bei niedriger Bildrate": "Quality at low frame rate",
+  "Modelldetail": "Model detail",
+  "Leuchteffekt (Bloom)": "Glow effect (bloom)",
+  "Lichthöfe": "Light halos",
+  "Schatten": "Shadows",
+  "Triebwerksspuren": "Engine trails",
+  "Explosionen": "Explosions"
 };

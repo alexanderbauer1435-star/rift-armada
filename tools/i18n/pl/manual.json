@@ -806,5 +806,16 @@
  "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Pole szczątków: osłona (−25 % obrażeń), trudno wykryć, wolniejszy ruch",
  "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Okręty w polu szczątków mają osłonę (−25 % obrażeń) i trudno je wykryć, ale są wolniejsze. Myśliwce z tego nie korzystają.",
  "Lizenzen:": "Licencje:",
- "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada korzysta z three.js (licencja MIT, © 2010–2024 three.js authors), kroju Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) oraz, w aplikacji na Androida, z Capacitor (licencja MIT, © 2017–present Drifty Co.). Statki, stacje, mapy, obrazy, muzyka i dźwięki zostały stworzone specjalnie dla gry. Wszystkie nazwy, frakcje i postacie są fikcyjne."
+ "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada korzysta z three.js (licencja MIT, © 2010–2024 three.js authors), kroju Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) oraz, w aplikacji na Androida, z Capacitor (licencja MIT, © 2017–present Drifty Co.). Statki, stacje, mapy, obrazy, muzyka i dźwięki zostały stworzone specjalnie dla gry. Wszystkie nazwy, frakcje i postacie są fikcyjne.",
+ "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra to za dużo dla tego urządzenia – ustawiono jakość Wysoka. Aby mimo to zachować Ultra: Ustawienia → Jakość przy niskiej liczbie klatek → Zachowaj.",
+ "Voll": "Pełny",
+ "Einfach": "Proste",
+ "Halten": "Zachowaj",
+ "Qualität bei niedriger Bildrate": "Jakość przy niskiej liczbie klatek",
+ "Modelldetail": "Szczegółowość modeli",
+ "Leuchteffekt (Bloom)": "Efekt poświaty (bloom)",
+ "Lichthöfe": "Aureole świetlne",
+ "Schatten": "Cienie",
+ "Triebwerksspuren": "Smugi silników",
+ "Explosionen": "Eksplozje"
 }

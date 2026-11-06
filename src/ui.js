@@ -1024,6 +1024,12 @@ function loadPrefs() {
 /* Fassung 23: 3D ist Standard, nur ohne WebGL 2D; ruckelt es im Gefecht, schlägt perfWatch (main.js) 2D vor */
 function gfxGuess() { try { const c = document.createElement('canvas'); if (!(c.getContext('webgl2') || c.getContext('webgl'))) return '2d'; } catch (e) { return '2d'; } return '3d'; }
 function savePrefs() { try { localStorage.setItem('ra.prefs', JSON.stringify({ set: SET, menu: MENU })); } catch (e) { /* Speicher gesperrt */ } }
+/* Fassung 25: erweiterte Grafik-Einstellungen → Renderer. Schatten »Auto« = nur bei Ultra und keiner schwachen Karte. */
+function gfxOpts() {
+  const low = R.mode3d && RA3D.gpu ? !!RA3D.gpu().low : false;
+  return { lod: SET.lod || 'auto', bloom: SET.bloom || 'auto', halos: SET.halos !== false, trails: SET.trails !== false, booms: SET.booms !== false, hold: !!SET.hold,
+    shadows: SET.shadows === 'on' || (SET.shadows !== 'off' && SET.qual === 'ultra' && !low) };
+}
 function applySet() {
   SND.setVol(SET.vol / 100); MUS.setVol(SET.mus / 100);
   document.documentElement.style.setProperty('--ui', (15 * SET.scale) + 'px');
@@ -1031,6 +1037,7 @@ function applySet() {
   R.qScale = SET.qual === 'low' ? 0.6 : 1; R.detail = SET.qual === 'low' ? 1 : SET.qual === 'ultra' ? 3 : 2;   /* Fassung 24: Ultra = Stufe 3 (nur 3D) */
   const fb = document.getElementById('fpsBox'); if (fb) fb.hidden = !SET.fps;
   if (R.cv) { const got = R.setMode(SET.gfx || '3d'); if (got !== (SET.gfx || '3d') && SET.gfx === '3d') SET.gfx3dFailed = true; if (R.mode3d) RA3D.setDetail(R.detail); R.resize(); }
+  if (R.cv && R.mode3d && RA3D.setGfx) RA3D.setGfx(gfxOpts());   /* Fassung 25: erweiterte Grafik */
   if (typeof layout === 'function') layout();
 }
 function segInit(id, opts, get, set) {
@@ -1049,6 +1056,15 @@ function initSettings() {
     segInit('sVoice', [[true, 'An'], [false, 'Aus']], () => SET.voice !== false, v => { SET.voice = v; savePrefs(); if (v) VOX.test(); else VOX.stop(); });   /* Runde 18 */
     segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; SET.gfxUser = true; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
     segInit('sQual', [['ultra', 'Ultra', L('starke Geräte')], ['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); if (v === 'ultra') { const gi = R.mode3d && RA3D.gpu ? RA3D.gpu() : null; toast(gi && gi.low ? L('Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.') : L('Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.'), gi && gi.low ? 'bad' : ''); } });
+    /* Fassung 25: erweiterte Grafik */
+    const gs = (id, opts, key, def) => segInit(id, opts, () => SET[key] === undefined ? def : SET[key], v => { SET[key] = v; applySet(); savePrefs(); });
+    gs('sLod', [['full', 'Voll'], ['auto', 'Auto'], ['lo', 'Sparsam']], 'lod', 'auto');
+    gs('sBloom', [['auto', 'Auto'], ['on', 'An'], ['off', 'Aus']], 'bloom', 'auto');
+    gs('sHalo', [[true, 'An'], [false, 'Aus']], 'halos', true);
+    gs('sShadow', [['auto', 'Auto'], ['on', 'An'], ['off', 'Aus']], 'shadows', 'auto');
+    gs('sTrail', [[true, 'An'], [false, 'Aus']], 'trails', true);
+    gs('sBoom', [[true, 'Groß'], [false, 'Einfach']], 'booms', true);
+    gs('sHold', [[false, 'Automatisch'], [true, 'Halten']], 'hold', false);
     segInit('sFps', [[false, 'Aus'], [true, 'An']], () => !!SET.fps, v => { SET.fps = v; applySet(); savePrefs(); });   /* Fassung 24: Bildratenanzeige */
     segInit('sHints', [[false, 'Aus'], [true, 'An'], ['again', 'Neu zeigen']], () => SET.hints !== false, v => { if (v === 'again') { SET.seenTips = {}; SET.hints = true; toast(L('Hinweise werden wieder gezeigt')); } else SET.hints = v; savePrefs(); });
     segInit('sPwr', [['auto', 'Flüssig'], ['save', 'Akku sparen']], () => SET.pwr, v => { SET.pwr = v; savePrefs(); });

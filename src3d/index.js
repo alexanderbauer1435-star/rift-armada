@@ -15,7 +15,7 @@ import './models/factions/alliance.js'; import './models/factions/mars.js'; impo
 import './models/stations/alliance.js'; import './models/stations/mars.js'; import './models/stations/legion.js'; import './models/stations/nexus.js'; import './models/stations/brood.js'; import './models/stations/seal.js'; import './models/stations/extra22.js';
 import './models/world/nature.js'; import './models/world/sites.js';
 import { mats, BUILD, BUILDB, BUILDW, bake, drawCount, farGeometry, keepFor, setFine } from './models/kit.js';
-import { S, supported, initScene, resize, setDetail, render, disposeScene, adapt, sceneChanged, setQuality, quality } from './scene.js';
+import { S, Q, supported, initScene, resize, setDetail, render, disposeScene, adapt, sceneChanged, setQuality, quality, gfxApply } from './scene.js';
 import { CAM, setCam, updateCamera, project, unproject, shake } from './camera.js';
 import { buildWorld, updateWorld, disposeWorld } from './world.js';
 import { initEntities, updateEntities, clearEntities, disposeEntities, ghost, hideGhost, setEffects, shipEvent, entityStats, _E, queuePrebuild, prebuild, warm, pending, warmWait } from './entities.js';
@@ -43,6 +43,7 @@ const RA3D = {
     FX.ok = typeof effects.frame === 'function';
     if (FX.ok && typeof effects.init === 'function') { try { effects.init(S.scene, THREE, mats, S.detail); } catch (e) { console.warn('RA3D: effects.init', e); FX.ok = false; } }
     setEffects(FX.ok ? effects : null);
+    if (FX.ok && effects.setGfx) effects.setGfx(S.gfx); gfxApply();
     return true;
   },
   /* dpr = Geräte-Pixelverhältnis (window.devicePixelRatio, ungekürzt); die Render-Skalierung regelt der Renderer */
@@ -108,6 +109,7 @@ const RA3D = {
     updateCamera(dt);
     updateWorld(g, dt, time, view); t1 = now(); P.world = t1 - t0; t0 = t1;
     updateEntities(g, dt, time, view); t1 = now(); P.entities = t1 - t0; t0 = t1;
+    if (FX.ok && effects.state) effects.state({ bloom: Q.bloom });
     if (FX.ok) { try { effects.frame(g, dt, time, view, S.camera); FX.err = 0; } catch (err) { console.warn('RA3D: effects.frame', err); if (++FX.err > 3) FX.ok = false; } }
     t1 = now(); P.effects = t1 - t0; t0 = t1;
     flushOverlay(); updateFog(view); t1 = now(); P.overlayFog = t1 - t0; t0 = t1;
@@ -117,8 +119,10 @@ const RA3D = {
   dispose() { disposeFog(); disposeWorld(); disposeEntities(); if (FX.ok && typeof effects.clear === 'function') effects.clear(); disposeScene(); },
   /* Messwerte und Zugriff für Tests (nicht Teil der Spec) */
   prof: PROF,
+  setGfx(o) { Object.assign(S.gfx, o || {}); gfxApply(); if (FX.ok && typeof effects.setGfx === 'function') effects.setGfx(S.gfx); },
+  gfx() { return Object.assign({}, S.gfx); },
   stats() { return Object.assign({ calls: S.info.calls, tris: S.info.tris, detail: S.detail, dist: CAM.dist }, entityStats()); },
-  _: { S, CAM, THREE, BUILD, BUILDB, BUILDW, mats, bake, drawCount, effects, E: _E, farGeometry, keepFor }
+  _: { S, CAM, THREE, BUILD, BUILDB, BUILDW, mats, bake, drawCount, effects, E: _E, farGeometry, keepFor, sets: () => _E.sets }
 };
 window.RA3D = RA3D;
 export default RA3D;

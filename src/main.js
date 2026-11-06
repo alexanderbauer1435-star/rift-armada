@@ -183,7 +183,7 @@ function fpsMeter(t) {
   if (!_gpuWarn && R.mode3d && RA3D.gpu && UI.g && !UI.attract) { _gpuWarn = true; const gi = _gpu || RA3D.gpu(); if (gi && gi.soft) toast(L('Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.'), 'bad', 9000); }
   /* Ultra: fünf Sekunden in Folge unter 40 Bildern im laufenden Spiel → zurück auf Hoch (Ultra soll nur flüssig laufen) */
   const live = UI.g && !UI.g.over && !UI.paused && !UI.attract && SET.pwr !== 'save';
-  if (SET.qual === 'ultra' && live && !window.__RA_TEST) { _ultraLow = fps < 40 ? _ultraLow + 1 : 0; if (_ultraLow >= 5) { _ultraLow = 0; SET.qual = 'auto'; applySet(); savePrefs(); toast(L('Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt.')); } } else _ultraLow = 0;
+  if (SET.qual === 'ultra' && live && !window.__RA_TEST && !SET.hold) { _ultraLow = fps < 40 ? _ultraLow + 1 : 0; if (_ultraLow >= 5) { _ultraLow = 0; SET.qual = 'auto'; applySet(); savePrefs(); toast(L('Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.'), '', 6000); } } else _ultraLow = 0;
 }
 function frame(t) {
   requestAnimationFrame(frame);

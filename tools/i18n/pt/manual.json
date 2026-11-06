@@ -806,5 +806,16 @@
  "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo de destroços: cobertura (−25 % de dano), difícil de detectar, mais lento",
  "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Naves dentro de um campo de destroços têm cobertura (−25 % de dano) e são difíceis de detectar, mas ficam mais lentas. Caças não se beneficiam.",
  "Lizenzen:": "Licenças:",
- "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada usa three.js (licença MIT, © 2010–2024 three.js authors), a fonte Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, no app Android, Capacitor (licença MIT, © 2017–present Drifty Co.). Naves, estações, mapas, imagens, música e sons foram criados especialmente para o jogo. Todos os nomes, facções e personagens são fictícios."
+ "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada usa three.js (licença MIT, © 2010–2024 three.js authors), a fonte Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, no app Android, Capacitor (licença MIT, © 2017–present Drifty Co.). Naves, estações, mapas, imagens, música e sons foram criados especialmente para o jogo. Todos os nomes, facções e personagens são fictícios.",
+ "Ultra ist für dieses Gerät zu viel – Qualität auf Hoch gestellt. Wer Ultra trotzdem will: Einstellungen → Qualität bei niedriger Bildrate → Halten.": "Ultra é demais para este aparelho – qualidade ajustada para Alta. Para manter Ultra mesmo assim: Configurações → Qualidade com taxa de quadros baixa → Manter.",
+ "Voll": "Completo",
+ "Einfach": "Simples",
+ "Halten": "Manter",
+ "Qualität bei niedriger Bildrate": "Qualidade com taxa de quadros baixa",
+ "Modelldetail": "Detalhe dos modelos",
+ "Leuchteffekt (Bloom)": "Efeito de brilho (bloom)",
+ "Lichthöfe": "Halos de luz",
+ "Schatten": "Sombras",
+ "Triebwerksspuren": "Rastros dos motores",
+ "Explosionen": "Explosões"
 }

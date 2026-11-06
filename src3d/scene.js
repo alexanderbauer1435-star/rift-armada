@@ -41,7 +41,8 @@ export const CAM_DIR = new THREE.Vector3(0, Math.sin(TILT), Math.cos(TILT));
 export const S = {
   renderer: null, scene: null, camera: null, composer: null, bloom: null, canvas: null,
   detail: 1, ultra: false, want: 1, cssW: 2, cssH: 2, dpr: 1, time: 0, g: null, vp: -1, view: null,
-  key: null, rim: null, fill: null, hemi: null, pmrem: null, ok: false, info: { calls: 0, tris: 0 }
+  key: null, rim: null, fill: null, hemi: null, pmrem: null, ok: false, info: { calls: 0, tris: 0 },
+  gfx: { lod: "auto", halos: true, shadows: false, bloom: "auto", trails: true, hold: false }
 };
 /* Regelung: dev = Geräte-DPR, scale = aktuelle Skalierung, level = Stufe in steps, bloom = Bloom an */
 const MP_MAX = 2.2e6, S_MIN = 0.5, STEP = 1.15, SLOW = 20.5, FAST = 17.8, HOLD = 2000, SETTLE = 1000;
@@ -125,7 +126,9 @@ function limits() {
   max = Math.max(smin, max);
   const steps = []; for (let s = max; s > smin * 1.001; s /= STEP) steps.unshift(+s.toFixed(3)); steps.unshift(smin);
   if (steps.length > 1 && steps[1] - steps[0] < 0.04) steps.splice(1, 1);
-  Q.max = max; Q.steps = steps; Q.top = steps.length - 1 + (S.detail >= 2 && !S.low ? 1 : 0);
+  /* Fassung 25: Leuchteffekt (Bloom) nach Einstellung: auto = nur Detail 2 und keine schwache Karte, an = immer, aus = nie */
+  const bl = S.gfx.bloom === 'on' ? true : S.gfx.bloom === 'off' ? false : S.detail >= 2 && !S.low;
+  Q.max = max; Q.steps = steps; Q.top = steps.length - 1 + (bl ? 1 : 0);
   Q.start = S.low ? max : S.ultra ? max : Math.min(max, 1.75);
 }
 function levelOf(scale) { let best = 0; for (let i = 0; i < Q.steps.length; i++) if (Q.steps[i] <= scale + 1e-3) best = i; return best; }
@@ -167,7 +170,7 @@ export function resize(cssW, cssH, dev) {
   if (dev) Q.dev = Math.max(0.5, Math.min(4, dev));
   limits();
   if (!S.ok) return;
-  if (!Q.init) { Q.init = true; apply(S.ultra && !S.low ? Q.top : levelOf(Q.start)); return; }
+  if (!Q.init) { Q.init = true; apply((S.ultra && !S.low) || S.gfx.hold ? Q.top : levelOf(Q.start)); return; }
   const want = Q.bloomWant ? Q.top : levelOf(Math.min(Q.scale, Q.max));
   Q.scale = -1; apply(Math.min(want, Q.top));
 }
@@ -178,14 +181,14 @@ export function setDetail(d) {
   if (!S.ok) return;
   limits();
   if (!Q.init) return;
-  const want = S.ultra || Q.bloomWant ? Q.top : levelOf(Math.min(Q.scale, Q.max)); if (S.ultra !== was) Q.block = {};
+  const want = S.ultra || Q.bloomWant || S.gfx.hold ? Q.top : levelOf(Math.min(Q.scale, Q.max)); if (S.ultra !== was) Q.block = {};
   Q.scale = -1; apply(Math.min(want, Q.top));
 }
 
 /* Regelung je Bild: Abstand der Aufrufe messen, höchstens alle 2 s eine Stufe ändern */
 export function adapt(now) {
   const dt = now - Q.last; Q.last = now;
-  if (!Q.auto || !(dt > 0) || dt > 250) return;
+  if (!Q.auto || S.gfx.hold || !(dt > 0) || dt > 250) return;
   if (now - Q.changed < SETTLE) return;
   Q.ema = Q.n ? Q.ema * 0.9 + dt * 0.1 : dt; Q.n++;
   if (Q.n < 30 || now - Q.changed < HOLD) return;
@@ -196,6 +199,29 @@ export function adapt(now) {
     const from = Q.level; Q.block[from] = now + (Q.blockT[from] = Math.min(160000, (Q.blockT[from] || 10000) * 2));
     Q.down = { from, ema: Q.ema }; apply(from - 1, now);
   } else if (Q.ema < FAST && Q.level < Q.top && !(Q.block[Q.level + 1] > now)) apply(Q.level + 1, now);
+}
+/* Fassung 25: Schatten (Einstellung). Nur das Hauptlicht wirft Schatten; Werfer sind vereinfachte Modelle auf Ebene 1
+   (Schiffe: einfachste Detailstufe, Stationen: vereinfachtes Fernmodell) und Felsen. Die Schattenkamera folgt dem
+   Blick (camera.js). Umschalten übersetzt die Materialien neu (einmaliger Ruck). */
+export function setShadows(on) {
+  on = !!on && S.ok; const r = S.renderer; if (!r) return;
+  if (r.shadowMap.enabled === on && S.key.castShadow === on) return;
+  r.shadowMap.enabled = on; r.shadowMap.type = THREE.PCFSoftShadowMap; r.shadowMap.needsUpdate = true;
+  const L = S.key; L.castShadow = on;
+  if (on) {
+    const sz = S.ultra ? 2048 : 1536; L.shadow.mapSize.set(sz, sz); if (L.shadow.map) { L.shadow.map.dispose(); L.shadow.map = null; }
+    L.shadow.bias = -0.0006; L.shadow.normalBias = 1.2; L.shadow.radius = 3;
+    L.shadow.camera.layers.enable(1); L.shadow.camera.near = 10; L.shadow.camera.far = 4200;
+  }
+  S.scene.traverse(o => { if (o.material) { const ms = Array.isArray(o.material) ? o.material : [o.material]; for (const m of ms) m.needsUpdate = true; } });
+}
+/* Fassung 25: Grafik-Einstellungen neu anwenden (Leuchten, Halten, Schatten) */
+export function gfxApply() {
+  if (!S.ok) return;
+  limits(); setShadows(S.gfx.shadows);
+  if (!Q.init) return;
+  const want = S.gfx.hold || S.ultra ? Q.top : Math.min(Q.level, Q.top);
+  Q.scale = -1; Q.block = {}; apply(want);
 }
 /* Test- und Einstellhaken: auto an/aus, feste Skalierung, Bloom */
 export function setQuality(o) {
