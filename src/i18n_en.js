@@ -810,7 +810,7 @@ const EN = {
   "Flaggschiff der Brood. Das älteste Wesen im Kessel: wächst mit jedem Abschuss, ruft den Schwarm, verschlingt Schiffe, legt Sporen.": "Brood flagship. The oldest creature in the Caldera: grows with every kill, calls the swarm, devours ships, lays spores.",
   "Broodmother": "Broodmother",
   "Hive Mind. Gebiert alle 45 Sekunden einen Schwarm an Ort und Stelle.": "Hive Mind. Spawns a swarm on the spot every 45 seconds.",
-  "Plaguebearer": "Plaguebearer",
+  "Blightcarrier": "Blightcarrier",
   "Plague. Zwei Parasitenwerfer; platzt beim Tod in eine Säurewolke.": "Plague. Two parasite launchers; bursts into an acid cloud on death.",
   "Behemoth": "Behemoth",
   "Titan. Gepanzerter Rammkoloss mit drei Mäulern, sprintet aufs Ziel zu.": "Titan. Armoured ramming colossus with three maws, sprints at its target.",
@@ -1042,7 +1042,7 @@ const EN = {
   "Lange Gefechte, Parasiten auf Großschiffe": "Long battles, parasites on capital ships",
   "Säure +50 % Schaden": "Acid +50% damage",
   "Parasiten schlüpfen in 7 statt 12 s": "Parasites hatch in 7 s instead of 12",
-  "Schiff Plaguebearer: zwei Parasitenwerfer": "Ship: Plaguebearer, two parasite launchers",
+  "Schiff Blightcarrier: zwei Parasitenwerfer": "Ship: Blightcarrier, two parasite launchers",
   "Flaggschiff: Seuche": "Flagship: Plague",
   "Titan": "Titan",
   "Größer als alles": "Bigger than anything",
@@ -2549,7 +2549,7 @@ const EN = {
   "Sturmlandeschiff. Rammt den Rumpf auf und setzt 70 Marines ab, auf Schiffe und Stationen. Ohne Doktrin.": "Assault lander. Rams the hull open and deploys 70 marines onto ships and stations. No doctrine needed.",
   "Templar": "Templar",
   "Templer-Fähre mit 70 Ordensrittern. Entert angeschlagene Schiffe und Stationen. Kein Heldenschiff.": "Templar ferry with 70 knights of the order. Boards damaged ships and stations. Not a hero ship.",
-  "Assimilator": "Assimilator",
+  "Absorber": "Absorber",
   "Schickt 70 Konverterdrohnen in Schiffe und Stationen. Ist die Crew überwältigt, wird das Ziel Teil des Netzes.": "Sends 70 converter drones into ships and stations. Once the crew is overwhelmed, the target becomes part of the network.",
   "Parasite Pod": "Parasite Pod",
   "Parasitenkapsel. Bohrt sich in Schiffe und Stationen und lässt 70 Parasiten los. Ist die Crew gefressen, gehört das Ziel der Brut.": "Parasite pod. Burrows into ships and stations and releases 70 parasites. Once the crew is devoured, the target belongs to the brood.",
@@ -2737,5 +2737,7 @@ const EN = {
   "Hinweise werden wieder gezeigt": "Tips will be shown again",
   "OK": "OK",
   "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Debris field: cover (−25 % damage), hard to detect, slower",
-  "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Ships inside a debris field have cover (−25 % damage) and are hard to detect, but move slower. Fighters don't benefit."
+  "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Ships inside a debris field have cover (−25 % damage) and are hard to detect, but move slower. Fighters don't benefit.",
+  "Lizenzen:": "Licences:",
+  "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada uses three.js (MIT licence, © 2010–2024 three.js authors), the Barlow Condensed typeface (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) and, for the Android app, Capacitor (MIT licence, © 2017–present Drifty Co.). Ships, stations, maps, images, music and sounds were created specifically for the game. All names, factions and characters are fictional."
 };

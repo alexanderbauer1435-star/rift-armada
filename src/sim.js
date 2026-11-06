@@ -961,7 +961,7 @@ function kill(g, t, src, owner) {
     /* Heldenschiffe der Legion fallen nicht: sie ruhen als Wrack und lassen sich wieder erwecken */
     if (t.def.hero && !t.derelict) { makeDerelict(g, t); t.hull = t.hullMax * 0.1; t.dormant = 1; ev(g, 'dormant', { x: t.x, y: t.y, owner: t.owner, id: t.id, name: t.def.name, hero: t.hero }); return; }
     removeShip(g, t);
-    /* Plaguebearer platzt in eine Säurewolke */
+    /* Blightcarrier platzt in eine Säurewolke */
     if (t.def.burst) { nearShips(g, t.x, t.y, 130, e => { if (!e.dead && foes(g, t.owner, e.owner)) { damage(g, e, 120, 'acid', null, t.owner, t.x, t.y); acidOn(g, e, 90, t.owner); } return false; }); ev(g, 'burst', { x: t.x, y: t.y, r: 130, owner: t.owner }); }
     /* Matriarch wächst mit jedem Abschuss */
     if (src && !src.dead && src.k === 1 && src.def.grow && t.def.role !== 'fighter' && owner !== t.owner) { const cap = src.def.hull * g.players[src.owner].tfx.hull * 2; if (src.hullMax < cap) { const add = src.def.hull * 0.05; src.hullMax = Math.min(cap, src.hullMax + add); src.hull = Math.min(src.hullMax, src.hull + add); src.hmul = src.hullMax / (src.def.hull * g.players[src.owner].tfx.hull * (1 + 0.1 * src.rank) * (src.rfH || 1)); } }

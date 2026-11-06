@@ -614,7 +614,7 @@
  "Sturmlandeschiff. Rammt den Rumpf auf und setzt 70 Marines ab, auf Schiffe und Stationen. Ohne Doktrin.": "Módulo de assalto. Abre o casco no aríete e desembarca 70 fuzileiros em naves e estações. Não precisa de doutrina.",
  "Templar": "Templar",
  "Templer-Fähre mit 70 Ordensrittern. Entert angeschlagene Schiffe und Stationen. Kein Heldenschiff.": "Balsa templária com 70 cavaleiros da ordem. Aborda naves e estações danificadas. Não é nave-herói.",
- "Assimilator": "Assimilator",
+ "Absorber": "Absorber",
  "Schickt 70 Konverterdrohnen in Schiffe und Stationen. Ist die Crew überwältigt, wird das Ziel Teil des Netzes.": "Envia 70 drones conversores para dentro de naves e estações. Quando a tripulação é dominada, o alvo passa a fazer parte da rede.",
  "Parasite Pod": "Parasite Pod",
  "Parasitenkapsel. Bohrt sich in Schiffe und Stationen und lässt 70 Parasiten los. Ist die Crew gefressen, gehört das Ziel der Brut.": "Cápsula parasita. Perfura naves e estações e libera 70 parasitas. Quando a tripulação é devorada, o alvo pertence à cria.",
@@ -804,5 +804,7 @@
  "Hinweise werden wieder gezeigt": "As dicas serão mostradas novamente",
  "OK": "OK",
  "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo de destroços: cobertura (−25 % de dano), difícil de detectar, mais lento",
- "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Naves dentro de um campo de destroços têm cobertura (−25 % de dano) e são difíceis de detectar, mas ficam mais lentas. Caças não se beneficiam."
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Naves dentro de um campo de destroços têm cobertura (−25 % de dano) e são difíceis de detectar, mas ficam mais lentas. Caças não se beneficiam.",
+ "Lizenzen:": "Licenças:",
+ "Rift Armada verwendet three.js (MIT-Lizenz, © 2010–2024 three.js authors), die Schrift Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) und für die Android-App Capacitor (MIT-Lizenz, © 2017–present Drifty Co.). Schiffe, Stationen, Karten, Bilder, Musik und Klänge sind eigens für das Spiel erzeugt. Alle Namen, Fraktionen und Figuren sind frei erfunden.": "Rift Armada usa three.js (licença MIT, © 2010–2024 three.js authors), a fonte Barlow Condensed (SIL Open Font License 1.1, © 2017 The Barlow Project Authors) e, no app Android, Capacitor (licença MIT, © 2017–present Drifty Co.). Naves, estações, mapas, imagens, música e sons foram criados especialmente para o jogo. Todos os nomes, facções e personagens são fictícios."
 }
