@@ -1,7 +1,11 @@
 /* =====================================================================
-   MARTIAN REPUBLIC – Stationen. Formensprache: Mars baut in Asteroiden. Unter jeder Station liegt ein Felsbrocken
-   (verschobene Ikosphäre mit Kratern, rotbraun-grau), oben plan gefräst; der Rand der Fräsfläche bleibt als
-   zackiger Felskragen stehen, die Station sitzt also im Fels wie in einer Mulde. Darauf und hinein gebaut:
+   MARTIAN REPUBLIC – Stationen. Formensprache: Mars baut in Asteroiden. Felsbrocken (verschobene Ikosphäre mit
+   Kratern, rotbraun-grau), oben plan gefräst; der Rand der Fräsfläche bleibt als zackiger Felskragen stehen, die
+   Station sitzt also im Fels wie in einer Mulde. Damit eine Basis nicht eintönig wirkt, hat jede Rolle ihren eigenen
+   Grundriss: großer runder Fels (Basis, Massetreiber), gespaltener Fels (Werft), länglicher Erzbrocken (Raffinerie),
+   Stahlbühne auf Streben über kleinem Fels (Reaktor), kleiner Fels mit Auslegerplattformen (Labor), Felsnadel
+   (Geschütz, Relais), freischwebende Plattform mit eingefangenem Brocken (Flak), Felsriegel (Sperrwall), drei
+   Brocken unter einem Dreieckdeck (Radar). Darauf und hinein gebaut:
    verschraubte Stahlmodule mit kleinen Fasen (wie die Schiffsrümpfe), Achteck-Bauten mit schrägen Wänden
    (Brutalismus), offenes Fachwerk, Rohrleitungen, Kühlrippen mit Restglut, Warnstreifen, rostrote Akzente,
    Bohrtürme und Förderanlagen, Scheinwerfer und warme, orangefarbene Fensterbänder. Teamfarbe (M.trim) als
@@ -42,6 +46,7 @@ function sm(M) {
     coilDim: basic('#8cc4ff', 1.05),
     coilHot: basic('#e4f2ff', 2.1),
     ice: xm(M).ice,
+    field: basic('#ffb070', 1.8),   /* Sperrfeld-Emitter (Farbe des Feldes aus entities.js) */
     cable: new THREE.MeshStandardMaterial({ color: '#1c1a18', metalness: 0.3, roughness: 0.8 })
   };
   SC.set(M, S); return S;
@@ -123,6 +128,8 @@ function rockGeo(o) {
 function rock(o) { return mesh(rockGeo(o), rockMat()); }
 /* kleiner Felsbrocken (liegt auf oder steckt im Fels) */
 function boulder(s, seed, sy = 0.7) { return rock({ rx: s, ry: s * sy, rz: s * (0.8 + (seed % 5) * 0.08), seed, det: 3, craters: 1, amp: 0.35 }); }
+/* mittlerer Felsbrocken mit Kratern (Anker für Streben, Trümmer neben einer Station) */
+function chunk(s, seed, sy = 0.75) { return rock({ rx: s, ry: s * sy, rz: s * (0.82 + (seed % 4) * 0.07), seed, det: 4, craters: 2, amp: 0.32 }); }
 
 /* ------------------------------------------------------------ Zusammenbacken
    wie bake der Schiffe, aber mit den Kennzeichen der Stationen als Grenzen (aim, charge, chargeAt, berth, dock)
@@ -542,7 +549,9 @@ regB('yard', (M, d, lv) => {
    Stufe III: drei Andockplätze, Schmelze mit glühendem Kern und umlaufendem Förderring (verarbeitet mit Aufschlag). */
 regB('refinery', (M, d, lv) => {
   const g = new THREE.Group(), X = xm(M), S = sm(M);
-  g.add(rock({ rx: 36, ry: 22, rz: 35, cy: -11, top: 0, rim: 2.6, rimIn: 0.64, rimOut: 0.84, seed: 31, det: 13, craters: 8 }));
+  /* länglicher, zerklüfteter Erzbrocken (quer zu den Piers), seitlich angelagerte Trümmer */
+  g.add(rock({ rx: 37, ry: 21, rz: 29, cy: -10.5, top: 0, rim: 3.2, rimIn: 0.62, rimOut: 0.86, seed: 33, det: 13, craters: 9, amp: 0.26 }));
+  for (const [x, y, z, s, sd] of [[-6, -3.5, 27, 6.5, 501], [10, -4, -27.5, 5.5, 502], [-27, -2.5, -15, 4.5, 503]]) { const c = chunk(s, sd); c.position.set(x, y, z); g.add(c); }
   const docks = lv === 1 ? [HP] : lv === 2 ? [HP, -HP] : [HP, HP + TAU / 3, HP - TAU / 3];
   /* Deck um den Prozessturm */
   g.add(prism([[0.01, -0.4], [12.5, -0.4], [12.5, 0.8], [0.01, 0.8]], S.deck, 8));
@@ -598,8 +607,19 @@ regB('refinery', (M, d, lv) => {
    Kühlarme, Kühlmitteltanks. Stufe III: 16 Spulen, sechs lange Kühlarme, drei kreisende Feldbögen über dem Ring. */
 regB('reactor', (M, d, lv) => {
   const g = new THREE.Group(), X = xm(M), S = sm(M);
-  g.add(rock({ rx: 27, ry: 17.5, rz: 26, cy: -8.8, top: 0, rim: 2.4, rimIn: 0.66, rimOut: 0.86, seed: 41, det: 12, craters: 7 }));
   const Rt = lv === 1 ? 8.0 : lv === 2 ? 9.2 : 10.2, nC = lv === 1 ? 8 : lv === 2 ? 12 : 16, y0 = 2.0, y1 = 5.4, ri = Rt - 2.4, ro = Rt + 2.4;
+  /* Kein Felsbett: der Tokamak steht auf einer achteckigen Stahlbühne (Gitterrost, Radialträger), die auf Streben
+     über einem kleinen Asteroiden schwebt – der Fels dient nur als Anker und Wärmesenke. */
+  { const RO = 25;
+    g.add(ring(ro + 2.6, RO, -0.9, 0.15, M.hull2, 8));
+    g.add(ring(RO - 0.5, RO + 0.2, -0.7, 0.45, X.hazard, 8, 0.4));
+    for (let k = 0; k < 8; k++) { const a = k * PI / 4; g.add(at(bar(0.9, 0.45, RO - ro - 2.8, M.dark), ...pol(a, (RO + ro + 2.6) / 2, 0.35)).rotateY(a)); }
+    for (let k = 0; k < 8; k++) { const a = k * PI / 4 + PI / 8; g.add(at(sl(5.2, 0.25, 4.4, k % 2 ? S.deck : M.hull, 0.08), ...pol(a, RO - 4.2, 0.25)).rotateY(a)); }
+    g.add(prism([[ro + 2.8, -0.9], [ro + 1, -3.4], [6, -6.5], [0.01, -6.5]], M.dark, 8));
+    g.add(rock({ rx: 15, ry: 11, rz: 13.5, cy: -16.5, top: -9, rim: 1.6, rimIn: 0.6, rimOut: 0.9, seed: 41, det: 9, craters: 5, amp: 0.28 }));
+    for (let k = 0; k < 8; k++) { const a = k * PI / 4 + PI / 8; anchor(g, M, pol(a, RO - 2, -0.9), pol(a, 10.5, -9.2), 0.75); }
+    for (let k = 0; k < 4; k++) { const a = k * HP; g.add(beam(pol(a, ro + 2, -3), pol(a + PI / 4, RO - 3, -0.9), 0.4, M.dark)); g.add(beam(pol(a, ro + 2, -3), pol(a - PI / 4, RO - 3, -0.9), 0.4, M.dark)); }
+  }
   g.add(prism([[0.01, -0.3], [ro + 3, -0.3], [ro + 3, 1.2], [ro + 2.2, y0], [0.01, y0]], S.deck, 16));
   g.add(ring(ro + 2.7, ro + 3.15, 0.1, 1.0, X.hazard, 16, 0.3));
   /* Ringkanal: Außen- und Innenwand, Boden */
@@ -647,7 +667,20 @@ regB('reactor', (M, d, lv) => {
    Teamlichtern), dritter Mast, Sensorkugel mit Teamband. */
 regB('lab', (M, d, lv) => {
   const g = new THREE.Group(), X = xm(M), S = sm(M), a0 = PI * 0.75;
-  g.add(rock({ rx: 30.5, ry: 19, rz: 29.5, cy: -9.5, top: 0, rim: 2.8, rimIn: 0.68, rimOut: 0.88, seed: 53, det: 12, craters: 8 }));
+  /* kleiner, hoher Fels; Schüsseln, Masten und Bohranlage stehen draußen auf Auslegerplattformen, die mit Laufstegen
+     an das Deck und mit Streben an die Felsflanke angeschlossen sind (Spinnen-Grundriss statt runder Scheibe) */
+  g.add(rock({ rx: 18.5, ry: 15, rz: 18, cy: -8.5, top: 0, rim: 2.4, rimIn: 0.7, rimOut: 0.92, seed: 53, det: 11, craters: 7, amp: 0.24 }));
+  const outrig = (a, dist, pr) => {
+    const p = new THREE.Group(); p.position.set(...pol(a, dist, 0)); g.add(p);
+    p.add(prism([[0.01, -2.6], [pr * 0.4, -2.6], [pr, -0.6], [pr, 0.2], [0.01, 0.2]], M.hull2, 8));
+    p.add(ring(pr - 0.15, pr + 0.15, -0.4, 0.3, X.hazard, 8, 0.25));
+    for (const s of [-1, 1]) { const q = pol(a + s * 0.22, 13.5, -5.5), o = p.position; p.add(beam([0, -2, 0], [q[0] - o.x, q[1], q[2] - o.z], 0.6, M.dark)); }
+    const len = dist - pr - 12.6; if (len < 1) return p;
+    const c = new THREE.Group(); place(g, c, a, 12.6 + len / 2, 0);
+    c.add(at(sl(1.6, 0.4, len + 0.4, M.hull2, 0.1), 0, 0.3, 0)); for (const s of [-1, 1]) c.add(at(bar(0.12, 0.12, len, M.dark), s * 0.75, 1.3, 0));
+    c.add(beam([0, 0.1, -len / 2], [0, -1.6, 0], 0.3, M.dark)); c.add(beam([0, -1.6, 0], [0, 0.1, len / 2], 0.3, M.dark));
+    return p;
+  };
   g.add(prism([[0.01, -0.3], [13, -0.3], [13, 0.9], [0.01, 0.9]], S.deck, 8));
   g.add(ring(12.5, 13.3, 0.4, 1.1, X.hazard, 8, 0.3));
   /* Laborbau */
@@ -660,22 +693,22 @@ regB('lab', (M, d, lv) => {
     g.add(at(prism([[rr, -0.6], ...P], lv >= 3 ? M.hull : M.hull2, 14, 0), 0, 11.6, 0));
     if (lv >= 3) g.add(at(ring(rr - 0.05, rr + 0.12, 0.2, 0.9, M.trim, 14), 0, 11.6, 0)); }
   /* Schüsseln */
-  const dishAt = (a, dist, r, tilt, sp) => { const p = pol(a, dist, 0); const base = new THREE.Group(); base.position.set(p[0], 0, p[2]); g.add(base); base.add(prism([[0.01, -0.5], [r * 0.55, -0.5], [r * 0.55, 0.8], [r * 0.45, 1.2], [0.01, 1.2]], M.hull2, 8)); const dd = dish(M, r, tilt, sp); dd.position.y = 1.2; base.add(dd); lampAt(base, M, r * 0.5, 1.3, 0, 0.22); };
+  const dishAt = (a, dist, r, tilt, sp) => { const p = pol(a, dist, 0); outrig(a, dist, r * 0.75 + 1); const base = new THREE.Group(); base.position.set(p[0], 0, p[2]); g.add(base); base.add(prism([[0.01, -0.5], [r * 0.55, -0.5], [r * 0.55, 0.8], [r * 0.45, 1.2], [0.01, 1.2]], M.hull2, 8)); const dd = dish(M, r, tilt, sp); dd.position.y = 1.2; base.add(dd); lampAt(base, M, r * 0.5, 1.3, 0, 0.22); };
   dishAt(a0, 20, 9.5, 0.55, 0.12);
   if (lv >= 2) { dishAt(a0 + TAU / 3, 20.5, 6.6, 0.7, 0.18); dishAt(a0 - TAU / 3, 20.5, 6.6, 0.45, 0.16); }
   /* Masten */
-  const mastAt = (a, dist, h) => { const p = pol(a, dist, 0), m = new THREE.Group(); m.position.set(p[0], 0, p[2]); g.add(m); m.add(slab0(3, 0.8, 3, M.hull2, 0, -0.2, 0, 0.2)); const l = lattice(M, h, 2.0, 0.6, Math.round(h / 3), 0.14); l.position.y = 0.6; m.add(l); for (let i = 1; i <= 3; i++) m.add(at(bar(2.6 - i * 0.5, 0.1, 0.1, M.dark), 0, 0.6 + h * (0.5 + i * 0.13), 0)); m.add(at(cyl(0.08, 0.08, 3, M.dark, 4), 0, h + 2.1, 0, HP)); beacon(m, M.red, 0, h + 3.7, 0, 0.26, 0.75); };
+  const mastAt = (a, dist, h) => { outrig(a, dist, 2.6); const p = pol(a, dist, 0), m = new THREE.Group(); m.position.set(p[0], 0, p[2]); g.add(m); m.add(slab0(3, 0.8, 3, M.hull2, 0, -0.2, 0, 0.2)); const l = lattice(M, h, 2.0, 0.6, Math.round(h / 3), 0.14); l.position.y = 0.6; m.add(l); for (let i = 1; i <= 3; i++) m.add(at(bar(2.6 - i * 0.5, 0.1, 0.1, M.dark), 0, 0.6 + h * (0.5 + i * 0.13), 0)); m.add(at(cyl(0.08, 0.08, 3, M.dark, 4), 0, h + 2.1, 0, HP)); beacon(m, M.red, 0, h + 3.7, 0, 0.26, 0.75); };
   mastAt(a0 + PI, 19, 15);
   if (lv >= 2) mastAt(a0 + PI / 3, 23, 11);
   if (lv >= 3) mastAt(a0 - PI / 3, 23, 12);
   /* Kernbohranlage und Probenlager */
-  { const p = pol(a0 + PI + 0.95, 20), b = new THREE.Group(); b.position.set(p[0], 0, p[2]); b.rotation.y = a0; g.add(b);
+  { outrig(a0 + PI + 0.95, 20, 4.4); const p = pol(a0 + PI + 0.95, 20), b = new THREE.Group(); b.position.set(p[0], 0, p[2]); b.rotation.y = a0; g.add(b);
     b.add(slab0(5.2, 0.8, 5.2, M.hull2, 0, -0.2, 0, 0.2)); const l = lattice(M, 8, 3.2, 1.2, 3, 0.16); l.position.y = 0.6; b.add(l);
     b.add(at(cyl(0.22, 0.22, 7.6, X.steel, 6), 0, 4.4, 0, HP)); b.add(at(sl(1.4, 0.9, 1.4, M.dark, 0.2), 0, 8.9, 0)); b.add(at(ring(0.5, 1.3, 0.6, 1.1, X.hazard, 8, 0.2), 0, 0, 0));
     for (let i = 0; i < 3; i++) b.add(at(container(M, S, 1.8, 1.8, 3.6, i + 1), 4.2, 0.6 + (i === 2 ? 1.8 : 0), -1.2 + (i % 2) * 2.4 - (i === 2 ? 1.2 : 0))); }
   /* Stufe III: Interferometer-Ring */
   if (lv >= 3) {
-    for (let k = 0; k < 6; k++) { const p = pol(k * PI / 3 + PI / 6, 28.2, 0); g.add(at(sl(1.4, 3.6, 1.4, M.dark, 0.25), p[0], 1.6, p[2])); }
+    for (let k = 0; k < 6; k++) { const a = k * PI / 3 + PI / 6, p = pol(a, 28.2, 0); g.add(at(sl(1.4, 1.6, 1.4, M.dark, 0.25), p[0], 2.6, p[2])); g.add(beam(pol(a, 28.2, 1.9), pol(a, 15, -5), 0.7, M.dark)); }
     const rg = new THREE.Group(); rg.position.y = 3.6; rg.userData.spin = { axis: 'y', speed: 0.07 }; g.add(rg);
     rg.add(ring(27.6, 28.8, -0.35, 0.35, M.hull2, 48));
     for (let k = 0; k < 12; k++) { const a = k * TAU / 12; const p = pol(a, 28.2, 0.35); rg.add(at(sl(1.4, 0.5, 2.2, M.dark, 0.15), p[0], p[1] + 0.25, p[2]).rotateY(a)); rg.add(at(cyl(0.07, 0.07, 2.4, M.dark, 4), p[0], 1.8, p[2], HP)); if (k % 2 === 0) { const b = mesh(new THREE.SphereGeometry(0.26, 8, 6), S.team, false); b.position.set(p[0], 3.1, p[2]); rg.add(b); } }
@@ -692,7 +725,11 @@ regB('lab', (M, d, lv) => {
    Stufe III: zwei Autokanonen und eine Railgun in der Mitte, Kondensatorbank hinten. */
 regB('turret', (M, d, lv) => {
   const g = new THREE.Group(), X = xm(M), S = sm(M);
-  g.add(rock({ rx: 18, ry: 12, rz: 17.5, cy: -6, top: 0, rim: 1.8, rimIn: 0.66, rimOut: 0.88, seed: 61, det: 10, craters: 6 }));
+  /* Felsnadel: schmaler, tiefer, zerklüfteter Brocken – die Barbette sitzt wie eine Krone obenauf */
+  g.add(rock({ rx: 12.5, ry: 18, rz: 12, cy: -11, top: 0, rim: 2.6, rimIn: 0.6, rimOut: 0.94, seed: 61, det: 9, craters: 4, amp: 0.34 }));
+  /* Panzerschürze (ab Stufe II) und Panzerkeile mit Warnstreifen am Barbettenfuß (Stufe III) */
+  if (lv >= 2) for (let k = 0; k < 8; k++) { const a = k * PI / 4 + PI / 8; g.add(at(sl(6.6, 2.8, 1.2, k % 2 ? M.hull : M.hull2, 0.3, 0.85, 1), ...pol(a, 11.6, 1.2)).rotateY(a).rotateX(-0.35)); }
+  if (lv >= 3) for (let k = 0; k < 4; k++) { const a = k * HP; const w = new THREE.Group(); place(g, w, a, 12.6, -0.4); w.add(at(sl(3.2, 3.2, 3.6, M.hull, 0.5, 0.6, 0.7), 0, 1.2, 0)); w.add(at(hazBar(M, 3.3, 0.5, 2.6, 0.25), 0, 2.4, 0.2)); lampAt(w, M, 0, 3.0, 1.2, 0.26); }
   g.add(prism([[0.01, -3], [10.2, -3], [11.0, -0.6], [11.0, 1.9], [9.9, 3.0], [0.01, 3.0]], M.hull2, 8));
   g.add(ring(10.95, 11.2, 0.4, 1.2, X.hazard, 8, 0.3));
   prismWin(g, M, 11.0, 1.65, 0.45, 8, 0.4, 1, [0, 4]);
@@ -726,7 +763,13 @@ regB('turret', (M, d, lv) => {
    und eine leichte Autokanone. Stufe III: vier PDC und eine mittlere Autokanone, Radar auf eigenem Mast. */
 regB('flak', (M, d, lv) => {
   const g = new THREE.Group(), X = xm(M), S = sm(M);
-  g.add(rock({ rx: 21, ry: 14, rz: 20.5, cy: -7, top: 0, rim: 2, rimIn: 0.66, rimOut: 0.88, seed: 71, det: 11, craters: 6 }));
+  /* Kein Felsbett: freischwebende Stahlplattform mit Kiel; unten in vier Klammerarmen ein eingefangener Brocken
+     als Ballast und Munitionslager */
+  g.add(prism([[0.01, -9], [4.5, -9], [10.5, -4.2], [13.2, -1.2], [0.01, -1.2]], M.dark, 8));
+  g.add(ring(10.3, 10.9, -4.6, -3.6, X.hazard, 8, 0.35));
+  { const c = chunk(6.5, 711, 0.8); c.position.y = -13; g.add(c);
+    for (let k = 0; k < 4; k++) { const a = k * HP + PI / 4; g.add(beam(pol(a, 4, -8.6), pol(a, 6.6, -12), 0.9, M.hull2)); g.add(hazBeam(M, pol(a, 6.6, -12), pol(a, 4.6, -15.5), 0.75, 0.25)); }
+    for (let k = 0; k < 8; k++) { const a = k * PI / 4 + PI / 8; g.add(beam(pol(a, 12.4, -1.3), pol(a, 5, -8.6), 0.45, M.hull2)); } }
   g.add(prism([[0.01, -1], [13.2, -1], [13.2, 1.0], [12.4, 1.6], [0.01, 1.6]], M.hull2, 8));
   g.add(ring(13.15, 13.4, -0.2, 0.6, X.hazard, 8, 0.3));
   for (let k = 0; k < 4; k++) g.add(at(sl(6.4, 0.3, 6.4, k % 2 ? M.hull : S.deck, 0.1), ...pol(k * HP + PI / 4, 5.6, 1.75)).rotateY(PI / 4));
@@ -757,40 +800,161 @@ regB('flak', (M, d, lv) => {
   return g;
 });
 
-/* KOMMANDORELAIS – Gittermast auf dem Fels mit Richtfunk-Ringen (drehen langsam, gegenläufig) und Leuchtfeuer
-   an der Spitze; quer über den Fels zwei Phased-Array-Felder, Abspannseile, Gerätehaus.
-   Stufe I: ein Antennenring. Stufe II: zwei Ringe und eine Richtschüssel. Stufe III: drei Ringe, höherer Mast. */
+/* KOMMANDORELAIS – hoher, schlanker Fernmeldemast auf einer Felsnadel (daneben lose Trümmer): Gittermast um ein
+   Steigrohr mit Bühnen, an Auslegern ein Bündel Richtfunkschüsseln, die in alle Richtungen schauen und langsam
+   nachführen; oben Peitschenantenne mit Teamfeuer, Abspannseile in den Fels, Gerätehaus am Fuß.
+   Stufe I: Mast 26, zwei Schüsseln. Stufe II: Mast 32, vier Schüsseln, drehender Richtfunkring, Containerstapel.
+   Stufe III: Mast 38, sechs Schüsseln, zweiter gegenläufiger Ring, Antennenkrone, Panzerkragen am Fuß. */
 regB('relay', (M, d, lv) => {
-  const g = new THREE.Group(), X = xm(M), S = sm(M), H = lv === 3 ? 19 : 17;
-  g.add(rock({ rx: 17.5, ry: 12, rz: 17, cy: -6, top: 0, rim: 1.8, rimIn: 0.66, rimOut: 0.88, seed: 83, det: 10, craters: 6 }));
-  g.add(prism([[0.01, -1], [4.6, -1], [4.6, 1.4], [3.8, 2.0], [0.01, 2.0]], M.hull, 8)); g.add(ring(4.55, 4.8, 0.2, 0.9, X.hazard, 8, 0.25));
-  const l = lattice(M, H, 3.6, 1.0, Math.round(H / 2.6), 0.17); l.position.y = 2; g.add(l);
-  g.add(at(cyl(0.12, 0.2, 3.5, M.dark, 6), 0, H + 3.6, 0, HP));
-  g.add(at(sl(1.6, 0.8, 1.6, M.hull2, 0.2), 0, H + 2.3, 0));
-  beacon(g, S.team, 0, H + 5.6, 0, 0.42, 0.8);
-  /* Ringe */
-  const rings = [[H * 0.62, 7.6, 1], [H * 0.84, 5.4, -1], [H * 0.4, 9.8, 1]].slice(0, lv);
-  rings.forEach(([y, r, dir], i) => {
-    const w = (3.6 + (1.0 - 3.6) * (y - 2) / H) / 2, rg = new THREE.Group(); rg.position.y = y; rg.userData.spin = { axis: 'y', speed: 0.22 * dir }; g.add(rg);
-    rg.add(ring(r - 0.3, r + 0.3, -0.25, 0.25, M.hull2, 24));
-    rg.add(ring(w + 0.1, w + 0.7, -0.4, 0.4, M.dark, 8));
-    for (let k = 0; k < 4; k++) { const a = k * HP + PI / 4; rg.add(beam(pol(a, w + 0.6, 0), pol(a, r - 0.2, 0), 0.22, M.dark)); }
-    const nd = 6 + i * 2;
-    for (let k = 0; k < nd; k++) { const a = k * TAU / nd; const p = pol(a, r, 0); rg.add(at(bar(0.12, 2.6, 0.12, M.dark), p[0], 1.2, p[2])); rg.add(at(sl(0.7, 0.5, 0.7, M.hull, 0.1), p[0], 0.3, p[2])); if (k % 2 === 0) { const b = mesh(new THREE.SphereGeometry(0.17, 6, 4), S.team, false); b.position.set(p[0], 2.6, p[2]); rg.add(b); } }
+  const g = new THREE.Group(), X = xm(M), S = sm(M), H = [22, 27, 32][lv - 1], W0 = 4.0, W1 = 1.5;
+  const hw = y => (W0 + (W1 - W0) * y / H) / 2;   /* halbe Mastbreite in Höhe y über dem Sockel */
+  g.add(rock({ rx: 13, ry: 12, rz: 11, cy: -7, top: 0, rim: 1.8, rimIn: 0.6, rimOut: 0.9, seed: 83, det: 8, craters: 3, amp: 0.3 }));
+  for (const [x, y, z, s, sd] of [[12, -2.8, 5.5, 3.6, 84], [-10.5, -2.4, -7, 2.8, 86], [-3, -4.8, 12, 2.4, 87]]) { const b = boulder(s, sd); b.position.set(x, y, z); g.add(b); }
+  /* Sockel */
+  g.add(prism([[0.01, -1], [5.2, -1], [5.2, 1.2], [4.4, 2.0], [0.01, 2.0]], M.hull, 8)); g.add(ring(5.15, 5.4, 0.1, 0.8, X.hazard, 8, 0.25));
+  prismWin(g, M, 5.2, 0.6, 0.4, 8, 0.5, 1, [1, 3, 5, 7]);
+  /* Mast */
+  const l = lattice(M, H, W0, W1, Math.round(H / 3), 0.17); l.position.y = 2; g.add(l);
+  g.add(at(cyl(0.42, 0.42, H, M.hull2, 6), 0, 2 + H / 2, 0, HP));
+  for (let y = 8; y < H - 2; y += 8) g.add(at(sl(hw(y) * 2 + 0.8, 0.45, hw(y) * 2 + 0.8, M.hull2, 0.12), 0, 2 + y, 0));
+  g.add(at(sl(2.4, 1.0, 2.4, M.hull2, 0.25), 0, H + 2.4, 0));
+  g.add(at(cyl(0.08, 0.22, 7, M.dark, 6), 0, H + 6.3, 0, HP));
+  beacon(g, S.team, 0, H + 10, 0, 0.45, 0.8);
+  /* Richtschüsseln an Auslegern: [Höhenanteil, Winkel, Radius] */
+  const DS = [[0.6, 0.5, 3.4], [0.6, 0.5 + PI, 3.4], [0.8, 0.5 + HP, 2.8], [0.8, 0.5 - HP, 2.8], [0.38, 0.5 + PI / 4 + HP, 3.6], [0.38, 0.5 - PI / 4 - HP, 3.6]].slice(0, lv * 2);
+  DS.forEach(([f, a, r], i) => {
+    const y = 2 + H * f, e = hw(H * f) + r * 0.9 + 0.6;
+    g.add(beam(pol(a, hw(H * f), y), pol(a, e, y), 0.5, M.dark)); g.add(beam(pol(a, hw(H * f), y - 2), pol(a, e - 0.6, y - 0.2), 0.3, M.dark));
+    g.add(at(sl(r * 1.1, 0.4, r * 1.1, M.hull2, 0.1), ...pol(a, e, y)));
+    const dd = dish(M, r, 1.05, 0.12 + i * 0.03); dd.position.set(...pol(a, e, y + 0.2)); dd.rotation.y = a + PI; g.add(dd);
   });
-  /* Phased-Array-Felder (quer) */
-  for (const s of [-1, 1]) {
-    const f = new THREE.Group(); f.position.set(s * 12.5, 0, 0); f.rotation.z = -s * 0.42; g.add(f);
-    f.add(at(sl(0.8, 7.8, 13, M.hull2, 0.2), 0, 4.3, 0));
-    for (let i = 0; i < 5; i++) for (let j = 0; j < 8; j++) f.add(at(bar(0.25, 1.2, 1.3, (i + j) % 3 ? M.dark : M.hull), s * 0.5, 1.4 + i * 1.45, -5.6 + j * 1.6));
-    f.add(at(bar(0.12, 0.2, 12.4, M.trim), s * 0.47, 8.0, 0));
-    for (const z of [-4.6, 4.6]) g.add(beam([s * 10.6, 0.2, z], [s * 13.8, 3.6, z], 0.5, M.dark));
-    g.add(at(sl(4.4, 0.8, 14, M.hull2, 0.2), s * 11.7, 0.1, 0));
+  /* Richtfunkringe: drehen langsam, gegenläufig, mit Stabantennen und Teamlichtern */
+  const rings = [[0.94, 4.8, 1], [0.2, 7.4, -1]].slice(0, lv - 1);
+  rings.forEach(([f, r, dir], i) => {
+    const rg = new THREE.Group(); rg.position.y = 2 + H * f; rg.userData.spin = { axis: 'y', speed: 0.25 * dir }; g.add(rg);
+    rg.add(ring(r - 0.25, r + 0.25, -0.22, 0.22, M.hull2, 16));
+    rg.add(ring(hw(H * f) + 0.1, hw(H * f) + 0.6, -0.35, 0.35, M.dark, 8));
+    for (let k = 0; k < 4; k++) { const a = k * HP + PI / 4; rg.add(beam(pol(a, hw(H * f) + 0.5, 0), pol(a, r - 0.2, 0), 0.22, M.dark)); }
+    for (let k = 0; k < 8; k++) { const p = pol(k * PI / 4, r, 0); rg.add(at(bar(0.12, 2.4 + (k % 2) * 1.2, 0.12, M.dark), p[0], 1.2 + (k % 2) * 0.6, p[2])); if (k % 2 === 0) { const b = mesh(new THREE.SphereGeometry(0.18, 6, 4), S.team, false); b.position.set(p[0], 2.5, p[2]); rg.add(b); } }
+  });
+  /* Abspannseile in den Fels */
+  for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + PI / 6; anchor(g, M, pol(a, hw(H * 0.7), H * 0.7 + 2), pol(a, 10.6, 0.3), 0.12); }
+  /* Gerätehaus, ab Stufe II Containerstapel */
+  { const b = new THREE.Group(); place(g, b, PI * 0.58, 2.0, 2.0); b.add(module(M, 4.6, 3.0, 5.6, {})); b.add(at(cyl(0.12, 0.12, 3, M.dark, 4), 1.2, 4.6, 4, HP)); b.add(beam([0, 0, 5.2], [0, -2.2, 6.4], 0.5, M.dark)); }
+  if (lv >= 2) for (let i = 0; i < 3; i++) g.add(at(container(M, S, 1.8, 1.8, 3.6, i + 1), -6.6 + (i === 2 ? 0.6 : 0), 0.2 + (i === 2 ? 1.8 : 0), 1.2 - (i % 2) * 2.2).rotateY(0.4));
+  /* Stufe III: Antennenkrone und Panzerkragen */
+  if (lv >= 3) {
+    for (let k = 0; k < 4; k++) { const p = pol(k * HP + PI / 4, 1.5, H + 2.9); g.add(at(cyl(0.06, 0.12, 4, M.dark, 4), p[0], p[1] + 2, p[2], HP)); g.add(at(lamp(M, 0.2), p[0], p[1] + 4.1, p[2])); }
+    for (let k = 0; k < 8; k++) { const a = k * PI / 4; g.add(at(sl(3.8, 2.6, 0.8, k % 2 ? M.hull : M.hull2, 0.25, 0.8, 1), ...pol(a, 5.6, 1.5)).rotateY(a).rotateX(-0.4)); }
+    g.add(ring(5.9, 6.3, 0.0, 0.5, X.hazard, 8, 0.3));
   }
-  /* Abspannseile, Gerätehaus */
-  for (let k = 0; k < 3; k++) { const a = k * TAU / 3 + PI / 6; anchor(g, M, [Math.sin(a) * 1, H * 0.9 + 2, Math.cos(a) * 1], pol(a, 15.5, 0.3), 0.12); }
-  { const b = new THREE.Group(); place(g, b, PI, 7.8, 0); b.add(module(M, 6.4, 3.6, 7.5, {})); for (let i = 0; i < 2; i++) b.add(at(container(M, S, 2, 2, 4, i + 1), 5.2, 1, 2 + i * 0.3 - i * 4.2)); }
-  if (lv >= 2) { const dd = dish(M, 3.0, 0.7, 0.2); dd.position.set(...pol(0.3, 11.5, 0.4)); g.add(dd); g.add(at(slab0(3.6, 0.6, 3.6, M.hull2, 0, -0.2, 0, 0.2), ...pol(0.3, 11.5, 0))); }
+  return g;
+});
+
+/* FRÜHWARNRADAR – ganz anders als das Relais: niedrig und breit. Drei Felsbrocken tragen ein dreieckiges Stahldeck,
+   darauf ein gedrungener Gitterturm mit Drehkranz; obenauf dreht die große, fast senkrecht stehende Radarschüssel
+   (Fachwerkrücken, Speisehorn am Ausleger, Gegengewicht). Stufe I: Schüssel 8. Stufe II: Schüssel 9.5, Freund-Feind-
+   Antenne auf dem Rücken, Bunker mit kleiner Schüssel. Stufe III: Schüssel 11, zweite Nachführschüssel auf eigenem
+   Mast, Panzerschürze am Turmfuß, Teamlichter an den Deckecken. */
+regB('radar', (M, d, lv) => {
+  const g = new THREE.Group(), X = xm(M), S = sm(M), T = 7 + lv * 1.5, RD = [8, 9.5, 11][lv - 1], RV = 15, a0 = PI / 6;
+  for (let k = 0; k < 3; k++) { const a = a0 + k * TAU / 3, rk = rock({ rx: 7.5 + k * 0.6, ry: 6.5, rz: 6.8 + (k % 2), cy: -3.4, top: 0, rim: 1.0, rimIn: 0.6, rimOut: 0.9, seed: 131 + k, det: 6, craters: 2, amp: 0.3 }); rk.position.set(...pol(a, 11.5, 0)); g.add(rk); }
+  /* Dreieckdeck mit Warnkanten und Unterzügen */
+  g.add(prism([[0.01, -0.8], [RV, -0.8], [RV, 0.8], [RV - 1.2, 1.4], [0.01, 1.4]], M.hull2, 3, a0));
+  for (let k = 0; k < 3; k++) {
+    const am = a0 + k * TAU / 3 + PI / 3, e = new THREE.Group(); place(g, e, am, RV / 2 - 0.3, 0);
+    e.add(at(hazBar(M, RV * 1.6, 0.5, 0.6, 0.35), 0, 0.9, 0));
+    g.add(beam(pol(a0 + k * TAU / 3, RV - 1, -0.9), pol(0, 0, -3.2), 0.8, M.dark));
+    g.add(at(sl(6, 0.3, 3.4, k % 2 ? S.deck : M.hull, 0.08), ...pol(am, RV / 2 - 2.8, 1.45)).rotateY(am));
+  }
+  g.add(prism([[0.01, -4], [3, -4], [5.5, -0.8], [0.01, -0.8]], M.dark, 6));
+  /* Turm */
+  const l = lattice(M, T, 7.4, 3.4, 3, 0.3); l.position.y = 1.4; g.add(l);
+  g.add(at(cyl(1.0, 1.0, T, M.hull2, 8), 0, 1.4 + T / 2, 0, HP));
+  g.add(prism([[0.01, T + 1.2], [3.2, T + 1.2], [3.4, T + 2.2], [0.01, T + 2.2]], M.hull, 8)); g.add(ring(3.3, 3.6, T + 1.3, T + 1.9, X.hazard, 16, 0.3));
+  /* Drehkranz mit Schüssel */
+  const tt = new THREE.Group(); tt.position.y = T + 2.2; tt.userData.spin = { axis: 'y', speed: 0.45 }; g.add(tt);
+  tt.add(prism([[0.01, 0], [3.0, 0], [3.0, 1.4], [2.4, 2.0], [0.01, 2.0]], M.hull2, 8));
+  tt.add(at(sl(3.6, 2.4, 3.2, M.hull, 0.35), 0, 3.0, -2.2)); winAt(tt, M, 2.6, 0.5, 0, 3.3, -3.83, PI);
+  tt.add(at(sl(3.0, 2.0, 2.4, S.rust, 0.3), 0, 2.8, -4.8)); tt.add(at(hazBar(M, 3.1, 0.4, 2.5, 0.25), 0, 3.4, -4.8));
+  const head = new THREE.Group(); head.position.set(0, RD * 0.95 + 2.4, 0.6); head.rotation.x = HP - 0.32; tt.add(head);
+  { const P = []; for (let i = 0; i <= 6; i++) { const t = i / 6; P.push([RD * t + 0.001, RD * 0.28 * t * t]); }
+    const back = P.slice().reverse().map(([rr, y]) => [rr * 0.98, y - RD * 0.05]);
+    head.add(prism([...P, [RD * 1.02, RD * 0.28 + 0.03], ...back], M.hull, 20, 0));
+    head.add(ring(RD * 0.99, RD * 1.05, RD * 0.24, RD * 0.31, M.dark, 20));
+    for (let k = 0; k < 6; k++) { const a = k * TAU / 6; head.add(beam(pol(a, RD * 0.95, RD * 0.22), [0, -RD * 0.35, 0], RD * 0.035, M.dark)); }
+    for (let k = 0; k < 4; k++) { const a = k * HP + PI / 4; head.add(beam(pol(a, RD * 0.85, RD * 0.26), [0, RD * 0.75, 0], RD * 0.02, M.dark)); }
+    head.add(at(cyl(RD * 0.08, RD * 0.12, RD * 0.2, M.dark, 6), 0, RD * 0.78, 0, HP)); lampAt(head, M, 0, RD * 0.9, 0, 0.3);
+    head.add(at(cyl(RD * 0.18, RD * 0.22, RD * 0.4, M.hull2, 8), 0, -RD * 0.25, 0, HP));
+    head.add(at(bar(RD * 1.2, 0.14, 0.7, M.trim), 0, -RD * 0.05, -RD * 0.5)); }
+  tt.add(beam([0, 2.0, 0], [0, RD * 0.95 + 2.4, 0.6], 1.2, M.hull2));
+  /* Stufe II: Freund-Feind-Antenne auf dem Rücken, Bunker mit kleiner Schüssel */
+  if (lv >= 2) {
+    const ff = new THREE.Group(); ff.position.set(0, 4.6, -5.6); tt.add(ff);
+    ff.add(at(sl(RD * 1.2, 2.2, 0.6, M.hull2, 0.15), 0, 1.2, 0)); for (let i = 0; i < 6; i++) ff.add(at(bar(RD * 0.16, 1.6, 0.2, i % 2 ? M.dark : M.hull), (i - 2.5) * RD * 0.19, 1.2, 0.36));
+    const b = new THREE.Group(); place(g, b, a0 + TAU / 3 + PI / 3 + PI, 3.5, 1.4); b.add(module(M, 4.2, 2.8, 5.4, {}));
+    const dd = dish(M, 2.8, 0.6, 0.2); dd.position.set(0, 3.2, 3.2); b.add(dd);
+    const f = finArray(M, 3, 3.2, 5, 1.4); place(g, f, a0 + 2 * TAU / 3, RV - 6, 1.4); f.rotation.y += HP;
+  }
+  /* Stufe III: Nachführschüssel auf eigenem Mast, Panzerschürze, Teamlichter */
+  if (lv >= 3) {
+    const m = new THREE.Group(); m.position.set(...pol(a0 + TAU / 3, RV - 4.5, 1.4)); g.add(m);
+    const ml = lattice(M, 8, 2.2, 1.0, 3, 0.14); m.add(ml); const dd = dish(M, 3.0, 0.9, 0.25); dd.position.y = 8; m.add(dd); beacon(m, M.red, 1.4, 8.4, 0, 0.2, 0.8);
+    for (let k = 0; k < 6; k++) { const a = k * PI / 3 + PI / 6; g.add(at(sl(3.4, 2.6, 0.8, k % 2 ? M.hull : M.hull2, 0.25, 0.85, 1), ...pol(a, 4.6, 2.6)).rotateY(a).rotateX(-0.35)); }
+    for (let k = 0; k < 3; k++) beacon(g, S.team, ...pol(a0 + k * TAU / 3, RV - 1.6, 1.9), 0.35, 0.9);
+  }
+  for (let k = 0; k < 3; k++) lampAt(g, M, ...pol(a0 + k * TAU / 3 + PI / 3, RV / 2 - 1.2, 1.7), 0.24);
+  return g;
+});
+
+/* SPERRWALL – Emitterbunker auf einem quer liegenden Felsriegel: langer, gepanzerter Bunker mit Fasen und
+   Warnstreifen, an beiden Enden ein Emitterpylon mit Spulenstapel und glühendem Emitterkopf (Farbe des Sperrfelds),
+   in der Mitte der Feldgenerator mit Kühlrippen; Streben verankern den Bunker im Fels. Das Feld selbst zeichnet
+   entities.js. Stufe II: höhere Pylone mit mehr Spulen, Kondensatorrohre auf dem Dach, Schrägpanzer an den
+   Längsseiten. Stufe III: noch höhere Pylone, drehender Emitterring über dem Generator, Scheinwerfer, Teamleiste. */
+regB('wall', (M, d, lv) => {
+  const g = new THREE.Group(), X = xm(M), S = sm(M), ph = [8, 10, 12][lv - 1], px = 7.4, BW = 19, BD = 7.2;
+  g.add(rock({ rx: 13.5, ry: 8, rz: 8.5, cy: -4.2, top: 0, rim: 1.2, rimIn: 0.66, rimOut: 0.94, seed: 141, det: 8, craters: 3, amp: 0.26 }));
+  { const b = boulder(2.6, 142); b.position.set(-3, -2.4, 8.2); g.add(b); }
+  /* Bunker */
+  g.add(at(sl(BW, 3.4, BD, M.hull, 0.9), 0, 1.4, 0));
+  g.add(at(hazBar(M, BW + 0.1, 0.6, BD + 0.1, 0.35), 0, 0.3, 0));
+  for (let i = 0; i < 3; i++) g.add(at(sl(3.6, 0.45, BD - 1.8, i === 1 ? M.hull : M.hull2, 0.12), -3.8 + i * 3.8, 3.25, 0));
+  for (const s of [-1, 1]) winAt(g, M, BW - 8, 0.45, 0, 2.0, s * (BD / 2 + 0.02), s > 0 ? 0 : PI);
+  g.add(at(bar(BW - 6, 0.12, 0.7, M.trim), 0, 3.12, BD / 2 - 0.9));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) anchor(g, M, [sx * (BW / 2 - 1), 0, sz * (BD / 2 - 0.6)], [sx * 12.2, -2.6, sz * 5.4], 0.5);
+  /* Emitterpylone */
+  for (const sx of [-1, 1]) {
+    const x = sx * px, p = new THREE.Group(); p.position.x = x; g.add(p);
+    p.add(at(sl(3.4, ph, 3.4, M.hull2, 0.45, 0.85, 1), 0, 3.1 + ph / 2, 0));
+    p.add(at(hazBar(M, 3.5, 0.6, 3.5, 0.3), 0, 3.9, 0));
+    const nc = lv + 1; for (let i = 0; i < nc; i++) { const y = 5.2 + i * (ph - 3) / nc; p.add(ring(1.95, 2.6, y, y + 0.55, M.dark, 8)); p.add(ring(1.9, 2.0, y + 0.55, y + 0.75, S.field, 8)); }
+    /* Emitterkopf: Gehäuse, Käfig, glühender Kern (pulsiert) */
+    const ty = 3.1 + ph;
+    p.add(prism([[0.01, ty], [2.2, ty], [2.4, ty + 1.0], [1.6, ty + 1.6], [0.01, ty + 1.6]], M.hull, 8));
+    for (let k = 0; k < 4; k++) p.add(at(bar(0.3, 2.8, 0.3, M.dark), ...pol(k * HP + PI / 4, 1.5, ty + 2.8)));
+    p.add(at(sl(3.4, 0.4, 3.4, M.dark, 0.1), 0, ty + 4.3, 0));
+    const core = mesh(new THREE.SphereGeometry(1.05, 10, 8), S.field, false); core.position.y = ty + 2.7; core.userData.pulse = { amp: 0.14, speed: 2.6 }; p.add(core);
+    lampAt(p, M, sx * 1.75, ty - 1, 1.75, 0.24); beacon(p, M.red, 0, ty + 4.8, 0, 0.26, 0.8);
+  }
+  /* Feldgenerator in der Mitte */
+  g.add(prism([[0.01, 3.1], [3.4, 3.1], [3.4, 4.6], [2.6, 5.4], [0.01, 5.4]], M.hull2, 8));
+  for (let k = 0; k < 8; k++) { const a = k * PI / 4 + PI / 8; g.add(at(sl(0.35, 1.6, 1.8, M.dark, 0.08), ...pol(a, 3.9, 4.0)).rotateY(a)); }
+  g.add(at(cyl(1.5, 1.7, 0.5, M.dark, 8), 0, 5.6, 0, HP)); g.add(at(cyl(0.8, 0.8, 0.3, S.field, 8), 0, 5.95, 0, HP));
+  /* Stufe II: Kondensatorrohre auf dem Dach, Schrägpanzer an den Längsseiten */
+  if (lv >= 2) {
+    for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) { const x = sx * (3.0 + i * 0.95); g.add(at(cyl(0.38, 0.38, BD - 2.4, i % 2 ? M.hull : M.dark, 8), x, 3.9, 0)); }
+    for (const s of [-1, 1]) g.add(at(sl(BW - 5, 2.4, 0.9, M.hull2, 0.25), 0, 1.6, s * (BD / 2 + 0.55)).rotateX(s * 0.38));
+  }
+  /* Stufe III: drehender Emitterring über dem Generator, Scheinwerfer, Teamleiste */
+  if (lv >= 3) {
+    const rg = new THREE.Group(); rg.position.y = 7.6; rg.userData.spin = { axis: 'y', speed: 0.6 }; g.add(rg);
+    rg.add(ring(3.6, 4.2, -0.25, 0.25, M.hull2, 16));
+    for (let k = 0; k < 4; k++) { const a = k * HP; rg.add(at(sl(1.0, 0.9, 1.0, M.dark, 0.15), ...pol(a, 3.9, 0))); const n = mesh(new THREE.SphereGeometry(0.35, 6, 4), S.field, false); n.position.set(...pol(a, 3.9, 0.7)); rg.add(n); }
+    for (let k = 0; k < 4; k++) g.add(beam(pol(k * HP + PI / 4, 2.4, 5.4), pol(k * HP + PI / 4, 0.6, 7.3), 0.25, M.dark));
+    for (const s of [-1, 1]) { const f = flood(M, S, 0.8, 0.35); f.position.set(s * 2.4, 3.4, BD / 2 - 0.6); g.add(f); }
+    g.add(at(bar(BW - 4, 0.25, 0.25, S.team), 0, 3.2, -(BD / 2 - 0.6)));
+  }
   return g;
 });
 

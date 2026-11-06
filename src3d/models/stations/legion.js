@@ -2,7 +2,8 @@
    GOLDEN LEGION – Stationen. Formensprache: wiederhergestellte Erbauer-Festungen als Kathedralen im All, wie die
    Schiffe der Legion: Elfenbeinmauern, schwere Goldgesimse, Spitzhelm-Türme mit Fialen, Strebepfeiler und
    Strebebögen, Spitzbogen- und Rosenfenster aus leuchtendem Buntglas, Heiligenscheine, Banner und Lichtlanzen.
-   Jedes Gebäude steht auf einer goldgefassten achteckigen Plattform (dunkelvioletter Boden mit Goldintarsien und
+   Jedes Gebäude steht auf einer goldgefassten Plattform – achteckig (Thronhalle, Werft, Schrein, Sunbreaker), sonst
+   mit eigenem Umriss je Rolle (Sechseck, Raute, Dreieck, Fünfeck, gestrecktes Sechseck, kleine runde Nabe) – (dunkelvioletter Boden mit Goldintarsien und
    Erbauer-Runen, Zierfialen an den Ecken, darunter ein umgekehrter Kronenkiel mit Erbauer-Kristall). Ein Lichtband
    in der Spielerfarbe (M.trim) läuft innen am Plattformrand um, dazu Wappen und Bannerränder in Spielerfarbe.
    Mitte im Ursprung, oben +Y, Grundfläche im Kreis d.r. Jedes Gebäude wird je Materialsatz und Stufe einmal gebaut,
@@ -20,9 +21,9 @@ function cvs(w, h, draw) { const c = document.createElement('canvas'); c.width =
 function ctex(c, srgb = true) { const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; }
 /* Bodenintarsie der Plattform: 1 Bildbreite = 2 · Plattformradius, Bildmitte = Gebäudemitte, Bild nach unten = +Z.
    lines = true zeichnet nur die leuchtenden Goldlinien (für das Leuchten) */
-function floorCanvas(lines) {
+function floorCanvas(lines, n = 8) {
   return cvs(1024, 1024, (x, w) => {
-    const c = w / 2, oct = (rr, rot = 0) => { x.beginPath(); for (let i = 0; i <= 8; i++) { const a = i / 8 * TAU + rot; x.lineTo(c + Math.cos(a) * rr, c + Math.sin(a) * rr); } };
+    const c = w / 2, oct = (rr, rot = 0) => { x.beginPath(); for (let i = 0; i <= n; i++) { const a = i / n * TAU + rot; x.lineTo(c + Math.cos(a) * rr, c + Math.sin(a) * rr); } };
     if (!lines) {
       const g = x.createRadialGradient(c * 0.8, c * 0.8, 0, c, c, c); g.addColorStop(0, '#5e3a78'); g.addColorStop(1, '#2b1846'); x.fillStyle = g; x.fillRect(0, 0, w, w);
       /* Steinplatten: konzentrische Achtecke und Speichen */
@@ -38,7 +39,7 @@ function floorCanvas(lines) {
     /* Goldfassungen */
     x.lineWidth = 5; oct(c * 0.9); x.stroke(); x.lineWidth = 2.5; oct(c * 0.865); x.stroke();
     x.lineWidth = 4; oct(c * 0.7); x.stroke(); x.lineWidth = 2; oct(c * 0.675); x.stroke();
-    x.lineWidth = 3; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; x.beginPath(); x.moveTo(c + Math.cos(a) * c * 0.7, c + Math.sin(a) * c * 0.7); x.lineTo(c + Math.cos(a) * c * 0.865, c + Math.sin(a) * c * 0.865); x.stroke(); }
+    x.lineWidth = 3; for (let i = 0; i < n; i++) { const a = i / n * TAU; x.beginPath(); x.moveTo(c + Math.cos(a) * c * 0.7, c + Math.sin(a) * c * 0.7); x.lineTo(c + Math.cos(a) * c * 0.865, c + Math.sin(a) * c * 0.865); x.stroke(); }
     /* Runenring zwischen den Fassungen: kleine Zeichen aus Strichen und Rauten */
     let s2 = 31; const q = () => { s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; };
     x.lineWidth = 2.2;
@@ -54,7 +55,7 @@ function floorCanvas(lines) {
       x.stroke(); x.restore();
     }
     /* Sonnenzeichen an den acht Speichen */
-    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU + PI / 8, px = c + Math.cos(a) * c * 0.782, py = c + Math.sin(a) * c * 0.782; x.beginPath(); x.arc(px, py, 9, 0, TAU); x.fill(); for (let k = 0; k < 8; k++) { const b = k / 8 * TAU; x.beginPath(); x.moveTo(px + Math.cos(b) * 12, py + Math.sin(b) * 12); x.lineTo(px + Math.cos(b) * 19, py + Math.sin(b) * 19); x.stroke(); } }
+    for (let i = 0; i < n; i++) { const a = i / n * TAU + PI / n, px = c + Math.cos(a) * c * 0.782, py = c + Math.sin(a) * c * 0.782; x.beginPath(); x.arc(px, py, 9, 0, TAU); x.fill(); for (let k = 0; k < 8; k++) { const b = k / 8 * TAU; x.beginPath(); x.moveTo(px + Math.cos(b) * 12, py + Math.sin(b) * 12); x.lineTo(px + Math.cos(b) * 19, py + Math.sin(b) * 19); x.stroke(); } }
     /* innerer Stern (meist vom Gebäude verdeckt) */
     x.lineWidth = 3; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; x.beginPath(); x.moveTo(c, c); x.lineTo(c + Math.cos(a) * c * (i % 2 ? 0.3 : 0.5), c + Math.sin(a) * c * (i % 2 ? 0.3 : 0.5)); x.stroke(); }
   });
@@ -118,6 +119,7 @@ function xb(M) {
   const rt = ctex(roofCanvas()); rt.wrapS = rt.wrapT = THREE.RepeatWrapping;
   B = {
     floor: new THREE.MeshStandardMaterial({ map: ctex(fl), emissiveMap: ctex(fg), emissive: '#ffc35a', emissiveIntensity: 0.55, metalness: 0.5, roughness: 0.45, bumpMap: M.hull.bumpMap, bumpScale: 0.25 }),
+    floorN: {},
     violet: new THREE.MeshStandardMaterial({ color: '#2c2346', metalness: 0.75, roughness: 0.38, bumpMap: M.hull.bumpMap, bumpScale: 0.4 }),
     team: new THREE.MeshBasicMaterial({ color: team.clone().multiplyScalar(1.35) }),
     teamSoft: new THREE.MeshBasicMaterial({ color: team.clone().multiplyScalar(1.1) }),
@@ -133,6 +135,12 @@ function xb(M) {
     rib: new THREE.MeshBasicMaterial({ color: new THREE.Color('#ffd98a').multiplyScalar(1.5) })
   };
   XB.set(M, B); return B;
+}
+
+/* Bodenmaterial für eine Plattform mit n Ecken (Intarsien folgen dem Umriss), je Materialsatz zwischengespeichert */
+function floorMat(M, n) {
+  const B = xb(M); if (n === 8) return B.floor;
+  return B.floorN[n] || (B.floorN[n] = new THREE.MeshStandardMaterial({ map: ctex(floorCanvas(false, n)), emissiveMap: ctex(floorCanvas(true, n)), emissive: '#ffc35a', emissiveIntensity: 0.55, metalness: 0.5, roughness: 0.45, bumpMap: M.hull.bumpMap, bumpScale: 0.25 }));
 }
 
 /* ------------------------------------------------------------ Grundformen */
@@ -157,7 +165,7 @@ function rod(a, b, w, h, mat) {
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), d.normalize()); return m;
 }
 /* Achteck (Ecken bei k · 45°, Ecke auf +X und +Z) */
-const octPoly = (R, rot = 0) => Array.from({ length: 8 }, (_, i) => { const a = i / 8 * TAU + rot; return [Math.cos(a) * R, Math.sin(a) * R]; });
+const octPoly = (R, rot = 0, n = 8) => Array.from({ length: n }, (_, i) => { const a = i / n * TAU + rot; return [Math.cos(a) * R, Math.sin(a) * R]; });
 /* konvexes Vieleck an der Geraden x = c abschneiden (keep > 0: x ≥ c behalten) */
 function clipX(poly, c, keep) {
   const out = [], inside = p => (p[0] - c) * keep >= -1e-6;
@@ -174,18 +182,20 @@ const hallSec = (w, h, roof) => [[w / 2, 0], [w / 2, h], [0, h + roof], [-w / 2,
 /* ------------------------------------------------------------ Plattform */
 /* Goldgefasste Achteckplattform (Radius r = d.r): Boden mit Intarsien, Elfenbeinkante mit Goldgesims, Lichtband in
    Spielerfarbe, Eckfialen auf Pfeilerfüßen, darunter ein umgekehrter Kronenkiel (Bronze, Violett, Goldrippen) mit
-   Erbauer-Kristall. o.slot = Breite einer durchgehenden Dockrinne entlang Z (Werft): dann zwei Plattformhälften. */
+   Erbauer-Kristall. o.slot = Breite einer durchgehenden Dockrinne entlang Z (Werft): dann zwei Plattformhälften.
+   Damit nicht jede Station auf derselben Scheibe steht: o.n = Eckenzahl (3 Dreieck, 4 Raute, 6, 12, 16 fast rund),
+   o.k = Größe relativ zu r, o.sz = Stauchung quer (Z) für langgestreckte Plattformen (Bodenbild wird mitgestaucht). */
 function platform(M, r, o = {}) {
-  const g = new THREE.Group(), B = xb(M), X = xm(M), R = r * 0.97, t1 = r * 0.05, rim = r * 0.045;
-  const full = octPoly(R);
+  const g = new THREE.Group(), B = xb(M), X = xm(M), n = o.n || 8, sz = o.sz || 1, R = r * (o.k || 0.97), t1 = r * 0.05, rim = r * 0.045;
+  const full = octPoly(R, 0, n).map(([x, z]) => [x, z * sz]);
   const parts = o.slot ? [clipX(full, o.slot / 2, 1), clipX(full, -o.slot / 2, -1)] : [full];
   for (const P of parts) {
     /* Boden */
     const inner = P.map(([x, z]) => { const k = (Math.hypot(x, z) - rim) / Math.hypot(x, z); return o.slot ? [x * (Math.abs(x) - rim > o.slot / 2 ? 1 : 1), z] : [x * k, z * k]; });
     const shp = new THREE.Shape(P.map(([x, z]) => new THREE.Vector2(x, -z)));
     const fg = new THREE.ShapeGeometry(shp); const uv = fg.attributes.uv, pp = fg.attributes.position;
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, pp.getX(i) / (2 * R) + 0.5, pp.getY(i) / (2 * R) + 0.5);
-    fg.rotateX(-PI / 2); g.add(mesh(fg, B.floor));
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, pp.getX(i) / (2 * R) + 0.5, pp.getY(i) / (2 * R * sz) + 0.5);
+    fg.rotateX(-PI / 2); g.add(mesh(fg, floorMat(M, n)));
     /* Kante, Kiel */
     g.add(prism(P, 0, -t1, 1, M.hull));
     g.add(prism(P, -t1, -t1 * 1.6, 0.94, M.gold));
@@ -206,14 +216,15 @@ function platform(M, r, o = {}) {
       g.add(rod([a[0], -t1 * 1.6, a[1]], [cx + (a[0] - cx) * 0.6, -r * 0.2, cz + (a[1] - cz) * 0.6], r * 0.025, r * 0.025, M.gold));
       g.add(rod([cx + (a[0] - cx) * 0.6, -r * 0.2, cz + (a[1] - cz) * 0.6], [cx + (a[0] - cx) * 0.22, -r * 0.34, cz + (a[1] - cz) * 0.22], r * 0.02, r * 0.02, M.gold));
     }
-    for (const [x, z] of P) {
+    P.forEach(([x, z], ci) => {
+      if (n > 8 && ci % 2) return;   /* viele Ecken: Fialen nur auf jeder zweiten */
       const big = o.slot && Math.abs(Math.abs(x) - o.slot / 2) < 0.01;
       const s = big ? 1.4 : 1;
       const k = 1 - r * 0.05 * s / Math.hypot(x, z), px = x * k, pz = z * k;
       g.add(at(cy(r * 0.042 * s, r * 0.05 * s, r * 0.05, M.hull, 8, 0, r * 0.025), px, 0, pz));
       g.add(at(mesh(G('Lcg' + r + s, () => new THREE.CylinderGeometry(r * 0.05 * s, r * 0.05 * s, r * 0.012, 8)), M.gold), px, r * 0.05, pz));
       g.add(at(pinnacle(M, r * 0.035 * s, r * 0.15 * s), px, r * 0.056, pz));
-    }
+    });
     /* Kristall unter dem Kiel */
     const cr = mesh(G('Lkc' + r, () => new THREE.OctahedronGeometry(1, 0).scale(r * 0.05, r * 0.13, r * 0.05)), X.crystal);
     cr.position.set(cx * 0.22, -r * 0.4, cz * 0.22); g.add(cr);
@@ -496,7 +507,7 @@ regB('yard', (M, d, lv) => {
    höhere Kuppel mit Heiligenschein, Urnenkranz auf Sockeln, Banner. */
 regB('refinery', (M, d, lv) => {
   const g = new THREE.Group(), r = d.r, X = xm(M), B = xb(M);
-  g.add(platform(M, r));
+  g.add(platform(M, r, { n: 12, k: 0.56 }));   /* kleine runde Nabe, die Piers ragen frei ins All */
   const R = 11, h = lv >= 3 ? 13 : 11;
   g.add(octHouse(M, R, h, { gold: true, rh: lv >= 3 ? 12 : 9, nw: 2 }));
   g.add(at(cy(R * 1.25, R * 1.3, 1.6, M.hull2, 8, PI / 8, 0.8), 0, 0, 0));
@@ -527,11 +538,11 @@ regB('refinery', (M, d, lv) => {
     arm.rotation.y = -a; g.add(arm);
   }
   /* Erzurnen am Sockel (zwischen den Armen), Stufe III Urnenkranz auf Sockeln */
-  const uN = lv >= 3 ? 8 : 4, uR = lv >= 3 ? 26 : R + 4;
+  const uN = lv >= 3 ? 8 : 4, uR = lv >= 3 ? 18.2 : R + 4;
   for (let i = 0; i < uN; i++) {
-    const a = PI / 2 + (i + 0.5) / uN * TAU; if (lv < 3 && angs.some(b => Math.abs(((a - b + PI) % TAU + TAU) % TAU - PI) < 0.6)) continue;
+    const a = PI / 2 + (i + 0.5) / uN * TAU; if (angs.some(b => Math.abs(((a - b + PI) % TAU + TAU) % TAU - PI) < (lv < 3 ? 0.6 : 0.3))) continue;
     const u = new THREE.Group(); u.position.set(Math.cos(a) * uR, 0, Math.sin(a) * uR);
-    if (lv >= 3) { u.add(at(cy(2.4, 2.8, 2, M.hull, 8, PI / 8, 1), 0, 0, 0)); u.add(at(cy(2.6, 2.6, 0.3, M.gold), 0, 2, 0)); }
+    if (lv >= 3) { u.add(at(cy(2.0, 2.3, 2, M.hull, 8, PI / 8, 1), 0, 0, 0)); u.add(at(cy(2.6, 2.6, 0.3, M.gold), 0, 2, 0)); }
     const urn = mesh(urnGeo(), M.hull); urn.scale.setScalar(1.1); urn.position.y = (lv >= 3 ? 2 : 0) + 3.3; u.add(urn);
     for (const y of [-1.6, 1.6]) u.add(at(mesh(G('Lru' + y, () => new THREE.TorusGeometry(y < 0 ? 2.3 : 1.75, 0.18, 4, 14).rotateX(PI / 2)), M.gold), 0, urn.position.y + y * 1.1, 0));
     u.add(at(mesh(G('Lrg', () => new THREE.CylinderGeometry(0.8, 0.8, 0.5, 10)), M.glow, false), 0, urn.position.y + 3.3, 0));
@@ -558,7 +569,7 @@ regB('refinery', (M, d, lv) => {
    Sockel, dritter Ring, großer liegender Strahlenkranz, Heiligenschein über dem Kern. */
 regB('reactor', (M, d, lv) => {
   const g = new THREE.Group(), r = d.r, X = xm(M), B = xb(M);
-  g.add(platform(M, r));
+  g.add(platform(M, r, { n: 6 }));
   /* Sockel */
   g.add(cy(9, 10, 6, M.hull, 8, PI / 8, 3)); g.add(at(cy(9.7, 9.7, 0.6, M.gold), 0, 6, 0)); g.add(at(cy(10.4, 10.6, 0.8, M.gold), 0, 0.4, 0));
   g.add(cy(5.6, 7, 3.5, M.gold, 8, PI / 8, 7.9)); g.add(at(cy(4.4, 4.6, 1.5, M.hull), 0, 10.4, 0));
@@ -594,7 +605,7 @@ regB('reactor', (M, d, lv) => {
    Armillarsphäre über dem Helm, Räucherlaternen, Banner, zweiter Ring. */
 regB('lab', (M, d, lv) => {
   const g = new THREE.Group(), r = d.r, X = xm(M);
-  g.add(platform(M, r));
+  g.add(platform(M, r, { n: 4 }));   /* Raute, Ecken auf den Achsen (dort liegen ab Stufe II die Bibliotheksflügel) */
   const R = 11.5, hb = 8;
   g.add(octHouse(M, R, hb, { roof: false, nw: 2, whk: 0.45 }));
   /* zweites Geschoss (Fensterreihe) */
@@ -608,6 +619,15 @@ regB('lab', (M, d, lv) => {
   for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, hh = i % 2 ? 5 : 8; const n = mesh(G('Lln' + hh, () => new THREE.CylinderGeometry(0.08, 0.22, hh, 5).translate(0, hh / 2, 0)), M.gold); n.position.set(Math.cos(a) * rt * 0.6, y0 + ht + roofH * 0.55, Math.sin(a) * rt * 0.6); n.rotation.set(Math.sin(a) * 0.3, 0, -Math.cos(a) * 0.3); g.add(n); const tip = navLight(M, 0.28, 'light', 0.3 + i * 0.03); tip.position.set(Math.cos(a) * (rt * 0.6 + hh * 0.3), y0 + ht + roofH * 0.55 + hh * 0.95, Math.sin(a) * (rt * 0.6 + hh * 0.3)); g.add(tip); }
   /* Ecktürmchen mit Strebebögen */
   if (lv >= 2) for (let i = 0; i < 4; i++) { const a = i * PI / 2; const t = spire(M, 1.6, 7, 6); t.position.set(Math.cos(a) * 9.5, y0, Math.sin(a) * 9.5); g.add(t); const fb = buttress(M, [9.5, y0 + 7], [rt + 0.3, y0 + 11], 0.35); fb.rotation.y = -a; g.add(fb); }
+  /* Bibliotheksflügel zu den Rautenecken: Stufe II zwei (±X), Stufe III vier; Kopfwand mit Fialen */
+  const nWing = lv >= 3 ? 4 : lv >= 2 ? 2 : 0;
+  for (let i = 0; i < nWing; i++) {
+    const w = new THREE.Group(); w.rotation.y = i * PI / 2 + PI / 2;
+    w.add(hallZ(M, R * 0.86, R + 10.5, 7, 6, 3.4, { ribs: 2, rose: false }));
+    w.add(at(blk(7.4, 6.6, 1.2, M.hull), 0, 3.3, R + 10.9)); w.add(at(blk(7.8, 0.5, 1.6, M.gold), 0, 6.6, R + 10.9));
+    w.add(at(pinnacle(M, 0.7, 5), 0, 6.8, R + 10.9)); for (const s of [-1, 1]) w.add(at(pinnacle(M, 0.45, 3.2), s * 3.5, 6.8, R + 10.9));
+    g.add(w);
+  }
   /* Astrolab-Ringe um den Turm */
   if (lv >= 2) { const pv = new THREE.Group(); const rg = mesh(G('Lla1', () => new THREE.TorusGeometry(8.5, 0.35, 5, 40)), M.gold); rg.rotation.x = PI / 2 + 0.25; pv.add(rg); for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; pv.add(at(navLight(M, 0.35, 'light', 0.3 + i * 0.05), Math.cos(a) * 8.5, Math.sin(a) * 8.5 * Math.sin(0.25) * -1, Math.sin(a) * 8.5 * Math.cos(0.25))); } pv.position.y = y0 + ht * 0.45; pv.userData.spin = { axis: 'y', speed: 0.25 }; g.add(pv); }
   if (lv >= 3) {
@@ -627,10 +647,12 @@ regB('lab', (M, d, lv) => {
    Strebebögen. Stufe III: schwere Lanze mit kleiner Lanze darüber, höherer Turm, Zinnenring, Teamlichter. */
 regB('turret', (M, d, lv) => {
   const g = new THREE.Group(), r = d.r;
-  g.add(platform(M, r));
+  g.add(platform(M, r, { n: 12, k: 0.82 }));
   const rt = 5.4, h = [8, 9, 10.5][lv - 1];
   g.add(bastionTower(M, rt, h, { buttress: lv >= 2, brot: PI / 4 }));
   if (lv >= 3) { const P = octPoly(12.5, PI / 8); for (let i = 0; i < 8; i++) { const a = P[i], b = P[(i + 1) % 8], L = Math.hypot(b[0] - a[0], b[1] - a[1]); const w = new THREE.Group(); w.add(at(blk(L - 1.5, 2, 1.4, M.hull), 0, 1, 0)); w.add(at(blk(L - 1.5, 0.3, 1.6, M.gold), 0, 2, 0)); for (let j = 0; j < 3; j++) w.add(at(blk(0.9, 0.9, 1.4, M.hull), -L / 2 + 1.6 + j * (L - 3.2) / 2, 2.5, 0)); w.position.set((a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2); w.rotation.y = Math.atan2(-(b[1] - a[1]), b[0] - a[0]); g.add(w); } }
+  /* Stufe II: niedrige Goldbrüstung mit Fialen um den Turmfuß */
+  if (lv === 2) { g.add(at(mesh(G('Ltpb', () => new THREE.TorusGeometry(11.5, 0.45, 3, 16).rotateX(PI / 2)), M.gold), 0, 1.1, 0)); for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + PI / 4; g.add(at(cy(0.6, 0.75, 1.4, M.hull, 6, 0, 0.7), Math.cos(a) * 11.5, 0, Math.sin(a) * 11.5)); g.add(at(pinnacle(M, 0.4, 2.6), Math.cos(a) * 11.5, 1.4, Math.sin(a) * 11.5)); } }
   const head = lv >= 3 ? lanceHead(M, 2.9, { len: 18, lr: 0.9, rings: 3, sub: true }) : lanceHead(M, 2.6, { n: lv, len: 14, lr: 0.6 });
   head.position.y = h + rt * 0.2; g.add(head);
   for (let i = 0; i < 4; i++) { const a = PI / 4 + i * PI / 2; g.add(at(navLight(M, 0.45, 'light', 0.3 + i * 0.02), Math.cos(a) * 14, 0.8, Math.sin(a) * 14)); }
@@ -670,7 +692,7 @@ regB('shield', (M, d, lv) => {
    Stufe III: drei Rahen, sechs Banner, Heiligenschein-Krone, Räucherlaternen am Sockel. */
 regB('relay', (M, d, lv) => {
   const g = new THREE.Group(), r = d.r, B = xb(M);
-  g.add(platform(M, r));
+  g.add(platform(M, r, { n: 3 }));   /* Dreieck: Spitze auf +X, Ecktürme ab Stufe II auf den Ecken */
   g.add(cy(5.5, 6.2, 3, M.hull, 8, PI / 8, 1.5)); g.add(at(cy(6, 6, 0.4, M.gold), 0, 3, 0));
   for (let i = 0; i < 4; i++) { const a = i * PI / 2; const c = crest(M, 1.1); c.position.set(Math.cos(a) * 5.3, 1.6, Math.sin(a) * 5.3); c.rotation.y = PI / 2 - a; g.add(c); }
   const ht = [15, 20, 25][lv - 1], tw = spire(M, 2.8, ht, 9.5); tw.position.y = 3; g.add(tw);
@@ -681,9 +703,17 @@ regB('relay', (M, d, lv) => {
     yard.add(at(blk(15, 0.55, 0.55, M.gold), 0, 0, 0)); for (const s of [-1, 1]) { yard.add(at(mesh(G('Lrk', () => new THREE.ConeGeometry(0.5, 1.8, 6).rotateZ(-PI / 2)), M.gold), s * 8.2, 0, 0, 0, s > 0 ? 0 : PI, 0)); yard.add(at(navLight(M, 0.3, 'light', 0.3), s * 9.1, 0, 0)); const bn = tbanner(M, 3, 9, i + s); bn.position.set(s * 5.2, -0.3, 0); bn.rotation.y = PI / 2; yard.add(bn); }
     yard.position.y = y; g.add(yard);
   });
+  /* Ecktürme auf den Dreieckspitzen (Stufe II) mit Strebebögen zum Turm, Stufe III mit Bannern und Kristallen */
+  if (lv >= 2) for (let i = 0; i < 3; i++) {
+    const a = i * TAU / 3, cx = Math.cos(a) * 12.5, cz = Math.sin(a) * 12.5, t = spire(M, 1.7, lv >= 3 ? 10 : 7.5, 6);
+    t.position.set(cx, 0, cz); g.add(t);
+    const fb = buttress(M, [12.5, lv >= 3 ? 9 : 6.5], [3.4, 3 + ht * 0.35], 0.35); fb.rotation.y = -a; g.add(fb);
+    if (lv >= 3) { const bn = tbanner(M, 1.6, 5.5, i); bn.position.set(Math.cos(a) * 10.6, 8.5, Math.sin(a) * 10.6); bn.rotation.y = -a + PI / 2; g.add(bn); }
+  }
+  if (lv >= 3) { const hl = halo(M, 5.5, 16); hl.rotation.x = -PI / 2; hl.position.y = 3 + ht + 12; g.add(hl); }
   if (lv >= 2) { const rg = mesh(G('Lrlr', () => new THREE.TorusGeometry(5.5, 0.22, 5, 32).rotateX(PI / 2)), B.teamSoft, false); rg.position.y = 3 + ht * 0.3; rg.userData.pulse = { amp: 0.04, speed: 1.2 }; g.add(rg); }
   if (lv >= 3) { const sb = sunburst(M, 4.2, 12, 0.1); sb.position.y = 3 + ht * 0.62; g.add(sb); for (let i = 0; i < 4; i++) { const a = i * PI / 2 + PI / 4; g.add(at(blk(3.6, 0.5, 0.5, M.gold), Math.cos(a) * 7, 3.6, Math.sin(a) * 7, 0, -a, 0)); const cs = censer(M, 1.8); cs.position.set(Math.cos(a) * 8.6, 3.4, Math.sin(a) * 8.6); g.add(cs); } }
-  for (let i = 0; i < 4; i++) { const a = PI / 4 + i * PI / 2; g.add(at(navLight(M, 0.45, 'light', 0.3 + i * 0.02), Math.cos(a) * 14, 0.8, Math.sin(a) * 14)); }
+  for (let i = 0; i < 3; i++) { const a = i * TAU / 3 + PI / 3; g.add(at(navLight(M, 0.45, 'light', 0.3 + i * 0.02), Math.cos(a) * 8.2, 0.8, Math.sin(a) * 8.2)); }
   return g;
 });
 
@@ -738,6 +768,92 @@ regB('super', (M, d, lv) => {
     for (let i = 0; i < 16; i++) { const a = i / 16 * TAU + PI / 16; g.add(at(cy(1.1, 1.3, 2.5, M.hull, 6, 0, 1.25), Math.cos(a) * 47, 0, Math.sin(a) * 47)); g.add(at(pinnacle(M, 0.5, 4), Math.cos(a) * 47, 2.5, Math.sin(a) * 47)); }
     const hl = halo(M, 13, 24); hl.rotation.x = -PI / 2; hl.position.y = cy0 + 13; g.add(hl);
     const rg = mesh(G('Lsrg', () => new THREE.TorusGeometry(46, 0.25, 4, 64).rotateX(PI / 2)), B.teamSoft, false); rg.position.y = 1.0; g.add(rg);
+  }
+  return g;
+});
+
+/* ------------------------------------------------------------ eigene Modelle für Seherturm und Ägiswall
+   extra22.js trägt die allgemeinen (verkleinertes Relais) nur ein, wenn eine Fraktion kein eigenes Modell hat. */
+
+/* SEHERTURM – Frühwarnstation: Fünfeck-Plattform, achteckiges Sockelhaus, schlanker Schaft mit Rosen, oben auf
+   einer Goldgabel das drehende „Seherauge“: ein großer Hohlspiegel mit Goldrand, im Brennpunkt ein Kristall.
+   Stufe I: Spiegel 6,5. Stufe II: Spiegel 7,5, fünf Schildpylonen auf den Ecken. Stufe III: Spiegel 8,5,
+   Strahlenkranz um den Schaft, Strebebögen von den Pylonen zum Schaft, Heiligenschein über dem Auge, Banner. */
+regB('radar', (M, d, lv) => {
+  const g = new THREE.Group(), r = d.r, X = xm(M), B = xb(M);
+  g.add(platform(M, r, { n: 5 }));
+  const hb = 6, ht = [13, 16, 19][lv - 1], y1 = hb + ht, mR = [6.5, 7.5, 8.5][lv - 1];
+  /* Sockelhaus: Achteckstumpf mit Gold-Gesims, Lanzetten auf vier Seiten */
+  g.add(cy(6.2, 6.6, hb, M.hull, 8, PI / 8, hb / 2)); g.add(at(cy(6.7, 6.7, 0.5, M.gold), 0, hb, 0));
+  for (let i = 0; i < 4; i++) { const a = i * PI / 2, wa = apo(6.2, 6.6, hb, 3) + 0.08; const gr = glassRow(M, [[0, 1.2, 1.6, 3.2]], 0.2); gr.position.set(Math.cos(a) * wa, 0, Math.sin(a) * wa); gr.rotation.y = -a; g.add(gr); }
+  /* Schaft */
+  g.add(cy(2.8, 3.4, ht, M.hull, 8, PI / 8, hb + ht / 2));
+  for (const f of [0.08, 0.5, 0.92]) g.add(at(cy(3.5, 3.5, 0.5, M.gold), 0, hb + ht * f, 0));
+  for (let i = 0; i < 2; i++) { const a = i * PI + PI / 8; const ro = rose(M, 1.5, 8); ro.position.set(Math.cos(a) * 3.15, hb + ht * 0.7, Math.sin(a) * 3.15); ro.rotation.y = PI / 2 - a; g.add(ro); }
+  g.add(at(cy(4.4, 3.2, 1.4, M.hull), 0, y1 + 0.7, 0)); g.add(at(cy(4.6, 4.6, 0.4, M.gold), 0, y1 + 1.5, 0));
+  for (let i = 0; i < 4; i++) { const a = i / 4 * TAU + PI / 4; g.add(at(pinnacle(M, 0.3, 2), Math.cos(a) * 4.2, y1 + 1.6, Math.sin(a) * 4.2)); }
+  /* Seherauge: dreht um Y */
+  const eye = new THREE.Group(); eye.position.y = y1 + 1.7; eye.userData.spin = { axis: 'y', speed: 0.4 }; g.add(eye);
+  eye.add(at(cy(2.2, 2.6, 1.2, M.gold), 0, 0.6, 0));
+  for (const s of [-1, 1]) { eye.add(at(blk(0.8, mR * 0.9 + 1.2, 1.0, M.gold), s * (mR + 0.7), mR * 0.45 + 0.6, 0)); eye.add(at(blk(1.1, 0.4, 1.3, M.gold), s * (mR + 0.7), mR * 0.9 + 1.2, 0)); }
+  eye.add(rod([-(mR + 0.7), 1.0, 0], [mR + 0.7, 1.0, 0], 0.7, 0.7, M.gold));
+  const mir = new THREE.Group(); mir.position.y = mR * 0.9 + 0.4; mir.rotation.x = PI / 2 - 0.4; eye.add(mir);
+  const capG = G('Lrdm' + mR, () => { const Rs = mR * 1.6, th = Math.asin(1 / 1.6), s = new THREE.SphereGeometry(Rs, 16, 4, 0, TAU, 0, th); s.translate(0, -Rs * Math.cos(th), 0); s.scale(1, -1, 1); const nn = s.attributes.normal; for (let i = 0; i < nn.count; i++) nn.setXYZ(i, -nn.getX(i), -nn.getY(i), -nn.getZ(i)); return s; });
+  mir.add(mesh(capG, B.mirror));   /* gespiegelt statt gedreht: die hohle Seite ist Vorderseite */
+  mir.add(at(mesh(G('Lrdb' + mR, () => new THREE.CylinderGeometry(mR * 1.0, mR * 0.7, 0.8, 16)), M.gold), 0, -0.5, 0));
+  mir.add(mesh(G('Lrdr' + mR, () => new THREE.TorusGeometry(mR, mR * 0.05, 3, 24).rotateX(PI / 2)), M.gold));
+  for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + PI / 2; mir.add(rod([Math.cos(a) * mR * 0.95, 0, Math.sin(a) * mR * 0.95], [0, mR * 0.75, 0], 0.22, 0.22, M.gold)); }
+  const cr = mesh(G('Lrdc', () => new THREE.OctahedronGeometry(1, 0).scale(0.8, 1.5, 0.8)), X.crystal); cr.position.y = mR * 0.8; mir.add(cr);
+  mir.add(at(glowSprite(M, 5), 0, mR * 0.8, 0));
+  /* Stufe II: Pylonen auf den Ecken */
+  const P = octPoly(r * 0.97 * 0.74, 0, 5);
+  if (lv >= 2) {
+    for (const [x, z] of P) { const p = pylon(M, lv >= 3 ? 9 : 7, 1.1); p.position.set(x, 0, z); g.add(p); }
+  }
+  /* Stufe III: Strahlenkranz, Strebebögen, Heiligenschein, Banner */
+  if (lv >= 3) {
+    const sb = sunburst(M, 5.5, 12, 0.12); sb.position.y = hb + ht * 0.38; g.add(sb);
+    P.forEach(([x, z], i) => { const a = i / 5 * TAU, fb = buttress(M, [Math.hypot(x, z) - 0.5, 7.5], [3.4, hb + ht * 0.3], 0.35); fb.rotation.y = -a; g.add(fb); });
+    const hl = halo(M, 4.5, 16); hl.rotation.x = -PI / 2; hl.position.y = y1 + mR * 2 + 4; g.add(hl);
+    for (let i = 0; i < 4; i++) { const a = i * PI / 2 + PI / 4; const bn = tbanner(M, 1.6, 4.6, i); bn.position.set(Math.cos(a) * 7.0, hb - 0.4, Math.sin(a) * 7.0); bn.rotation.y = -a + PI / 2; g.add(bn); }
+  }
+  return g;
+});
+
+/* ÄGISWALL – Schildwall: langgestreckte Sechseck-Plattform, darauf eine Kapellenmauer mit Buntglas zwischen zwei
+   Bastionstürmen mit Kristallkronen; ein Spitzbogen aus Gold verbindet die Turmköpfe, in ihm hängt der Emitter-
+   kristall (pulsiert). Das Feld selbst zeichnet entities.js. Stufe II: höhere Türme, Strebepfeiler mit Strebebögen,
+   Banner an der Mauer. Stufe III: Heiligenschein um den Kristall, Fialenkamm auf der Mauer, höchste Türme. */
+regB('wall', (M, d, lv) => {
+  const g = new THREE.Group(), r = d.r, X = xm(M), B = xb(M), ph = [8, 9.5, 11][lv - 1], tx = 8.2;
+  g.add(platform(M, r, { n: 6, sz: 0.62 }));
+  /* Kapellenmauer */
+  g.add(at(blk(2 * tx - 3, 4.6, 3.2, M.hull), 0, 2.3, 0)); g.add(at(blk(2 * tx - 2.6, 0.5, 3.8, M.gold), 0, 4.7, 0)); g.add(at(blk(2 * tx - 2.6, 0.5, 3.6, M.hull2), 0, 0.3, 0));
+  for (const s of [-1, 1]) { const gr = glassRow(M, row(4, -5, 5, 1.0, 1.1, 2.6), 0.2); gr.position.z = s * 1.67; gr.rotation.y = -s * PI / 2; g.add(gr); }
+  g.add(at(blk(2 * tx - 4, 0.15, 0.3, B.team), 0, 4.98, 1.4));
+  /* Bastionstürme mit Kristallkronen */
+  for (const s of [-1, 1]) {
+    const t = bastionTower(M, 2.3, ph); t.position.x = s * tx; g.add(t);
+    const c = mesh(G('Lwc', () => new THREE.OctahedronGeometry(1, 0).scale(1.0, 2.0, 1.0)), X.crystal); c.position.set(s * tx, ph + 2.6, 0); g.add(c);
+    const rg = mesh(G('Lwr2', () => new THREE.TorusGeometry(1.7, 0.14, 4, 16).rotateX(PI / 2)), M.glowSoft, false); rg.position.set(s * tx, ph + 2.6, 0); rg.userData.pulse = { amp: 0.07, speed: 1.6 }; g.add(rg);
+  }
+  /* Spitzbogen zwischen den Türmen, darin der Emitterkristall */
+  const ah = 6 + lv;
+  g.add(at(archTube(M, 2 * tx, ah, 0.45, M.gold), 0, ph + 0.3, 0));
+  const ey = ph + 0.3 + ah - 3.2;
+  g.add(rod([0, ph + 0.3 + ah - 0.4, 0], [0, ey + 1.8, 0], 0.18, 0.18, M.gold));
+  const em = mesh(G('Lwe', () => new THREE.OctahedronGeometry(1, 0).scale(1.1, 1.9, 1.1)), X.crystal); em.position.y = ey; em.userData.pulse = { amp: 0.1, speed: 2.4 }; g.add(em);
+  g.add(at(glowSprite(M, 6), 0, ey, 0));
+  /* Stufe II: Strebepfeiler mit Strebebögen an den Turmaußenseiten, Banner */
+  if (lv >= 2) for (const s of [-1, 1]) {
+    const p = pier(M, 1.2, ph * 0.55, 1.6); p.position.x = s * (tx + 5); g.add(p);
+    const fb = buttress(M, [tx + 5, ph * 0.55], [tx + 2.3, ph * 0.85], 0.32); fb.scale.x = s; g.add(fb);
+    const bn = tbanner(M, 1.5, 4.2, s); bn.position.set(s * 3.2, 4.4, 1.9); g.add(bn);
+  }
+  /* Stufe III: Heiligenschein um den Kristall, Fialenkamm */
+  if (lv >= 3) {
+    const hl = halo(M, 2.6, 12); hl.position.y = ey; g.add(hl);
+    for (let i = 0; i < 5; i++) g.add(at(pinnacle(M, 0.35, 2.2), -5 + i * 2.5, 4.95, 0));
   }
   return g;
 });
