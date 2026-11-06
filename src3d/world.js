@@ -195,25 +195,43 @@ export function buildWorld(g) {
 function siteKey(st, col) { return st.kind + '|' + (st.scanned ? 1 : 0) + '|' + (st.done ? 1 : 0) + (OP_KINDS[st.kind] ? '|' + (col || '') : ''); }
 /* ------------------------------------------------------------ Fassung 22: Trümmerfelder und neutrale Stationen */
 const OP_KINDS = { relayst: 1, refplat: 1, drydock: 1 };
+/* Trümmerfelder. Fassung 24: statt einer flachen dunklen Scheibe (wirkte wie ein Loch) eine weiche Staubwolke mit
+   gestricheltem Rand, je Feld eine eigene Gruppe, die sich langsam dreht – die Wrackteile treiben sichtbar. */
+let DUST_TEX = null;
+function dustTex() {
+  if (DUST_TEX) return DUST_TEX;
+  const c = canvas(256, 256, (x, w, h) => {
+    const r = rng(311), cx = w / 2, R = w / 2 - 2;
+    const gr = x.createRadialGradient(cx, cx, 0, cx, cx, R); gr.addColorStop(0, 'rgba(150,162,182,0.16)'); gr.addColorStop(0.75, 'rgba(140,152,172,0.11)'); gr.addColorStop(0.97, 'rgba(130,142,165,0.03)'); gr.addColorStop(1, 'rgba(130,142,165,0)');
+    x.fillStyle = gr; x.beginPath(); x.arc(cx, cx, R, 0, TAU); x.fill();
+    /* weiche Schlieren statt harter Kreise */
+    for (let i = 0; i < 70; i++) { const a = r() * TAU, d = Math.sqrt(r()) * R * 0.85, rr = 14 + r() * 34, px = cx + Math.cos(a) * d, py = cx + Math.sin(a) * d, b = x.createRadialGradient(px, py, 0, px, py, rr);
+      b.addColorStop(0, `rgba(205,214,228,${0.035 + r() * 0.04})`); b.addColorStop(1, 'rgba(205,214,228,0)'); x.fillStyle = b; x.fillRect(px - rr, py - rr, rr * 2, rr * 2); }
+    for (let i = 0; i < 420; i++) { const a = r() * TAU, d = Math.sqrt(r()) * R * 0.95; x.fillStyle = `rgba(225,232,242,${0.12 + r() * 0.3})`; x.fillRect(cx + Math.cos(a) * d, cx + Math.sin(a) * d, 1 + r(), 1 + r()); }
+    x.strokeStyle = 'rgba(190,205,225,0.32)'; x.lineWidth = 1.5; x.setLineDash([10, 8]); x.beginPath(); x.arc(cx, cx, R - 3, 0, TAU); x.stroke();
+  });
+  DUST_TEX = new THREE.CanvasTexture(c); DUST_TEX.colorSpace = THREE.SRGBColorSpace; return DUST_TEX;
+}
 function buildDebris(list) {
-  const g = new THREE.Group(); g.name = 'debris';
-  const n = list.reduce((s, d) => s + Math.round(d.r * d.r / 900), 0), r = rng(77);
-  const plate = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.22, 0.5), new THREE.MeshStandardMaterial({ color: '#7d8796', metalness: 0.7, roughness: 0.45 }), n);
-  const chunk = new THREE.InstancedMesh(new THREE.TetrahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ color: '#5c636e', metalness: 0.55, roughness: 0.6, flatShading: true }), n);
+  const g = new THREE.Group(); g.name = 'debris'; W.debris = [];
+  const plateG = new THREE.BoxGeometry(1, 0.22, 0.5), chunkG = new THREE.TetrahedronGeometry(1, 0);
+  const plateM = new THREE.MeshStandardMaterial({ color: '#8d97a6', metalness: 0.7, roughness: 0.42 }), chunkM = new THREE.MeshStandardMaterial({ color: '#646b76', metalness: 0.55, roughness: 0.6, flatShading: true });
+  const dustM = new THREE.MeshBasicMaterial({ map: dustTex(), transparent: true, depthWrite: false, fog: false });
   const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
-  let k = 0;
-  for (const d of list) {
-    const cnt = Math.round(d.r * d.r / 900);
-    for (let i = 0; i < cnt; i++, k++) {
-      const a = r() * TAU, dd = Math.sqrt(r()) * d.r * 0.9, s = 3 + r() * 9;
-      p.set(d.x + Math.cos(a) * dd, -2 + r() * 6, d.y + Math.sin(a) * dd); e.set(r() * TAU, r() * TAU, r() * TAU); q.setFromEuler(e);
-      sc.set(s * (1 + r()), s, s); m4.compose(p, q, sc); plate.setMatrixAt(k, m4);
-      p.x += (r() - 0.5) * 30; p.z += (r() - 0.5) * 30; sc.setScalar(s * 0.6); m4.compose(p, q, sc); chunk.setMatrixAt(k, m4);
+  list.forEach((d, fi) => {
+    const r = rng(77 + fi * 131), cnt = Math.max(6, Math.round(d.r * d.r / 900));
+    const fg = new THREE.Group(); fg.position.set(d.x, 0, d.y);
+    const plate = new THREE.InstancedMesh(plateG, plateM, cnt), chunk = new THREE.InstancedMesh(chunkG, chunkM, cnt);
+    for (let i = 0; i < cnt; i++) {
+      const a = r() * TAU, dd = Math.sqrt(r()) * d.r * 0.88, s = 3 + r() * 9;
+      p.set(Math.cos(a) * dd, -2 + r() * 6, Math.sin(a) * dd); e.set(r() * TAU, r() * TAU, r() * TAU); q.setFromEuler(e);
+      sc.set(s * (1 + r()), s, s); m4.compose(p, q, sc); plate.setMatrixAt(i, m4);
+      p.x += (r() - 0.5) * 30; p.z += (r() - 0.5) * 30; sc.setScalar(s * 0.6); m4.compose(p, q, sc); chunk.setMatrixAt(i, m4);
     }
-    const dust = new THREE.Mesh(new THREE.CircleGeometry(d.r, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: '#40506a', transparent: true, opacity: 0.35, depthWrite: false, fog: false, blending: THREE.AdditiveBlending }));
-    dust.position.set(d.x, -4, d.y); dust.renderOrder = 1; g.add(dust);
-  }
-  for (const im of [plate, chunk]) { im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; g.add(im); }
+    for (const im of [plate, chunk]) { im.castShadow = true; im.receiveShadow = true; im.frustumCulled = false; fg.add(im); }
+    const dust = new THREE.Mesh(new THREE.PlaneGeometry(d.r * 2.08, d.r * 2.08).rotateX(-Math.PI / 2), dustM); dust.position.y = -5; dust.renderOrder = 1; fg.add(dust);
+    g.add(fg); W.debris.push({ g: fg, dust, sp: (r() < 0.5 ? -1 : 1) * (0.012 + r() * 0.01) });
+  });
   return g;
 }
 function outpostModel(st, col) {
@@ -261,6 +279,8 @@ export function updateWorld(g, dt, t, view) {
   for (const e of W.nebs) if (e.m) e.m.visible = inView(e.n.x, e.n.y, e.n.r * 1.2, 20);
   for (const e of W.nebs) if (e.grp) { const n = e.n, tt = t * 0.15 + n.x * 0.01; e.grp.children.forEach((d, k) => { d.position.x = Math.cos(tt + k * 2.1) * n.r * 0.18; d.position.z = Math.sin(tt * 1.3 + k * 2.1) * n.r * 0.18; if (S.ultra) { d.rotation.y = t * 0.02 * (k % 2 ? -1 : 1) * (1 + k * 0.4); const sc = n.r * (1 - k * 0.22) * (1 + 0.06 * Math.sin(t * 0.3 + k * 1.7 + n.x * 0.003)); d.scale.setScalar(sc); } }); }
   /* Fassung 24 »Ultra«: Gasriese dreht sich, die Wolken schneller */
+  /* Fassung 24: Trümmerfelder treiben langsam im Kreis, der Staub dreht gegenläufig */
+  if (W.debris) for (const d of W.debris) { d.g.rotation.y += dt * d.sp; d.dust.rotation.y = -d.g.rotation.y * 1.6; }
   if (W.giant) { W.giant.ball.rotateOnAxis(W.giant.axis, dt * 0.012); W.giant.cloud.rotateOnAxis(W.giant.axis, dt * 0.022); }
   /* Fassung 22: gesprengte Felsen ausblenden, angeschlagene rot getönt */
   if ((g.rockN || 0) !== W.rockN) { W.rockN = g.rockN || 0; const z = new THREE.Matrix4().makeScale(0, 0, 0); g.map.rocks.forEach((o, i) => { const rf = W.rockRef[i]; if (o.gone && rf && !rf.gone) { rf.gone = 1; rf.im.setMatrixAt(rf.j, z); rf.im.instanceMatrix.needsUpdate = true; } }); }
@@ -294,5 +314,5 @@ export function updateWorld(g, dt, t, view) {
 export function disposeWorld() {
   if (!W.root) return;
   S.scene.remove(W.root);
-  W.root = null; W.sky = null; W.giant = null; W.anim = null; W.nodes = []; W.nebs = []; W.sites.clear(); W.gates.clear();
+  W.root = null; W.sky = null; W.giant = null; W.debris = null; W.anim = null; W.nodes = []; W.nebs = []; W.sites.clear(); W.gates.clear();
 }

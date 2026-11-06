@@ -143,6 +143,11 @@ button { font: inherit; color: inherit; }
 #tip .cost { color: var(--acc2); font-weight: 600; }
 #tip p { margin: 0.2em 0 0; color: var(--txt); }
 #tip .req { color: var(--warn); }
+/* Fassung 24: Erstkontakt-Hinweise – einmal je Gerät, nicht modal */
+#hintCard { position: absolute; left: 50%; top: 7.6em; transform: translateX(-50%); max-width: min(34em, 92vw); background: var(--panel2); border: 1px solid #8fe3ff66; border-left: 4px solid #8fe3ff; border-radius: 8px; padding: 0.5em 0.7em 0.5em 0.8em; display: flex; gap: 0.6em; align-items: flex-start; z-index: 6; box-shadow: 0 4px 18px #0008; }
+#hintCard b { color: #8fe3ff; display: block; margin-bottom: 0.15em; }
+#hintCard p { margin: 0; font-size: 0.88em; line-height: 1.35; }
+#hintCard button { flex: none; }
 #info { position: absolute; left: 50%; bottom: 8.6em; transform: translateX(-50%); background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 0.3em 0.8em; font-size: 1em; pointer-events: none; }
 /* ---------- Fenster ---------- */
 .ovl { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, rgba(2,4,10,0.55), rgba(2,4,10,0.86) 75%); z-index: 10; font-size: var(--ui); padding: 0.6em; box-sizing: border-box; }
@@ -626,6 +631,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     <div id="idle" hidden><span class="idL">Untätig</span></div><!-- Fassung 22: Untätig-Hinweise (play.js) -->
     <div id="mpSigBox" hidden></div><!-- Mehrspieler: Auswahl der Funksignale (net.js) -->
     <div id="info" hidden></div>
+    <div id="hintCard" hidden><p><b id="hintT"></b><span id="hintX"></span></p><button class="key" id="hintOk">OK</button></div>
     <div id="tip" hidden></div>
   </div>
   <div id="menu">
@@ -893,6 +899,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     <div class="row"><span class="lbl">Qualität</span><div class="seg" id="sQual"></div></div>
     <div class="row"><span class="lbl">Bildrate</span><div class="seg" id="sPwr"></div></div>
     <div class="row"><span class="lbl">Bildrate anzeigen</span><div class="seg" id="sFps"></div></div><!-- Fassung 24 -->
+    <div class="row"><span class="lbl">Einsteiger-Hinweise</span><div class="seg" id="sHints"></div></div><!-- Fassung 24 -->
     <div class="row"><span class="lbl">Farbenblind-Modus</span><div class="seg" id="sCb"></div></div>
     <div class="row"><span class="lbl">Vibration</span><div class="seg" id="sVib"></div></div>
     <div class="row"><span class="lbl">Schadenssymbole</span><div class="seg" id="sDmg"></div></div><!-- Fassung 22 -->

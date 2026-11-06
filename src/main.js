@@ -24,6 +24,7 @@ function resetUi() {
 /* saved: { g, ui } aus einem Spielstand, sonst entsteht eine neue Partie */
 /* seat: eigener Sitz im Mehrspieler (sonst der menschliche Spieler der Partie) */
 function beginGame(opts, kind, saved, seat) {
+  UI.hintQ = []; UI.hintCur = ''; { const hc = document.getElementById('hintCard'); if (hc) hc.hidden = true; }
   const g = saved ? saved.g : createGame(opts), me = seat !== undefined && seat >= 0 ? seat : g.human;
   resetUi();
   UI.g = g; UI.me = me; UI.P = g.players[me]; UI.attract = false; UI.kind = kind; UI.opts = opts; UI.speed = kind === 'mp' ? 1 : SET.speed; UI.tab = 'eco';

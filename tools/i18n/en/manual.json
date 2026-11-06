@@ -789,5 +789,22 @@
  "Bildrate anzeigen": "Show frame rate",
  "Flotten und Stationen werden vorbereitet.": "Preparing fleets and stations.",
  "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Your browser is rendering 3D without the graphics card. Please turn on hardware acceleration in the browser settings – or choose 2D.",
- "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "This graphics card is too weak for Ultra – High is recommended."
+ "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "This graphics card is too weak for Ultra – High is recommended.",
+ "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Debris field: cover (−25% damage), hard to detect, slower",
+ "Schilde": "Shields",
+ "Schilde fangen Treffer ab und laden sich außerhalb des Kampfes wieder auf. Ist der Schild weg, trifft es den Rumpf. Beschädigte Schiffe zur Werft schicken: Sie repariert im Umkreis.": "Shields absorb hits and recharge out of combat. Once a shield is down, the hull takes the damage. Send damaged ships to the shipyard: it repairs everything nearby.",
+ "Lahmlegen statt zerstören": "Disable instead of destroy",
+ "Ein manövrierunfähiges Schiff treibt hilflos. Wähle Schiffe mit Marines und tippe es an, um es zu entern – erbeutete Schiffe gehören dann dir.": "A disabled ship drifts helplessly. Select ships carrying marines and tap it to board – captured ships are yours.",
+ "Wracks": "Wrecks",
+ "Zerstörte Schiffe hinterlassen Wracks. Frachter wählen und das Wrack antippen: Die Bergung bringt Rohstoffe.": "Destroyed ships leave wrecks. Select cargo ships and tap the wreck: salvage yields resources.",
+ "Trümmerfeld": "Debris field",
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Ships inside a debris field have cover (−25% damage) and are hard to detect, but move slower. Fighters don't benefit.",
+ "Sprungtor": "Jump gate",
+ "Fliege Schiffe durch die Mitte eines aktiven Tors, um zum verbundenen Tor zu springen. Tor antippen zeigt, wem es gehört.": "Fly ships through the centre of an active gate to jump to its linked gate. Tap the gate to see who controls it.",
+ "Einsteiger-Hinweise": "Beginner tips",
+ "Neu zeigen": "Show again",
+ "Hinweise werden wieder gezeigt": "Tips will be shown again",
+ "OK": "OK",
+ "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Debris field: cover (−25 % damage), hard to detect, slower",
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Ships inside a debris field have cover (−25 % damage) and are hard to detect, but move slower. Fighters don't benefit."
 }

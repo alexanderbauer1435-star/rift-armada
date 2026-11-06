@@ -787,5 +787,22 @@
  "Bildrate anzeigen": "Mostrar FPS",
  "Flotten und Stationen werden vorbereitet.": "Preparando flotas y estaciones.",
  "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "El navegador calcula el 3D sin la tarjeta gráfica. Activa la aceleración por hardware en los ajustes del navegador, o elige 2D.",
- "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "Esta tarjeta gráfica es demasiado débil para Ultra; se recomienda Alta."
+ "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "Esta tarjeta gráfica es demasiado débil para Ultra; se recomienda Alta.",
+ "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo de escombros: cobertura (−25 % de daño), difícil de detectar, más lento",
+ "Schilde": "Escudos",
+ "Schilde fangen Treffer ab und laden sich außerhalb des Kampfes wieder auf. Ist der Schild weg, trifft es den Rumpf. Beschädigte Schiffe zur Werft schicken: Sie repariert im Umkreis.": "Los escudos absorben impactos y se recargan fuera de combate. Sin escudo, el daño va al casco. Envía las naves dañadas al astillero: repara todo lo que hay cerca.",
+ "Lahmlegen statt zerstören": "Inutilizar en vez de destruir",
+ "Ein manövrierunfähiges Schiff treibt hilflos. Wähle Schiffe mit Marines und tippe es an, um es zu entern – erbeutete Schiffe gehören dann dir.": "Una nave inutilizada va a la deriva indefensa. Selecciona naves con marines y tócala para abordarla: las naves capturadas pasan a ser tuyas.",
+ "Wracks": "Restos",
+ "Zerstörte Schiffe hinterlassen Wracks. Frachter wählen und das Wrack antippen: Die Bergung bringt Rohstoffe.": "Las naves destruidas dejan restos. Selecciona cargueros y toca los restos: el rescate da recursos.",
+ "Trümmerfeld": "Campo de escombros",
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Las naves dentro de un campo de escombros tienen cobertura (−25 % de daño) y son difíciles de detectar, pero se mueven más despacio. Los cazas no se benefician.",
+ "Sprungtor": "Portal de salto",
+ "Fliege Schiffe durch die Mitte eines aktiven Tors, um zum verbundenen Tor zu springen. Tor antippen zeigt, wem es gehört.": "Haz pasar naves por el centro de un portal activo para saltar al portal enlazado. Toca el portal para ver quién lo controla.",
+ "Einsteiger-Hinweise": "Consejos para principiantes",
+ "Neu zeigen": "Mostrar de nuevo",
+ "Hinweise werden wieder gezeigt": "Los consejos se volverán a mostrar",
+ "OK": "OK",
+ "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Campo de escombros: cobertura (−25 % de daño), difícil de detectar, más lento",
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Las naves dentro de un campo de escombros tienen cobertura (−25 % de daño) y son difíciles de detectar, pero se mueven más despacio. Los cazas no se benefician."
 }

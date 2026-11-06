@@ -787,5 +787,22 @@
  "Bildrate anzeigen": "Afficher les images/s",
  "Flotten und Stationen werden vorbereitet.": "Préparation des flottes et des stations.",
  "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Le navigateur calcule la 3D sans carte graphique. Activez l'accélération matérielle dans les réglages du navigateur – ou choisissez la 2D.",
- "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "Cette carte graphique est trop faible pour Ultra – Élevée est recommandée."
+ "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "Cette carte graphique est trop faible pour Ultra – Élevée est recommandée.",
+ "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Champ de débris : couverture (−25 % de dégâts), difficile à repérer, plus lent",
+ "Schilde": "Boucliers",
+ "Schilde fangen Treffer ab und laden sich außerhalb des Kampfes wieder auf. Ist der Schild weg, trifft es den Rumpf. Beschädigte Schiffe zur Werft schicken: Sie repariert im Umkreis.": "Les boucliers absorbent les tirs et se rechargent hors combat. Une fois le bouclier tombé, c'est la coque qui encaisse. Envoyez les vaisseaux endommagés au chantier naval : il répare tout ce qui est à proximité.",
+ "Lahmlegen statt zerstören": "Neutraliser plutôt que détruire",
+ "Ein manövrierunfähiges Schiff treibt hilflos. Wähle Schiffe mit Marines und tippe es an, um es zu entern – erbeutete Schiffe gehören dann dir.": "Un vaisseau neutralisé dérive sans défense. Sélectionnez des vaisseaux avec des marines et touchez-le pour l'aborder – les vaisseaux capturés vous appartiennent.",
+ "Wracks": "Épaves",
+ "Zerstörte Schiffe hinterlassen Wracks. Frachter wählen und das Wrack antippen: Die Bergung bringt Rohstoffe.": "Les vaisseaux détruits laissent des épaves. Sélectionnez des cargos et touchez l'épave : le récupérage rapporte des ressources.",
+ "Trümmerfeld": "Champ de débris",
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Les vaisseaux dans un champ de débris sont à couvert (−25 % de dégâts) et difficiles à repérer, mais plus lents. Les chasseurs n'en profitent pas.",
+ "Sprungtor": "Porte de saut",
+ "Fliege Schiffe durch die Mitte eines aktiven Tors, um zum verbundenen Tor zu springen. Tor antippen zeigt, wem es gehört.": "Faites passer des vaisseaux par le centre d'une porte active pour sauter vers la porte liée. Touchez la porte pour voir qui la contrôle.",
+ "Einsteiger-Hinweise": "Conseils pour débutants",
+ "Neu zeigen": "Réafficher",
+ "Hinweise werden wieder gezeigt": "Les conseils seront de nouveau affichés",
+ "OK": "OK",
+ "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Champ de débris : couverture (−25 % de dégâts), difficile à repérer, plus lent",
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Les vaisseaux dans un champ de débris sont à couvert (−25 % de dégâts) et difficiles à repérer, mais plus lents. Les chasseurs n'en profitent pas."
 }

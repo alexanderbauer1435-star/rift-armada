@@ -5,6 +5,7 @@
    Drücken, Meldungen, Hauptmenü, Einstellungen, Pause, Abschluss.
    ===================================================================== */
 const UI = {
+  hintQ: [], hintCur: '', hintT: 0,
   subAim: '', superTgt: null, docPick: null, abTarget: null, selS: 0, abId: '',
   g: null, me: -1, P: null, sel: new Set(), selB: 0, mode: 'normal', place: null, box: null, boxMode: false, keys: {}, paused: false, endShown: false, attract: true, kind: '', opts: null,
   speed: 1, tab: 'eco', showRange: false, showAll: false, mark: null, mouse: false, cx: 0, cy: 0, hx: 0, hy: 0, onView: false, rect: null, form: 'wedge', lastTap: 0, lastTapId: 0, hovT: 0, tipT: 0, saveAt: 0, alertT: -99, alertPos: null, camTravel: 0, fsOff: false, fsPause: false, mPage: 'home', items: []
@@ -33,6 +34,38 @@ function toast(msg, cls, ms) {
   box.appendChild(el);
   while (box.children.length > 4) box.firstChild.remove();
   setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.4s'; setTimeout(() => el.remove(), 420); }, ms || 3200);
+}
+/* Fassung 24: Erstkontakt-Hinweise. Jeder Hinweis erscheint einmal je Gerät (SET.seenTips), nicht in der Ausbildung,
+   nicht im Zuschauermodus. Auf dem Bildschirm bleibt immer nur einer; weitere warten in einer kurzen Schlange. */
+const HINTS = {
+  shields: ['Schilde', 'Schilde fangen Treffer ab und laden sich außerhalb des Kampfes wieder auf. Ist der Schild weg, trifft es den Rumpf. Beschädigte Schiffe zur Werft schicken: Sie repariert im Umkreis.'],
+  crippled: ['Lahmlegen statt zerstören', 'Ein manövrierunfähiges Schiff treibt hilflos. Wähle Schiffe mit Marines und tippe es an, um es zu entern – erbeutete Schiffe gehören dann dir.'],
+  wreck: ['Wracks', 'Zerstörte Schiffe hinterlassen Wracks. Frachter wählen und das Wrack antippen: Die Bergung bringt Rohstoffe.'],
+  debris: ['Trümmerfeld', 'Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.'],
+  gate: ['Sprungtor', 'Fliege Schiffe durch die Mitte eines aktiven Tors, um zum verbundenen Tor zu springen. Tor antippen zeigt, wem es gehört.']
+};
+function hintOn() { const g = UI.g; return g && !UI.attract && SET.hints !== false && !(g.mis && g.mis.id === 'tut'); }
+function hint(id) {
+  if (!hintOn()) return;
+  const seen = SET.seenTips || (SET.seenTips = {});
+  if (seen[id] || UI.hintQ.includes(id) || UI.hintCur === id) return;
+  UI.hintQ.push(id); if (!UI.hintCur) hintNext();
+}
+function hintNext() {
+  const id = UI.hintQ.shift(), el = $('hintCard'); UI.hintCur = id || '';
+  if (!id) { el.hidden = true; return; }
+  const h = HINTS[id]; SET.seenTips[id] = 1; savePrefs();
+  $('hintT').textContent = L(h[0]); $('hintX').textContent = L(h[1]); el.hidden = false; UI.hintT = performance.now() + 14000;
+  $('hintOk').onclick = () => { SND.play('click'); hintNext(); };
+}
+/* einmal je Sekunde: Lagen, die kein eigenes Ereignis haben (Trümmerfeld, Tor in Sicht) */
+function hintScan(g) {
+  if (UI.hintCur && performance.now() > UI.hintT) hintNext();
+  if (!hintOn() || g.tick % 30) return;
+  const seen = SET.seenTips || {};
+  if (!seen.debris && g.ships.some(u => u.cov && u.owner === UI.me && !u.dead)) hint('debris');
+  if (!seen.gate && g.gates.some(gt => gt.state === 'active' && R.seen(gt.x, gt.y) && R.inView(gt.x, gt.y, 0))) hint('gate');
+  if (!seen.wreck && g.wrecks && g.wrecks.some(w => !w.ruin && R.seen(w.x, w.y) && R.inView(w.x, w.y, 0))) hint('wreck');
 }
 function showInfo(txt, ms) { const el = $('info'); el.textContent = txt; el.hidden = false; UI.infoT = performance.now() + (ms || 2500); }
 /* Tooltip über langes Drücken auf eine Taste */
@@ -108,7 +141,7 @@ function tap(sx, sy) {
     else if (hit && hit.k === 3) showInfo(hit.kind === 'ice' ? L('Eismond: {0} Eis', fmt(hit.amount)) : L('Erz: {0}', fmt(hit.amount)));
     else if (hit && hit.k === 1) showInfo((hit.derelict ? L('Wrack') + ': ' : L('Feind') + ': ') + L(hit.def.name) + (hit.crewMax ? ' · ' + L('Crew') + ' ' + Math.round(hit.crew) + '/' + hit.crewMax : ''));
     else if (hit && hit.k === 2) showInfo(L('Feind: {0} Stufe {1}', L(hit.def.name), ROMAN[hit.lv]));
-    else { const w = nearWreck(g, wx, wy, 70 / Math.max(0.3, R.cam.z)); if (w && R.seen(w.x, w.y)) showInfo(L('Wrack: {0} bergbar. Frachter wählen und das Wrack antippen.', Math.round(w.sal))); else if (UI.selB) desel(); }
+    else { const w = nearWreck(g, wx, wy, 70 / Math.max(0.3, R.cam.z)); if (w && R.seen(w.x, w.y)) showInfo(L('Wrack: {0} bergbar. Frachter wählen und das Wrack antippen.', Math.round(w.sal))); else if (inDebris(g.map, wx, wy)) { showInfo(L('Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer'), 3000); if (UI.selB) desel(); } else if (UI.selB) desel(); }
     return;
   }
   order(us, hit, wx, wy);
@@ -864,6 +897,7 @@ function hudUpdate() {
   if ((g.tick % 30) < 4) hudGroups();
   if (UI.infoT && performance.now() > UI.infoT) { $('info').hidden = true; UI.infoT = 0; }
   if (g.mis) misUiHud();
+  hintScan(g);
   musMood(g, P);
 }
 function musMood(g, P) {
@@ -907,7 +941,8 @@ UI.consume = function (evs) {
       case 'board': if (visAt(g, me, e.x, e.y)) SND.play('board', e.x, e.y); break;
       case 'captured': { const nm = L(e.name); if (e.to === me) { toast(L('{0} geentert und übernommen', nm), 'good', 4000); SND.play('rank', e.x, e.y); } else if (e.from === me) { toast(L('{0} wurde geentert und ist verloren', nm), 'bad', 4000); SND.play('lose'); R.ping(e.x, e.y); } hudSel(); break; }
       case 'derelict': if (mine) { toast(L('{0}: Crew verloren, treibt als Wrack', L(e.name)), 'warn', 4000); R.ping(e.x, e.y); } break;
-      case 'crippled': if (mine) { toast(L('{0} ist manövrierunfähig und treibt!', L(e.name)), 'bad', 4000); R.ping(e.x, e.y, '#ffb347'); } else if (e.by === me) { toast(L('{0} lahmgelegt. Jetzt entern!', L(e.name)), 'good', 4000); SND.play('rank', e.x, e.y); } break;
+      case 'shdown': if (g.byId) { /* Ereignis ohne Besitzer: eigenes Schiff an dieser Stelle? */ if (g.ships.some(u => u.owner === me && !u.dead && Math.abs(u.x - e.x) < 2 && Math.abs(u.y - e.y) < 2)) hint('shields'); } break;
+      case 'crippled': if (mine || e.by === me) hint('crippled'); if (mine) { toast(L('{0} ist manövrierunfähig und treibt!', L(e.name)), 'bad', 4000); R.ping(e.x, e.y, '#ffb347'); } else if (e.by === me) { toast(L('{0} lahmgelegt. Jetzt entern!', L(e.name)), 'good', 4000); SND.play('rank', e.x, e.y); } break;
       case 'uncrippled': if (mine) toast(L('Crew hat das Schiff wieder flott gemacht'), 'good'); break;
       case 'repaired': if (mine) toast(L('{0} an der Werft instand gesetzt', L(e.name)), 'good', 3500); break;
       case 'recrew': if (mine) toast(L('Wrack neu besetzt'), 'good'); break;
@@ -1015,6 +1050,7 @@ function initSettings() {
     segInit('sGfx', [['3d', '3D'], ['2d', '2D']], () => SET.gfx || '3d', v => { SET.gfx = v; SET.gfxUser = true; applySet(); savePrefs(); if (v === '3d' && !R.mode3d) toast(L('3D ist auf diesem Gerät nicht verfügbar – es bleibt bei 2D.'), 'warn', 4000); });
     segInit('sQual', [['ultra', 'Ultra', L('starke Geräte')], ['auto', 'Hoch'], ['low', 'Sparsam']], () => SET.qual, v => { SET.qual = v; applySet(); savePrefs(); if (v === 'ultra') { const gi = R.mode3d && RA3D.gpu ? RA3D.gpu() : null; toast(gi && gi.low ? L('Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.') : L('Ultra: volle Auflösung, feinere Modelle und mehr Effekte – braucht mehr Akku. Fällt bei zu wenig Bildrate selbst auf Hoch zurück.'), gi && gi.low ? 'bad' : ''); } });
     segInit('sFps', [[false, 'Aus'], [true, 'An']], () => !!SET.fps, v => { SET.fps = v; applySet(); savePrefs(); });   /* Fassung 24: Bildratenanzeige */
+    segInit('sHints', [[false, 'Aus'], [true, 'An'], ['again', 'Neu zeigen']], () => SET.hints !== false, v => { if (v === 'again') { SET.seenTips = {}; SET.hints = true; toast(L('Hinweise werden wieder gezeigt')); } else SET.hints = v; savePrefs(); });
     segInit('sPwr', [['auto', 'Flüssig'], ['save', 'Akku sparen']], () => SET.pwr, v => { SET.pwr = v; savePrefs(); });
     segInit('sCb', [[false, 'Aus'], [true, 'An']], () => !!SET.cb, v => { SET.cb = v; savePrefs(); if (R.drawMini) try { R.drawMini(); } catch (e) { /* nichts */ } });
     segInit('sVib', [[true, 'An'], [false, 'Aus']], () => SET.vib !== false, v => { SET.vib = v; savePrefs(); if (v) buzz(40); });

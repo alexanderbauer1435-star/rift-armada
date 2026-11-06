@@ -787,5 +787,22 @@
  "Bildrate anzeigen": "Pokaż FPS",
  "Flotten und Stationen werden vorbereitet.": "Przygotowywanie flot i stacji.",
  "Der Browser rechnet die 3D-Grafik ohne Grafikkarte. Bitte in den Browser-Einstellungen die Hardwarebeschleunigung einschalten – oder 2D wählen.": "Przeglądarka liczy grafikę 3D bez karty graficznej. Włącz akcelerację sprzętową w ustawieniach przeglądarki – albo wybierz 2D.",
- "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "Ta karta graficzna jest za słaba na Ultra – zalecana jest jakość Wysoka."
+ "Diese Grafikkarte ist für Ultra zu schwach – empfohlen ist Hoch.": "Ta karta graficzna jest za słaba na Ultra – zalecana jest jakość Wysoka.",
+ "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Pole szczątków: osłona (−25% obrażeń), trudno wykryć, wolniejszy ruch",
+ "Schilde": "Osłony",
+ "Schilde fangen Treffer ab und laden sich außerhalb des Kampfes wieder auf. Ist der Schild weg, trifft es den Rumpf. Beschädigte Schiffe zur Werft schicken: Sie repariert im Umkreis.": "Osłony pochłaniają trafienia i ładują się poza walką. Gdy osłona padnie, obrażenia trafiają w kadłub. Wysyłaj uszkodzone okręty do stoczni: naprawia wszystko w pobliżu.",
+ "Lahmlegen statt zerstören": "Unieruchom zamiast niszczyć",
+ "Ein manövrierunfähiges Schiff treibt hilflos. Wähle Schiffe mit Marines und tippe es an, um es zu entern – erbeutete Schiffe gehören dann dir.": "Unieruchomiony okręt dryfuje bezbronnie. Wybierz okręty z marines i dotknij go, by przeprowadzić abordaż – zdobyte okręty należą do ciebie.",
+ "Wracks": "Wraki",
+ "Zerstörte Schiffe hinterlassen Wracks. Frachter wählen und das Wrack antippen: Die Bergung bringt Rohstoffe.": "Zniszczone okręty zostawiają wraki. Wybierz frachtowce i dotknij wraku: odzysk daje surowce.",
+ "Trümmerfeld": "Pole szczątków",
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Okręty w polu szczątków mają osłonę (−25% obrażeń) i trudno je wykryć, ale są wolniejsze. Myśliwce z tego nie korzystają.",
+ "Sprungtor": "Wrota skokowe",
+ "Fliege Schiffe durch die Mitte eines aktiven Tors, um zum verbundenen Tor zu springen. Tor antippen zeigt, wem es gehört.": "Przeprowadź okręty przez środek aktywnych wrót, aby skoczyć do połączonych wrót. Dotknij wrót, by zobaczyć, kto je kontroluje.",
+ "Einsteiger-Hinweise": "Wskazówki dla początkujących",
+ "Neu zeigen": "Pokaż ponownie",
+ "Hinweise werden wieder gezeigt": "Wskazówki będą ponownie wyświetlane",
+ "OK": "OK",
+ "Trümmerfeld: Deckung (−25 % Schaden), schwer zu orten, langsamer": "Pole szczątków: osłona (−25 % obrażeń), trudno wykryć, wolniejszy ruch",
+ "Schiffe im Trümmerfeld haben Deckung (−25 % Schaden) und sind schwer zu orten, fliegen aber langsamer. Jäger profitieren nicht davon.": "Okręty w polu szczątków mają osłonę (−25 % obrażeń) i trudno je wykryć, ale są wolniejsze. Myśliwce z tego nie korzystają."
 }
