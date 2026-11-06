@@ -15,6 +15,11 @@
      Hüllenprisma  Facettenkuppel mit Leuchtgitter, Emitterprismen
      Netzknoten  Gitterknoten mit Ringen, Fäden zu Ankern in alle Richtungen, kreisende Lichtpunkte
      Resonanz    Kristallkrone, Resonanzringe und Kronenadern leuchten nacheinander mit der Ladung auf
+     Gitterwall  zwei Obelisken mit leuchtendem Wandgitter dazwischen, schwebender Emitter
+     Lauschkristall  hoher Stamm mit schräger, drehender Kristallschüssel
+   Grundrisse je Rolle verschieden (Sockelform): Kernknoten und Resonanz rund, Wachskammer längliches Sechseck,
+   Verdichter Achteck, Resonator Sechseck, Facettenkammer Dreieck, Kristallwacht Raute, Hüllenprisma Zwölfeck,
+   Netzknoten drei schwebende Dreiecksschollen, Gitterwall schmales Sechseck, Lauschkristall Fünfeck.
    Stufen fügen sichtbare Teile hinzu (Kristalle, Ringe, schwebende Splitter, hellere Kerne), nicht nur Größe.
    Bewegung ruhig: langsames Drehen und Kreisen, sanftes Pulsieren und Schwingen, kein Blinken.
    Mitte im Ursprung, +Y oben, Grundfläche im Kreis mit Radius d.r.
@@ -90,19 +95,33 @@ function cluster(X, F, s, seed, n = 7) {
   for (let i = 0; i < 3; i++) { const f = mesh(fragGeo(seed + i), X.cryS); f.scale.setScalar(s * 0.45); f.position.set((r() - 0.5) * s * 2, s * 0.25, (r() - 0.5) * s * 2); f.rotation.set(r() * 3, r() * 3, 0); g.add(f); }
   return g;
 }
-/* Kristallinsel: massive facettierte Scholle (14 Ecken, leicht unregelmäßig), oben flach, unten zur Spitze auslaufend */
-function islandGeo(R, seed) {
-  return geo(`island|${q(R)}|${seed}`, () => {
-    const n = 14, r = rng(seed * 53 + 1), f = []; for (let i = 0; i < n; i++) f.push(0.9 + r() * 0.1);
-    const sec = (y, k) => ({ z: y, pts: ngon(n, 1, 1, 0.1).map(([x, z], i) => [x * k * R * f[i], z * k * R * f[i]]) });
+/* Kristallinsel: massive facettierte Scholle, oben flach, unten zur Spitze auslaufend. Grundriss sh = { n, irr, rot, sx }:
+   n Ecken (14 = fast rund und unregelmäßig, 3–8 = klares Vieleck je Rolle, damit nicht jede Station auf derselben
+   runden Scholle steht), irr Unregelmäßigkeit, rot Drehung der ersten Ecke, sx Stauchung quer (länglicher Grundriss). */
+const SH0 = { n: 14, irr: 0.1, rot: 0.1, sx: 1 };
+function shapeOf(o) { return Object.assign({}, SH0, o.shape ? { irr: 0.03, rot: 0 } : {}, o.shape || {}); }
+function shapeKey(sh) { return `${sh.n}|${sh.irr}|${sh.rot.toFixed(3)}|${sh.sx}`; }
+function shapePts(R, seed, sh, k) {
+  const r = rng(seed * 53 + 1), f = []; for (let i = 0; i < sh.n; i++) f.push(1 - sh.irr + r() * sh.irr);
+  return ngon(sh.n, 1, 1, sh.rot).map(([x, z], i) => [x * k * R * f[i] * sh.sx, z * k * R * f[i]]);
+}
+/* Randabstand des Grundrisses in Richtung a (Anteil von R): für Klingen, Kristalle und Cluster am Rand */
+function edgeK(sh, a) {
+  const c = Math.cos(a), s = -Math.sin(a), a2 = Math.atan2(s, c / sh.sx), st = TAU / sh.n, t = ((a2 - sh.rot) % st + st) % st - st / 2;   /* Welt-Z = −Grundriss-Y */
+  return Math.cos(st / 2) / Math.cos(t) / Math.hypot(c / sh.sx, s);
+}
+/* Weltwinkel der Ecken des Grundrisses */
+const cornerA = s0 => { const sh = shapeOf({ shape: s0 }), r = []; for (let i = 0; i < sh.n; i++) { const a = sh.rot + i / sh.n * TAU; r.push(Math.atan2(-Math.sin(a), Math.cos(a) * sh.sx)); } return r; };
+function islandGeo(R, seed, sh = SH0) {
+  return geo(`island|${q(R)}|${seed}|${shapeKey(sh)}`, () => {
+    const sec = (y, k) => ({ z: y, pts: shapePts(R, seed, sh, k) });
     const g = loft([sec(-R * 0.42, 0.03), sec(-R * 0.24, 0.5), sec(-R * 0.08, 0.9), sec(R * 0.03, 0.965), sec(R * 0.1, 0.84)], null, { uv: 1 / 24 }).geometry;
     g.rotateX(-Math.PI / 2); return facetCols(g, seed + 5, 0.5);
   });
 }
-function islandRim(R, seed, y, rad) {
-  const n = 14, r = rng(seed * 53 + 1), f = []; for (let i = 0; i < n; i++) f.push(0.9 + r() * 0.1);
-  const pts = ngon(n, 1, 1, 0.1).map(([x, z], i) => [x * 0.965 * R * f[i], y, -z * 0.965 * R * f[i]]), ed = []; for (let i = 0; i < n; i++) ed.push([i, (i + 1) % n]);
-  return frameGeo(`islandRim|${q(R)}|${seed}|${rad}`, pts, ed, rad, 5);
+function islandRim(R, seed, y, rad, sh = SH0) {
+  const pts = shapePts(R, seed, sh, 0.965).map(([x, z]) => [x, y, -z]), ed = []; for (let i = 0; i < sh.n; i++) ed.push([i, (i + 1) % sh.n]);
+  return frameGeo(`islandRim|${q(R)}|${seed}|${rad}|${shapeKey(sh)}`, pts, ed, rad, 5);
 }
 
 /* ------------------------------------------------------------ Kristallsockel
@@ -111,34 +130,38 @@ function islandRim(R, seed, y, rad) {
    außen (Spitzen bis 0,98·R), dahinter aufrechte Splitter; Kristallcluster (o.clusters) sitzen auf dem Rand der Insel.
    Darunter Wurzelkristalle (die Stationen schweben). Feldschein o.glow (0 = keiner), Splitterwolke o.cloud (Anzahl). */
 function socket(M, X, S, R, seed, o = {}) {
-  const g = new THREE.Group(), r = rng(seed * 97 + 13), n = o.n || 9, a0 = o.a0 || 0, top = R * 0.1;
+  const g = new THREE.Group(), r = rng(seed * 97 + 13), n = o.n || 9, a0 = o.a0 || 0, top = R * 0.1, poly = !!o.shape, sh = shapeOf(o);
+  const K = a => poly ? edgeK(sh, a) : 1;   /* Randabstand je Richtung (Vieleck) */
   g.position.y = -top;   /* Oberkante der Insel liegt bei y = 0 */
-  g.add(mesh(islandGeo(R, seed), X.dark));
-  g.add(mesh(islandRim(R, seed, R * 0.03, Math.max(0.12, R * 0.009)), S.teamVein, false));
-  for (let i = 0; i < 7; i++) { const a = a0 + i / 7 * TAU + 0.3; g.add(beam(X, P(a, R * 0.2, top + 0.15), P(a, R * 0.88, top + 0.15), Math.max(0.08, R * 0.004), S.thread)); }
-  const po = { n: 6, sq: 1, tf: 0.1, tb: 0.5, tw: 0, wb: 0.92, wf: 0.97 }, PL = q(R * 0.1), PR = q(R * (o.plate || 0.4));
-  const pl = gem(PL, PR, X.cry, po); pl.rotation.x = -Math.PI / 2; pl.position.y = top + PL * 0.35; g.add(pl);
-  const pe = gemEdges(X, PL, PR, po, X.vein, Math.max(0.1, R * 0.005)); pe.rotation.x = -Math.PI / 2; pe.position.y = pl.position.y; g.add(pe);
-  /* Klingenkranz */
-  for (let i = 0; i < n; i++) {
-    const a = a0 + (i + (r() - 0.5) * 0.4) / n * TAU, reach = R * (0.9 + r() * 0.08), L = R * (0.42 + r() * 0.16) * (o.len || 1), w = R * (0.08 + r() * 0.03), e = (4 + r() * 12) * DEG;
+  g.add(mesh(islandGeo(R, seed, sh), X.dark));
+  g.add(mesh(islandRim(R, seed, R * 0.03, Math.max(0.12, R * 0.009), sh), S.teamVein, false));
+  for (let i = 0; i < 7; i++) { const a = a0 + i / 7 * TAU + 0.3; g.add(beam(X, P(a, R * 0.2, top + 0.15), P(a, R * 0.88 * K(a), top + 0.15), Math.max(0.08, R * 0.004), S.thread)); }
+  const pn = poly && sh.n <= 8 ? sh.n : 6, po = { n: pn, sq: 1, tf: 0.1, tb: 0.5, tw: 0, wb: 0.92, wf: 0.97 }, PL = q(R * 0.1), PR = q(R * (o.plate || 0.4));
+  const pl = gem(PL, PR, X.cry, po); pl.rotation.x = -Math.PI / 2; pl.position.y = top + PL * 0.35; pl.scale.x = poly ? sh.sx : 1; g.add(pl);
+  const pe = gemEdges(X, PL, PR, po, X.vein, Math.max(0.1, R * 0.005)); pe.rotation.x = -Math.PI / 2; pe.position.y = pl.position.y; pe.scale.x = pl.scale.x; g.add(pe);
+  /* Klingenkranz: rund – Klingen ringsum; Vieleck – je Ecke eine große Klinge mit zwei kleinen daneben (betont den Grundriss) */
+  const blades = poly ? cornerA(sh).flatMap(c => [[c, 1.15], [c - 0.17 * TAU / sh.n, 0.6], [c + 0.17 * TAU / sh.n, 0.6]]) : Array.from({ length: n }, () => [null, 1]);
+  blades.forEach(([a, k], i) => {
+    if (a === null) a = a0 + (i + (r() - 0.5) * 0.4) / n * TAU;
+    const reach = R * (0.9 + r() * 0.08) * K(a), L = R * (0.42 + r() * 0.16) * (o.len || 1) * k * (poly ? 0.75 : 1), w = R * (0.08 + r() * 0.03) * Math.sqrt(k), e = (4 + r() * 12) * DEG;
     const F = P(a, reach - Math.cos(e) * L, top - R * 0.02 + Math.sin(e) * L * 0.3);
     g.add(grow(L, w, i % 3 === 2 ? X.dark : i % 3 ? X.cryS : X.cry, { n: 4, sq: 0.4, tf: 0.46, tb: 0.16, tw: 0.5 }, F, dirE(a, -e)));
-  }
+  });
   const nu = o.up ?? n;
   for (let i = 0; i < nu; i++) {
     const a = a0 + (i + 0.5 + (r() - 0.5) * 0.3) / nu * TAU, L = R * (0.16 + r() * 0.12), e = (30 + r() * 28) * DEG;
-    g.add(grow(L, L * 0.2, i % 2 ? X.cryS : X.cry, { n: 4 + (i % 2), tf: 0.5, tb: 0.2, tw: 0.5 }, P(a, R * (o.upAt || 0.74) * (0.95 + r() * 0.1), top - R * 0.03), dirE(a, e)));
+    g.add(grow(L, L * 0.2, i % 2 ? X.cryS : X.cry, { n: 4 + (i % 2), tf: 0.5, tb: 0.2, tw: 0.5 }, P(a, R * (o.upAt || 0.74) * (0.95 + r() * 0.1) * K(a), top - R * 0.03), dirE(a, e)));
   }
   const nc = o.clusters ?? 6;
-  for (let i = 0; i < nc; i++) { const a = a0 + (i + 0.5) / nc * TAU + (o.ca || 0); g.add(cluster(X, P(a, R * (o.cAt || 0.66), top - R * 0.01), R * 0.075, seed * 7 + i, 6)); }
+  for (let i = 0; i < nc; i++) { const a = a0 + (i + 0.5) / nc * TAU + (o.ca || 0); g.add(cluster(X, P(a, R * (o.cAt || 0.66) * K(a), top - R * 0.01), R * 0.075, seed * 7 + i, 6)); }
   /* Wurzeln */
   g.add(grow(R * 0.5, R * 0.14, X.dark, { n: 6, tf: 0.6, tb: 0.1, tw: 0.5 }, [0, -R * 0.3, 0], [0, -1, 0]));
-  for (let i = 0; i < 5; i++) { const a = a0 + i / 5 * TAU + 0.5; g.add(grow(R * 0.4, R * 0.08, i % 2 ? X.dark : X.cryS, { n: 5, tf: 0.55, tb: 0.15, tw: 0.5 }, P(a, R * 0.3, -R * 0.12), [Math.cos(a) * 0.7, -1, Math.sin(a) * 0.7])); }
+  for (let i = 0; i < 5; i++) { const a = a0 + i / 5 * TAU + 0.5; g.add(grow(R * 0.4, R * 0.08, i % 2 ? X.dark : X.cryS, { n: 5, tf: 0.55, tb: 0.15, tw: 0.5 }, P(a, R * 0.3 * K(a), -R * 0.12), [Math.cos(a) * 0.7, -1, Math.sin(a) * 0.7])); }
   if (o.glow !== 0) { const gd = mesh(geo('hexdisc', () => new THREE.CircleGeometry(1, 6).rotateZ(Math.PI / 2)), S.ground, false); gd.rotation.x = -Math.PI / 2; gd.scale.setScalar(R * (o.glow || 0.5)); gd.position.y = top + PL * 0.8; g.add(gd); }
   /* feine Splitterwolke: kleine Kristalle treiben langsam um den Sockel */
   const nw = o.cloud ?? 8;
   if (nw) { g.add(orbiters(M, X, { axis: 'y', n: nw, r: R * 0.82, y: top + R * 0.12, size: R * 0.028, speed: 0.07, seed: seed + 3, wob: R * 0.05, flat: 0.95 })); g.add(orbiters(M, X, { axis: 'y', n: Math.round(nw * 0.6), r: R * 0.55, y: top + R * 0.2, size: R * 0.02, speed: -0.09, seed: seed + 9, wob: R * 0.04, mat: X.cry })); }
+  g.userData.edgeK = K;
   return g;
 }
 
@@ -266,7 +289,7 @@ registerB('nexus', 'base', (M, d, lv) => {
 registerB('nexus', 'yard', (M, d, lv) => {
   const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group();
   const BL = [55, 80, 110][lv - 1], by = [15, 21, 24][lv - 1], nr = lv + 2, ax = [0.6, 0.7, 0.76][lv - 1] * R, az = 0.86 * R;
-  g.add(socket(M, X, S, R, 2, { n: 12, up: 8, plate: 0.3, glow: 0, clusters: 4, ca: Math.PI / 4, cAt: 0.72 }));
+  g.add(socket(M, X, S, R, 2, { shape: { n: 6, sx: 0.85, rot: Math.PI / 2 }, up: 8, plate: 0.3, glow: 0, clusters: 4, ca: Math.PI / 4, cAt: 0.72 }));
   /* Nährbett und Wälle */
   const bed = gem(q(az * 1.7), q(ax * 0.55), X.cry, { n: 6, sq: 0.22, tf: 0.2, tb: 0.2, tw: 0 }); bed.position.y = 1.2; g.add(bed);
   g.add(grow(az * 1.5, 1.2, X.vein, { n: 4, tw: 0 }, [0, 1.6, -az * 0.75], [0, 0, 1], false));
@@ -296,7 +319,7 @@ registerB('nexus', 'yard', (M, d, lv) => {
   /* Tor am Bug */
   const zb = 0.66 * az, gx = ax * 0.55, to = { n: 3, sq: 1, tw: 0, tf: 0.4, tb: 0.1 }, TL = 16 + lv * 2;
   for (const sg of [-1, 1]) { const F = [sg * gx, 0, zb], dv = [sg * 0.15, 1, 0.12]; g.add(grow(TL, 3, X.cry, to, F, dv)); g.add(growEdges(X, TL, 3, to, F, dv, S.teamVein, 0.1)); }
-  anchors(M, X, S, g, [Math.PI / 2 - 0.5, Math.PI / 2 + 0.5, -Math.PI / 2 - 0.6, -Math.PI / 2 + 0.6], R * 0.84, 1.9, null);
+  anchors(M, X, S, g, [Math.PI / 2 - 0.5, Math.PI / 2 + 0.5, -Math.PI / 2 - 0.6, -Math.PI / 2 + 0.6], R * 0.76, 1.9, null);
   /* Wachstumsbögen über der Liegestelle (Kristallbänder) */
   if (lv >= 2) {
     const zz = lv === 2 ? [6] : [-12, 14];
@@ -316,7 +339,7 @@ registerB('nexus', 'yard', (M, d, lv) => {
    Kristallband in Spielerfarbe am Sockelrand. */
 registerB('nexus', 'refinery', (M, d, lv) => {
   const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group();
-  g.add(socket(M, X, S, R, 3, { n: 11, up: 8, plate: 0.42, clusters: 3, ca: Math.PI / 6 }));
+  g.add(socket(M, X, S, R, 3, { shape: { n: 8, rot: Math.PI / 8 }, up: 8, plate: 0.42, clusters: 3, ca: Math.PI / 6 }));
   g.add(grow(8, 10, X.dark, { n: 8, tf: 0.15, tb: 0.15, tw: 0, sq: 1 }, [0, -1, 0], UPV));
   const fun = mesh(geo('nxfunnel', () => facetCols(lathe([[3, 2], [8, 4], [15, 11], [21, 19], [22.5, 21], [19, 20], [12, 11], [6, 5], [3, 2]], null, 8).geometry, 9, 0.6)), X.cry); fun.rotation.y = Math.PI / 8; g.add(fun);
   g.add(mesh(geo('nxfunnelE', () => { const pts = [], ed = []; for (let k = 0; k < 8; k++) { const a = k / 8 * TAU + Math.PI / 8; [[8, 4], [15, 11], [21, 19], [22.5, 21]].forEach(([r, y], j) => { pts.push([Math.cos(a) * r * 1.01, y, Math.sin(a) * r * 1.01]); if (j) ed.push([pts.length - 2, pts.length - 1]); }); } for (let k = 0; k < 8; k++) ed.push([k * 4 + 3, ((k + 1) % 8) * 4 + 3]); return frameGeo('nxfunnelE', pts, ed, 0.14, 4); }), S.teamVein, false));
@@ -363,7 +386,7 @@ registerB('nexus', 'refinery', (M, d, lv) => {
    breites Band am Sockelrand, Lichtbögen vom Kern zu den Zinken, kreisende Funken. */
 registerB('nexus', 'reactor', (M, d, lv) => {
   const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group(), cy = 13;
-  g.add(socket(M, X, S, R, 4, { n: 9, up: 6, plate: 0.4, clusters: 3 }));
+  g.add(socket(M, X, S, R, 4, { shape: { n: 6 }, up: 6, plate: 0.4, clusters: 3 }));
   g.add(grow(6, 8.5, X.dark, { n: 6, tf: 0.2, tb: 0.2, tw: 0, sq: 1 }, [0, -1, 0], UPV));
   const bo = { n: 6, tf: 0.32, tb: 0.1, tw: 0, sq: 1, wb: 0.9, wf: 0.92 }, BL = 22, BR = 6.5 + lv * 0.4;
   g.add(grow(BL, BR, X.cry, bo, [0, 3, 0], UPV)); g.add(growEdges(X, BL, BR, bo, [0, 3, 0], UPV, S.teamVein, 0.16));
@@ -399,7 +422,7 @@ registerB('nexus', 'reactor', (M, d, lv) => {
    (umgekehrtes Prisma mit Kern), äußerer Kranz aus sechs kleinen Facetten. */
 registerB('nexus', 'lab', (M, d, lv) => {
   const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group();
-  g.add(socket(M, X, S, R, 5, { n: 10, up: 7, plate: 0.38, clusters: 3, ca: Math.PI / 3 }));
+  const lsh = { n: 3, rot: Math.PI / 2 }; g.add(socket(M, X, S, R, 5, { shape: lsh, up: 6, upAt: 0.6, plate: 0.38, clusters: 3, cAt: 0.5, ca: Math.PI / 3 }));
   g.add(grow(6, 9, X.dark, { n: 6, tf: 0.2, tb: 0.2, tw: 0, sq: 1 }, [0, -1, 0], UPV));
   for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + Math.PI / 2; g.add(grow(12, 2.4, X.dark, { n: 4, tf: 0.5, tb: 0.1, tw: 0 }, P(a, 8.5, 1), [-Math.cos(a) * 0.55, 1, -Math.sin(a) * 0.55])); }
   const PL = 28 + lv * 2, pr = { n: 3, sq: 1, tf: 0.22, tb: 0.06, tw: 0, rot: -30 * DEG }, PR = 7.5;
@@ -419,27 +442,41 @@ registerB('nexus', 'lab', (M, d, lv) => {
     const cap = new THREE.Group(); cap.position.y = PL + 6; cap.add(grow(10, 4, X.cry, pr, [0, 5, 0], [0, -1, 0])); cap.add(put(core(M, X, 1, 8, 0.15, X.haloW), 0, 1.5, 0)); cap.userData.spin = { axis: 'y', speed: 0.3 }; g.add(cap);
     const c3 = new THREE.Group(); c3.userData.spin = { axis: 'y', speed: 0.06 }; for (let i = 0; i < 6; i++) { const a = (i + 0.25) / 6 * TAU; c3.add(facet(1.8, P(a, 27, 6), [Math.cos(a) * 0.4, 1, Math.sin(a) * 0.4])); } g.add(c3);
   }
-  anchors(M, X, S, g, [0, 1, 2].map(i => (i + 0.5) / 3 * TAU), 29, 1.5, [PR, 8]);
+  anchors(M, X, S, g, cornerA(lsh), 27, 1.5, [PR, 8]);
   return g;
 });
 
 /* ======================================================================== KRISTALLWACHT – Obsidiansäule mit Strahlerkopf
-   Obsidiantrommel mit Adern in Spielerfarbe und sechs stämmigen Stützkristallen, darauf eine Dreikant-Säule mit
-   Leuchtkanten; oben dreht der Kopf (aim). I: ein Emitter. II: zwei Emitter nebeneinander, Kristallband um die Säule.
-   III: großer Prisma-Emitter, daneben ein Spire-Emitter und ein Kristall-PD, kreisende Splitter um den Kopf. */
+   Rautensockel (Ecken in den vier Hauptrichtungen) mit vier schräg nach außen stehenden Wachkristallen an den Ecken –
+   von oben ein klares Kreuz, das sich von den runden Stationen abhebt. Obsidiantrommel mit Adern in Spielerfarbe und
+   sechs stämmigen Stützkristallen, darauf eine hohe Dreikant-Säule mit Leuchtkanten; oben dreht der Kopf (aim).
+   I: ein Emitter, niedrige Eckkristalle. II: zwei Emitter, Kristallband um die Säule, Eckkristalle höher mit
+   Lichtspitzen, Sechseckring schwebt unter dem Kopf. III: großer Prisma-Emitter, Spire-Emitter und Kristall-PD, hohe
+   Eckwächter mit Lichtfäden zum Kopf und Nebenkristallen, Splitterkranz um den Kopf. */
 registerB('nexus', 'turret', (M, d, lv) => {
-  const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group(), hy = 10;
-  g.add(socket(M, X, S, R, 6, { n: 9, up: 0, plate: 0.45, clusters: 2, cAt: 0.7 }));
+  const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group(), hy = 10 + lv * 1.5, tsh = { n: 4 };
+  g.add(socket(M, X, S, R, 6, { shape: tsh, up: 0, plate: 0.45, clusters: 0, cloud: 5 }));
   const dro = { n: 6, tf: 0.25, tb: 0.15, tw: 0, sq: 1 };
   g.add(grow(6, 7, X.dark, dro, [0, -1, 0], UPV)); g.add(growEdges(X, 6, 7, dro, [0, -1, 0], UPV, S.teamVein, 0.1));
   const so = { n: 3, sq: 1, tf: 0.12, tb: 0.05, tw: 0, rot: -30 * DEG };
   g.add(grow(hy - 3, 3.5, X.dark, so, [0, 3, 0], UPV)); g.add(growEdges(X, hy - 3, 3.5, so, [0, 3, 0], UPV, X.veinHot, 0.1));
   for (let i = 0; i < 6; i++) { const a = i / 6 * TAU + Math.PI / 6, big = i % 2 === 0; g.add(grow(big ? 10 : 7, big ? 1.9 : 1.4, big ? X.cryS : X.cry, { n: 4, tf: 0.45, tb: 0.15, tw: 0.5 }, P(a, big ? 8.5 : 7, 0), [-Math.cos(a) * 0.45, 1, -Math.sin(a) * 0.45])); }
-  if (lv >= 2) g.add(spinning(band(5.5, 1.2, 0.8, S.band, 6, hy - 3), 'y', 0.4));
+  /* Eckwächter: Obsidian mit Leuchtkanten, je Stufe höher */
+  const WL = [6, 9, 12][lv - 1], wo = { n: 4, sq: 0.8, tf: 0.4, tb: 0.1, tw: 0 };
+  for (const a of cornerA(tsh)) {
+    const F = P(a, 12.5, -0.5), dv = [Math.cos(a) * 0.35, 1, Math.sin(a) * 0.35];
+    g.add(grow(WL, 1.7, X.dark, wo, F, dv)); g.add(growEdges(X, WL, 1.7, wo, F, dv, S.teamVein, 0.08));
+    const u = unit(dv), T = [F[0] + u[0] * WL, F[1] + u[1] * WL, F[2] + u[2] * WL];
+    if (lv >= 2) g.add(put(octa(X.veinHot, 0.5, 1, 0.5, false), T[0], T[1] + 0.6, T[2]));
+    if (lv >= 3) {
+      g.add(beam(X, T, [0, hy + 2, 0], 0.1, S.thread));
+      for (const k of [-1, 1]) { const b = a + k * 0.45; g.add(grow(5, 0.9, X.cryS, { n: 4, tf: 0.5, tb: 0.2, tw: 0.5 }, P(b, 11, 0), [Math.cos(b) * 0.4, 1, Math.sin(b) * 0.4])); }
+    }
+  }
+  if (lv >= 2) { g.add(spinning(band(5.5, 1.2, 0.8, S.band, 6, hy - 3), 'y', 0.4)); g.add(spinning(hring(7.5, 0.3, X.beam, 6, 3, hy - 0.5), 'y', -0.3)); }
   const list = lv === 1 ? [[0, 2.2, false]] : lv === 2 ? [[-2.5, 1.9, false], [2.5, 1.9, false]] : [[0.6, 2.2, true], [4.4, 1.5, false]];
   const h = beamHead(M, X, 2.3, list, 0.3); h.position.y = hy + 2; g.add(h);
-  if (lv >= 3) { const pd = pdHead(M, X, 1.4, 0); pd.userData.aim = null; pd.position.set(-4, 0.7, 1); h.add(pd); g.add(orbiters(M, X, { axis: 'y', n: 3, r: 8, y: hy + 4, size: 0.6, speed: 0.4, seed: 3, wob: 0.8 })); }
-  anchors(M, X, S, g, [0, 1, 2].map(i => (i + 0.5) / 3 * TAU + Math.PI / 6), 16.5, 1.1, [4, 4]);
+  if (lv >= 3) { const pd = pdHead(M, X, 1.4, 0); pd.userData.aim = null; pd.position.set(-4, 0.7, 1); h.add(pd); g.add(orbiters(M, X, { axis: 'y', n: 4, r: 8, y: hy + 4, size: 0.6, speed: 0.4, seed: 3, wob: 0.8 })); }
   return g;
 });
 
@@ -486,7 +523,7 @@ function domeFrame(Rd, H, n, k, rad) {
 }
 registerB('nexus', 'shield', (M, d, lv) => {
   const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group(), Rd = 11 + lv * 2, H = Rd * 0.8;
-  g.add(socket(M, X, S, R, 7, { n: 10, up: 0, plate: 0.5, clusters: 3, cAt: 0.74 }));
+  g.add(socket(M, X, S, R, 7, { shape: { n: 12, irr: 0 }, up: 0, plate: 0.5, clusters: 3, cAt: 0.74 }));
   const dro = { n: 8, tf: 0.2, tb: 0.2, tw: 0, sq: 1 };
   g.add(grow(5, Rd + 1, X.dark, dro, [0, -1.5, 0], UPV)); g.add(growEdges(X, 5, Rd + 1, dro, [0, -1.5, 0], UPV, X.vein, 0.1, 2));
   g.add(grow(8, 3.5, X.dark, { n: 6, tf: 0.5, tb: 0.1, tw: 0 }, [0, 2, 0], UPV));
@@ -514,14 +551,32 @@ registerB('nexus', 'shield', (M, d, lv) => {
   return g;
 });
 
-/* ======================================================================== NETZKNOTEN – Gitterknoten mit Ankern
-   Obsidiansockel mit drei Stützkristallen trägt den schwebenden Knotenkristall (großer durchscheinender Oktaeder mit
-   Kern) in einem drehenden Oktaedergitter; schräge Kristallbänder (Anzahl = Stufe) kreisen darum, Lichtfäden spannen
-   sich zu Leuchtankern in alle Richtungen, Lichtpunkte kreisen. I: drei Anker. II: sechs Anker (drei groß, drei klein).
-   III: Netzring verbindet die Anker, Antennenkristall über dem Knoten. */
+/* ======================================================================== NETZKNOTEN – Gitterknoten über schwebenden Schollen
+   Kein geschlossener Sockel: eine kleine Sechskant-Scholle in der Mitte und drei dreieckige Außenschollen (Spitze
+   nach außen), die frei schweben und nur durch Lichtfäden verbunden sind – von oben ein lockeres Dreigestirn, das
+   sich von allen übrigen Stationen abhebt. Über der Mitte der schwebende Knotenkristall (großer durchscheinender
+   Oktaeder mit Kern) in einem drehenden Oktaedergitter; schräge Kristallbänder (Anzahl = Stufe) kreisen darum.
+   I: drei Außenschollen mit Ankern. II: drei kleine Zwischenschollen mit Ankern, zweites Band. III: Netzring
+   verbindet alle Anker, Antennenkristall über dem Knoten, mehr Splitter auf den Schollen. */
+/* Kleine schwebende Scholle (Radius Rs) mit Leuchtkante, Wurzelkristall und nc Splittern zur Seite a */
+function islet(M, X, S, Rs, seed, a, sh, nc) {
+  const g = new THREE.Group(), r = rng(seed * 11 + 3), top = Rs * 0.1;
+  g.add(put(mesh(islandGeo(Rs, seed, sh), X.dark), 0, -top, 0));
+  g.add(put(mesh(islandRim(Rs, seed, Rs * 0.03, 0.14, sh), S.teamVein, false), 0, -top, 0));
+  g.add(grow(Rs * 0.7, Rs * 0.16, X.dark, { n: 5, tf: 0.6, tb: 0.1, tw: 0.5 }, [0, -Rs * 0.2, 0], [0, -1, 0]));
+  for (let i = 0; i < nc; i++) { const b = a + (i - (nc - 1) / 2) * 0.9 + (r() - 0.5) * 0.3, L = Rs * (0.5 + r() * 0.35); g.add(grow(L, L * 0.2, i % 2 ? X.cryS : X.cry, { n: 4, tf: 0.5, tb: 0.2, tw: 0.5 }, P(b, Rs * 0.45, -0.3), dirE(b, (45 + r() * 25) * DEG))); }
+  return g;
+}
 registerB('nexus', 'relay', (M, d, lv) => {
-  const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group(), ny = 10;
-  g.add(socket(M, X, S, R, 8, { n: 9, up: 0, plate: 0.4, clusters: 2, cAt: 0.7 }));
+  const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group(), ny = 10 + lv;
+  /* Mittelscholle und Außenschollen (Ecke nach außen) */
+  g.add(islet(M, X, S, R * 0.34, 81, 0, { n: 6, irr: 0.03, rot: 0, sx: 1 }, 0));
+  const big = [0, 1, 2].map(i => i / 3 * TAU + Math.PI / 2), sm2 = big.map(a => a + Math.PI / 3);
+  const tsh = a => ({ n: 3, irr: 0.03, rot: -a, sx: 1 });
+  big.forEach((a, i) => { const s = islet(M, X, S, R * 0.3, 82 + i, a, tsh(a), lv >= 3 ? 3 : 2); s.position.set(...P(a, R * 0.64, -0.6)); g.add(s); g.add(beam(X, P(a, R * 0.3, 0.2), P(a, R * 0.45, -0.2), 0.12, S.thread)); });
+  if (lv >= 2) sm2.forEach((a, i) => { const s = islet(M, X, S, R * 0.18, 86 + i, a, tsh(a), lv >= 3 ? 2 : 1); s.position.set(...P(a, R * 0.6, -1.2)); g.add(s); });
+  g.add(orbiters(M, X, { axis: 'y', n: 6, r: R * 0.5, y: 1.5, size: R * 0.025, speed: 0.08, seed: 8, wob: 0.8 }));
+  /* Fuß und Knoten */
   const so = { n: 6, sq: 1, tf: 0.35, tb: 0.1, tw: 0 };
   g.add(grow(8, 3.6, X.dark, so, [0, -1, 0], UPV)); g.add(growEdges(X, 8, 3.6, so, [0, -1, 0], UPV, S.teamVein, 0.1));
   for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + Math.PI / 2; g.add(grow(9, 1.6, X.cryS, { n: 4, tf: 0.5, tb: 0.1, tw: 0.5 }, P(a, 5, 0), [-Math.cos(a) * 0.4, 1, -Math.sin(a) * 0.4])); }
@@ -532,12 +587,12 @@ registerB('nexus', 'relay', (M, d, lv) => {
   const cage = new THREE.Group(); cage.add(mesh(frameGeo('nxrelayCage', cp, ce, 0.16), X.beam, false)); cage.add(mesh(nodesGeo('nxrelayCage', cp, 0.55), S.team, false));
   nd.add(spinning(cage, 'y', -0.25)); g.add(nd);
   for (let i = 0; i < lv; i++) { const r = band(9.5 + i * 2, 0.7, 0.5, i === 1 ? X.cryS : S.band, 32); r.rotation.x = (i % 2 ? -0.22 : 0.22); const p = new THREE.Group(); p.position.y = ny; p.add(r); p.userData.spin = { axis: 'y', speed: i % 2 ? -0.35 : 0.3 }; g.add(p); }
-  const big = [0, 1, 2].map(i => i / 3 * TAU + Math.PI / 2);
-  anchors(M, X, S, g, big, 16.5, 1.35, null);
-  for (const a of big) g.add(beam(X, [0, ny, 0], P(a, 16.5, 4.7), 0.14, X.beamSoft));
-  if (lv >= 2) { const sm2 = big.map(a => a + Math.PI / 3); anchors(M, X, S, g, sm2, 14, 0.9, null); for (const a of sm2) g.add(beam(X, [0, ny, 0], P(a, 14, 3.2), 0.09, S.thread)); }
+  /* Anker auf den Schollen, Fäden zum Knoten */
+  anchors(M, X, S, g, big, R * 0.68, 1.35, null);
+  for (const a of big) g.add(beam(X, [0, ny, 0], P(a, R * 0.68, 4.7), 0.14, X.beamSoft));
+  if (lv >= 2) { anchors(M, X, S, g, sm2, R * 0.62, 0.9, null); for (const a of sm2) g.add(beam(X, [0, ny, 0], P(a, R * 0.62, 3.2), 0.09, S.thread)); }
   if (lv >= 3) {
-    const all = [...big.map(a => [a, 16.5, 4.7]), ...big.map(a => [a + Math.PI / 3, 14, 3.2])].sort((p, r) => ((p[0] % TAU) + TAU) % TAU - ((r[0] % TAU) + TAU) % TAU);
+    const all = [...big.map(a => [a, R * 0.68, 4.7]), ...sm2.map(a => [a, R * 0.62, 3.2])].sort((p, r) => ((p[0] % TAU) + TAU) % TAU - ((r[0] % TAU) + TAU) % TAU);
     for (let i = 0; i < 6; i++) { const [a1, d1, y1] = all[i], [a2, d2, y2] = all[(i + 1) % 6]; g.add(beam(X, P(a1, d1, y1), P(a2, d2, y2), 0.1, S.thread)); }
     g.add(grow(7, 1.2, X.cryS, { n: 3, sq: 1, tw: 0, tf: 0.45, tb: 0.15 }, [0, ny + 5, 0], UPV)); g.add(put(octa(S.team, 0.6, 1, 0.6, false), 0, ny + 12.5, 0));
   }
@@ -581,5 +636,89 @@ registerB('nexus', 'super', (M, d, lv) => {
   }
   if (lv >= 3) { const dash = new THREE.Group(); for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; dash.add(grow(6, 1, S.band, { n: 4, tf: 0.5, tb: 0.5, tw: 0 }, P(a, 50, 0), UPV)); } g.add(spinning(dash, 'y', 0.05)); g.add(spinning(band(50, 1.2, 0.9, X.cryS, 48, 1), 'y', 0.05)); }
   anchors(M, X, S, g, [0, 1, 2].map(i => i / 3 * TAU), 46, 2, [14, 10]);
+  return g;
+});
+
+/* ======================================================================== GITTERWALL – Feldemitter (Schildwall)
+   Länglicher Sechskantsockel (Längsachse Z), an beiden Enden ein Obsidian-Obelisk (Dreikant, Leuchtkanten in
+   Spielerfarbe), dazwischen ein leuchtendes Gitter aus Lichtstreben mit Knoten – das Wandgitter, aus dem das Feld
+   wächst (das Feld selbst zeichnet entities.js). Über der Mitte schwebt der Emitterkristall mit hellem Kern.
+   I: zwei Gitterreihen. II: dritte Reihe, Sechseckringe drehen um die Obelisken, Stützkristalle an den Flanken.
+   III: höhere Obelisken mit Lichtspitzen und zweitem Ring, Dreiecksring um den Emitter, kreisende Splitter.
+   Eigenes Modell statt des allgemeinen aus extra22.js (das nur Fraktionen ohne eigenes Modell bedient). */
+registerB('nexus', 'wall', (M, d, lv) => {
+  const X = xm(M), S = sm(M), R = d.r, root = new THREE.Group(), g = new THREE.Group(), zo = R * 0.6, OL = 15 + lv * 3, ey = 14 + lv * 2.5;
+  g.add(socket(M, X, S, R, 11, { shape: { n: 6, sx: 0.5, rot: Math.PI / 2 }, up: 0, plate: 0.25, clusters: 0, cloud: 4, glow: 0.3 }));
+  const oo = { n: 3, sq: 1, tf: 0.3, tb: 0.06, tw: 0, rot: -30 * DEG };
+  for (const sg of [-1, 1]) {
+    const F = [0, -0.5, sg * zo];
+    g.add(grow(4, 3.4, X.dark, { n: 6, tf: 0.3, tb: 0.2, tw: 0, sq: 1 }, [0, -1, sg * zo], UPV));
+    g.add(grow(OL, 2.4, X.dark, oo, F, UPV)); g.add(growEdges(X, OL, 2.4, oo, F, UPV, S.teamVein, 0.12));
+    if (lv >= 2) {
+      const r1 = spinning(hring(3.6, 0.3, S.band, 6, 3, OL * 0.45), 'y', 0.4 * sg); r1.position.z = sg * zo; g.add(r1);
+      for (const sx of [-1, 1]) g.add(grow(7, 1.2, X.cryS, { n: 4, tf: 0.5, tb: 0.2, tw: 0.5 }, [sx * 2, 0, sg * zo], [sx * 0.6, 1, sg * 0.2]));
+    }
+    if (lv >= 3) { g.add(put(octa(X.veinHot, 0.6, 1.2, 0.6, false), 0, OL + 0.4, sg * zo)); const r2 = spinning(hring(3, 0.25, X.beam, 6, 3, OL * 0.75), 'y', -0.5 * sg); r2.position.z = sg * zo; g.add(r2); }
+  }
+  /* Wandgitter zwischen den Obelisken: Reihen, Zickzackstreben, Knoten */
+  const rows = lv >= 2 ? [3, 7.5, 12] : [3.5, 10], cols = 5, pts = [], ed = [];
+  rows.forEach((y, j) => {
+    for (let i = 0; i < cols; i++) {
+      pts.push([0, y, -zo + 2 + i / (cols - 1) * (zo - 2) * 2]); const k = pts.length - 1;
+      if (i) ed.push([k - 1, k]);
+      if (j) { ed.push([k, k - cols]); if ((i + j) % 2 === 0 && i < cols - 1) ed.push([k, k - cols + 1]); if ((i + j) % 2 === 1 && i > 0) ed.push([k, k - cols - 1]); }
+    }
+  });
+  const key = 'nxwall' + rows.length;
+  g.add(mesh(frameGeo(key, pts, ed, 0.22), X.beam, false)); g.add(mesh(nodesGeo(key, pts, 0.6), S.team, false));
+  /* Emitter */
+  const em = new THREE.Group(); em.position.y = ey; g.add(em);
+  em.add(spinning(octa(X.cry, 2.4, 4, 2.4), 'y', 0.5)); em.add(core(M, X, 1.3 + lv * 0.2, 11, 0.12));
+  g.add(beam(X, [0, rows[rows.length - 1], 0], [0, ey - 3.5, 0], 0.25, X.beamSoft));
+  if (lv >= 3) { em.add(spinning(hring(5, 0.4, S.band, 3, 4), 'y', 0.6)); g.add(orbiters(M, X, { axis: 'y', n: 4, r: 7, y: ey, size: 0.5, speed: 0.5, seed: 12, wob: 1, mat: X.veinHot })); }
+  /* gebaut längs Z, gedreht auf die Längsachse X (wie die übrigen Schildwälle) */
+  g.rotation.y = Math.PI / 2; root.add(g);
+  return root;
+});
+
+/* ======================================================================== LAUSCHKRISTALL – Frühwarnstation
+   Fünfecksockel, darauf ein hoher fünfkantiger Obsidianstamm mit Leuchtkanten, oben ein schräg gestellter Fächer aus
+   flachen Kristallblättern (eine Kristallschüssel), der sich langsam dreht; in der Mitte ein Lichtkern, davor eine
+   Empfangsnadel mit Spitze in Spielerfarbe. Klar anders als der Netzknoten: hoch, mit großer flacher Schüssel.
+   I: sechs Blätter. II: neun Blätter, gegenläufiger Sechseckring unter der Schüssel, drei Horchnadeln am Fuß.
+   III: zwölf Blätter mit Leuchtkanten, zweiter Ring, kreisende Splitter auf weiter Bahn. */
+registerB('nexus', 'radar', (M, d, lv) => {
+  const X = xm(M), S = sm(M), R = d.r, g = new THREE.Group(), rsh = { n: 5, rot: Math.PI / 2 }, sy = 17 + lv * 1.5;
+  g.add(socket(M, X, S, R, 12, { shape: rsh, up: 5, upAt: 0.6, plate: 0.32, clusters: 2, cAt: 0.55, cloud: 5 }));
+  const so = { n: 5, sq: 1, tf: 0.1, tb: 0.1, tw: 0 };
+  g.add(grow(5, 6, X.dark, { n: 5, tf: 0.3, tb: 0.2, tw: 0, sq: 1 }, [0, -1, 0], UPV));
+  g.add(grow(sy, 2.4, X.dark, so, [0, 0, 0], UPV)); g.add(growEdges(X, sy, 2.4, so, [0, 0, 0], UPV, S.teamVein, 0.1));
+  for (let i = 0; i < 3; i++) { const a = i / 3 * TAU + 0.3; g.add(grow(9, 1.5, X.cry, { n: 4, tf: 0.45, tb: 0.15, tw: 0 }, P(a, 4.5, 0), [-Math.cos(a) * 0.25, 1, -Math.sin(a) * 0.25])); }
+  /* Schüssel: Drehteller (Y) mit schräg gestelltem Fächer */
+  const dk = new THREE.Group(); dk.position.y = sy; dk.userData.spin = { axis: 'y', speed: 0.35 }; g.add(dk);
+  const tilt = new THREE.Group(); tilt.rotation.x = 0.55; dk.add(tilt);
+  const np = [6, 9, 12][lv - 1], PL = 9 + lv, po = { n: 4, sq: 0.3, tf: 0.4, tb: 0.1, tw: 0 };
+  for (let i = 0; i < np; i++) {
+    const a = i / np * TAU, F = P(a, 1.5, 0), dv = dirE(a, 32 * DEG);
+    tilt.add(grow(PL, 2.2, i % 2 ? X.cryS : X.cry, po, F, dv));
+    if (lv >= 3 || i % 2 === 0) tilt.add(growEdges(X, PL, 2.2, po, F, dv, S.teamVein, 0.08, 2));
+  }
+  tilt.add(band(PL * 0.86, 0.6, 0.5, S.band, 24, PL * 0.53));
+  tilt.add(core(M, X, 1.4 + lv * 0.15, 9, 0.12));
+  tilt.add(grow(7, 0.5, X.veinHot, { n: 4, tf: 0.5, tb: 0.1, tw: 0 }, [0, 0, 0], UPV, false)); tilt.add(put(octa(S.team, 0.6, 1, 0.6, false), 0, 7.6, 0));
+  if (lv >= 2) {
+    g.add(spinning(hring(6.5, 0.45, S.band, 6, 3, sy - 3), 'y', -0.5));
+    for (const a of cornerA(rsh).filter((_, i) => i % 2 === 0).slice(0, 3)) { const F = P(a, 13, 0); g.add(grow(10 + lv, 0.8, X.cryS, { n: 3, sq: 1, tf: 0.5, tb: 0.1, tw: 0 }, F, UPV)); g.add(put(octa(X.veinHot, 0.35, 0.7, 0.35, false), F[0], 11 + lv, F[2])); g.add(beam(X, [F[0], 10 + lv, F[2]], [0, sy - 3, 0], 0.08, S.thread)); }
+  }
+  if (lv >= 3) {
+    /* Nebenschüssel auf einem Seitenarm, dreht gegenläufig */
+    const sa = 0.3, [sx, , sz] = P(sa, 11), ny2 = sy * 0.55;
+    g.add(grow(10, 0.9, X.dark, { n: 4, tf: 0.2, tb: 0.1, tw: 0 }, [0, ny2 - 4, 0], [sx, 4, sz]));
+    const d2 = new THREE.Group(); d2.position.set(sx, ny2 + 1, sz); d2.userData.spin = { axis: 'y', speed: -0.6 }; g.add(d2);
+    const t2 = new THREE.Group(); t2.rotation.x = 0.7; d2.add(t2);
+    for (let i = 0; i < 6; i++) { const a = i / 6 * TAU; t2.add(grow(6.5, 1.5, i % 2 ? X.cryS : X.cry, po, P(a, 0.8, 0), dirE(a, 32 * DEG))); }
+    t2.add(core(M, X, 0.8, 5, 0.15)); t2.add(band(5.4, 0.4, 0.35, S.band, 16, 3.4));
+    g.add(spinning(hring(7, 0.3, X.beam, 6, 3, sy - 6), 'y', 0.4)); g.add(orbiters(M, X, { axis: 'y', n: 5, r: R * 0.8, y: sy * 0.6, size: 0.7, speed: 0.12, seed: 14, wob: 2 })); }
+  anchors(M, X, S, g, cornerA(rsh).filter((_, i) => i % 2 === 1), R * 0.68, 1.2, [2.4, 6]);
   return g;
 });

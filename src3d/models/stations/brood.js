@@ -12,6 +12,10 @@
      Pheromon     hoher Stiel mit Fühlerfedern (wie ein Nachtfalter) und rosa Duftknollen, die langsam glimmen
      Sporennest   blasse Boviste mit Poren und Scheitelöffnung, darüber eine kreisende Sporenwolke
      Brutsturm    Mutterleib im Knochenkorb, umringt von Eiern, die mit der Ladung nacheinander aufleuchten
+     Membranwall  zwei Knochenhauer als Torbogen mit Flughaut, Emitterblase am Scheitel
+     Sinnesknospe riesiges Auge unter Chitinhaube auf geringeltem Stiel, Hörsegel am Fuß
+   Die Nesthaut bekommt je Rolle eigene Lappen (o.petal): Kleeblatt beim Pheromonknoten, Blüte bei der Brutkammer,
+   Dreilappen bei der Verdauung, Oval beim Cortex, schmal und länglich beim Membranwall.
    Teamfarbe: Leuchtadern in der Nesthaut, Kranzadern, Nervenknoten, Duftkerne, Fühlerspitzen. Säuregrün bleibt die
    Grundfarbe (Augen, Säure, Nährsaft). Mitte im Ursprung, oben +Y, Grundfläche im Kreis d.r.
    ===================================================================== */
@@ -106,7 +110,10 @@ function nestSkin(M, R, o = {}) {
   const s = XB(M), x = X(M), q = rng(o.seed || 7), g = new THREE.Group(), B = new Bag();
   const sx = o.sx ?? 1, sz = o.sz ?? 1, hT = o.h ?? R * 0.07, hB = o.hb ?? R * 0.2;
   const lobes = []; for (let i = 0; i < 6; i++) lobes.push([2 + (q() * 6 | 0), q() * TAU, 0.018 + q() * 0.035]);
-  const edge = a => { let k = 1; for (const [n, p, A] of lobes) k += A * Math.sin(n * a + p); return R * k; };
+  /* o.petal = [Anzahl, Tiefe, Phase]: ausgeprägte Lappen je Rolle (Kleeblatt, Blüte …), damit nicht jedes Nest auf
+     derselben runden Haut steht; normiert, so dass der Rand den Radius R nicht überschreitet */
+  const [pk, pa, pp] = o.petal || [0, 0, 0];
+  const edge = a => { let k = 1; for (const [n, p, A] of lobes) k += A * Math.sin(n * a + p); return R * k * (1 + pa * Math.cos(pk * (a - pp))) / (1 + pa); };
   const swell = (px, pz) => hT * 0.22 * (Math.sin(px / R * 7.1 + 1.3) * Math.sin(pz / R * 6.3 - 0.4) + 0.5 * Math.sin((px + pz) / R * 11));
   const top = (px, pz) => { const a = Math.atan2(pz / sz, px / sx), rho = Math.min(1, Math.hypot(px / sx, pz / sz) / edge(a)); return hT * Math.sqrt(Math.max(0, 1 - Math.pow(rho, 5))) + swell(px, pz) * (1 - rho * rho); };
   B.add(new Geo().grid(o.nu || 72, 26, (u, v) => {
@@ -362,7 +369,7 @@ registerB('brood', 'yard', (M, d, lv) => {
    Dornenkranz um den Schließmuskel und Gallenblasen. */
 registerB('brood', 'refinery', (M, d, lv) => {
   const R = d.r, g = new THREE.Group(), x = X(M), s = XB(M), B = new Bag(), q = rng(71 + lv);
-  const { g: skin, top } = nestSkin(M, R * 0.86, { seed: 73, veins: 8, h: R * 0.05 }); g.add(skin);
+  const { g: skin, top } = nestSkin(M, R * 0.86, { seed: 73, veins: 8, h: R * 0.05, petal: [3, 0.14, -Math.PI / 2 + 0.25] }); g.add(skin);
   const a0 = -Math.PI / 2 + 0.25, gul = []; for (let i = 0; i < lv; i++) gul.push(a0 + i * TAU / 3);
   const Sc = V(0, 11.5, 0), S0 = 11.5, Sy = 10.5;
   const lobe = d => { let k = 1; for (const a of gul) { const c = d.x * Math.cos(a) + d.z * Math.sin(a); k += 0.3 * Math.pow(Math.max(0, c), 2) * (1 - Math.abs(d.y)); } return k; };
@@ -416,7 +423,7 @@ registerB('brood', 'refinery', (M, d, lv) => {
    spangen, III dritte Reihe oben, Dornen am Kelch, zwei kleine Nebenkerne). */
 registerB('brood', 'reactor', (M, d, lv) => {
   const R = d.r, g = new THREE.Group(), x = X(M), s = XB(M), B = new Bag(), q = rng(81 + lv);
-  const { g: skin, top } = nestSkin(M, R * 0.9, { seed: 83, veins: 7, h: R * 0.07, hb: R * 0.22, nu: 56 }); g.add(skin);
+  const { g: skin, top } = nestSkin(M, R * 0.9, { seed: 83, veins: 7, h: R * 0.07, hb: R * 0.22, nu: 60, petal: [5, 0.17, 0] }); g.add(skin);
   const Kc = V(0, 10.5, 0), Kr = 5.2;
   /* Kelch */
   B.add(cg('calyx', () => latheC([[1.9, 0, 0.5], [1.75, 0.35, 0.7], [1.2, 0.75, 0.95], [1.05, 1.0, 1.1], [0.8, 0.9, 0.5], [0.01, 0.6, 0.4]], 22)), x.flesh, T(0, 0.5, 0, 5.2, 7.5, 5.2));
@@ -466,7 +473,7 @@ function brainGeo(seed) {
 }
 registerB('brood', 'lab', (M, d, lv) => {
   const R = d.r, g = new THREE.Group(), x = X(M), s = XB(M), B = new Bag(), q = rng(91 + lv);
-  const { g: skin, top } = nestSkin(M, R * 0.9, { seed: 93, veins: 8, h: R * 0.06, hb: R * 0.2 }); g.add(skin);
+  const { g: skin, top } = nestSkin(M, R * 0.9, { seed: 93, veins: 8, h: R * 0.06, hb: R * 0.2, petal: [2, 0.12, Math.PI / 2] }); g.add(skin);
   const Bc = V(0, 13.5, 1), Bs = 17.5;
   const br = new THREE.Group(); br.position.copy(Bc); br.rotation.x = -0.12;
   const cx = mesh(cg('brain', () => brainGeo(3)), s.brain); cx.scale.setScalar(Bs); br.add(cx);
@@ -513,7 +520,7 @@ function feather(M, len, w, n = 7) {
 }
 registerB('brood', 'relay', (M, d, lv) => {
   const R = d.r, g = new THREE.Group(), x = X(M), s = XB(M), B = new Bag(), q = rng(41 + lv);
-  const { g: skin, top } = nestSkin(M, R * 0.88, { seed: 45, veins: 6, h: R * 0.08, hb: R * 0.25, nu: 48 }); g.add(skin);
+  const { g: skin, top } = nestSkin(M, R * 0.88, { seed: 45, veins: 6, h: R * 0.08, hb: R * 0.25, nu: 54, petal: [3, 0.3, 0.4] }); g.add(skin);
   const H = [0, 18, 22, 26][lv], r0 = 4.2;
   const pts = []; for (let i = 0; i <= 6; i++) { const t = i / 6; pts.push([Math.sin(t * 2.2) * 1.6, lerp(-0.5, H, t), Math.cos(t * 1.7) * 1.2 - 1.2]); }
   const rf = v => lerp(r0, 1.8, Math.pow(v, 0.8)) * (1 + 0.1 * Math.pow(Math.max(0, Math.sin(v * Math.PI * 9)), 2)) * (1 + 0.9 * sm(0.93, 1, 1 - v));
@@ -523,7 +530,7 @@ registerB('brood', 'relay', (M, d, lv) => {
     const c = new THREE.CatmullRomCurve3(pts.map(p => V(...p))), tor = cg('band', () => { const t = new THREE.TorusGeometry(1, 0.2, 6, 16); t.rotateX(Math.PI / 2); return addColor(t, () => [1.25, 1.0, 1.25]); });
     for (let i = 1; i <= 4; i++) { const v = i / 5, p = c.getPointAt(v), tg = c.getTangentAt(v), r = rf(v); b.add(tor, x.chitin, place(p, tg, null, r * 1.08, r * 1.3, r * 1.08)); for (let k = 0; k < 3; k++) { const a = k / 3 * TAU + i; spike(b, M, p.clone().add(ring(a, r * 1.05)), ring(a, 1, 0.9), r * 0.9, r * 0.2, false); } }
     /* Wurzelkranz */
-    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + 0.4, e = ring(a, 9 + q() * 3); e.y = top(e.x, e.z) - 0.4; b.add(tubeC([[Math.cos(a) * r0 * 0.5, 2.2, Math.sin(a) * r0 * 0.5 - 1.2], [Math.cos(a) * 6, 1.4, Math.sin(a) * 6 - 0.6], e.toArray()], 1.3, 0.5, x.flesh, 8, 6, 0.1, 0.6, 0.9).geometry, x.flesh, I0); }
+    for (let i = 0; i < 6; i++) { const a = 0.4 + (i >> 1) * TAU / 3 + (i % 2 ? 0.32 : -0.32), e = ring(a, 10 + q() * 3);   /* je Lappen zwei Wurzeln */ e.y = top(e.x, e.z) - 0.4; b.add(tubeC([[Math.cos(a) * r0 * 0.5, 2.2, Math.sin(a) * r0 * 0.5 - 1.2], [Math.cos(a) * 6, 1.4, Math.sin(a) * 6 - 0.6], e.toArray()], 1.3, 0.5, x.flesh, 8, 6, 0.1, 0.6, 0.9).geometry, x.flesh, I0); }
     /* Krone: Fühler */
     const e = c.getPointAt(1), tg = c.getTangentAt(1), nF = lv * 2;
     b.add(sphG(12, 8), x.chitin, T(e.x, e.y, e.z, 2.6, 2.2, 2.6));
@@ -558,7 +565,7 @@ function puffball(M, r, seed) {
 }
 registerB('brood', 'spore', (M, d, lv) => {
   const R = d.r, g = new THREE.Group(), x = X(M), s = XB(M), B = new Bag(), q = rng(61 + lv);
-  const { g: skin, top } = nestSkin(M, R * 0.9, { seed: 63, veins: 7, h: R * 0.07, hb: R * 0.22, nu: 56 }); g.add(skin);
+  const { g: skin, top } = nestSkin(M, R * 0.9, { seed: 63, veins: 7, h: R * 0.07, hb: R * 0.22, nu: 60, petal: [6, 0.1, 0.3] }); g.add(skin);
   const big = [0, 11, 12, 13][lv], pb = puffball(M, big, 1); pb.position.set(lv === 1 ? 0 : -3, top(0, 0) + big * 0.35, lv === 1 ? 0 : 2); g.add(pb);
   const subs = lv === 1 ? [] : lv === 2 ? [[12, -8, 6.5]] : [[12, -8, 6.5], [-6, -15, 5]];
   subs.forEach(([px, pz, r], i) => { const p = puffball(M, r, 3 + i); p.position.set(px, top(px, pz) + r * 0.3, pz); g.add(p); });
@@ -605,5 +612,89 @@ registerB('brood', 'super', (M, d, lv) => {
   const core = mesh(sphG(18, 12), x.core, false); core.position.copy(Wc); core.scale.setScalar(Wr * 0.72); core.userData.charge = true; core.userData.chargeBase = Wr * 0.72; g.add(core);
   const inner = mesh(blob(22, 16, 1, 0.95, 1, 0.08, 7, 2, 0.5, 1.0), s.heart); inner.position.copy(Wc); inner.scale.setScalar(Wr * 0.42); inner.userData.pulse = { amp: 0.06, speed: 1.2, base: Wr * 0.42 }; g.add(inner);
   const womb = mesh(blob(36, 24, 1, Wy / Wr, 1, 0.04, 11, 1.8), s.womb, false); womb.position.copy(Wc); womb.scale.setScalar(Wr); womb.renderOrder = 4; womb.userData.pulse = { amp: 0.02, speed: 0.8, base: Wr }; g.add(womb);
+  return g;
+});
+
+/* ===================================================================== MEMBRANWALL (Schildwall) */
+/* Zwei mächtige Knochenhauer wachsen aus Fleischhügeln an den Enden einer länglichen Nesthaut (Längsachse X) und
+   krümmen sich zueinander; dazwischen spannt sich eine durchscheinende, geäderte Flughaut, aus der das Feld wächst (das
+   Feld selbst zeichnet entities.js). Oben in der Mitte hängt die Emitterblase (säuregrün, pulsiert). Funktionsmerkmal:
+   ein Torbogen mit Haut – kein anderes Nest ist so breit und flach.
+   Stufen: I Bogen und Haut; II Knochenrippen in der Haut, Dornen auf den Hauern, Augen am Fuß; III zweites, kleineres
+   Hauerpaar außen, Tentakel mit Teamspitzen, Säuredrüsen an den Hügeln, größere Emitterblase. Eigenes Modell statt
+   des allgemeinen aus extra22.js. */
+registerB('brood', 'wall', (M, d, lv) => {
+  const R = d.r, g = new THREE.Group(), x = X(M), s = XB(M), B = new Bag();
+  const { g: skin, top } = nestSkin(M, R * 0.86, { seed: 121, sx: 1, sz: 0.55, veins: 6, h: R * 0.05, hb: R * 0.16, nu: 48 }); g.add(skin);
+  const xo = R * 0.6, H = 15 + lv * 1.5;
+  /* Hauer: Punktlisten von außen unten zur Mitte oben */
+  const tusk = sg => [[sg * xo, top(sg * xo, 0) - 1, 0], [sg * (xo + 1), H * 0.45, 0.4], [sg * xo * 0.72, H * 0.88, 0.6], [sg * xo * 0.28, H, 0.3]];
+  for (const sg of [-1, 1]) {
+    const pts = tusk(sg); mound(B, M, V(sg * xo, top(sg * xo, 0) - 0.5, 0), 4.6, 3.8, x.chitin);
+    horn(B, M, pts, 2.2, 0.12, { sym: false, rad: 9, seg: 16 });
+    if (lv >= 2) { const c = new THREE.CatmullRomCurve3(pts.map(p => V(...p))); for (const t of [0.3, 0.5, 0.68]) { const p = c.getPointAt(t); spike(B, M, p.clone().add(V(sg * 1.2, 0.6, 0)), V(sg, 0.8, 0.2), 3.2, 0.6, false); } for (let i = 0; i < 2; i++) eye(B, M, V(sg * (xo - 2.4), top(sg * xo, 0) + 2.6 + i * 1.3, 2.6 - i * 0.5), V(sg * 0.3, 0.4, 1).normalize(), 0.75 - i * 0.15, false, false); }
+  }
+  /* Flughaut zwischen den Hauern (Ebene z ≈ 0), unten am Haut-Saum, oben am Bogen, leicht nach hinten durchhängend */
+  const L = new THREE.CatmullRomCurve3(tusk(-1).map(p => V(...p))), Rr = new THREE.CatmullRomCurve3(tusk(1).map(p => V(...p)));
+  const mg = new Geo().grid(16, 10, (u, v) => {
+    /* u: links → rechts über den Bogen, v: Saum unten → Bogen oben */
+    const tL = 0.15 + 0.85 * u, a = u < 0.5 ? L.getPointAt(Math.min(1, u * 2 * 0.98 + 0.02)) : Rr.getPointAt(Math.min(1, (1 - u) * 2 * 0.98 + 0.02));
+    const by = top((u - 0.5) * 2 * xo * 0.9, 0) + 0.4, bx = (u - 0.5) * 2 * xo * 0.92, k = Math.sin(Math.PI * v), py = lerp(by, a.y - 0.4, v), px = lerp(bx, a.x * 0.97, v);
+    void tL; return [px, py, -1.4 * k * Math.sin(Math.PI * u) + 0.3, lerp(0.75, 1.25, v), u * 3, v * 2];
+  }).build();
+  const mm = mesh(mg, x.membrane, false); mm.renderOrder = 3; const mp = new THREE.Group(); mp.add(mm); mp.userData.pulse = { amp: 0.012, speed: 0.7, base: 1 }; g.add(mp);
+  /* Stufe II: Knochenrippen in der Haut */
+  if (lv >= 2) for (const u of [0.3, 0.5, 0.7]) { const bx = (u - 0.5) * 2 * xo * 0.92, a = u < 0.5 ? L.getPointAt(u * 2 * 0.98 + 0.02) : Rr.getPointAt((1 - u) * 2 * 0.98 + 0.02); horn(B, M, [[bx, top(bx, 0) - 0.5, 0.2], [lerp(bx, a.x, 0.5), lerp(top(bx, 0), a.y, 0.5), -0.5], [a.x * 0.97, a.y - 0.6, 0.2]], 0.6, 0.35, { sym: false, rad: 5, seg: 8 }); }
+  /* Stufe III: äußere Hauer, Säuredrüsen */
+  if (lv >= 3) for (const sg of [-1, 1]) { const x0 = sg * R * 0.8; horn(B, M, [[x0, top(x0, 0) - 1, -2], [x0 * 1.02, 6, -2.5], [x0 * 0.92, 11, -2]], 1.4, 0.1, { sym: false, rad: 7, seg: 10 }); horn(B, M, [[x0 * 0.95, top(x0, 0) - 1, 2.5], [x0, 5, 3], [x0 * 0.9, 9, 2.5]], 1.1, 0.1, { sym: false, rad: 7, seg: 10 }); }
+  B.flush(g);
+  if (lv >= 3) for (const sg of [-1, 1]) { sacAt(g, s.nutr, V(sg * (xo - 3.5), top(sg * xo, 0) + 2.2, -3), 1.6, [1, 0.85, 1.2], 0.08, 1.4 + sg * 0.2, 10); g.add(tentacle(M, V(sg * xo * 0.9, top(sg * xo, 0) + 1, 2), [[sg * xo * 0.9, top(sg * xo, 0) + 1, 2], [sg * xo * 0.7, 4, 5], [sg * xo * 0.45, 3.5, 7]], 0.9, { amp: 0.2, speed: 0.7, phase: sg, tip: s.teamSoft, tipR: 0.6, seg: 10, rad: 6 })); }
+  /* Emitterblase am Scheitel */
+  const er = 2.2 + lv * 0.35, ep = V(0, H + 0.2, 0.4);
+  const sc = sacAt(g, s.nutr, ep, er, [1, 1.2, 1], 0.1, 1.8, 14); const k = mesh(sphG(10, 7), s.teamSoft, false); k.scale.setScalar(er * 0.4); sc.add(k);
+  return g;
+});
+
+/* ===================================================================== SINNESKNOSPE (Frühwarnstation) */
+/* Ein riesiges Auge auf einem dicken, geringelten Fleischstiel, unter einer Chitinhaube mit Lidwulst; das Auge sucht
+   langsam den Horizont ab (schwenkt um Y). Um den Fuß stehen Hörsegel – Knochenfächer mit geäderter Haut –, die sich
+   leicht wiegen. Klar anders als der Pheromonknoten (dünner Stiel mit Fühlerfedern): ein großes Auge mit Segeln.
+   Stufen: I Auge, zwei Hörsegel; II drei Segel, drei kleine Augenstiele am Fuß, Dornen auf der Haube; III vier Segel,
+   sechs Augenstiele, Nebenauge am Stiel, Leuchtblasen am Fuß. Eigenes Modell statt des allgemeinen aus extra22.js. */
+registerB('brood', 'radar', (M, d, lv) => {
+  const R = d.r, g = new THREE.Group(), x = X(M), s = XB(M), B = new Bag(), q = rng(131 + lv);
+  const { g: skin, top } = nestSkin(M, R * 0.88, { seed: 133, veins: 7, h: R * 0.07, hb: R * 0.22, nu: 56, petal: [4, 0.18, Math.PI / 4] }); g.add(skin);
+  const H = 15 + lv * 1.5, er = 5.2 + lv * 0.5;
+  /* Stiel mit Chitinringen */
+  const pts = [[0, -0.5, 0], [0.8, H * 0.35, -0.6], [-0.4, H * 0.7, -0.8], [0, H, -0.6]];
+  const rf = v => lerp(4.4, 2.6, v) * (1 + 0.08 * Math.pow(Math.max(0, Math.sin(v * Math.PI * 8)), 2)) * (1 + 0.8 * sm(0.9, 1, 1 - v));
+  B.add(sweep(pts, rf, 14, 26, 0.55, 1.0, 6).build(), x.flesh, I0);
+  const c = new THREE.CatmullRomCurve3(pts.map(p => V(...p))), tor = cg('band', () => { const t = new THREE.TorusGeometry(1, 0.2, 6, 16); t.rotateX(Math.PI / 2); return addColor(t, () => [1.25, 1.0, 1.25]); });
+  for (const v of [0.3, 0.55, 0.78]) { const p = c.getPointAt(v); B.add(tor, x.chitin, place(p, c.getTangentAt(v), null, rf(v) * 1.08, rf(v) * 1.4, rf(v) * 1.08)); }
+  if (lv >= 3) eye(B, M, c.getPointAt(0.45).add(V(rf(0.45) * 0.9, 0, 0.6)), V(1, 0.3, 0.4).normalize(), 1.1, false, false);
+  /* Hörsegel um den Fuß */
+  const nS = lv + 1;
+  for (let i = 0; i < nS; i++) {
+    const a = [-Math.PI / 4, -Math.PI * 3 / 4, Math.PI / 4, Math.PI * 3 / 4][i], o = ring(a, 1), sd = V(-o.z, 0, o.x), r0 = ring(a, 6.5);   /* erst die hinteren Lappen, dann die vorderen */ r0.y = top(r0.x, r0.z) - 0.3;
+    const L = 11 + lv * 1.5, st = [-0.6, 0, 0.6].map(k => { const dir = o.clone().multiplyScalar(1.1).add(V(0, 1, 0)).addScaledVector(sd, k).normalize(); return [r0.toArray(), r0.clone().addScaledVector(dir, L * 0.55).add(V(0, 0.6, 0)).toArray(), r0.clone().addScaledVector(dir, L).toArray()]; });
+    g.add(membrane(M, st, { r: 0.35, nv: 6, nu: 5, seg: 8, rad: 5, sag: 0.2, tips: s.teamSoft, tipR: 0.45, sway: { axis: 'y', amp: 0.12, speed: 0.6, phase: i * 1.7 } }));
+  }
+  B.flush(g);
+  /* Auge unter der Haube, schwenkt suchend */
+  const head = new THREE.Group(); head.position.set(...c.getPointAt(1).toArray()); head.position.y += er * 0.55; g.add(head);
+  const look = new THREE.Group(); look.rotation.x = -0.35; head.add(look);
+  /* großes Auge: feiner aufgelöst als eyeball(), Iris und Pupille mit Abstand (kein Durchstechen) */
+  B2(look, b => { b.add(sphG(22, 16), s.shell, T(0, 0, 0, er)); const cap = (k, th, n) => cg('bcap' + k, () => { const c = new THREE.SphereGeometry(1, n, 6, 0, TAU, 0, th); c.rotateX(Math.PI / 2); return addColor(c, () => 1); }); b.add(cap('i', 0.7, 24), x.acid, T(0, 0, 0, er * 1.035)); b.add(cap('p', 0.28, 16), x.socket, T(0, 0, 0, er * 1.06)); });
+  const HB = new Bag();
+  HB.add(domeG(), x.chitin, T(0, er * 0.15, -er * 0.25, er * 1.18, er * 1.0, er * 1.22));
+  HB.add(cg('lid', () => { const t = new THREE.TorusGeometry(1, 0.16, 6, 20, Math.PI); addColor(t, () => [1.2, 0.95, 1.2]); return t; }), x.flesh, T(0, er * 0.08, er * 0.62, er * 0.95, er * 0.95, er * 0.6));
+  if (lv >= 2) for (let i = 0; i < 3; i++) spike(HB, M, V(0, er * (1.05 - i * 0.12), -er * (0.15 + i * 0.4)), V(0, 1, -0.8), er * (0.55 - i * 0.08), er * 0.11, false);
+  for (const sg of [-1, 1]) spike(HB, M, V(sg * er * 1.05, er * 0.2, -er * 0.4), V(sg, 0.3, -0.5), er * 0.5, er * 0.1, false);
+  HB.flush(look);
+  head.userData.sway = { axis: 'y', amp: 0.7, speed: 0.22, phase: 0, base: 0 };
+  /* Augenstiele und Leuchtblasen am Fuß */
+  const nE = [0, 3, 6][lv - 1];
+  for (let i = 0; i < nE; i++) { const a = i / nE * TAU + 0.5, p = ring(a, 11 + (i % 2) * 2); p.y = top(p.x, p.z) - 0.2; g.add(eyeStalk(M, p, a, 5.5 + (i % 2), 1.4, i * 0.9)); }
+  if (lv >= 3) for (const a of [1.2, 3.3, 5.4]) { const p = ring(a, 7.5); p.y = top(p.x, p.z) + 1.2; sacAt(g, s.nutr, p, 1.5, [1, 0.85, 1.1], 0.08, 1.2 + a * 0.1, 10); }
   return g;
 });
