@@ -48,15 +48,15 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   /* Flaggschiff und Begleiter aufstellen, Fähigkeiten-Tasten */
   await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, b = g.bldgs.find(x => x.owner === me && x.role === 'base'); const fs = addShip(g, 'archipelago', me, b.x + 260, b.y + 120, 0); const l = addShip(g, 'lancer', me, b.x + 300, b.y + 60, 0); const l2 = addShip(g, 'reckoning', me, b.x + 300, b.y + 180, 0); fs.auto = false; l.auto = false; l2.auto = false; RA.UI.sel.clear(); RA.UI.sel.add(fs.id); RA.UI.selB = 0; hudSel(); R.cam.z = 1.1; R.center(fs.x, fs.y); RA.step(5); });
   await page.waitForTimeout(300);
-  const abBtns = await page.evaluate(() => [...document.querySelectorAll('#cmds .key.ab')].map(b => b.textContent));
+  const abBtns = await page.evaluate(() => [...document.querySelectorAll('#abils .key.ab')].map(b => b.textContent));
   check('flagship shows 4 ability buttons incl. fleet command (' + abBtns.join(' | ') + ')', abBtns.length === 4);   /* Fassung 22: Flottenbefehl */
   check('commander on card', await page.evaluate(() => document.querySelector('#selCard .cmdr') !== null && document.querySelector('#selCard .subs') !== null));
   await shot('24-flagship-card');
   /* Fähigkeit per Taste zünden: Feldwerft */
-  const fy = await page.$('#cmds .key.ab');
+  const fy = await page.$('#abils .key.ab');
   await fy.tap(); await page.waitForTimeout(300);
   check('ability fired via button', await page.evaluate(() => { const u = RA.UI.g.byId.get([...RA.UI.sel][0]); return u.abcd.fieldyard > 0 && u.abT.fieldyard > 0; }));
-  check('button shows cooldown', await page.evaluate(() => document.querySelector('#cmds .key.ab').classList.contains('cd')));
+  check('button shows cooldown', await page.evaluate(() => document.querySelector('#abils .key.ab').classList.contains('cd')));
   /* Subsystem-Ziel: Gegner aufstellen, Ziel-Taste durchschalten, angreifen */
   await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, fs = g.byId.get([...RA.UI.sel][0]); const t = addShip(g, 'olympus', 1 - me, fs.x + 330, fs.y, Math.PI); t.stance = 2; t.hold = true; window.__tgt = t.id; RA.step(2); });
   await page.evaluate(() => { cycleSub(); });
@@ -73,7 +73,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   await page.evaluate(() => { RA.UI.speed = 0.001; });
   await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, b = g.bldgs.find(x => x.owner === me && x.role === 'base'); const b1 = addShip(g, 'boarder', me, b.x + 640, b.y + 100, 0); const b2 = addShip(g, 'dropship', me, b.x + 640, b.y + 160, 0); b1.auto = b2.auto = false; b1.stance = b2.stance = 2; const t = addShip(g, 'lancer', 1 - me, b.x + 820, b.y + 130, Math.PI); t.stance = 2; t.hold = true; t.crew = 12; t.shield = 0; window.__tgt = t.id; RA.UI.sel.clear(); RA.UI.sel.add(b1.id); RA.UI.sel.add(b2.id); RA.UI.selB = 0; hudSel(); R.cam.z = 1.1; R.center(b.x + 730, b.y + 130); RA.step(20); });
   await page.waitForTimeout(300);
-  const boardBtn = await page.evaluate(() => [...document.querySelectorAll('#cmds .key.ab')].findIndex(b => b.textContent.indexOf('Entern') >= 0));
+  const boardBtn = await page.evaluate(() => [...document.querySelectorAll('#abils .key.ab')].findIndex(b => b.textContent.indexOf('Entern') >= 0));
   check('board button present', boardBtn >= 0);
   await page.evaluate(() => useAbility('board'));
   check('board mode entered', await page.evaluate(() => RA.UI.mode === 'board'));

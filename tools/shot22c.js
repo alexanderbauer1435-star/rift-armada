@@ -59,7 +59,7 @@ const OUT = path.resolve(__dirname, 'shots'); fs.mkdirSync(OUT, { recursive: tru
   });
   check('Auswahl wechseln beendet das Untermenü', await page.evaluate(() => RA.UI.mode === 'normal'));
   await page.evaluate(() => RA.step(20));
-  check('Taste »Breitseite« (Salve) am Olympus', await page.evaluate(() => { hudCmds(true); return !!document.querySelector('[data-k="cmd:Breitseite"]') && [...document.querySelectorAll('#cmds .key.ab small')].some(e => e.textContent === 'Salve'); }));
+  check('Taste »Breitseite« (Salve) am Olympus', await page.evaluate(() => { hudCmds(true); return !!document.querySelector('[data-k="cmd:Breitseite"]') && [...document.querySelectorAll('#abils .key.ab small')].some(e => e.textContent === 'Salve'); }));
   await page.evaluate(() => { const f = RA.UI.g.ships.find(x => x.id22f); RA.issue({ t: 'ab', u: [f.id], id: 'fcBroad' }); RA.step(8); hudUpdate(); });
   check('Befehl wirkt auf die Flotte, Karte zeigt ihn', await page.evaluate(() => { const g = RA.UI.g; return g.ships.filter(u => u.owner === RA.UI.me && u.fcT > 0).length >= 7 && /Flottenbefehl: Breitseite/.test(document.getElementById('selCard').textContent); }));
   await shot('04-fleet-command');

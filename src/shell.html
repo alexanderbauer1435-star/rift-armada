@@ -90,6 +90,14 @@ button { font: inherit; color: inherit; }
 /* Hochformat: Tasten in voller Breite unter der Auswahlkarte, ein Wisch zeigt die übrigen */
 @media (max-aspect-ratio: 1/1) { #bottom { flex-wrap: wrap; } #bottom #selCard { order: 1; } #bottom #build { order: 1; } #cmds { order: 2; flex: 1 1 100%; margin-left: 0; } }
 #cmds .key { flex: 0 0 auto; }
+/* Fassung 25: Fähigkeiten eigene Leiste rechts über der Befehlsleiste – nie mehr nach rechts scrollen */
+#abils { position: fixed; right: 0.5em; bottom: calc(3.85em + env(safe-area-inset-bottom)); display: flex; flex-wrap: wrap-reverse; justify-content: flex-end; gap: 0.35em; width: max-content; max-width: min(62vw, 30em); padding: 0.3em; background: rgba(5,7,15,0.55); border: 1px solid rgba(255,190,90,0.28); border-radius: 10px; pointer-events: auto; }
+#abils .key { flex: 0 0 auto; min-width: 3.4em; width: auto; min-height: 2.9em; padding: 0.2em 0.35em; flex-direction: column; gap: 0; font-size: 0.9em; line-height: 1.1; }
+#abils .key small { font-size: 0.75em; opacity: 0.8; text-transform: none; }
+#abils .key.ab { position: relative; overflow: hidden; border-color: var(--acc2); }
+#abils .key.ab.cd { opacity: 0.75; border-color: var(--line); }
+#abils .key.ab .cdb { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--acc2); }
+#abils .key.ab.cd .cdb { background: var(--dim); }
 #cmds .key { width: 3.4em; min-height: 2.9em; padding: 0.2em; flex-direction: column; gap: 0; font-size: 0.9em; line-height: 1.1; }
 #cmds .key small { font-size: 0.75em; opacity: 0.8; text-transform: none; }
 #cmds .key.ab { position: relative; overflow: hidden; border-color: var(--acc2); }
@@ -564,7 +572,7 @@ body.replay #idle, body.replay #apBanner, body.replay #slowTag { display: none !
 #rpBar { position: absolute; left: 0.5em; right: 0.5em; bottom: calc(0.5em + env(safe-area-inset-bottom)); display: flex; gap: 0.5em; align-items: center; flex-wrap: wrap; background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 0.4em 0.6em; }
 #rpSeek { flex: 1 1 10em; min-width: 8em; accent-color: var(--acc); }
 #rpTime { font-variant-numeric: tabular-nums; min-width: 6.5em; }
-body.replay #top, body.replay #bottom, body.replay #groups, body.replay #hpBar, body.replay #army, body.replay #teamBox, body.replay #misBox { display: none !important; }
+body.replay #top, body.replay #bottom, body.replay #abils, body.replay #groups, body.replay #hpBar, body.replay #army, body.replay #teamBox, body.replay #misBox { display: none !important; }
 body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
 .pgRow { display: flex; justify-content: space-between; align-items: baseline; gap: 1em; }
 .pgBar { height: 0.5em; background: rgba(143,227,255,0.12); border-radius: 99px; overflow: hidden; margin: 0.3em 0 0.6em; } .pgBar i { display: block; height: 100%; background: var(--acc); }
@@ -624,6 +632,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
       <div id="selCard" hidden></div>
       <div id="build" hidden><div id="tabs"></div><div id="items"></div></div>
       <div id="cmds"></div>
+      <div id="abils" hidden></div><!-- Fassung 25: Fähigkeiten in eigener Leiste über den Befehlen -->
     </div>
     <div id="misBox" hidden>
       <div id="radio" hidden><canvas id="radioPic" class="pic" width="112" height="112"></canvas><div><div class="rh"><span id="radioName"></span><span id="radioRole"></span><span id="radioMore"></span></div><div id="radioText"></div></div></div>

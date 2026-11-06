@@ -18,10 +18,14 @@ const run = (g, s, fn) => { const n = Math.round(s / X.STEP); for (let i = 0; i 
   let waveEv = null, riftN = 0;
   run(g, 181, g => { for (const e of g.ev) { if (e.t === 'wave') waveEv = e; if (e.t === 'rift') riftN++; } });
   ok(waveEv && waveEv.n === 1 && waveEv.count > 0 && g.wave.phase === 'wave', 'Welle 1 gestartet mit ' + (waveEv && waveEv.count) + ' Gegnern aus ' + riftN + ' Riss');
-  ok(g.ships.filter(u => !u.dead && u.owner === g.threat).length === waveEv.count, 'Wellenschiffe gehören der Bedrohung');
+  /* Fassung 25: Schiffe treten nacheinander aus den Toren */
+  ok(g.wave.q.length > 0 && g.wave.ids.length < waveEv.count, 'Wellenschiffe warten im Tor (' + g.wave.q.length + ' in der Schlange)');
+  ok(g.wave.rifts && g.wave.rifts.length >= 2 && g.wave.active && g.wave.active.length >= 1, 'Alle Tore bekannt, aktives Tor markiert');
+  let done = null;
+  run(g, 25, g => { for (const e of g.ev) if (e.t === 'waveDone') done = e; });
+  ok(g.wave.q.length === 0 && g.wave.ids.length === waveEv.count && g.wave.ids.every(id => { const u = g.byId.get(id); return !u || u.owner === g.threat; }), 'Wellenschiffe gehören der Bedrohung und kamen alle aus dem Tor');
   ok(g.players[g.threat].shipCount === 0, 'Wellenschiffe zählen keine Kommandopunkte');
   const comp1 = waveEv.count;
-  let done = null;
   for (let i = 0; i < 30 * 160 && !done; i++) { X.stepGame(g); for (const e of g.ev) if (e.t === 'waveDone') done = e; g.ev.length = 0; }
   ok(done && done.n === 1 && g.wave.phase === 'build', 'Welle 1 beendet (Gegner tot oder Zeit um)');
   ok(p.rewardAsk && p.rewardOpts.length === 3, 'Drei Belohnungskarten angeboten: ' + (p.rewardOpts || []).join(', '));
@@ -52,6 +56,7 @@ const run = (g, s, fn) => { const n = Math.round(s / X.STEP); for (let i = 0; i 
   run(g, 10);
   for (let w = 0; w < 20 && !g.over; w++) {
     g.wave.next = 0.5; run(g, 1.5);
+    for (let k = 0; k < 40 && g.wave.q.length; k++) run(g, 1);
     for (const id of g.wave.ids) { const u = g.byId.get(id); if (u && !u.dead) C.kill(g, u, null, -1); }
     run(g, 3);
     waves++;

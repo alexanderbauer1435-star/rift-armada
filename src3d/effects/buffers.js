@@ -298,7 +298,7 @@ export class DomeBuf {
 }
 
 /* ------------------------------------------------------------ Bodenscheiben mit Mustern */
-export const DMODE = { spores: 0, rift: 1, flare: 2, vortex: 3, storm: 4, glow: 5 };
+export const DMODE = { spores: 0, rift: 1, flare: 2, vortex: 3, storm: 4, glow: 5, portal: 6 };
 const DISC_VERT = `
 attribute float iMode; attribute vec4 iCol; attribute vec2 iPar;
 varying vec2 vUv; varying float vMode; varying vec4 vCol; varying vec2 vPar;
@@ -356,6 +356,13 @@ void main() {
     float n = noise(q * 5.0 + t * 0.4);
     col = mix(vec3(0.7, 1.0, 0.25), vec3(0.5, 0.2, 0.7), smoothstep(0.2, 0.9, d + 0.2 * n));
     a = (1.0 - smoothstep(0.3, 1.0, d)) * (0.3 + 0.7 * spokes) * k * 0.6;
+  } else if (m == 6) {
+    /* Fassung 25: Risstor-Wirbel – grün-violette Spirale in dunkler Öffnung, hell zur Mitte (k = Wachheit) */
+    float sp = sin(ang * 4.0 - 8.0 * log(d + 0.05) + ph);
+    float band = smoothstep(0.2, 0.95, sp);
+    float rad = 1.0 - smoothstep(0.75, 1.0, d);
+    col = mix(vec3(0.85, 1.25, 0.45), mix(vec3(0.45, 0.95, 0.2), vec3(0.5, 0.18, 0.7), smoothstep(0.2, 0.85, d)), smoothstep(0.0, 0.35, d));
+    a = (band * rad * (0.25 + 0.3 * k) + (1.0 - smoothstep(0.0, 0.3, d)) * 0.5 * k) * min(k, 1.2);
   } else {
     /* weiches Leuchten am Boden */
     a = (1.0 - smoothstep(0.0, 1.0, d)) * k;

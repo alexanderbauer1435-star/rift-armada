@@ -745,19 +745,9 @@ function frame2D(alpha, dt) {
   for (const st of g.sites) if (inV(st.x, st.y, st.r + 40) && R.seen(st.x, st.y)) { if (R.detail > 1 && cam.z > 0.35) glowAt(ctx, st.x + st.r * 0.1, st.y + st.r * 0.14, st.r * 1.5, '#000000', 0.45); ctx.save(); ctx.translate(st.x, st.y); drawSite(ctx, st, R.time, R.visible(st)); ctx.restore(); if (st.prog > 0 && !st.done) { ctx.strokeStyle = st.by >= 0 ? pcol(st.by) : '#fff'; ctx.lineWidth = 3 / cam.z; ctx.beginPath(); ctx.arc(st.x, st.y, st.r + 10, -Math.PI / 2, -Math.PI / 2 + TAU * st.prog); ctx.stroke(); } if (st.owner >= 0 && st.kind !== 'ruin') { ctx.strokeStyle = pcol(st.owner); ctx.lineWidth = 1.5 / cam.z; ctx.setLineDash([6 / cam.z, 6 / cam.z]); ctx.beginPath(); ctx.arc(st.x, st.y, st.r + 6, 0, TAU); ctx.stroke(); ctx.setLineDash([]); } }
   for (const gt of g.gates) if (inV(gt.x, gt.y, gt.r + 40) && R.seen(gt.x, gt.y)) { if (R.detail > 1 && cam.z > 0.35) glowAt(ctx, gt.x + 6, gt.y + 8, gt.r * 1.4, '#000000', 0.4); ctx.save(); ctx.translate(gt.x, gt.y); drawGate(ctx, gt, R.time, gt.owner >= 0 ? pcol(gt.owner) : '#9ff0c0'); ctx.restore(); if (gt.prog > 0) { ctx.strokeStyle = gt.by >= 0 ? pcol(gt.by) : '#fff'; ctx.lineWidth = 3 / cam.z; ctx.beginPath(); ctx.arc(gt.x, gt.y, gt.r + 14, -Math.PI / 2, -Math.PI / 2 + TAU * gt.prog); ctx.stroke(); } }
   /* Sterneneruption des Sunbreakers: brennender Bereich */
-  /* Risse der Brood (Wellen): violett-grüne Wunden im Raum, die offenen pulsieren */
-  if (g.wave && g.wave.open) for (const r0 of g.wave.open) if (inV(r0.x, r0.y, 200)) {
-    const hot = g.wave.phase === 'wave', k = hot ? 1.6 : 0.8, rr = 80 + 10 * Math.sin(R.time * 2 + r0.x);
-    ctx.save(); ctx.translate(r0.x, r0.y); ctx.rotate(Math.atan2(g.map.h / 2 - r0.y, g.map.w / 2 - r0.x) + Math.PI / 2);
-    ctx.globalCompositeOperation = 'lighter';
-    const gr = ctx.createRadialGradient(0, 0, 4, 0, 0, rr * 1.6); gr.addColorStop(0, 'rgba(214,255,106,' + (0.35 * k) + ')'); gr.addColorStop(0.5, 'rgba(160,80,200,' + (0.25 * k) + ')'); gr.addColorStop(1, 'rgba(80,20,120,0)');
-    ctx.fillStyle = gr; ctx.beginPath(); ctx.ellipse(0, 0, rr * 1.6, rr * 0.7, 0, 0, TAU); ctx.fill();
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = '#12051c'; ctx.beginPath(); ctx.moveTo(-rr, 0); for (let i = 0; i <= 10; i++) { const x = -rr + i * rr / 5; ctx.lineTo(x, -6 - 10 * Math.sin(i / 10 * Math.PI) * (1 + 0.2 * Math.sin(R.time * 3 + i))); } for (let i = 10; i >= 0; i--) { const x = -rr + i * rr / 5; ctx.lineTo(x, 6 + 10 * Math.sin(i / 10 * Math.PI) * (1 + 0.2 * Math.cos(R.time * 3 + i))); } ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = 'rgba(214,255,106,' + (0.5 + 0.4 * k * Math.abs(Math.sin(R.time * 3))) + ')'; ctx.lineWidth = 2 / cam.z; ctx.stroke();
-    ctx.restore();
-    if (hot && R.detail > 1 && Math.random() < 0.4) fxSpark(r0.x + (Math.random() - 0.5) * rr, r0.y + (Math.random() - 0.5) * 30, 1, 40, '#d6ff6a', 0.5);
-  }
+  /* Fassung 25: Risstore der Brood (Wellen) – alle Tore von Anfang an sichtbar: schlafend dunkel, vor der Welle
+     erwachend (pulsierend), während der Welle offen mit grünem Wirbel; aus der Mitte treten die Schiffe */
+  if (g.wave) for (const r0 of riftList(g)) if (inV(r0.x, r0.y, 220)) drawRiftGate(ctx, r0, riftState(g, r0), R.time, cam.z);
   /* Sporenteppiche */
   for (const sp of g.spores) if (inV(sp.x, sp.y, sp.r + 40)) { const k = Math.min(1, sp.t / 5); const gr = ctx.createRadialGradient(sp.x, sp.y, 0, sp.x, sp.y, sp.r); gr.addColorStop(0, 'rgba(180,255,60,' + (0.22 * k) + ')'); gr.addColorStop(0.7, 'rgba(140,224,74,' + (0.14 * k) + ')'); gr.addColorStop(1, 'rgba(140,224,74,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(sp.x, sp.y, sp.r, 0, TAU); ctx.fill(); if (R.detail > 1 && Math.random() < 0.5) { const a = Math.random() * TAU, d = Math.random() * sp.r; fxSpark(sp.x + Math.cos(a) * d, sp.y + Math.sin(a) * d, 1, 12, '#d6ff6a', 0.5); } }
   for (const b of g.bldgs) if (!b.dead && b.role === 'spore' && b.done && inV(b.x, b.y, 400) && R.visible(b)) { const r = lvOf(b).aura; const gr = ctx.createRadialGradient(b.x, b.y, b.def.r, b.x, b.y, r); gr.addColorStop(0, 'rgba(180,255,60,0.16)'); gr.addColorStop(1, 'rgba(140,224,74,0)'); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.fill(); ctx.strokeStyle = 'rgba(180,255,60,0.25)'; ctx.lineWidth = 1 / cam.z; ctx.setLineDash([4 / cam.z, 6 / cam.z]); ctx.beginPath(); ctx.arc(b.x, b.y, r, 0, TAU); ctx.stroke(); ctx.setLineDash([]); }
@@ -1194,7 +1184,7 @@ R.drawMini = function () {
   for (const u of g.ships) { if (u.dead || u.def.role === 'fighter' || (vp >= 0 && !R.visible(u))) continue; ctx.fillStyle = pcol(u.owner); const r = Math.max(1.2, u.def.r * sx * 0.8); ctx.fillRect(u.x * sx - r, u.y * sy - r, r * 2, r * 2); }
   /* Nebel */
   if (vp >= 0) { ctx.save(); ctx.globalAlpha = 0.75; ctx.imageSmoothingEnabled = false; ctx.drawImage(R.fogCv, 0, 0, W, H); ctx.restore(); }
-  if (g.wave && g.wave.open) for (const r0 of g.wave.open) { ctx.strokeStyle = '#b4ff3c'; ctx.globalAlpha = g.wave.phase === 'wave' ? 0.6 + 0.4 * Math.sin(R.time * 8) : 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(r0.x * sx - 5, r0.y * sy); ctx.lineTo(r0.x * sx + 5, r0.y * sy); ctx.stroke(); ctx.globalAlpha = 1; }
+  if (g.wave) for (const r0 of riftList(g)) { const st = riftState(g, r0); ctx.strokeStyle = st >= 2 ? '#b4ff3c' : '#7a4a9a'; ctx.globalAlpha = g.wave.phase === 'wave' ? 0.6 + 0.4 * Math.sin(R.time * 8) : 0.5; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(r0.x * sx - 5, r0.y * sy); ctx.lineTo(r0.x * sx + 5, r0.y * sy); ctx.stroke(); ctx.globalAlpha = 1; }
   if (g.mis && g.mis.marks) for (const mk of g.mis.marks) { ctx.strokeStyle = mk.done ? '#7ddc6b' : '#ffb86b'; ctx.globalAlpha = mk.done ? 0.7 : 0.6 + 0.4 * Math.sin(R.time * 5); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(mk.x * sx, mk.y * sy, Math.max(4, mk.r * sx), 0, TAU); ctx.stroke(); ctx.globalAlpha = 1; }
   for (const st of g.strikes) { ctx.strokeStyle = '#ff5b47'; ctx.globalAlpha = 0.6 + 0.4 * Math.sin(R.time * 12); ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(st.x * sx, st.y * sy, Math.max(4, st.r * sx), 0, TAU); ctx.stroke(); }
   for (const p of R.pings) { const k = p.t / 2.4, rr = 3 + (1 - (p.t % 0.8) / 0.8) * 10; ctx.strokeStyle = p.col; ctx.globalAlpha = 1 - k; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(p.x * sx, p.y * sy, rr, 0, TAU); ctx.stroke(); }
@@ -1203,3 +1193,52 @@ R.drawMini = function () {
   ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 1;
   ctx.strokeRect(cam.x * sx, cam.y * sy, R.cssW / cam.z * sx, R.cssH / cam.z * sy);
 };
+
+/* Fassung 25: Risstore der Wellenmodi – Liste, Zustand (0 schlafend, 1 schon einmal offen, 2 erwacht, 3 offen) und Zeichnung */
+function riftList(g) { const W = g.wave; return W.rifts || W.open || []; }
+function riftState(g, r) {
+  const W = g.wave, has = l => l && l.some(o => o.x === r.x && o.y === r.y);
+  if (W.phase === 'wave' && has(W.active)) return 3;
+  if (W.phase === 'build' && has(W.soon)) return 2;
+  return has(W.open) ? 1 : 0;
+}
+function drawRiftGate(ctx, r0, st, t, z) {
+  const R0 = 78, k = [0.35, 0.55, 1.0, 1.5][st], ph = r0.x * 0.013 + r0.y * 0.007;
+  ctx.save(); ctx.translate(r0.x, r0.y);
+  /* Hof */
+  ctx.globalCompositeOperation = 'lighter';
+  const pul = st >= 2 ? 0.75 + 0.25 * Math.sin(t * (st === 3 ? 6 : 3) + ph) : 1;
+  const gr = ctx.createRadialGradient(0, 0, R0 * 0.2, 0, 0, R0 * 2.1); gr.addColorStop(0, 'rgba(160,255,80,' + (0.22 * k * pul) + ')'); gr.addColorStop(0.45, 'rgba(150,60,200,' + (0.18 * k) + ')'); gr.addColorStop(1, 'rgba(60,10,90,0)');
+  ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, R0 * 2.1, 0, TAU); ctx.fill();
+  ctx.globalCompositeOperation = 'source-over';
+  /* dunkle Öffnung */
+  ctx.fillStyle = '#0a0312'; ctx.beginPath(); ctx.arc(0, 0, R0 * 0.8, 0, TAU); ctx.fill();
+  /* Wirbel in der Öffnung (dreht schneller, je wacher) */
+  if (st >= 1) {
+    ctx.save(); ctx.rotate(t * (0.25 + 0.6 * k)); ctx.globalCompositeOperation = 'lighter';
+    for (let arm = 0; arm < 4; arm++) {
+      ctx.beginPath();
+      for (let i = 0; i <= 24; i++) { const f = i / 24, rr = R0 * 0.78 * (1 - f), a = arm * TAU / 4 + f * 4.2; const x = Math.cos(a) * rr, y = Math.sin(a) * rr; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.strokeStyle = 'rgba(' + (st >= 2 ? '170,255,90' : '140,80,190') + ',' + (0.25 + 0.35 * k / 1.5) + ')'; ctx.lineWidth = 6; ctx.stroke();
+    }
+    const cg = ctx.createRadialGradient(0, 0, 0, 0, 0, R0 * 0.5); cg.addColorStop(0, 'rgba(220,255,140,' + (0.5 * k / 1.5 * pul) + ')'); cg.addColorStop(1, 'rgba(120,255,60,0)');
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 0, R0 * 0.5, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+  /* Rahmen aus Chitin-Dornen */
+  const n = 14;
+  for (let i = 0; i < n; i++) {
+    const a = i / n * TAU + ph, a1 = a - 0.16, a2 = a + 0.16, l = R0 * (1.18 + 0.12 * Math.sin(i * 2.3 + ph));
+    ctx.beginPath(); ctx.moveTo(Math.cos(a1) * R0 * 0.78, Math.sin(a1) * R0 * 0.78); ctx.lineTo(Math.cos(a) * l, Math.sin(a) * l); ctx.lineTo(Math.cos(a2) * R0 * 0.78, Math.sin(a2) * R0 * 0.78); ctx.closePath();
+    ctx.fillStyle = i % 2 ? '#2a1636' : '#3a2048'; ctx.fill();
+  }
+  ctx.lineWidth = Math.max(5, 7); ctx.strokeStyle = '#3d2350'; ctx.beginPath(); ctx.arc(0, 0, R0 * 0.82, 0, TAU); ctx.stroke();
+  /* Leuchtknoten auf dem Ring */
+  for (let i = 0; i < 7; i++) {
+    const a = i / 7 * TAU + ph * 2, on = st >= 2 ? 0.55 + 0.45 * Math.sin(t * 5 + i) : st === 1 ? 0.35 : 0.15;
+    ctx.fillStyle = 'rgba(180,255,90,' + on + ')'; ctx.beginPath(); ctx.arc(Math.cos(a) * R0 * 0.82, Math.sin(a) * R0 * 0.82, 4.5, 0, TAU); ctx.fill();
+  }
+  ctx.strokeStyle = 'rgba(180,255,90,' + (0.25 + 0.5 * k / 1.5 * pul) + ')'; ctx.lineWidth = 2 / Math.max(0.3, z); ctx.beginPath(); ctx.arc(0, 0, R0 * 0.79, 0, TAU); ctx.stroke();
+  ctx.restore();
+  if (st === 3 && R.detail > 1 && Math.random() < 0.4) { const a = Math.random() * TAU; fxSpark(r0.x + Math.cos(a) * R0 * 0.8, r0.y + Math.sin(a) * R0 * 0.8, 1, 40, '#d6ff6a', 0.5); }
+}

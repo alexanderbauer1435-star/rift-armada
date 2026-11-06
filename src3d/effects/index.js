@@ -87,7 +87,7 @@ export function setDetail(d) {
 /* Render-Skalierung des Kerns (0,5…2). Die Mindestbreite gilt in Pixeln des Render-Ziels; bei kleiner Skalierung
    etwas breiter, damit dünne Strahlen und Funken nicht unter einen Pixel fallen und flimmern. */
 export function setPixelRatio(k) { k = Math.max(0.25, +k || 1); SCREEN.uMinPx.value = k < 0.9 ? 1.4 : 1.25; }
-export function clear() { for (const k in P) P[k].clear(); later = []; }
+export function clear() { for (const k in P) P[k].clear(); later = []; clearRiftGates(); }
 /* Anzahl lebender Partikel und Draw-Calls (für das Labor und die Leistungsanzeige) */
 export function stats() { let n = 0; for (const k in P) n += P[k].count; let dc = 0; for (const k in B) if (B[k].mesh.visible) dc++; return { particles: n, drawCalls: dc, spr: B.spr.n, fire: B.fire.n, quad: B.quad.n, smoke: B.smoke.n, chunk: B.chunk.n, ring: B.ring.n, disc: B.disc.n, dome: B.dome.n }; }
 
@@ -365,7 +365,7 @@ export function frame(g, dt, time, view, cam) {
     if (g.spores) spores(g, dt, time, view);
     if (g.mines && g.mines.length) mines(g, time, view);   /* Fassung 22 */
     heals(g, time, view);
-    if (g.wave && g.wave.open) rifts(g, dt, time);
+    if (g.wave && (g.wave.rifts || g.wave.open)) rifts(g, dt, time);
   }
   for (const k in B) B[k].flush();
 }
@@ -514,13 +514,37 @@ function heals(g, time, view) {
   }
 }
 
-/* Risse (Quarantine): längliche Wunde, quer zur Richtung zur Kartenmitte; bei Welle heller und mit Funken */
+/* Fassung 25: Risstore (Wellenmodi) – Ring aus Chitin-Dornen mit dunkler Öffnung und Wirbel. Alle Tore sind von Anfang an
+   da (schlafend), vor der Welle erwachen die, aus denen sie kommt, während der Welle dreht der grüne Wirbel. */
+const RG = new Map();
+let rgGeo = null;
+function riftGate(x, y) {
+  const key = x + ',' + y; let o = RG.get(key); if (o) return o;
+  if (!rgGeo) {
+    const spike = new T.ConeGeometry(10, 46, 5); spike.translate(0, 23, 0);
+    rgGeo = { spike, torus: new T.TorusGeometry(66, 10, 8, 42).rotateX(Math.PI / 2), mat: new T.MeshStandardMaterial({ color: '#3a2048', roughness: 0.55, metalness: 0.15, emissive: '#12051c' }) };
+  }
+  const g = new T.Group(); g.position.set(x, 0, y);
+  const ring = new T.Mesh(rgGeo.torus, rgGeo.mat); g.add(ring);
+  const n = 14, sp = new T.InstancedMesh(rgGeo.spike, rgGeo.mat, n), M = new T.Matrix4(), Q = new T.Quaternion(), E = new T.Euler(), P = new T.Vector3(), S = new T.Vector3();
+  for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2 + x * 0.01; P.set(Math.cos(a) * 70, 0, Math.sin(a) * 70); E.set(0, -a, -Math.PI / 2 + 0.25); Q.setFromEuler(E); const k = 0.8 + 0.4 * Math.abs(Math.sin(i * 2.3)); S.set(k, k, k); M.compose(P, Q, S); sp.setMatrixAt(i, M); }
+  g.add(sp); root.add(g);
+  o = { g, ph: x * 0.013 + y * 0.007 }; RG.set(key, o); return o;
+}
+export function clearRiftGates() { for (const o of RG.values()) root.remove(o.g); RG.clear(); }
 function rifts(g, dt, time) {
-  const hot = g.wave.phase === 'wave', k = hot ? 1.6 : 0.8, m = g.map || { w: 0, h: 0 };
-  for (const r0 of g.wave.open) {
-    const rr = 80 + 10 * Math.sin(time * 2 + r0.x), ang = Math.atan2(m.h / 2 - r0.y, m.w / 2 - r0.x) + Math.PI / 2;
-    /* Welt-Winkel ang (x → y, im Uhrzeigersinn) → Drehung um Y: −ang; die Scheibe liegt mit ihrer x-Achse entlang der Wunde */
-    B.disc.write(r0.x, H.disc + 0.05, r0.y, rr * 1.6, rr * 0.7, -ang, DMODE.rift, k, r0.x * 0.01, 1, 1, 1, 1);
-    if (hot && detail > 1 && Math.random() < 24 * dt * K) spark(r0.x + Math.cos(ang) * rnd(-rr, rr), r0.y + Math.sin(ang) * rnd(-rr, rr), 1, 40, '#d6ff6a', 0.5, H.ground, 1.2, 2);
+  const W = g.wave, list = W.rifts || W.open || [], has = (l, r) => l && l.some(o => o.x === r.x && o.y === r.y);
+  for (const r0 of list) {
+    const st = W.phase === 'wave' && has(W.active, r0) ? 3 : W.phase === 'build' && has(W.soon, r0) ? 2 : has(W.open, r0) ? 1 : 0;
+    const o = riftGate(r0.x, r0.y), k = [0.35, 0.6, 1.0, 1.5][st], pul = st >= 2 ? 0.75 + 0.25 * Math.sin(time * (st === 3 ? 6 : 3) + o.ph) : 1;
+    o.g.rotation.y = time * 0.05;
+    /* Öffnung: Wirbel (dunkler Grund + Spirale), Hof */
+    B.disc.write(r0.x, H.disc + 0.04, r0.y, 58, 58, 0, DMODE.glow, 0.95, 0, 0.02, 0.005, 0.04, 1);
+    if (st >= 1) B.disc.write(r0.x, H.disc + 0.08, r0.y, 56, 56, time * (0.3 + 0.5 * k), DMODE.portal, k * pul, o.ph, 1, 1, 1, 1);
+    B.disc.write(r0.x, H.disc, r0.y, 165, 165, 0, DMODE.glow, 0.18 * k * pul, 0, st >= 2 ? 0.55 : 0.45, st >= 2 ? 1 : 0.2, st >= 2 ? 0.3 : 0.75, 1);
+    /* Leuchtknoten auf dem Ring */
+    const on = st >= 2 ? 0.6 + 0.4 * Math.sin(time * 5) : st === 1 ? 0.35 : 0.15;
+    for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + o.ph * 2 - time * 0.05; B.spr.write(r0.x + Math.cos(a) * 66, 9, r0.y + Math.sin(a) * 66, 16, 0, TILE.glow, 0.7, 1, 0.35, on); }
+    if (st === 3 && detail > 1 && Math.random() < 24 * dt * K) { const a = Math.random() * TAU; spark(r0.x + Math.cos(a) * 60, r0.y + Math.sin(a) * 60, 1, 40, '#d6ff6a', 0.5, H.ground, 1.2, 2); }
   }
 }

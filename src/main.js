@@ -289,7 +289,7 @@ function frame(t) {
     if (fsOk && !UI.fsOff && !UI.fsPause && !document.fullscreenElement) enterFs(true);
   }, true);
   if (fsOk) document.addEventListener('fullscreenchange', () => { const on = !!document.fullscreenElement; if (fsWas && !on && !UI.fsOff) UI.fsPause = true; fsWas = on; setTimeout(layout, 120); });
-  window.addEventListener('resize', layout);
+  window.addEventListener('resize', layout); window.addEventListener('resize', () => requestAnimationFrame(abilsPlace));
   window.addEventListener('orientationchange', () => setTimeout(layout, 250));
   if (window.ResizeObserver) new ResizeObserver(() => { if (!$('hud').hidden) layout(); }).observe($('bottom'));
   document.addEventListener('visibilitychange', () => { if (document.hidden) { if (UI.g && !UI.attract && !UI.endShown && UI.kind !== 'mp') { setPaused(true); try { saveNow(); } catch (e) { /* Speichern optional */ } } SND.sleep(); } else { SND.wake(); if (UI.g && !UI.attract) keepAwake(); } });

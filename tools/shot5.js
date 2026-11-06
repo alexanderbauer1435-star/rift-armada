@@ -37,7 +37,7 @@ const OUT = path.resolve(__dirname, 'shots');
   await page.evaluate(() => { const g = RA.UI.g, r = g.wave.open[0]; desel(); R.cam.z = 0.9; R.center(r.x, r.y); RA.step(20); });
   await shot('123-rift');
   /* Welle beenden: Gegner töten */
-  await page.evaluate(() => { const g = RA.UI.g; for (const id of g.wave.ids) { const u = g.byId.get(id); if (u && !u.dead) kill(g, u, null, -1); } RA.step(70); });
+  await page.evaluate(() => { const g = RA.UI.g; for (let k = 0; k < 40 && g.wave.q.length; k++) RA.step(30); for (const id of g.wave.ids) { const u = g.byId.get(id); if (u && !u.dead) kill(g, u, null, -1); } RA.step(70); });
   await page.waitForTimeout(1200);
   check('reward dialog with three cards', await page.evaluate(() => !document.getElementById('doctrine').hidden && RA.UI.rewardMode && document.querySelectorAll('.dcard').length === 3));
   await shot('124-reward');

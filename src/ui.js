@@ -566,9 +566,18 @@ function cmdBtn(txt, sub, fn, tip, cls) {
   bindHold(b, fn, tip ? () => '<h4>' + esc(txt) + '</h4><p>' + esc(L(tip)) + '</p>' : null);
   return b;
 }
+/* Fassung 25: Fähigkeitsleiste sitzt über der Befehlsleiste; überdeckt sie die Auswahlkarte (Hochformat), rückt sie darüber */
+function abilsPlace() {
+  const ab = $('abils'), sc = $('selCard'), cm = $('cmds'); if (ab.hidden) return;
+  ab.style.bottom = '';
+  const a = ab.getBoundingClientRect(), c = cm.getBoundingClientRect();
+  let top = Math.min(a.bottom, c.top - 4);
+  if (sc && !sc.hidden) { const r = sc.getBoundingClientRect(); if (r.right > a.left && r.bottom > a.top) top = Math.min(top, r.top - 4); }
+  ab.style.bottom = Math.max(0, innerHeight - top) + 'px';
+}
 function hudCmds(force) {
   const box = $('cmds');
-  if (!UI.g || UI.attract) { box.textContent = ''; box._sig = ''; return; }
+  if (!UI.g || UI.attract) { box.textContent = ''; box._sig = ''; $('abils').textContent = ''; $('abils').hidden = true; return; }
   const us = selShips(), b = UI.selB ? UI.g.byId.get(UI.selB) : null;
   /* nur neu aufbauen, wenn sich etwas ändert: Ein laufender Fingerdruck soll seine Taste behalten */
   const abs = selAbils(us), so = UI.selS ? UI.g.byId.get(UI.selS) : null;
@@ -576,6 +585,7 @@ function hudCmds(force) {
   if (!force && box._sig === sig) return;
   box._sig = sig;
   box.textContent = '';
+  const ab = $('abils'); ab.textContent = ''; ab.hidden = true;
   if (UI.mode === 'place') {
     const p = UI.place;
     const bb = cmdBtn('✓', 'Bauen', confirmPlace, 'Station hier errichten', p && p.ok ? 'arm' : 'off');
@@ -612,9 +622,9 @@ function hudCmds(force) {
       const el = cmdBtn(A.icon, A.name, () => useAbility(a.id), null, 'ab' + (a.ready ? '' : ' cd') + ((UI.mode === 'board' && a.id === 'board') || (UI.mode === 'abt' && a.id === UI.abId) ? ' on' : ''));
       el.innerHTML = '<span class="big">' + A.icon + '</span><small>' + esc(L(A.short || A.name)) + '</small><i class="cdb" style="width:' + cdw + '%"></i>';
       bindHold(el, () => useAbility(a.id), () => '<h4>' + A.icon + ' ' + esc(L(A.name)) + '</h4><div class="cost">' + (A.mut ? costTxt({ ice: Math.max(0, shipCost(UI.P, SHIPS[A.mut]).ice - shipCost(UI.P, us[0].def).ice), ore: 0 }) + ' · ' + L('Kokon') + ' ' + Math.round(A.dur * UI.P.tfx.mutT) + ' s' : L('Abklingzeit') + ' ' + A.cd + ' s' + (A.dur ? ' · ' + L('Dauer') + ' ' + A.dur + ' s' : '') + (A.r ? ' · ' + L('Umkreis') + ' ' + A.r : '')) + '</div><p>' + esc(L(A.desc)) + '</p>' + (A.mut ? shipTip(SHIPS[A.mut]) : '') + (a.ready ? '' : '<p class="req">' + L('Bereit in {0} s', Math.ceil(a.cd)) + '</p>'));
-      box.appendChild(el);
+      ab.appendChild(el);
     }
-    if (abs.length) box.appendChild(cmdBtn('A', 'Auto', toggleAuto, 'Auto: Das Schiff setzt seine Fähigkeiten selbst ein, wenn es sich lohnt', us.every(u => u.auto) ? 'on' : ''));
+    if (abs.length) { ab.hidden = false; requestAnimationFrame(abilsPlace); ab.appendChild(cmdBtn('A', 'Auto', toggleAuto, 'Auto: Das Schiff setzt seine Fähigkeiten selbst ein, wenn es sich lohnt', us.every(u => u.auto) ? 'on' : '')); }
     refitBtns(box, us);
   } else if (b && b.owner === UI.me) {
     if (b.role === 'super' && b.done) {

@@ -213,7 +213,7 @@ function tutHL(key) {
   if (!key) return;
   let el = null;
   if (key.indexOf('el:') === 0) el = document.querySelector(key.slice(3));
-  else if (key === 'ab') el = document.querySelector('#cmds .key.ab');
+  else if (key === 'ab') el = document.querySelector('#abils .key.ab');
   else el = document.querySelector('[data-k="' + key + '"]');
   if (!el && key.indexOf('item:') === 0 && UI.P) { const d = BLDG[UI.P.faction][key.slice(5)]; if (d) el = document.querySelector('[data-k="tab:' + d.tab + '"]'); }
   if (el) { el.classList.add('tutHL'); MISUI.hlEl = el; }

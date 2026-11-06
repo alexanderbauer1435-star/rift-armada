@@ -73,7 +73,7 @@ const OUT = path.resolve(__dirname, 'shots');
   check('nexus base connected, net shown for builder', await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me; return g.bldgs.filter(b => b.owner === me).every(b => !b.off); }));
   await shot('98-nexus-base');
   await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, b = g.bldgs.find(x => x.owner === me && x.role === 'base'); const sh = [0, 1, 2].map(i => { const u = addShip(g, 'shard', me, b.x + 300 + i * 30, b.y + 300, 0); u.auto = false; return u; }); const extra = ['prism', 'monolith', 'binder', 'mirror', 'facet', 'lattice', 'conduit', 'spire', 'harvester']; extra.forEach((t, i) => { const u = addShip(g, t, me, b.x + 420 + (i % 3) * 130, b.y + 420 + (i / 3 | 0) * 120, 0); u.auto = false; }); RA.step(30); setSel(sh); R.cam.z = 1.1; R.center(b.x + 450, b.y + 450); });
-  const mergeBtn = await page.evaluate(() => [...document.querySelectorAll('#cmds .key.ab')].findIndex(b => b.textContent.indexOf('Verschmelzen') >= 0));
+  const mergeBtn = await page.evaluate(() => [...document.querySelectorAll('#abils .key.ab')].findIndex(b => b.textContent.indexOf('Verschmelzen') >= 0));
   check('merge button for three shards', mergeBtn >= 0);
   await shot('99-nexus-fleet');
   await page.evaluate(() => useAbility('merge'));

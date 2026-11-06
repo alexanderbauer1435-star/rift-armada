@@ -30,11 +30,11 @@ const OUT = path.resolve(__dirname, 'shots');
   await page.waitForTimeout(300);
   await shot('111-brood-nest');
   await page.evaluate(() => { const g = RA.UI.g, me = RA.UI.me, b = g.bldgs.find(x => x.owner === me && x.role === 'base'); const list = ['larva', 'swarm', 'spitter', 'ravager', 'leech', 'sporer', 'acidmaw', 'leviathan', 'matriarch', 'broodmother', 'plaguebearer', 'behemoth', 'seeder', 'grazer']; list.forEach((t, i) => { const u = addShip(g, t, me, b.x + 150 + (i % 5) * 120, b.y + 320 + (i / 5 | 0) * 130, 0); u.auto = false; u.o = { t: 'hold' }; u.hold = true; }); RA.step(10); const m = g.ships.find(u => u.type === 'matriarch'); setSel([m]); R.cam.z = 1; R.center(b.x + 380, b.y + 440); });
-  check('matriarch card shows commander and abilities', await page.evaluate(() => document.querySelector('#selCard').textContent.indexOf('Matriarch') >= 0 && [...document.querySelectorAll('#cmds .key.ab')].length >= 3));
+  check('matriarch card shows commander and abilities', await page.evaluate(() => document.querySelector('#selCard').textContent.indexOf('Matriarch') >= 0 && [...document.querySelectorAll('#abils .key.ab')].length >= 3));
   await shot('112-brood-fleet');
   /* Larve mutieren */
   await page.evaluate(() => { const g = RA.UI.g; const l = g.ships.find(u => u.type === 'larva'); setSel([l]); });
-  const mutBtns = await page.evaluate(() => [...document.querySelectorAll('#cmds .key.ab')].map(b => b.textContent));
+  const mutBtns = await page.evaluate(() => [...document.querySelectorAll('#abils .key.ab')].map(b => b.textContent));
   check('larva shows four mutation buttons (' + mutBtns.join('|') + ')', mutBtns.filter(t => /Schwarm|Spitter|Ravager|Leech/.test(t)).length === 4);
   const bio0 = await page.evaluate(() => RA.UI.P.ice);
   await page.evaluate(() => useAbility('mutRav'));

@@ -62,27 +62,38 @@ function waveTarget(g) {
   const b = h ? g.bldgs.find(b => !b.dead && b.owner === h.id && b.role === 'base') || g.bldgs.find(b => !b.dead && b.owner === h.id) : null;
   return b || { x: g.map.w / 2, y: g.map.h / 2 };
 }
-function waveSpawn(g) {
-  const W = g.wave, tp = g.players[g.threat], comp = waveComp(g, W.n), rifts = waveRifts(g);
-  const tgt = waveTarget(g);
-  /* mit der Zeit öffnen sich mehr Risse */
-  const nR = Math.min(rifts.length, 1 + Math.floor((W.n - 1) / 3));
+/* Fassung 25: Die Brood kommt aus sichtbaren Risstoren. Alle Tore stehen von Anfang an auf der Karte (schlafend), vor einer
+   Welle erwachen die, aus denen sie kommt (10 s Vorwarnung), und die Schiffe treten nacheinander aus der Tormitte –
+   nicht mehr verstreut am Kartenrand. */
+function riftUse(g, n) {
+  const rifts = waveRifts(g), tgt = waveTarget(g);
+  const nR = Math.min(rifts.length, 1 + Math.floor((n - 1) / 3));
   const order = rifts.slice().sort((a, b) => hyp(a.x - tgt.x, a.y - tgt.y) - hyp(b.x - tgt.x, b.y - tgt.y));
   const use = [];
-  for (let i = 0; i < nR; i++) use.push(order[(W.n + i) % order.length]);
-  W.ids = [];
-  comp.forEach((t, i) => {
-    const r = use[i % use.length], a = g.rng() * TAU, d = 30 + g.rng() * 160;
-    const u = addShip(g, t, tp.id, clamp(r.x + dcos(a) * d, 20, g.map.w - 20), clamp(r.y + dsin(a) * d, 20, g.map.h - 20), datan2(tgt.y - r.y, tgt.x - r.x));
-    u.nocp = 1; tp.shipCount -= u.def.cp;
-    if (W.armor) u.armorPlus = W.armor;
-    u.o = { t: 'amove', x: tgt.x + dcos(a) * 120, y: tgt.y + dsin(a) * 120 };
-    W.ids.push(u.id);
-  });
+  for (let i = 0; i < nR; i++) use.push(order[(n + i) % order.length]);
+  return use;
+}
+function waveSpawn(g) {
+  const W = g.wave, comp = waveComp(g, W.n), use = W.soon && W.soon.length ? W.soon : riftUse(g, W.n);
+  W.ids = []; W.q = []; W.soon = null;
+  const per = use.map(() => 0);
+  comp.forEach((t, i) => { const ri = i % use.length; W.q.push({ t, x: use[ri].x, y: use[ri].y, at: g.time + 0.6 + per[ri] * (SHIPS[t].cls === 'l' ? 1.1 : 0.45) }); per[ri] += SHIPS[t].cls === 'l' ? 2 : 1; });
   W.open = W.open || [];
   for (const r of use) { ev(g, 'rift', { x: r.x, y: r.y, n: W.n }); if (!W.open.some(o => o.x === r.x && o.y === r.y)) W.open.push({ x: r.x, y: r.y }); }
+  W.active = use.map(r => ({ x: r.x, y: r.y }));
   W.phase = 'wave'; W.t0 = g.time; W.spawned = comp.length;
   ev(g, 'wave', { n: W.n, count: comp.length });
+}
+/* ein Schiff tritt aus dem Tor: Mitte ± wenig, Blick zum Ziel, Einsprung wie frisch gebaute Schiffe */
+function waveEmerge(g, q) {
+  const W = g.wave, tp = g.players[g.threat], tgt = waveTarget(g), a = g.rng() * TAU, d = g.rng() * 18;
+  const ang = datan2(tgt.y - q.y, tgt.x - q.x);
+  const u = addShip(g, q.t, tp.id, clamp(q.x + dcos(a) * d, 20, g.map.w - 20), clamp(q.y + dsin(a) * d, 20, g.map.h - 20), ang);
+  u.nocp = 1; tp.shipCount -= u.def.cp;
+  if (W.armor) u.armorPlus = W.armor;
+  u.o = { t: 'amove', x: tgt.x + dcos(a) * 120, y: tgt.y + dsin(a) * 120 };
+  W.ids.push(u.id);
+  ev(g, 'ready', { owner: tp.id, id: u.id, x: u.x, y: u.y, type: q.t });
 }
 function waveAdaptCount(g) {
   const A = g.wave.adapt;
@@ -96,20 +107,22 @@ function updateWaves(g, dt) {
   const tp = g.players[g.threat];
   if (W.phase === 'build') {
     W.next -= dt;
-    if (W.next <= 10 && !W.warned) { W.warned = 1; ev(g, 'waveWarn', { n: W.n + 1, s: 10 }); }
+    if (W.next <= 10 && !W.warned) { W.warned = 1; W.soon = riftUse(g, W.n + 1).map(r => ({ x: r.x, y: r.y })); ev(g, 'waveWarn', { n: W.n + 1, s: 10 }); }
     if (W.next <= 0) { W.n++; W.warned = 0; waveAdaptCount(g); waveSpawn(g); }
     return;
   }
+  /* Fassung 25: Schiffe treten nacheinander aus den Toren */
+  if (W.q && W.q.length) { let i = 0; while (i < W.q.length) { if (g.time >= W.q[i].at) { waveEmerge(g, W.q[i]); W.q.splice(i, 1); } else i++; } }
   /* laufende Welle: Nachzügler zum Ziel, Ende wenn alle tot oder Zeit um */
   if (g.tick % 60 === 17) {
     const tgt = waveTarget(g);
     let alive = 0;
     for (const id of W.ids) { const u = g.byId.get(id); if (!u || u.dead) continue; alive++; if (u.o.t === 'idle' || u.o.t === 'hold') { const a = g.rng() * TAU; u.o = { t: 'amove', x: tgt.x + dcos(a) * 100, y: tgt.y + dsin(a) * 100 }; u.path = null; } }
     W.alive = alive;
-    const over = alive === 0 || g.time - W.t0 > WAVE_MAX_T;
+    const over = (alive === 0 && !(W.q && W.q.length)) || g.time - W.t0 > WAVE_MAX_T;
     if (over) {
       if (alive) for (const id of W.ids) { const u = g.byId.get(id); if (u && !u.dead) kill(g, u, null, -1); }
-      W.phase = 'build'; W.next = WAVE_BUILD; W.cleared = W.n;
+      W.phase = 'build'; W.next = WAVE_BUILD; W.cleared = W.n; W.q = []; W.active = null;
       ev(g, 'waveDone', { n: W.n });
       for (const p of g.players) if (p.alive && !p.neutral && !p.threat) { p.rewardAsk = true; p.rewardOpts = pickRewards(g, p); }
       if (g.opts.mode === 'quarantine' && W.n >= QUARANTINE_WAVES) { g.over = true; const h = g.players.find(p => p.human) || g.players.find(p => !p.neutral && !p.threat); g.winner = h.id; g.winTeam = h.team; ev(g, 'over', { winner: g.winner, team: g.winTeam, waves: W.n }); }
@@ -158,7 +171,8 @@ function waveSetup(g, opts) {
   g.threat = i;
   if (!g.teamVis[98]) { g.teamVis[98] = new Int32Array(g.vw * g.vh); g.teamVisN[98] = new Int32Array(g.vw * g.vh); }
   g.players[i].vis = g.teamVis[98]; g.players[i].visN = g.teamVisN[98];
-  g.wave = { n: 0, phase: 'build', next: WAVE_FIRST, t0: 0, ids: [], alive: 0, spawned: 0, cleared: 0, adapt: { kin: 0, beam: 0 }, armor: 0, warned: 0, matriarch: 0 };
+  g.wave = { n: 0, phase: 'build', next: WAVE_FIRST, t0: 0, ids: [], alive: 0, spawned: 0, cleared: 0, adapt: { kin: 0, beam: 0 }, armor: 0, warned: 0, matriarch: 0, q: [], rifts: null, active: null, soon: null };
+  g.wave.rifts = waveRifts(g).map(r => ({ x: r.x, y: r.y }));   /* Fassung 25: alle Tore von Anfang an sichtbar */
   if (opts.mode === 'quarantine') {
     const h = g.players.find(p => p.human) || g.players[0];
     const s = addBldg(g, 'seal', h.id, g.map.w / 2, g.map.h / 2, true);
