@@ -25,7 +25,7 @@ const F = path.resolve(process.argv[2] || 'build/rift-armada.html'), OUT = proce
     const u = g.ships.find(s => s.owner === 0 && s.def.role !== 'fighter'); u.x = d.x; u.y = d.y; u.lx = u.x; u.ly = u.y; setIdle(u); setSel([]); UI.speed = 1; R.center(d.x, d.y); R.cam.z = Math.min(1.4, 300 / d.r); }, d);
   await p.waitForTimeout(3500);
   const h1 = await p.evaluate(() => ({ cur: UI.hintCur, vis: !document.getElementById('hintCard').hidden, txt: document.getElementById('hintT').textContent }));
-  out.push(['Hinweis Trümmerfeld', h1.cur === 'debris' && h1.vis]);
+  out.push(['Hinweis Trümmerfeld', h1.cur === 'debris' && h1.vis]); if (h1.cur !== 'debris') console.log('DBG', JSON.stringify(h1), await p.evaluate(() => JSON.stringify({ q: UI.hintQ, seen: SET.seenTips, cov: UI.g.ships.filter(u => u.owner === 0 && u.cov).length })));
   await p.screenshot({ path: OUT + '/hint24-debris.jpg', type: 'jpeg', quality: 90 });
   /* 2) OK schließt; Hinweis kommt nicht wieder */
   await p.evaluate(() => document.getElementById('hintOk').click()); await p.waitForTimeout(1500);

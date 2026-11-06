@@ -61,7 +61,7 @@ function hintNext() {
 /* einmal je Sekunde: Lagen, die kein eigenes Ereignis haben (Trümmerfeld, Tor in Sicht) */
 function hintScan(g) {
   if (UI.hintCur && performance.now() > UI.hintT) hintNext();
-  if (!hintOn() || g.tick % 30) return;
+  const now = performance.now(); if (!hintOn() || now < (UI.hintScanT || 0)) return; UI.hintScanT = now + 900;   /* nach Zeit, nicht nach Takt: bei langsamen Bildern springt g.tick über Vielfache von 30 */
   const seen = SET.seenTips || {};
   if (!seen.debris && g.ships.some(u => u.cov && u.owner === UI.me && !u.dead)) hint('debris');
   if (!seen.gate && g.gates.some(gt => gt.state === 'active' && R.seen(gt.x, gt.y) && R.inView(gt.x, gt.y, 0))) hint('gate');
