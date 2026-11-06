@@ -1024,11 +1024,10 @@ function loadPrefs() {
 /* Fassung 23: 3D ist Standard, nur ohne WebGL 2D; ruckelt es im Gefecht, schlägt perfWatch (main.js) 2D vor */
 function gfxGuess() { try { const c = document.createElement('canvas'); if (!(c.getContext('webgl2') || c.getContext('webgl'))) return '2d'; } catch (e) { return '2d'; } return '3d'; }
 function savePrefs() { try { localStorage.setItem('ra.prefs', JSON.stringify({ set: SET, menu: MENU })); } catch (e) { /* Speicher gesperrt */ } }
-/* Fassung 25: erweiterte Grafik-Einstellungen → Renderer. Schatten »Auto« = nur bei Ultra und keiner schwachen Karte. */
+/* Fassung 25: erweiterte Grafik-Einstellungen → Renderer (Schatten bleiben aus: im All ohne Boden kaum sichtbar) */
 function gfxOpts() {
-  const low = R.mode3d && RA3D.gpu ? !!RA3D.gpu().low : false;
   return { lod: SET.lod || 'auto', bloom: SET.bloom || 'auto', halos: SET.halos !== false, trails: SET.trails !== false, booms: SET.booms !== false, hold: !!SET.hold,
-    shadows: SET.shadows === 'on' || (SET.shadows !== 'off' && SET.qual === 'ultra' && !low) };
+    shadows: false };
 }
 function applySet() {
   SND.setVol(SET.vol / 100); MUS.setVol(SET.mus / 100);
@@ -1061,7 +1060,6 @@ function initSettings() {
     gs('sLod', [['full', 'Voll'], ['auto', 'Auto'], ['lo', 'Sparsam']], 'lod', 'auto');
     gs('sBloom', [['auto', 'Auto'], ['on', 'An'], ['off', 'Aus']], 'bloom', 'auto');
     gs('sHalo', [[true, 'An'], [false, 'Aus']], 'halos', true);
-    gs('sShadow', [['auto', 'Auto'], ['on', 'An'], ['off', 'Aus']], 'shadows', 'auto');
     gs('sTrail', [[true, 'An'], [false, 'Aus']], 'trails', true);
     gs('sBoom', [[true, 'Groß'], [false, 'Einfach']], 'booms', true);
     gs('sHold', [[false, 'Automatisch'], [true, 'Halten']], 'hold', false);

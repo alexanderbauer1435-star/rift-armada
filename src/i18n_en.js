@@ -2750,5 +2750,9 @@ const EN = {
   "Lichthöfe": "Light halos",
   "Schatten": "Shadows",
   "Triebwerksspuren": "Engine trails",
-  "Explosionen": "Explosions"
+  "Explosionen": "Explosions",
+  "Ton": "Sound",
+  "Darstellung": "Rendering",
+  "Anzeige": "Display",
+  "Spiel": "Gameplay"
 };

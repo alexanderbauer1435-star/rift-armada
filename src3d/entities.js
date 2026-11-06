@@ -226,7 +226,7 @@ function ribbonStep(pv, u, def, t, k, c) {
 /* Fassung 25: drei Detailstufen je Schiffstyp – 0 voll, 1 ≈ 40 %, 2 ≈ 15 % der Dreiecke. Stufe 1 und 2 entstehen bei
    Bedarf aus einem frischen, ungebackenen Aufbau (farGeometry: kleine Teile fallen weg, eine Geometrie, Farben je
    Ecke) und werden per Rasterbündelung vereinfacht. Flammen bleiben als eigene Teile erhalten. */
-const LOD_K = [1, 0.4, 0.15];
+const LOD_K = [1, 0.5, 0.2];   /* Fassung 25b: weniger grob – kleine Schiffe sollen nicht schwammig wirken */
 function trisOf(geo) { return (geo.index ? geo.index.count : geo.attributes.position.count) / 3; }
 function lodGeo(t, lvl) {
   if (!t.lodBase) { t.lodBase = farGeometry(buildShip(t.def, t.color), Math.max(1.2, t.def.len * 0.03)); t.fullTris = 0; for (const p of t.parts) if (!p.flame) t.fullTris += trisOf(p.geo); }
@@ -234,19 +234,23 @@ function lodGeo(t, lvl) {
   if (!t.lodGeo[lvl]) { const want = Math.max(lvl === 2 ? 60 : 160, t.fullTris * LOD_K[lvl]); t.lodGeo[lvl] = decimateGeometry(lvl === 2 && t.lodGeo[1] ? t.lodGeo[1] : t.lodBase, want); }
   return t.lodGeo[lvl];
 }
+const SC = new THREE.Vector3();
+function smallCut(t) {
+  const min = Math.max(1.2, t.def.len * 0.055);
+  return t.parts.filter(p => { if (p.flame) return true; if (!p.geo.boundingSphere) p.geo.computeBoundingSphere(); SC.setFromMatrixScale(p.node.matrixWorld); return p.geo.boundingSphere.radius * Math.max(SC.x, SC.y, SC.z) >= min; });
+}
 function lodPartsOf(t, lvl) {
   t.lodParts = t.lodParts || [];
-  if (!t.lodParts[lvl]) t.lodParts[lvl] = [{ node: t.root, geo: lodGeo(t, lvl), mat: null, flame: false, shadow: lvl === 2, order: 0, far: true }].concat(t.parts.filter(p => p.flame));
+  /* Fassung 25b: Stufe 1 behält die echten Materialien (Platten, Fenster, Lichter) und lässt nur Kleinteile weg –
+     die flache Farbversion wirkte auf mittlerer Größe schwammig. Stufe 2 (sehr klein) bleibt die vereinfachte Hülle. */
+  if (!t.lodParts[lvl]) t.lodParts[lvl] = lvl === 1 ? smallCut(t) : [{ node: t.root, geo: lodGeo(t, lvl), mat: null, flame: false, shadow: true, order: 0, far: true }].concat(t.parts.filter(p => p.flame));
   return t.lodParts[lvl];
-}
-/* Schattenwerfer der Stufen 0 und 1: die einfachste Stufe, nur für die Schattenkamera (Ebene 1) */
-function shadowPart(t) { return t.shPart || (t.shPart = { node: t.root, geo: lodGeo(t, 2), mat: null, flame: false, shadow: true, order: 0, far: true, shadowOnly: true });
 }
 function setOf(tpl, kind, lvl) {
   lvl = lvl === true ? 1 : (lvl | 0);
   const key = tpl.key + '|' + kind + (lvl ? '|l' + lvl : '');
   let s = E.sets.get(key); if (s) return s;
-  s = { tpl, kind, far: lvl > 0, lvl, parts: (lvl ? lodPartsOf(tpl, lvl) : tpl.parts).concat(lvl < 2 ? [shadowPart(tpl)] : []), n: 0, cap: 0, ims: [], last: 0 };
+  s = { tpl, kind, far: lvl > 0, lvl, parts: lvl ? lodPartsOf(tpl, lvl) : tpl.parts, n: 0, cap: 0, ims: [], last: 0 };
   grow(s, 16); E.sets.set(key, s); return s;
 }
 /* Stufe aus der Größe auf dem Bildschirm (Länge in CSS-Pixeln), mit Rückstellbereich gegen Flackern */
@@ -254,7 +258,7 @@ const LOD_T = { px: 0 };
 function lodPrep() {
   const g = S.gfx || {}, bias = g.lod === 'lo' ? 2.2 : g.lod === 'mid' ? 1.5 : g.lod === 'max' ? 0.45 : 1;
   LOD_T.k = S.cssH / (2 * Math.tan(FOV * Math.PI / 360));
-  const m = g.lod === 'full' ? 0 : (S.ultra ? 0.6 : S.detail < 2 ? 1.4 : 1) * bias; LOD_T.t0 = 120 * m; LOD_T.t1 = 46 * m;
+  const m = g.lod === 'full' ? 0 : (S.ultra ? 0.6 : S.detail < 2 ? 1.4 : 1) * bias; LOD_T.t0 = 110 * m; LOD_T.t1 = 30 * m;
   LOD_T.cam = S.camera.position;
 }
 function lodPick(x, y, z, len, prev) {
@@ -278,7 +282,7 @@ function grow(s, cap) {
     if (p.flame) geo.setAttribute('iFlame', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('iDmg', new THREE.InstancedBufferAttribute(new Float32Array(cap), 1).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('iCut', new THREE.InstancedBufferAttribute(new Float32Array(cap * 4), 4).setUsage(THREE.DynamicDrawUsage));
-    const im = new THREE.InstancedMesh(geo, mat, cap); im.frustumCulled = false; im.castShadow = !!p.shadowOnly || (p.far && p.shadow); im.receiveShadow = !p.shadowOnly; if (p.shadowOnly) im.layers.set(1); im.renderOrder = p.order; im.count = 0;
+    const im = new THREE.InstancedMesh(geo, mat, cap); im.frustumCulled = false; im.castShadow = false; im.receiveShadow = false; im.renderOrder = p.order; im.count = 0;
     im.instanceMatrix.setUsage(THREE.DynamicDrawUsage); im.setColorAt(0, WHITE); im.instanceColor.setUsage(THREE.DynamicDrawUsage);
     /* schon in diesem Frame gesetzte Instanzen übernehmen */
     if (old[j] && keep) { im.instanceMatrix.array.set(old[j].instanceMatrix.array.subarray(0, keep * 16)); if (old[j].instanceColor) im.instanceColor.array.set(old[j].instanceColor.array.subarray(0, keep * 3)); if (p.flame) geo.attributes.iFlame.array.set(old[j].geometry.attributes.iFlame.array.subarray(0, keep)); geo.attributes.iDmg.array.set(old[j].geometry.attributes.iDmg.array.subarray(0, keep)); geo.attributes.iCut.array.set(old[j].geometry.attributes.iCut.array.subarray(0, keep * 4)); }
@@ -355,17 +359,7 @@ function farStation(e) {
   const m = new THREE.Mesh(geo, farMaterial('normal')); m.castShadow = false; m.receiveShadow = true; m.visible = false; E.root.add(m); e.far = m;
   return m;
 }
-/* Fassung 25: Schattenwerfer je Station – vereinfachtes Fernmodell auf Ebene 1 (nur die Schattenkamera sieht sie) */
-const SHST = new Map(), SHMAT = new THREE.MeshBasicMaterial({ color: '#000000' });
-function shStation(e) {
-  if (e.sh) return e.sh;
-  const key = e.f + '|' + e.def.id + (e.spec ? ':' + e.spec : '') + '|' + e.lv;
-  let geo = SHST.get(key);
-  if (!geo) { const f = farStation(e).geometry; geo = decimateGeometry(f, Math.max(200, f.attributes.position.count / 3 * 0.3)); SHST.set(key, geo); }
-  const m = new THREE.Mesh(geo, SHMAT); m.layers.set(1); m.castShadow = true; m.receiveShadow = false; m.visible = false; E.root.add(m); e.sh = m;
-  return m;
-}
-function dropStation(e) { if (e.m) E.root.remove(e.m); if (e.far) E.root.remove(e.far); if (e.sh) E.root.remove(e.sh); }
+function dropStation(e) { if (e.m) E.root.remove(e.m); if (e.far) E.root.remove(e.far); }
 /* Schiff im Bauplatz der Werft (eigene halbdurchsichtige Materialien je Werft) */
 function berthShip(e, type, def, color) {
   if (e.berthType === type) return;
@@ -611,12 +605,11 @@ export function updateEntities(g, dt, t, view) {
     let e = E.stations.get(b.id);
     if (!e || e.key !== key) { if (e) dropStation(e); e = stationEntry(b, col); E.stations.set(b.id, e); }
     const sh = seen(b.x, b.y) && inView(b.x, b.y, b.def.r * 1.4, b.def.r * 0.6);
-    if (!sh) { if (e.m) e.m.visible = false; if (e.far) e.far.visible = false; if (e.sh) e.sh.visible = false; continue; }
+    if (!sh) { if (e.m) e.m.visible = false; if (e.far) e.far.visible = false; continue; }
     /* fern und fertig: Fernmodell (ein Draw-Call), sonst Vollmodell */
     const useFar = farSt && b.done, m = useFar ? farStation(e) : fullStation(e);
     if (useFar) { if (e.m) e.m.visible = false; } else if (e.far) e.far.visible = false;
     m.visible = true; m.position.set(b.x, 0, b.y);
-    if (S.gfx.shadows && b.done) { const p = shStation(e); p.visible = true; p.position.set(b.x, 0, b.y); } else if (e.sh) e.sh.visible = false;
     const v = vis(b);
     if (useFar) {
       if (b.upg) ring(b.x, b.y, b.def.r + 6, '#ffffff', 2, { dash: 4, a0: -Math.PI / 2, a1: -Math.PI / 2 + TAU * (b.upg.prog || 0) });

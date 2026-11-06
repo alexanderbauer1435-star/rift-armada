@@ -2751,7 +2751,11 @@ const LANGS = {
     "Lichthöfe": "Halos lumineux",
     "Schatten": "Ombres",
     "Triebwerksspuren": "Traînées des réacteurs",
-    "Explosionen": "Explosions"
+    "Explosionen": "Explosions",
+    "Ton": "Son",
+    "Darstellung": "Rendu",
+    "Anzeige": "Affichage",
+    "Spiel": "Jeu"
   },
   es: {
     "Ziele": "Objetivos",
@@ -5501,7 +5505,11 @@ const LANGS = {
     "Lichthöfe": "Halos de luz",
     "Schatten": "Sombras",
     "Triebwerksspuren": "Estelas de motores",
-    "Explosionen": "Explosiones"
+    "Explosionen": "Explosiones",
+    "Ton": "Sonido",
+    "Darstellung": "Representación",
+    "Anzeige": "Pantalla",
+    "Spiel": "Juego"
   },
   it: {
     "Ziele": "Obiettivi",
@@ -8251,7 +8259,11 @@ const LANGS = {
     "Lichthöfe": "Aloni luminosi",
     "Schatten": "Ombre",
     "Triebwerksspuren": "Scie dei motori",
-    "Explosionen": "Esplosioni"
+    "Explosionen": "Esplosioni",
+    "Ton": "Audio",
+    "Darstellung": "Resa grafica",
+    "Anzeige": "Visualizzazione",
+    "Spiel": "Gioco"
   },
   pt: {
     "Ziele": "Objetivos",
@@ -11001,7 +11013,11 @@ const LANGS = {
     "Lichthöfe": "Halos de luz",
     "Schatten": "Sombras",
     "Triebwerksspuren": "Rastros dos motores",
-    "Explosionen": "Explosões"
+    "Explosionen": "Explosões",
+    "Ton": "Som",
+    "Darstellung": "Renderização",
+    "Anzeige": "Exibição",
+    "Spiel": "Jogo"
   },
   pl: {
     "Ziele": "Cele",
@@ -13751,6 +13767,10 @@ const LANGS = {
     "Lichthöfe": "Aureole świetlne",
     "Schatten": "Cienie",
     "Triebwerksspuren": "Smugi silników",
-    "Explosionen": "Eksplozje"
+    "Explosionen": "Eksplozje",
+    "Ton": "Dźwięk",
+    "Darstellung": "Renderowanie",
+    "Anzeige": "Wyświetlanie",
+    "Spiel": "Rozgrywka"
   },
 };

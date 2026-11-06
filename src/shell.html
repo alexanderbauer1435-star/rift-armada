@@ -167,6 +167,10 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 #sVolV, #sMusV { min-width: 2.8em; text-align: right; font-weight: 600; color: var(--acc); }
 #settings .win { max-width: min(96vw, 42em); }
 #settings .row { margin: 0.35em 0; }
+#settings .setSec { margin: 0.7em 0 0.4em; padding: 0.2em 0.7em 0.3em; border: 1px solid rgba(143,227,255,0.16); border-radius: 10px; background: rgba(143,227,255,0.03); }
+#settings .setSec h3 { margin: 0.35em 0 0.2em; font-size: 0.95em; letter-spacing: 0.14em; text-transform: uppercase; color: #8fe3ff; }
+#settings .gfxSec { border-color: rgba(143,227,255,0.38); background: rgba(143,227,255,0.06); }
+#settings .setSec .row:last-child { border-bottom: none; }
 #settings .row:not(:last-child) { padding: 0.25em 0; border-bottom: 1px solid rgba(143,227,255,0.08); }
 /* ---------- Hauptmenü ---------- */
 #menu { position: absolute; inset: 0; z-index: 8; display: flex; flex-direction: column; align-items: center; background: radial-gradient(ellipse at 50% 38%, rgba(4,6,11,0.28), rgba(4,6,11,0.9) 72%), linear-gradient(180deg, rgba(4,6,11,0.55), rgba(4,6,11,0) 20%, rgba(4,6,11,0) 80%, rgba(4,6,11,0.7)); font-size: var(--ui); overflow: auto; touch-action: pan-y; }
@@ -291,7 +295,7 @@ input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 
 #help .win p b { color: var(--acc); }
 #endStats { display: grid; grid-template-columns: auto auto auto; gap: 0.25em 1em; margin: 0.6em 0; padding: 0.5em 0.7em; border-radius: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(143,227,255,0.12); }
 #endStats b { color: var(--acc); }
-#pause .row, #end .row, #settings .row:last-child, #cqMenuWin .row { justify-content: center; }
+#pause .row, #end .row, #settings .win > .row:last-child, #cqMenuWin .row { justify-content: center; }
 #hud.mis #toasts { left: auto; right: 11em; transform: none; align-items: flex-end; max-width: calc(100% - 25em); }
 @media (max-height: 460px) { :root { --ui: 13px; } #mini { width: 7.5em; height: 7.5em; } #selCard .desc { display: none; } .item { width: 6.2em; } .win { padding: 0.8em 1em 0.9em; } }
 @media (max-height: 360px) { :root { --ui: 11.5px; } }
@@ -889,32 +893,39 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
   </div></div>
   <div class="ovl" id="settings" hidden><div class="win">
     <h2>Einstellungen</h2>
+    <!-- Fassung 25: Einstellungen in Abschnitten; alles unter »Grafik« betrifft Darstellung und Bildrate -->
+    <div class="setSec"><h3>Ton</h3>
     <div class="row"><span class="lbl">Geräusche</span><input type="range" id="sVol" min="0" max="100" step="5"><span id="sVolV"></span></div>
     <div class="row"><span class="lbl">Musik</span><input type="range" id="sMus" min="0" max="100" step="5"><span id="sMusV"></span></div>
     <div class="row"><span class="lbl">Sprachmeldungen</span><div class="seg" id="sVoice"></div></div><!-- Runde 18: Sprachmeldungen (sfx.js) -->
-    <div class="row"><span class="lbl">Schriftgröße</span><div class="seg" id="sScale"></div></div>
-    <div class="row"><span class="lbl">Tempo</span><div class="seg" id="sSpeed"></div></div>
-    <div class="row"><span class="lbl">Balken</span><div class="seg" id="sBars"></div></div>
-    <div class="row"><span class="lbl">Grafik</span><div class="seg" id="sGfx"></div></div>
+    </div>
+    <div class="setSec gfxSec"><h3>Grafik</h3>
+    <div class="row"><span class="lbl">Darstellung</span><div class="seg" id="sGfx"></div></div>
     <div class="row"><span class="lbl">Qualität</span><div class="seg" id="sQual"></div></div>
     <div class="row"><span class="lbl">Bildrate</span><div class="seg" id="sPwr"></div></div>
     <div class="row"><span class="lbl">Bildrate anzeigen</span><div class="seg" id="sFps"></div></div><!-- Fassung 24 -->
-    <!-- Fassung 25: erweiterte Grafik (nur 3D) -->
     <div class="row"><span class="lbl">Qualität bei niedriger Bildrate</span><div class="seg" id="sHold"></div></div>
     <div class="row"><span class="lbl">Modelldetail</span><div class="seg" id="sLod"></div></div>
     <div class="row"><span class="lbl">Leuchteffekt (Bloom)</span><div class="seg" id="sBloom"></div></div>
     <div class="row"><span class="lbl">Lichthöfe</span><div class="seg" id="sHalo"></div></div>
-    <div class="row"><span class="lbl">Schatten</span><div class="seg" id="sShadow"></div></div>
     <div class="row"><span class="lbl">Triebwerksspuren</span><div class="seg" id="sTrail"></div></div>
     <div class="row"><span class="lbl">Explosionen</span><div class="seg" id="sBoom"></div></div>
-    <div class="row"><span class="lbl">Einsteiger-Hinweise</span><div class="seg" id="sHints"></div></div><!-- Fassung 24 -->
-    <div class="row"><span class="lbl">Farbenblind-Modus</span><div class="seg" id="sCb"></div></div>
-    <div class="row"><span class="lbl">Vibration</span><div class="seg" id="sVib"></div></div>
+    </div>
+    <div class="setSec"><h3>Anzeige</h3>
+    <div class="row"><span class="lbl">Schriftgröße</span><div class="seg" id="sScale"></div></div>
+    <div class="row"><span class="lbl">Balken</span><div class="seg" id="sBars"></div></div>
     <div class="row"><span class="lbl">Schadenssymbole</span><div class="seg" id="sDmg"></div></div><!-- Fassung 22 -->
+    <div class="row"><span class="lbl">Farbenblind-Modus</span><div class="seg" id="sCb"></div></div>
+    <div class="row"><span class="lbl">Einsteiger-Hinweise</span><div class="seg" id="sHints"></div></div><!-- Fassung 24 -->
     <div class="row"><span class="lbl">Sprache · Language</span><div class="seg" id="sLang"></div></div>
+    </div>
+    <div class="setSec"><h3>Spiel</h3>
+    <div class="row"><span class="lbl">Tempo</span><div class="seg" id="sSpeed"></div></div>
     <div class="row"><span class="lbl">Neue Schiffe zur aktiven Gruppe</span><div class="seg" id="sGrally"></div></div><!-- Fassung 22 (play.js) -->
     <div class="row"><span class="lbl">Befehle in der Pause</span><div class="seg" id="sApause"></div></div>
     <div class="row"><span class="lbl">Zeitlupe bei Großgefechten</span><div class="seg" id="sSlowmo"></div></div>
+    <div class="row"><span class="lbl">Vibration</span><div class="seg" id="sVib"></div></div>
+    </div>
     <div class="row"><button class="key arm" id="sClose">Schließen</button></div>
   </div></div>
   <div class="ovl" id="help" hidden><div class="win">

@@ -66,7 +66,7 @@ function gpuProbe() {
 }
 export function initScene(canvas, opts = {}) {
   Q.dev = Math.max(0.5, window.devicePixelRatio || 1);
-  S.gpu = gpuProbe(); S.low = WEAK.test(S.gpu) && !(typeof window !== 'undefined' && window.__RA_TEST);
+  S.gpu = gpuProbe(); S.low = (WEAK.test(S.gpu) && !(typeof window !== 'undefined' && window.__RA_TEST)) || !!(typeof window !== 'undefined' && window.__RA_LOW);
   Q.msaa = Q.dev < 1.5 && !S.low;
   try {
     S.canvas = canvas;
@@ -104,7 +104,7 @@ export function initScene(canvas, opts = {}) {
   if (S.low) {
     const rt2 = new THREE.WebGLRenderTarget(4, 4, { type: THREE.UnsignedByteType }); rt2.texture.colorSpace = THREE.SRGBColorSpace;
     S.fx = new EffectComposer(r, rt2); S.fx.addPass(new RenderPass(S.scene, S.camera));
-    const fs = FXAAShader.fragmentShader.replace('gl_FragColor = ApplyFXAA( tDiffuse, resolution.xy, vUv );', 'gl_FragColor = ApplyFXAA( tDiffuse, resolution.xy, vUv ); gl_FragColor.a = 1.0;\n#include <tonemapping_fragment>\n#include <colorspace_fragment>');
+    const fs = FXAAShader.fragmentShader.replace('gl_FragColor = ApplyFXAA( tDiffuse, resolution.xy, vUv );', 'gl_FragColor = ApplyFXAA( tDiffuse, resolution.xy, vUv );\n/* Fassung 25b: Nachschärfen – FXAA weicht Kanten und Platten auf; leichtes Unscharf-Maskieren holt die Details zurück */\n{ vec3 c0 = texture2D( tDiffuse, vUv ).rgb; vec3 bl = ( texture2D( tDiffuse, vUv + vec2( resolution.x, 0.0 ) ).rgb + texture2D( tDiffuse, vUv - vec2( resolution.x, 0.0 ) ).rgb + texture2D( tDiffuse, vUv + vec2( 0.0, resolution.y ) ).rgb + texture2D( tDiffuse, vUv - vec2( 0.0, resolution.y ) ).rgb ) * 0.25; gl_FragColor.rgb = max( gl_FragColor.rgb + ( c0 - bl ) * 0.45, 0.0 ); }\ngl_FragColor.a = 1.0;\n#include <tonemapping_fragment>\n#include <colorspace_fragment>');
     S.fxaa = new ShaderPass(new THREE.ShaderMaterial({ uniforms: THREE.UniformsUtils.clone(FXAAShader.uniforms), vertexShader: FXAAShader.vertexShader, fragmentShader: fs }));
     S.fx.addPass(S.fxaa);
   }
@@ -122,7 +122,10 @@ function limits() {
   if (S.low) max = Math.min(max, 1);
   if (S.detail < 1) max = Math.min(max, 1);
   /* schwache Karten: nie unter 0,8 (darunter wird das Bild matschig) */
-  const smin = S.low ? Math.min(0.8, max) : S_MIN;
+  /* Fassung 25b: Untergrenze der Skalierung – auf Bildschirmen mit DPR ≈ 1 wird alles unter 1 sofort pixelig und
+     verwaschen (Schiffe »schwammig«), also nie darunter; schwache Karten sparen stattdessen an Modellen und Effekten.
+     Hohe Pixeldichte (Telefone) darf weiter tief gehen. */
+  const smin = Q.dev <= 1.3 ? Math.min(1, max) : S.low ? Math.min(0.8, max) : S_MIN;
   max = Math.max(smin, max);
   const steps = []; for (let s = max; s > smin * 1.001; s /= STEP) steps.unshift(+s.toFixed(3)); steps.unshift(smin);
   if (steps.length > 1 && steps[1] - steps[0] < 0.04) steps.splice(1, 1);
