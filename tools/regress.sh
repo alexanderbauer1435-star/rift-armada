@@ -7,7 +7,8 @@ run() { echo "== $*"; if ! "$@" > /tmp/ra-regress.log 2>&1; then echo "FEHLER: $
 for t in determinism maps editor explore fort mechanics artillery replay round2 round3 waves tutorial ships22a ships22b ships22c buildings22a buildings22b maps22 play22 crip23; do run node tests/$t.js; done
 run node tests/campaign.js all 900
 run node tests/conquest.js 600
-for s in artshot shot shot2 shot3 shot4 shot5 shot6 shot7 shot8 interact mp edshot edmp play22 crip23shot dmg24shot ultra24shot ultra24b base24shot load24 desel24 hint24 lod25shot fx25shot abil25shot rift25shot gate25shot boot25; do run node tools/$s.js $F; done
+for s in artshot shot shot2 shot3 shot4 shot5 shot6 shot7 shot8 interact mp edshot edmp play22 crip23shot dmg24shot ultra24shot ultra24b base24shot load24 desel24 hint24 lod25shot fx25shot abil25shot rift25shot gate25shot boot25 aibrowser25; do run node tools/$s.js $F; done
+run python3 tools/dupnames.py
 run node tests/i18n.js
 run node tools/i18n/scan.js $F
 exit $fail

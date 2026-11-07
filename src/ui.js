@@ -683,7 +683,7 @@ function wpnTxt(def) {
 }
 /* Fassung 23: Rolle je Schiff als Symbol im Baumenü (Bau, Fracht, Belagerung, Entern, Reparatur, Minen, Träger,
    Flaggschiff, Unterstützung, sonst nach Größe: Jäger, Linie, Schwer) */
-function shipRole(d) {
+function shipRoleIcon(d) {   /* Fassung 25: eigener Name – »shipRole« gibt es schon in sim.js (Formation); im Gesamtskript überschrieb diese Fassung jene */
   if (d.build) return ['⚒', 'Bauschiff', 'Baut und repariert Stationen'];
   if (d.cargo) return ['⛏', 'Frachter', 'Sammelt Rohstoffe'];
   if (d.flag || d.hero) return ['★', 'Flaggschiff', 'Einzigartig, mit Flottenbefehl'];
@@ -698,7 +698,7 @@ function shipRole(d) {
   return ['◆', 'Linie', 'Rückgrat der Flotte'];
 }
 function shipTip(def) {
-  const ro = shipRole(def);
+  const ro = shipRoleIcon(def);
   return '<h4>' + esc(L(def.name)) + ' <small class="roleT">' + ro[0] + ' ' + esc(L(ro[1])) + '</small></h4><p class="fine">' + esc(L(ro[2])) + '</p><div class="cost">' + costTxt(shipCost(UI.P, def)) + ' · ' + def.time + ' s · ' + def.cp + ' ★</div><p>' + esc(L(def.desc)) + '</p><p class="fine">' + L('Hülle') + ' ' + def.hull + (def.shield ? ' · ' + L('Schild') + ' ' + def.shield : '') + (def.armor ? ' · ' + L('Panzerung') + ' ' + def.armor : '') + ' · ' + L('Tempo') + ' ' + def.speed + (def.wpn.length ? '<br>' + wpnTxt(def) : '') + (counterTxt(def) ? '<br>' + counterTxt(def) : '') + '</p>' + (reqTxt(def) ? '<p class="req">' + L('Benötigt') + ' ' + reqTxt(def) + '</p>' : '');
 }
 /* Erklärung zu einem Objekt auf der Karte (langes Antippen): Name, Besitzer, Stufe, Funktion, Zustand */
@@ -749,7 +749,7 @@ function hudBuild(force) {
       const why = trainReq(g, UI.me, d.id) || (b.lv < d.yard ? 'Benötigt Werft Stufe ' + ROMAN[d.yard] : null), afford = canPay(P, shipCost(P, d)), n = b.q.filter(q => q.id === d.id).length;
       const extra = (n ? '<span class="q">' + n + '</span>' : '') + (b.q.length && b.q[0].id === d.id ? '<span class="pb"><i style="width:' + Math.round(b.qp * 100) + '%"></i></span>' : '') + (why ? '<span class="lock">' + esc(L(why)) + '</span>' : '');
       /* Fassung 22: Doppeltippen/Umschalt-Klick reiht 5 ein, Tippen auf die Zahl oder Rechtsklick nimmt eines heraus (play.js) */
-      const ro = shipRole(d), el = itemBtn(L(d.name), shipCost(P, d), e => plTrain(b, d, e), () => shipTip(d), extra + '<span class="role">' + ro[0] + '</span>');
+      const ro = shipRoleIcon(d), el = itemBtn(L(d.name), shipCost(P, d), e => plTrain(b, d, e), () => shipTip(d), extra + '<span class="role">' + ro[0] + '</span>');
       el.addEventListener('contextmenu', e => { if (plUnqueue(b, d)) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
       if (why || !afford) el.classList.add('off');
       el.dataset.k = 'item:' + d.id;
