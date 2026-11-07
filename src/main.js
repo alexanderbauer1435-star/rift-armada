@@ -299,4 +299,6 @@ function frame(t) {
   menuRender();
   startAttract();
   requestAnimationFrame(frame);
+  /* Fassung 25: Startbild darf gehen, sobald das erste Bild des Menüs steht */
+  requestAnimationFrame(() => requestAnimationFrame(() => { try { if (window.__bootDone) window.__bootDone(); } catch (e) { /* egal */ } }));
 })();
