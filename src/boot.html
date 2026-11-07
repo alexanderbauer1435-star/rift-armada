@@ -74,7 +74,7 @@
     txt.textContent = text || TX[1]; shown = 0; set(0.02);
   };
   window.__bootSet = function (p) { set(Math.max(0.02, Math.min(1, p))); };
-  window.__bootHide = function () { clearInterval(cyc); leave(); };
+  window.__bootHide = function () { clearInterval(cyc); cyc = null; set(1); setTimeout(leave, 200); };
   window.__bootP = function (p) { if (!gone) { set(p); txt.textContent = TX[1]; } };
   window.__bootDone = function () { if (gone) return; ready = true; set(1); txt.textContent = TX[2]; setTimeout(leave, Math.max(250, MIN - (Date.now() - t0))); };
   /* nach dem Laden: Antippen überspringt die Wartezeit */

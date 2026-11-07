@@ -12,7 +12,7 @@ const F = path.resolve(process.argv[2] || 'build/rift-armada.html');
   await p.evaluate(() => launch(() => beginGame({ map: 'arena', seed: 5, pace: 'tactical', players: [{ faction: 'alliance', human: true, team: 0 }, { faction: 'mars', ai: 1, team: 1 }, { faction: 'brood', ai: 1, team: 2 }] }, 'skirmish')));
   let seen = false, pct = [], shot = false;
   for (let i = 0; i < 600; i++) {
-    const s = await p.evaluate(() => ({ vis: !document.getElementById('loading').hidden, loading: !!UI.loading, pct: document.getElementById('loadPct').textContent, t: UI.g ? UI.g.time : -1, left: RA3D._ && RA3D._.E ? 0 : 0 }));
+    const s = await p.evaluate(() => { const B = document.getElementById('boot'), fly = !!(B && B.style.display !== 'none' && !B.classList.contains('out')); return { vis: !document.getElementById('loading').hidden || fly, loading: !!UI.loading, pct: fly ? document.getElementById('bootPct').textContent : document.getElementById('loadPct').textContent, t: UI.g ? UI.g.time : -1, left: 0 }; });   /* Fassung 25: Vorbeiflug statt Fenster */
     if (s.vis && s.loading) { seen = true; pct.push(s.pct); if (!shot && parseInt(s.pct) > 20) { shot = true; await p.screenshot({ path: 'tools/shots/load24.jpg', type: 'jpeg', quality: 85 }); } }
     if (seen && !s.vis && !s.loading) break;
     await p.waitForTimeout(250);
