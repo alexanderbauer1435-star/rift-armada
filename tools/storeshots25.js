@@ -17,24 +17,24 @@ const want = n => !ONLY.length || ONLY.includes(n);
     await p.goto('file://' + F, { timeout: 180000 }); await p.waitForTimeout(1500);
     return p;
   }
-  const clean = p => p.addStyleTag({ content: 'body > *:not(#view3d):not(#view) { display: none !important; }' });
+  const clean = p => p.addStyleTag({ content: '#app > *:not(#view3d):not(#view), #fpsBox { display: none !important; } #view { opacity: 0 !important; }' });
   const shot = async (p, n) => { await p.evaluate(() => { try { FX.list.length = 0; } catch (e) {} }); await p.screenshot({ path: path.join(OUT, `scene-${n}.png`) }); console.log('Bild ' + n); };
   const reveal = p => p.evaluate(() => { const g = UI.g, me = UI.me; for (const q of g.players) q.nob = true; for (let i = 0; i < g.players[me].explored.length; i++) g.players[me].explored[i] = 1; g.reveals.push({ x: g.map.w / 2, y: g.map.h / 2, r: 99999, owner: me, until: 1e9 }); });
 
   /* 1 Raumschlacht: Allianz gegen Mars, Strahlen, Torpedos, Explosionen */
   if (want(1)) {
     const p = await page();
-    await p.evaluate(() => beginGame({ map: 'haven', seed: 7, pace: 'tactical', players: [{ faction: 'alliance', human: true, team: 0 }, { faction: 'mars', ai: 0, team: 1 }] }, 'skirmish'));
+    await p.evaluate(() => beginGame({ map: 'expanse', seed: 7, pace: 'tactical', players: [{ faction: 'alliance', human: true, team: 0 }, { faction: 'mars', ai: 0, team: 1 }] }, 'skirmish'));
     await p.waitForTimeout(3000); await reveal(p); await clean(p);
     await p.evaluate(() => {
-      const g = UI.g, me = UI.me, foe = 1 - me, cx = g.map.w / 2, cy = g.map.h / 2;
-      const A = ['haven', 'bulwark', 'aegis', 'lancer', 'lancer', 'reckoning', 'wren', 'wren', 'beacon', 'bulwark'], M = ['olympus', 'hammer', 'spear', 'hedgehog', 'needle', 'needle', 'longshot', 'spear', 'hammer', 'wasp'];
-      A.forEach((id, k) => { const u = addShip(g, id, me, cx - 230 - (k % 4) * 55, cy - 140 + ((k / 4) | 0) * 120 + (k % 2) * 30, 0); u.o = { t: 'amove', x: cx + 400, y: cy }; });
-      M.forEach((id, k) => { const u = addShip(g, id, foe, cx + 230 + (k % 4) * 55, cy - 140 + ((k / 4) | 0) * 120 + (k % 2) * 30, Math.PI); u.o = { t: 'amove', x: cx - 400, y: cy }; });
-      R.center(cx, cy + 20); R.cam.z = 1.15; UI.speed = 1;
+      const g = UI.g, me = UI.me, foe = 1 - me, cx = g.map.w / 2, cy = g.map.h / 2 + 520; window.__C = { x: cx, y: cy };
+      const A = ['haven', 'bulwark', 'aegis', 'lancer', 'lancer', 'reckoning', 'wren', 'wren', 'beacon', 'bulwark'], M = ['hammer', 'hammer', 'spear', 'hedgehog', 'needle', 'needle', 'longshot', 'spear', 'hedgehog', 'wasp'];
+      A.forEach((id, k) => { const u = addShip(g, id, me, cx - 150 - (k % 4) * 50, cy - 140 + ((k / 4) | 0) * 120 + (k % 2) * 30, 0); u.o = { t: 'amove', x: cx + 400, y: cy }; });
+      M.forEach((id, k) => { const u = addShip(g, id, foe, cx + 150 + (k % 4) * 50, cy - 140 + ((k / 4) | 0) * 120 + (k % 2) * 30, Math.PI); u.o = { t: 'amove', x: cx - 400, y: cy }; });
+      R.center(cx, cy + 20); R.cam.z = 1.55; UI.speed = 0.5;
     });
-    await p.waitForTimeout(9000);
-    await p.evaluate(() => { const g = UI.g; R.center(g.map.w / 2, g.map.h / 2 + 20); });
+    await p.waitForTimeout(5000);
+    await p.evaluate(() => { R.center(__C.x, __C.y + 20); });
     await p.waitForTimeout(600); await shot(p, 1); await p.close();
   }
   /* 2 Basis nach sieben Minuten KI-Spiel, Stationen auf Stufe 2–3 */
@@ -44,7 +44,7 @@ const want = n => !ONLY.length || ONLY.includes(n);
     await p.waitForTimeout(2500);
     await p.evaluate(() => { const g = UI.g, me = UI.me; UI.speed = 0; g.players[me].ai = aiInit(3); for (let i = 0; i < 480 / STEP && !g.over; i++) stepGame(g); g.events.length = 0; for (const s of g.bldgs) if (s.owner === me && !s.dead) s.lv = Math.max(s.lv || 1, 2 + (s.id % 2)); });
     await reveal(p); await clean(p);
-    await p.evaluate(() => { const g = UI.g, me = UI.me, b = g.bldgs.find(x => x.owner === me && x.role === 'base'); R.center(b.x + 60, b.y + 40); R.cam.z = 0.95; UI.speed = 1; });
+    await p.evaluate(() => { const g = UI.g, me = UI.me, b = g.bldgs.find(x => x.owner === me && x.role === 'base'); R.center(b.x + 30, b.y + 20); R.cam.z = 1.45; UI.speed = 1; });
     await p.waitForTimeout(8000); await shot(p, 2); await p.close();
   }
   /* 3 Sprungtor: Flotte fliegt durch, am Partnertor treten Schiffe aus */
@@ -56,11 +56,11 @@ const want = n => !ONLY.length || ONLY.includes(n);
       const g = UI.g, me = UI.me, gt = g.gates[0], pair = g.byId.get(gt.pair);
       for (const x of [gt, pair]) { x.state = 'active'; x.owner = me; x.mode = 'bridge'; }
       const ids = ['basilica', 'herald', 'herald', 'gleaner', 'herald', 'sovereign'];
-      ids.forEach((id, k) => { const u = addShip(g, id, me, gt.x - 200 - k * 90, gt.y + (k % 2 ? 40 : -40), 0); u.o = { t: 'move', x: gt.x + 10, y: gt.y }; u.path = null; });
-      window.__P = pair; R.center(pair.x + 80, pair.y); R.cam.z = 1.25; UI.speed = 1;
+      ids.forEach((id, k) => { const u = addShip(g, id, me, gt.x - 120 - k * 45, gt.y + (k % 2 ? 40 : -40), 0); u.o = { t: 'move', x: gt.x + 10, y: gt.y }; u.path = null; });
+      window.__P = pair; R.center(pair.x + 110, pair.y); R.cam.z = 1.6; UI.speed = 0.6;
     });
-    await p.waitForFunction(() => UI.g.ships.filter(u => u.owner === UI.me && Math.hypot(u.x - __P.x, u.y - __P.y) < 260).length >= 3, null, { timeout: 120000 }).catch(() => {});
-    await p.waitForTimeout(150); await shot(p, 3); await p.close();
+    await p.waitForFunction(() => UI.g.ships.filter(u => u.owner === UI.me && Math.hypot(u.x - __P.x, u.y - __P.y) < 200).length >= 1, null, { timeout: 120000 }).catch(() => {});
+    await p.waitForTimeout(700); await shot(p, 3); await p.close();
   }
   /* 4 Wellenmodus: Risstor offen, die Brood tritt aus, Verteidiger davor */
   if (want(4)) {
@@ -72,8 +72,8 @@ const want = n => !ONLY.length || ONLY.includes(n);
     await p.waitForFunction(() => UI.g.wave.soon && UI.g.wave.soon.length, null, { timeout: 60000 });
     await p.evaluate(() => {
       const g = UI.g, W = g.wave, r = W.soon[0], me = UI.me, tg = { x: g.map.w / 2, y: g.map.h / 2 }, a = Math.atan2(tg.y - r.y, tg.x - r.x);
-      ['hammer', 'spear', 'hedgehog', 'needle', 'spear'].forEach((id, k) => { const u = addShip(g, id, me, r.x + Math.cos(a) * (330 + (k % 2) * 60) + Math.sin(a) * (k - 2) * 70, r.y + Math.sin(a) * (330 + (k % 2) * 60) - Math.cos(a) * (k - 2) * 70, a + Math.PI); u.o = { t: 'hold' }; });
-      window.__R = r; R.center(r.x + Math.cos(a) * 170, r.y + Math.sin(a) * 170); R.cam.z = 1.0; W.next = 0.05;
+      ['hammer', 'spear', 'hedgehog', 'olympus', 'spear'].forEach((id, k) => { const u = addShip(g, id, me, r.x + Math.cos(a) * (300 + (k % 2) * 50) + Math.sin(a) * (k - 2) * 60, r.y + Math.sin(a) * (300 + (k % 2) * 50) - Math.cos(a) * (k - 2) * 60, a + Math.PI); u.o = { t: 'hold' }; });
+      window.__R = r; R.center(r.x + Math.cos(a) * 190, r.y + Math.sin(a) * 190); R.cam.z = 1.5; W.next = 0.05;
     });
     await p.waitForFunction(() => UI.g.wave.ids.length >= 5, null, { timeout: 120000 }).catch(() => {});
     await p.waitForTimeout(1200); await shot(p, 4); await p.close();
@@ -81,16 +81,16 @@ const want = n => !ONLY.length || ONLY.includes(n);
   /* 5 Großkampfschiffe nah: Schadensstufen, Triebwerksspuren, Lichthöfe */
   if (want(5)) {
     const p = await page();
-    await p.evaluate(() => beginGame({ map: 'test', seed: 4, pace: 'tactical', players: [{ faction: 'nexus', human: true, team: 0 }, { faction: 'brood', ai: 0, team: 1 }] }, 'skirmish'));
+    await p.evaluate(() => beginGame({ map: 'expanse', seed: 7, pace: 'tactical', players: [{ faction: 'nexus', human: true, team: 0 }, { faction: 'brood', ai: 0, team: 1 }] }, 'skirmish'));
     await p.waitForTimeout(3000); await reveal(p); await clean(p);
     await p.evaluate(() => {
-      const g = UI.g, me = UI.me, foe = 1 - me, cx = g.map.w / 2, cy = g.map.h / 2;
-      const a = addShip(g, 'facet', me, cx - 160, cy + 30, 0), b = addShip(g, 'monolith', me, cx - 260, cy - 80, 0), c = addShip(g, 'leviathan', foe, cx + 170, cy - 20, Math.PI), d = addShip(g, 'matriarch', foe, cx + 260, cy + 110, Math.PI);
+      const g = UI.g, me = UI.me, foe = 1 - me, cx = g.map.w / 2, cy = g.map.h / 2 + 520;
+      const a = addShip(g, 'facet', me, cx - 120, cy + 30, 0), b = addShip(g, 'monolith', me, cx - 190, cy - 70, 0), c = addShip(g, 'leviathan', foe, cx + 120, cy - 30, Math.PI), d = addShip(g, 'matriarch', foe, cx + 190, cy + 80, Math.PI);
       c.hull = c.def.hull * 0.3; d.hull = d.def.hull * 0.55; b.hull = b.def.hull * 0.5;
-      for (const u of [a, b]) u.o = { t: 'attack', id: c.id }; for (const u of [c, d]) u.o = { t: 'attack', id: a.id };
-      R.center(cx + 20, cy + 10); R.cam.z = 1.9; UI.speed = 0.6;
+      for (const u of [a, b]) u.o = { t: 'attack', id: c.id, hold: 1 }; for (const u of [c, d]) u.o = { t: 'attack', id: a.id, hold: 1 }; for (const u of [a, b, c, d]) { u.v = 0; u.def = Object.assign({}, u.def, { speed: 6 }); }
+      R.center(cx + 30, cy + 5); R.cam.z = 1.65; UI.speed = 0.4; RA3D.setGfx({ bloom: 'off' });
     });
-    await p.waitForTimeout(7000); await shot(p, 5); await p.close();
+    await p.waitForTimeout(4500); await shot(p, 5); await p.close();
   }
   console.log(errs.length ? 'FEHLER\n' + errs.slice(0, 5).join('\n') : 'keine Fehler'); await b.close();
 })();
