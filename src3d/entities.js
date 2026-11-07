@@ -78,7 +78,7 @@ function traffic(g, dt, seen, pcol) {
   for (const m of [TR.body, TR.glow]) { m.count = n; m.visible = n > 0; if (n) { m.instanceMatrix.needsUpdate = true; m.instanceColor.needsUpdate = true; } }
 }
 /* Fassung 24: Ereignisse für die Modelle (Einsprung frisch gebauter Schiffe) */
-export function shipEvent(e) { if (e.t === 'ready' && e.id !== undefined) E.born.set(e.id, E.now); }
+export function shipEvent(e) { if ((e.t === 'ready' || (e.t === 'jump' && e.gate && !e.from)) && e.id !== undefined) E.born.set(e.id, E.now); }   /* Fassung 25: auch Austritt aus dem Sprungtor */
 
 export function initEntities() {
   E.root = new THREE.Group(); E.root.name = 'entities'; S.scene.add(E.root);

@@ -823,5 +823,12 @@
  "Ton": "Sound",
  "Darstellung": "Rendering",
  "Anzeige": "Display",
- "Spiel": "Gameplay"
+ "Spiel": "Gameplay",
+ "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Changing the selection: double-tap a ship to select all visible ships of that type. Clear it with the ✕ on the selection card below – on PC a left-click on empty space is enough. On PC, Shift+click adds ships, Ctrl+1 to 5 stores groups and the number recalls them.",
+ "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "»Advance« sends the selection off and attacks everything on the way. Select the three Lancers again, then »Advance« and tap behind the target group.",
+ "Auswahl ändern und aufheben": "Change and clear the selection",
+ "Auswahl aufheben": "Clear selection",
+ "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+ "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Three Lancers have arrived. Tap »Select« at the bottom right and drag a frame around all three – on PC simply drag a frame with the left mouse button held. Then tap the marker.",
+ "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tap »Select« and drag a frame around the Lancers with your finger (on PC: frame with the left mouse button), then the marker."
 }

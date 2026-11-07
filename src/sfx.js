@@ -62,7 +62,7 @@ function sfxEvents(g, me, evs) {
       case 'cloak': if (vis || own) SND.play('cloak', e.x, e.y, own ? 0.8 : 0.6); break;
       case 'decloak': if (vis || own) SND.play('decloak', e.x, e.y, own ? 0.8 : 0.6); break;
       case 'salvage': if (vis) SND.play('salvage', e.x, e.y, 0.5); break;
-      case 'jump': if (vis && !e.from) SND.play('warp', e.x, e.y, 0.35); break;
+      case 'jump': if (vis && !e.from) SND.play('warp', e.x, e.y, e.gate ? 0.55 : 0.35); break;
       /* Warnungen: UI.consume spielt bei manchen schon ein Signal (alert, alarm, lowpower, upgrade) – dann nur die Ansage danach */
       case 'attack': if (e.owner === me) { sfxFight(g, 3); VOX.say('attack', 'Basis wird angegriffen', { prio: 3, wait: 0.45 }); } break;
       case 'flareWarn': VOX.say('flareWarn', 'Sonneneruption in 25 Sekunden', { prio: 3, wait: 1.25 }); break;

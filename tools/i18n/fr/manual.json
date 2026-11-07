@@ -821,5 +821,12 @@
  "Ton": "Son",
  "Darstellung": "Rendu",
  "Anzeige": "Affichage",
- "Spiel": "Jeu"
+ "Spiel": "Jeu",
+ "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Modifier la sélection : touchez deux fois un vaisseau pour sélectionner tous les vaisseaux visibles de ce type. Annulez avec le ✕ de la carte de sélection en bas – sur PC, un clic gauche dans le vide suffit. Sur PC, Maj+clic ajoute des vaisseaux, Ctrl+1 à 5 enregistre des groupes et le chiffre les rappelle.",
+ "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "« Assaut » envoie la sélection et attaque tout sur son chemin. Sélectionnez à nouveau les trois Lancer, puis « Assaut » et touchez derrière le groupe cible.",
+ "Auswahl ändern und aufheben": "Modifier et annuler la sélection",
+ "Auswahl aufheben": "Annuler la sélection",
+ "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+ "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Trois Lancer sont arrivés. Touchez « Sélection » en bas à droite et tracez un cadre autour des trois – sur PC, tracez simplement un cadre en maintenant le bouton gauche de la souris. Puis touchez le repère.",
+ "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Touchez « Sélection » et tracez un cadre autour des Lancer avec le doigt (sur PC : cadre avec le bouton gauche), puis le repère."
 }

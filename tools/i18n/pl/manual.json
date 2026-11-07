@@ -821,5 +821,12 @@
  "Ton": "Dźwięk",
  "Darstellung": "Renderowanie",
  "Anzeige": "Wyświetlanie",
- "Spiel": "Rozgrywka"
+ "Spiel": "Rozgrywka",
+ "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Zmiana wyboru: dotknij dwukrotnie okrętu, aby wybrać wszystkie widoczne okręty tego typu. Anuluj przyciskiem ✕ na karcie wyboru na dole – na PC wystarczy kliknąć lewym przyciskiem w puste miejsce. Na PC Shift+klik dodaje okręty, Ctrl+1–5 zapisuje grupy, a cyfra je przywołuje.",
+ "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "»Natarcie« wysyła wybrane okręty i atakuje wszystko po drodze. Wybierz ponownie trzy Lancery, potem »Natarcie« i dotknij za grupą celów.",
+ "Auswahl ändern und aufheben": "Zmień i anuluj wybór",
+ "Auswahl aufheben": "Anuluj wybór",
+ "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+ "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Przybyły trzy Lancery. Dotknij »Zaznacz« w prawym dolnym rogu i zaznacz ramką wszystkie trzy – na PC po prostu przeciągnij ramkę z wciśniętym lewym przyciskiem myszy. Potem dotknij znacznika.",
+ "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Dotknij »Zaznacz« i palcem zaznacz ramką Lancery (na PC: ramka lewym przyciskiem myszy), potem znacznik."
 }

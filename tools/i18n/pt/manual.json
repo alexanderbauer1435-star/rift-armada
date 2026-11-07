@@ -821,5 +821,12 @@
  "Ton": "Som",
  "Darstellung": "Renderização",
  "Anzeige": "Exibição",
- "Spiel": "Jogo"
+ "Spiel": "Jogo",
+ "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Alterar a seleção: toque duas vezes numa nave para selecionar todas as naves visíveis desse tipo. Cancele com o ✕ no cartão de seleção abaixo – no PC basta um clique esquerdo no vazio. No PC, Shift+clique adiciona naves, Ctrl+1 a 5 guarda grupos e o número os chama de volta.",
+ "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "«Avançar» envia a seleção e ataca tudo pelo caminho. Selecione de novo os três Lancer, depois «Avançar» e toque atrás do grupo-alvo.",
+ "Auswahl ändern und aufheben": "Alterar e cancelar a seleção",
+ "Auswahl aufheben": "Cancelar seleção",
+ "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+ "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Chegaram três Lancer. Toque em «Selecionar» no canto inferior direito e desenhe um quadro em volta dos três – no PC basta arrastar um quadro com o botão esquerdo do mouse pressionado. Depois toque na marca.",
+ "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toque em «Selecionar» e desenhe com o dedo um quadro em volta dos Lancer (no PC: quadro com o botão esquerdo), depois a marca."
 }

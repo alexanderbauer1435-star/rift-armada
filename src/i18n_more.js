@@ -2755,7 +2755,14 @@ const LANGS = {
     "Ton": "Son",
     "Darstellung": "Rendu",
     "Anzeige": "Affichage",
-    "Spiel": "Jeu"
+    "Spiel": "Jeu",
+    "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Modifier la sélection : touchez deux fois un vaisseau pour sélectionner tous les vaisseaux visibles de ce type. Annulez avec le ✕ de la carte de sélection en bas – sur PC, un clic gauche dans le vide suffit. Sur PC, Maj+clic ajoute des vaisseaux, Ctrl+1 à 5 enregistre des groupes et le chiffre les rappelle.",
+    "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "« Assaut » envoie la sélection et attaque tout sur son chemin. Sélectionnez à nouveau les trois Lancer, puis « Assaut » et touchez derrière le groupe cible.",
+    "Auswahl ändern und aufheben": "Modifier et annuler la sélection",
+    "Auswahl aufheben": "Annuler la sélection",
+    "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+    "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Trois Lancer sont arrivés. Touchez « Sélection » en bas à droite et tracez un cadre autour des trois – sur PC, tracez simplement un cadre en maintenant le bouton gauche de la souris. Puis touchez le repère.",
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Touchez « Sélection » et tracez un cadre autour des Lancer avec le doigt (sur PC : cadre avec le bouton gauche), puis le repère."
   },
   es: {
     "Ziele": "Objetivos",
@@ -5509,7 +5516,14 @@ const LANGS = {
     "Ton": "Sonido",
     "Darstellung": "Representación",
     "Anzeige": "Pantalla",
-    "Spiel": "Juego"
+    "Spiel": "Juego",
+    "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Cambiar la selección: toca dos veces una nave para seleccionar todas las naves visibles de ese tipo. Anúlala con la ✕ de la tarjeta de selección abajo; en PC basta un clic izquierdo en el vacío. En PC, Mayús+clic añade naves, Ctrl+1 a 5 guarda grupos y el número los recupera.",
+    "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "«Avanzar» envía la selección y ataca todo lo que encuentra. Vuelve a seleccionar los tres Lancer, luego «Avanzar» y toca detrás del grupo objetivo.",
+    "Auswahl ändern und aufheben": "Cambiar y anular la selección",
+    "Auswahl aufheben": "Anular selección",
+    "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+    "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Han llegado tres Lancer. Toca «Selección» abajo a la derecha y traza un marco alrededor de los tres; en PC basta con trazar un marco manteniendo pulsado el botón izquierdo del ratón. Luego toca la marca.",
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toca «Selección» y traza con el dedo un marco alrededor de los Lancer (en PC: marco con el botón izquierdo), luego la marca."
   },
   it: {
     "Ziele": "Obiettivi",
@@ -8263,7 +8277,14 @@ const LANGS = {
     "Ton": "Audio",
     "Darstellung": "Resa grafica",
     "Anzeige": "Visualizzazione",
-    "Spiel": "Gioco"
+    "Spiel": "Gioco",
+    "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Modificare la selezione: tocca due volte una nave per selezionare tutte le navi visibili di quel tipo. Annulla con la ✕ nella scheda di selezione in basso – su PC basta un clic sinistro nel vuoto. Su PC, Maiusc+clic aggiunge navi, Ctrl+1–5 salva gruppi e il numero li richiama.",
+    "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "«Avanza» manda avanti la selezione e attacca tutto lungo il percorso. Seleziona di nuovo i tre Lancer, poi «Avanza» e tocca dietro il gruppo bersaglio.",
+    "Auswahl ändern und aufheben": "Modificare e annullare la selezione",
+    "Auswahl aufheben": "Annulla selezione",
+    "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+    "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Sono arrivati tre Lancer. Tocca «Seleziona» in basso a destra e traccia un riquadro attorno a tutti e tre – su PC basta trascinare un riquadro tenendo premuto il tasto sinistro del mouse. Poi tocca il segnalino.",
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tocca «Seleziona» e traccia col dito un riquadro attorno ai Lancer (su PC: riquadro col tasto sinistro), poi il segnalino."
   },
   pt: {
     "Ziele": "Objetivos",
@@ -11017,7 +11038,14 @@ const LANGS = {
     "Ton": "Som",
     "Darstellung": "Renderização",
     "Anzeige": "Exibição",
-    "Spiel": "Jogo"
+    "Spiel": "Jogo",
+    "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Alterar a seleção: toque duas vezes numa nave para selecionar todas as naves visíveis desse tipo. Cancele com o ✕ no cartão de seleção abaixo – no PC basta um clique esquerdo no vazio. No PC, Shift+clique adiciona naves, Ctrl+1 a 5 guarda grupos e o número os chama de volta.",
+    "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "«Avançar» envia a seleção e ataca tudo pelo caminho. Selecione de novo os três Lancer, depois «Avançar» e toque atrás do grupo-alvo.",
+    "Auswahl ändern und aufheben": "Alterar e cancelar a seleção",
+    "Auswahl aufheben": "Cancelar seleção",
+    "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+    "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Chegaram três Lancer. Toque em «Selecionar» no canto inferior direito e desenhe um quadro em volta dos três – no PC basta arrastar um quadro com o botão esquerdo do mouse pressionado. Depois toque na marca.",
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toque em «Selecionar» e desenhe com o dedo um quadro em volta dos Lancer (no PC: quadro com o botão esquerdo), depois a marca."
   },
   pl: {
     "Ziele": "Cele",
@@ -13771,6 +13799,13 @@ const LANGS = {
     "Ton": "Dźwięk",
     "Darstellung": "Renderowanie",
     "Anzeige": "Wyświetlanie",
-    "Spiel": "Rozgrywka"
+    "Spiel": "Rozgrywka",
+    "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Zmiana wyboru: dotknij dwukrotnie okrętu, aby wybrać wszystkie widoczne okręty tego typu. Anuluj przyciskiem ✕ na karcie wyboru na dole – na PC wystarczy kliknąć lewym przyciskiem w puste miejsce. Na PC Shift+klik dodaje okręty, Ctrl+1–5 zapisuje grupy, a cyfra je przywołuje.",
+    "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "»Natarcie« wysyła wybrane okręty i atakuje wszystko po drodze. Wybierz ponownie trzy Lancery, potem »Natarcie« i dotknij za grupą celów.",
+    "Auswahl ändern und aufheben": "Zmień i anuluj wybór",
+    "Auswahl aufheben": "Anuluj wybór",
+    "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+    "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Przybyły trzy Lancery. Dotknij »Zaznacz« w prawym dolnym rogu i zaznacz ramką wszystkie trzy – na PC po prostu przeciągnij ramkę z wciśniętym lewym przyciskiem myszy. Potem dotknij znacznika.",
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Dotknij »Zaznacz« i palcem zaznacz ramką Lancery (na PC: ramka lewym przyciskiem myszy), potem znacznik."
   },
 };

@@ -821,5 +821,12 @@
  "Ton": "Audio",
  "Darstellung": "Resa grafica",
  "Anzeige": "Visualizzazione",
- "Spiel": "Gioco"
+ "Spiel": "Gioco",
+ "Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.": "Modificare la selezione: tocca due volte una nave per selezionare tutte le navi visibili di quel tipo. Annulla con la ✕ nella scheda di selezione in basso – su PC basta un clic sinistro nel vuoto. Su PC, Maiusc+clic aggiunge navi, Ctrl+1–5 salva gruppi e il numero li richiama.",
+ "»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.": "«Avanza» manda avanti la selezione e attacca tutto lungo il percorso. Seleziona di nuovo i tre Lancer, poi «Avanza» e tocca dietro il gruppo bersaglio.",
+ "Auswahl ändern und aufheben": "Modificare e annullare la selezione",
+ "Auswahl aufheben": "Annulla selezione",
+ "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
+ "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Sono arrivati tre Lancer. Tocca «Seleziona» in basso a destra e traccia un riquadro attorno a tutti e tre – su PC basta trascinare un riquadro tenendo premuto il tasto sinistro del mouse. Poi tocca il segnalino.",
+ "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tocca «Seleziona» e traccia col dito un riquadro attorno ai Lancer (su PC: riquadro col tasto sinistro), poi il segnalino."
 }

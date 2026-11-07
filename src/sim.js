@@ -1483,7 +1483,7 @@ function updateGates(g, step) {
       }
     }
     /* Durchflug */
-    if (pair) nearShips(g, gt.x, gt.y, 46, u => { if (u.derelict || u.def.role === 'fighter' || u.gateCd > g.time || g.tm[u.owner] === 99) return false; if (!gateOpen(g, gt, u.owner)) return false; ev(g, 'jump', { x: u.x, y: u.y, owner: u.owner, r: u.def.r, from: 1 }); const a = u.ang; u.x = pair.x + dcos(a) * 70; u.y = pair.y + dsin(a) * 70; u.lx = u.x; u.ly = u.y; u.path = null; u.gateCd = g.time + 6; if ((u.o.t === 'move' || u.o.t === 'amove') && hyp(u.o.x - gt.x, u.o.y - gt.y) < hyp(u.o.x - pair.x, u.o.y - pair.y)) setIdle(u); else if (u.o.t === 'harvest' || u.o.t === 'return') u.path = null; ev(g, 'jump', { x: u.x, y: u.y, owner: u.owner, r: u.def.r }); return false; });
+    if (pair) nearShips(g, gt.x, gt.y, 46, u => { if (u.derelict || u.def.role === 'fighter' || u.gateCd > g.time || g.tm[u.owner] === 99) return false; if (!gateOpen(g, gt, u.owner)) return false; ev(g, 'jump', { x: u.x, y: u.y, owner: u.owner, r: u.def.r, from: 1, gate: 1, gx: gt.x, gy: gt.y, gr: gt.r, mode: gt.mode || 'bridge', id: u.id });   /* Fassung 25: Tor-Durchflug mit Torlage für die Darstellung */ const a = u.ang; u.x = pair.x + dcos(a) * 70; u.y = pair.y + dsin(a) * 70; u.lx = u.x; u.ly = u.y; u.path = null; u.gateCd = g.time + 6; if ((u.o.t === 'move' || u.o.t === 'amove') && hyp(u.o.x - gt.x, u.o.y - gt.y) < hyp(u.o.x - pair.x, u.o.y - pair.y)) setIdle(u); else if (u.o.t === 'harvest' || u.o.t === 'return') u.path = null; ev(g, 'jump', { x: u.x, y: u.y, owner: u.owner, r: u.def.r, gate: 1, gx: pair.x, gy: pair.y, gr: pair.r, mode: gt.mode || 'bridge', id: u.id, ang: u.ang }); return false; });
   }
 }
 function cmdGate(g, pi, id, mode) {

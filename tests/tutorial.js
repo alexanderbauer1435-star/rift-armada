@@ -29,7 +29,7 @@ while (!g.over && g.time < 1500 && guard++ < 400) {
   if (st.id === 'group' && M.S.hl !== 'cmd:Auswahl' || st.id === 'yard' && M.S.hl !== 'item:yard') ok(false, 'Hervorhebung passt nicht: ' + M.S.hl);
 }
 ok(g.over && M.res === 1, 'Ausbildung bestanden in ' + Math.round(g.time) + ' s, Schritte: ' + seen.join(' → '));
-ok(seen.length === 10, 'alle zehn Schritte durchlaufen');
+ok(seen.length === 11 && seen.includes('selhow'), 'alle elf Schritte durchlaufen (mit Auswahl ändern)');
 ok(M.goals.every(q => q.st === 2), 'alle Ziele erfüllt');
 console.log(fails ? 'FAILS ' + fails : 'ALL OK');
 process.exit(fails ? 1 : 0);

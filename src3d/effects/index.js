@@ -317,13 +317,14 @@ export function event(e, g, view) {
       break;
     case 'strike': { const r = e.r || 150; light(e.x, e.y, H.proj, '#ffb070', 5, 600, 1.8); explode(e.x, e.y, r * 0.45, true, '#ffb070', H.proj, false); ring(e.x, e.y, r * 1.6, '#ff8a5a', 1.3, r * 0.1, 1, 0.5); smoke(e.x, e.y, r * 0.5, 18, 3.2, H.proj, 14); debris(e.x, e.y, 30, 260, 30, H.proj, 1); spark(e.x, e.y, 40, 320, '#ffd27a', 1.1, H.proj, 1.6, 1.5); later.push({ at: now + 0.35, fn: () => fire(e.x, e.y, r * 0.4, 1.2, 6, H.proj + r * 0.15, 0.9) }); shake(16); break; }
     case 'supercharged': ring(e.x, e.y, 80, '#ffb86b', 1.2, 3); break;
-    case 'ready': { /* Fassung 24: Einsprung frisch gebauter Schiffe */
+    case 'ready': if (e.rift) { /* Fassung 25: Austritt aus dem Risstor */ flash(e.rx, e.ry, 70, '#d6ff6a', 0.35, H.proj, TILE.glow, 1.4); ring(e.rx, e.ry, 130, '#b4ff3c', 0.7, 3, 1.3, 0.85, 40); spark(e.rx, e.ry, 12, 120, '#d6ff6a', 0.5, H.proj, 1.3, 1.2); }
+    { /* Fassung 24: Einsprung frisch gebauter Schiffe */
       const u = g && g.byId ? g.byId.get(e.id) : null; if (!u || !u.def || u.def.role === 'fighter') break;
       const r = u.def.r || 12, a = u.ang, c = facCol(g, e.owner), bx = u.x - Math.cos(a) * Math.max(60, u.def.len * 1.5), by = u.y - Math.sin(a) * Math.max(60, u.def.len * 1.5);
       flash(u.x, u.y, r * 1.6, '#ffffff', 0.25, H.proj, TILE.star, 1.3); ring(u.x, u.y, r * 2.2, c, 0.45, 2);
       line(bx, by, u.x, u.y, r * 0.7, c, 0.4, QMODE.tail, H.proj, H.proj, 1.4, 0.7); break;
     }
-    case 'jump': { const r = e.r || 12; ring(e.x, e.y, r * 2, '#c9a0ff', 0.5, 2.5); flash(e.x, e.y, r * 1.4, '#eadcff', 0.3, H.proj + r * 0.3, TILE.star, 1.2); if (!e.from) spark(e.x, e.y, 8, 90, '#e0c8ff', 0.5, H.proj); break; }
+    case 'jump': if (e.gate) { gateTransit(e); break; } { const r = e.r || 12; ring(e.x, e.y, r * 2, '#c9a0ff', 0.5, 2.5); flash(e.x, e.y, r * 1.4, '#eadcff', 0.3, H.proj + r * 0.3, TILE.star, 1.2); if (!e.from) spark(e.x, e.y, 8, 90, '#e0c8ff', 0.5, H.proj); break; }
     case 'merge': { const r = e.r || 14; ring(e.x, e.y, r * 2.5, '#eadcff', 0.9, 3); flash(e.x, e.y, r * 1.8, '#ffffff', 0.4, H.proj + r * 0.3, TILE.glow, 1.1); spark(e.x, e.y, 20, 140, '#f3e6ff', 0.7, H.proj); break; }
     case 'bound': line(e.fx, e.fy, e.x, e.y, 3, '#c9a0ff', 0.6, QMODE.soft, H.proj, H.proj, 1, 0.9); ring(e.x, e.y, 50, '#c9a0ff', 0.8, 3); break;
     case 'dormant': smoke(e.x, e.y, 14, 6, 2, H.proj + 2); ring(e.x, e.y, 40, '#f2c14e', 1, 2.5); break;
@@ -366,6 +367,7 @@ export function frame(g, dt, time, view, cam) {
     if (g.mines && g.mines.length) mines(g, time, view);   /* Fassung 22 */
     heals(g, time, view);
     if (g.wave && (g.wave.rifts || g.wave.open)) rifts(g, dt, time);
+    VIEW = view; if (g.gates && g.gates.length) gatesLive(g, dt, time);
   }
   for (const k in B) B[k].flush();
 }
@@ -514,6 +516,50 @@ function heals(g, time, view) {
   }
 }
 
+/* Fassung 25: Tor-Durchflug – Eintritt: Schiff wird zur Tormitte gezogen (Lichtstreif), Ereignishorizont schlägt eine
+   Welle, Blitz in der Mitte. Austritt am Partnertor: Welle nach außen, Blitz, Funkenkegel in Flugrichtung, Nachglühen.
+   Das Tor selbst leuchtet ein paar Sekunden heller (GK). */
+const GMC = { bridge: '#8fe3ff', lock: '#ffc46b', lance: '#ff6b5b' };
+const GK = new Map(); let VIEW = null;
+function gateKick(x, y, v) { const k = x + ',' + y; GK.set(k, Math.min(2, (GK.get(k) || 0) + v)); }
+function gateTransit(e) {
+  const c = GMC[e.mode] || GMC.bridge, r = e.r || 12, gr = e.gr || 46, h = H.proj;
+  gateKick(e.gx, e.gy, 1);
+  if (e.from) {
+    line(e.x, e.y, e.gx, e.gy, r * 1.2, c, 0.35, QMODE.soft, h, h - 2, 1, 0.9);
+    flash(e.gx, e.gy, gr * 1.1, '#ffffff', 0.35, h, TILE.glow, 1.4);
+    ring(e.gx, e.gy, gr * 0.15, c, 0.55, gr * 0.06, 1, 0.9, gr * 0.9);
+    ring(e.gx, e.gy, gr * 0.9, '#ffffff', 0.4, 2, 1.2, 0.6, gr * 0.2);
+    spark(e.gx, e.gy, 14, 60, c, 0.5, h, 0.8, 1.4);
+  } else {
+    const a = e.ang || 0;
+    flash(e.gx, e.gy, gr * 1.3, '#ffffff', 0.4, h, TILE.glow, 1.5);
+    ring(e.gx, e.gy, gr * 1.9, c, 0.7, 3, 1.4, 0.9, gr * 0.5);
+    ring(e.gx, e.gy, gr * 1.1, '#ffffff', 0.35, 2, 1, 0.7, gr * 0.3);
+    line(e.gx, e.gy, e.x, e.y, r * 1.6, c, 0.45, QMODE.soft, h, h, 1, 0.9);
+    { const cc = col(c); for (let i = 0; i < Math.round(14 * K); i++) { const aa = a + rnd(-0.45, 0.45), v = rnd(90, 230); spr(P.spr, e.gx, h, e.gy, Math.cos(aa) * v, rnd(-8, 8), Math.sin(aa) * v, rnd(0.35, 0.7), rnd(5, 8), 1.5, cc, 0.9, TILE.glow, 0, 2.2, 1.3); } }
+    light(e.gx, e.gy, h, c, 1.6, gr * 4, 0.5);
+  }
+}
+/* Fassung 25: aktive Sprungtore – Ereignishorizont schimmert, Lauflicht über die acht Emitter, Funken werden in die
+   Mitte gesogen, ab und zu ein Lichtbogen. Nach einem Durchflug kurz heller. */
+function gatesLive(g, dt, time) {
+  for (const gt of g.gates) {
+    if (gt.state !== 'active' && gt.state !== 'flicker') continue;
+    if (VIEW && VIEW.seen && !VIEW.seen(gt.x, gt.y)) continue;
+    const key = gt.x + ',' + gt.y, kick = GK.get(key) || 0; if (kick) GK.set(key, Math.max(0, kick - dt * 0.8));
+    const on = gt.state === 'active' ? 1 : 0.45, c = col(GMC[gt.mode] || GMC.bridge), k = on * (1 + kick);
+    B.disc.write(gt.x, H.disc + 1.6, gt.y, 41, 41, time * 0.4, DMODE.horizon, k, gt.x * 0.01, c[0], c[1], c[2], 1);
+    /* Lauflicht: ein heller Punkt wandert über die Emitter */
+    const ph = (time * (gt.mode === 'lance' ? 1.4 : 0.9)) % 1, idx = Math.floor(ph * 8);
+    for (let i = 0; i < 8; i++) { const a = i / 8 * TAU, d = ((i - idx + 8) % 8), aa = d === 0 ? 1 : d === 7 ? 0.45 : d === 6 ? 0.2 : 0.06; if (aa < 0.07 && on < 1) continue;
+      B.spr.write(gt.x + Math.cos(a) * 50, 7.5, gt.y - Math.sin(a) * 50, 24 + 18 * aa, 0, TILE.glow, c[0], c[1], c[2], Math.min(1, aa * on * 1.2)); }
+    /* eingesogene Funken (aus der Zeit abgeleitet, ohne Teilchenpool) */
+    if (detail > 0) for (let i = 0; i < 10; i++) { const f = (time * 0.45 + i / 10) % 1, a = i * 2.39 + gt.x * 0.01 + f * 2.2, rr = 46 * (1 - f);
+      B.spr.write(gt.x + Math.cos(a) * rr, 3 + f * 2, gt.y + Math.sin(a) * rr, 7 + 6 * f, 0, TILE.glow, c[0], c[1], c[2], 0.8 * on * Math.sin(f * Math.PI)); }
+    if (gt.state === 'active' && detail > 1 && Math.random() < dt * 0.9 * K) { const a = Math.random() * TAU, b = a + rnd(0.6, 1.4); line(gt.x + Math.cos(a) * 46, gt.y + Math.sin(a) * 46, gt.x + Math.cos(b) * 46, gt.y + Math.sin(b) * 46, 1.5, '#ffffff', 0.18, QMODE.soft, 6, 6, 1, 0.9); }
+  }
+}
 /* Fassung 25: Risstore (Wellenmodi) – Ring aus Chitin-Dornen mit dunkler Öffnung und Wirbel. Alle Tore sind von Anfang an
    da (schlafend), vor der Welle erwachen die, aus denen sie kommt, während der Welle dreht der grüne Wirbel. */
 const RG = new Map();
@@ -545,6 +591,9 @@ function rifts(g, dt, time) {
     /* Leuchtknoten auf dem Ring */
     const on = st >= 2 ? 0.6 + 0.4 * Math.sin(time * 5) : st === 1 ? 0.35 : 0.15;
     for (let i = 0; i < 7; i++) { const a = i / 7 * TAU + o.ph * 2 - time * 0.05; B.spr.write(r0.x + Math.cos(a) * 66, 9, r0.y + Math.sin(a) * 66, 16, 0, TILE.glow, 0.7, 1, 0.35, on); }
+    /* Herzschlag: erwacht langsam, offen schnell; offen dazu grüne Lichtbögen über die Öffnung */
+    if (st >= 2) { const per = st === 3 ? 0.9 : 1.6, n = Math.floor((time + o.ph) / per); if (o.beat !== n) { o.beat = n; ring(r0.x, r0.y, st === 3 ? 150 : 110, '#b4ff3c', st === 3 ? 0.9 : 1.1, 3, 1.2, st === 3 ? 0.8 : 0.5, 55); } }
+    if (st === 3 && detail > 1 && Math.random() < dt * 3 * K) { const a = Math.random() * TAU, b = a + rnd(1.5, 3); line(r0.x + Math.cos(a) * 56, r0.y + Math.sin(a) * 56, r0.x + Math.cos(b) * 50, r0.y + Math.sin(b) * 50, 2, '#e4ff9a', 0.16, QMODE.soft, 7, 7, 1, 0.9); }
     if (st === 3 && detail > 1 && Math.random() < 24 * dt * K) { const a = Math.random() * TAU; spark(r0.x + Math.cos(a) * 60, r0.y + Math.sin(a) * 60, 1, 40, '#d6ff6a', 0.5, H.ground, 1.2, 2); }
   }
 }

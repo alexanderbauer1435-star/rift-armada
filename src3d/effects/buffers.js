@@ -298,7 +298,7 @@ export class DomeBuf {
 }
 
 /* ------------------------------------------------------------ Bodenscheiben mit Mustern */
-export const DMODE = { spores: 0, rift: 1, flare: 2, vortex: 3, storm: 4, glow: 5, portal: 6 };
+export const DMODE = { spores: 0, rift: 1, flare: 2, vortex: 3, storm: 4, glow: 5, portal: 6, horizon: 7 };
 const DISC_VERT = `
 attribute float iMode; attribute vec4 iCol; attribute vec2 iPar;
 varying vec2 vUv; varying float vMode; varying vec4 vCol; varying vec2 vPar;
@@ -363,6 +363,17 @@ void main() {
     float rad = 1.0 - smoothstep(0.75, 1.0, d);
     col = mix(vec3(0.85, 1.25, 0.45), mix(vec3(0.45, 0.95, 0.2), vec3(0.5, 0.18, 0.7), smoothstep(0.2, 0.85, d)), smoothstep(0.0, 0.35, d));
     a = (band * rad * (0.25 + 0.3 * k) + (1.0 - smoothstep(0.0, 0.3, d)) * 0.5 * k) * min(k, 1.2);
+  } else if (m == 7) {
+    /* Fassung 25: Ereignishorizont eines Sprungtors – wandernde Ringwellen nach innen, feines Flimmern, Farbe der
+       Betriebsart (vCol), k = Stärke (nach Durchflug kurz über 1) */
+    float w1 = sin(d * 26.0 + t * 5.0 + ph);
+    float w2 = sin(d * 11.0 - t * 2.3 + ang * 3.0 + ph * 1.7);
+    float sh = 0.5 + 0.5 * w1 * 0.7 + 0.3 * w2;
+    float edge = smoothstep(0.55, 0.98, d) * (1.0 - smoothstep(0.98, 1.0, d));
+    float core = 1.0 - smoothstep(0.0, 0.45, d);
+    col = mix(vCol.rgb, vec3(1.0), 0.25 + 0.5 * core);
+    a = (0.18 + 0.3 * sh) * (1.0 - smoothstep(0.92, 1.0, d)) * min(k, 2.0) + edge * 0.45 * k + core * 0.35 * k;
+    a = clamp(a, 0.0, 0.9);
   } else {
     /* weiches Leuchten am Boden */
     a = (1.0 - smoothstep(0.0, 1.0, d)) * k;

@@ -1000,8 +1000,10 @@ MISSIONS.b1 = {
 const TUT_STEPS = [
   { id: 'move', hl: '', say: ['Willkommen an Bord, Kadett. Tippe die kleine Wren an, um sie zu wählen – dann tippe auf die Markierung.', 'Wren antippen (sie leuchtet grün eingekreist), dann die Markierung.'] },
   { id: 'shoot', hl: '', say: ['Gut geflogen. Jetzt die Zielscheibe: Mit gewählter Wren den Gegner antippen heißt angreifen.', 'Wren wählen, dann die rote Zielscheibe antippen.'] },
-  { id: 'group', hl: 'cmd:Auswahl', say: ['Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei. Dann tippe auf die Markierung.', '»Auswahl« antippen, mit dem Finger einen Rahmen um die Lancer ziehen, dann die Markierung.'] },
-  { id: 'amove', hl: 'cmd:Vorstoß', say: ['»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Lancer gewählt lassen, »Vorstoß«, dann hinter die Zielgruppe tippen.', 'Lancer wählen, »Vorstoß« antippen, dann die Zielgruppe.'] },
+  { id: 'group', hl: 'cmd:Auswahl', say: ['Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.', '»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.'] },
+  /* Fassung 25: Auswahl verändern und aufheben */
+  { id: 'selhow', hl: 'el:#selCard', say: ['Auswahl ändern: Doppeltippen auf ein Schiff wählt alle sichtbaren Schiffe dieses Typs. Aufheben mit dem ✕ in der Auswahlkarte unten – am PC genügt ein Linksklick ins Leere. Am PC fügt Umschalt+Klick Schiffe hinzu, Strg+1 bis 5 speichert Gruppen, die Zahl ruft sie wieder auf.'] },
+  { id: 'amove', hl: 'cmd:Vorstoß', say: ['»Vorstoß« schickt die Auswahl los und greift alles auf dem Weg an. Wähle die drei Lancer wieder, dann »Vorstoß« und hinter die Zielgruppe tippen.', 'Lancer wählen, »Vorstoß« antippen, dann die Zielgruppe.'] },
   { id: 'mini', hl: 'el:#mini', say: ['Oben rechts die Minikarte: Antippen springt dorthin, rote Ringe zeigen Angriffe. Zwei Finger zoomen die Karte, ein Finger verschiebt sie.'] },
   { id: 'yard', hl: 'item:yard', say: ['Jetzt die Basis. Wähle das Bauschiff, den Pathfinder. Unten erscheint das Baumenü: »Werft« antippen, dann einen freien Platz neben der Kommandobasis.', 'Pathfinder antippen, im Baumenü »Werft«, dann einen Platz nahe der Basis. Grün heißt: passt.'] },
   { id: 'reactor', hl: 'item:reactor', say: ['Stationen brauchen Energie. Baue mit dem Pathfinder einen Reaktor.', 'Pathfinder wählen, »Reaktor«, Platz antippen.'] },
@@ -1015,7 +1017,7 @@ MISSIONS.tut = {
     'Schritt für Schritt: Schiffe wählen und fliegen, angreifen, mehrere Schiffe führen, eine Werft bauen, Schiffe in Auftrag geben, Fähigkeiten einsetzen. Am Ende ein kleiner Ernstfall.'],
   hints: ['Tippen wählt, Tippen auf Raum fliegt, Tippen auf Gegner greift an.', 'Lange auf eine Taste drücken zeigt die Erklärung.', 'Die Pause oben rechts hält alles an.'],
   goals: [{ id: 'move', t: 'Fliege die Wren zur Markierung' }, { id: 'shoot', t: 'Zerstöre die Zielscheibe', later: 1 }, { id: 'group', t: 'Führe die drei Lancer zur Markierung', later: 1 },
-    { id: 'amove', t: 'Vorstoß: Zerstöre die Zielgruppe', later: 1 }, { id: 'mini', t: 'Die Minikarte', later: 1 }, { id: 'yard', t: 'Baue eine Werft', later: 1 }, { id: 'reactor', t: 'Baue einen Reaktor', later: 1 },
+    { id: 'selhow', t: 'Auswahl ändern und aufheben', later: 1 }, { id: 'amove', t: 'Vorstoß: Zerstöre die Zielgruppe', later: 1 }, { id: 'mini', t: 'Die Minikarte', later: 1 }, { id: 'yard', t: 'Baue eine Werft', later: 1 }, { id: 'reactor', t: 'Baue einen Reaktor', later: 1 },
     { id: 'train', t: 'Gib einen Lancer in Auftrag', later: 1 }, { id: 'ability', t: 'Setze eine Fähigkeit ein', later: 1 }, { id: 'defend', t: 'Wehre die Piraten ab', later: 1 }],
   map: { w: 3200, h: 2000, starts: [{ x: 480, y: 1000, ang: 0 }, { x: 2900, y: 1000, ang: Math.PI }],
     build(m, rng) {
@@ -1047,6 +1049,7 @@ MISSIONS.tut = {
       if (st.id === 'group') { const l = misSpawn(g, pi, ['lancer', 'lancer', 'lancer'], 760, 1380, 0, { gap: 60 }); for (const u of l) u.auto = false; misTag(g, 'lan', l); misMark(g, 'm', 1350, 1350, 190, 'Sammelpunkt'); misCam(g, 1050, 1350, 0.9, 1.5); }
       if (st.id === 'amove') { const t = misSpawn(g, 1, ['needle', 'needle', 'hedgehog', 'needle'], 2000, 1150, Math.PI, { hold: true, gap: 70 }); for (const u of t) u.stance = 2; misTag(g, 't2', t); misMark(g, 'm', 2000, 1150, 200, 'Zielgruppe'); }
       if (st.id === 'mini') { misUnmark(g, 'm'); M.t.mini = g.time + 9; }
+      if (st.id === 'selhow') { misUnmark(g, 'm'); M.t.selhow = g.time + 14; }
       if (st.id === 'yard' || st.id === 'reactor') { const b = own('pathfinder')[0]; if (b) { misMark(g, 'b', b.x, b.y, 50, 'Bauschiff'); misCam(g, b.x + 150, b.y, 1, 1.5); } }
       if (st.id === 'train') { misUnmark(g, 'b'); M.f.built0 = h.stats.built; const y = g.bldgs.find(b => !b.dead && b.owner === pi && b.role === 'yard'); if (y) misMark(g, 'b', y.x, y.y, y.def.r + 30, 'Werft'); }
       if (st.id === 'ability') { misUnmark(g, 'b'); M.f.ab0 = 1; for (const u of g.ships) if (u.owner === pi && u.abcd) for (const k in u.abcd) u.abcd[k] = 0; }
@@ -1066,6 +1069,7 @@ MISSIONS.tut = {
     else if (st.id === 'group') { const l = misLive(g, M.tag.lan); done = l.length > 0 && l.every(u => hyp(u.x - 1350, u.y - 1350) < 230); }
     else if (st.id === 'amove') done = !misCount(g, M.tag.t2);
     else if (st.id === 'mini') done = g.time >= M.t.mini;
+    else if (st.id === 'selhow') done = g.time >= M.t.selhow;
     else if (st.id === 'yard') done = misHas(g, pi, 'yard');
     else if (st.id === 'reactor') done = misHas(g, pi, 'reactor');
     else if (st.id === 'train') done = h.stats.built > M.f.built0;

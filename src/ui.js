@@ -774,7 +774,9 @@ function hudBuild(force) {
   }
   box.hidden = true;
 }
+function selCardInit() { const c = $('selCard'); if (c._xi) return; c._xi = 1; c.addEventListener('click', e => { if (e.target.closest('.selX')) { e.stopPropagation(); desel(); SND.play('click'); } }); }
 function hudSel() {
+  selCardInit();
   const card = $('selCard'), us = selShips(), b = UI.selB ? UI.g.byId.get(UI.selB) : null, so = UI.selS ? UI.g.byId.get(UI.selS) : null;
   if (!us.length && !b && !so) { card.hidden = true; card._h = ''; UI.hasSel = false; hudCmds(); hudBuild(); return; }
   card.hidden = false; UI.hasSel = true;
@@ -858,6 +860,7 @@ function hudSel() {
     h += '<div class="bar"><i style="width:' + Math.round(hull / hullMax * 100) + '%"></i></div>' + (shMax ? '<div class="bar sh"><i style="width:' + Math.round(sh / shMax * 100) + '%"></i></div>' : '');
     h += '<div class="sellist">' + [...by.entries()].map(([t, e]) => '<button data-t="' + t + '"' + (e.hurt ? ' class="hurt"' : '') + '>' + e.n + ' × ' + esc(L(e.def.name)) + '</button>').join('') + '</div>';
   }
+  h = '<button class="selX" title="' + L('Auswahl aufheben') + '">✕</button>' + h;   /* Fassung 25: Abwählen per Taste (auf dem Handy sonst umständlich) */
   if (card._h !== h) { card.innerHTML = h; card._h = h; }
   card.querySelectorAll('.sellist button').forEach(el => el.addEventListener('click', () => { const t = el.dataset.t; setSel(selShips().filter(u => u.type === t)); SND.play('click'); }));
   hudCmds(); hudBuild();

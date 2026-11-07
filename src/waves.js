@@ -93,7 +93,7 @@ function waveEmerge(g, q) {
   if (W.armor) u.armorPlus = W.armor;
   u.o = { t: 'amove', x: tgt.x + dcos(a) * 120, y: tgt.y + dsin(a) * 120 };
   W.ids.push(u.id);
-  ev(g, 'ready', { owner: tp.id, id: u.id, x: u.x, y: u.y, type: q.t });
+  ev(g, 'ready', { owner: tp.id, id: u.id, x: u.x, y: u.y, type: q.t, rift: 1, rx: q.x, ry: q.y });
 }
 function waveAdaptCount(g) {
   const A = g.wave.adapt;
