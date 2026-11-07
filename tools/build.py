@@ -23,7 +23,7 @@ def boot_html():
     h = h.replace('{{STARS1}}', stars(70, '0px', '#9fb6d6')).replace('{{STARS2}}', stars(45, '0.5px', '#cfe3ff')).replace('{{STARS3}}', stars(22, '1px', '#ffffff'))
     fac = ''
     for k, (f, name, fc, eg, ships, names) in enumerate(FACS):
-        fac += '<div style="--k:%d;--fc:%s;--eg:%s">' % (k, fc, eg)
+        fac += '<div class="fg" data-f="%s" style="--k:%d;--fc:%s;--eg:%s">' % (f, k, fc, eg)
         fac += '<div class="ship b2"><img src="%s" alt=""></div><div class="ship s1"><img src="%s" alt=""></div><div class="ship b1"><img src="%s" alt=""></div>' % (img(ships[1]), img(ships[2]), img(ships[0]))
         fac += '<div class="fl"><b>%s</b><small>%s</small></div></div>\n' % (name, names)
     h = h.replace('{{FACTIONS}}', fac).replace('{{IMG:icon}}', img('icon'))

@@ -2762,7 +2762,8 @@ const LANGS = {
     "Auswahl aufheben": "Annuler la sélection",
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Trois Lancer sont arrivés. Touchez « Sélection » en bas à droite et tracez un cadre autour des trois – sur PC, tracez simplement un cadre en maintenant le bouton gauche de la souris. Puis touchez le repère.",
-    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Touchez « Sélection » et tracez un cadre autour des Lancer avec le doigt (sur PC : cadre avec le bouton gauche), puis le repère."
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Touchez « Sélection » et tracez un cadre autour des Lancer avec le doigt (sur PC : cadre avec le bouton gauche), puis le repère.",
+    "Flotten werden vorbereitet …": "Préparation des flottes …"
   },
   es: {
     "Ziele": "Objetivos",
@@ -5523,7 +5524,8 @@ const LANGS = {
     "Auswahl aufheben": "Anular selección",
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Han llegado tres Lancer. Toca «Selección» abajo a la derecha y traza un marco alrededor de los tres; en PC basta con trazar un marco manteniendo pulsado el botón izquierdo del ratón. Luego toca la marca.",
-    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toca «Selección» y traza con el dedo un marco alrededor de los Lancer (en PC: marco con el botón izquierdo), luego la marca."
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toca «Selección» y traza con el dedo un marco alrededor de los Lancer (en PC: marco con el botón izquierdo), luego la marca.",
+    "Flotten werden vorbereitet …": "Preparando flotas …"
   },
   it: {
     "Ziele": "Obiettivi",
@@ -8284,7 +8286,8 @@ const LANGS = {
     "Auswahl aufheben": "Annulla selezione",
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Sono arrivati tre Lancer. Tocca «Seleziona» in basso a destra e traccia un riquadro attorno a tutti e tre – su PC basta trascinare un riquadro tenendo premuto il tasto sinistro del mouse. Poi tocca il segnalino.",
-    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tocca «Seleziona» e traccia col dito un riquadro attorno ai Lancer (su PC: riquadro col tasto sinistro), poi il segnalino."
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tocca «Seleziona» e traccia col dito un riquadro attorno ai Lancer (su PC: riquadro col tasto sinistro), poi il segnalino.",
+    "Flotten werden vorbereitet …": "Preparazione delle flotte …"
   },
   pt: {
     "Ziele": "Objetivos",
@@ -11045,7 +11048,8 @@ const LANGS = {
     "Auswahl aufheben": "Cancelar seleção",
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Chegaram três Lancer. Toque em «Selecionar» no canto inferior direito e desenhe um quadro em volta dos três – no PC basta arrastar um quadro com o botão esquerdo do mouse pressionado. Depois toque na marca.",
-    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toque em «Selecionar» e desenhe com o dedo um quadro em volta dos Lancer (no PC: quadro com o botão esquerdo), depois a marca."
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toque em «Selecionar» e desenhe com o dedo um quadro em volta dos Lancer (no PC: quadro com o botão esquerdo), depois a marca.",
+    "Flotten werden vorbereitet …": "Preparando frotas …"
   },
   pl: {
     "Ziele": "Cele",
@@ -13806,6 +13810,7 @@ const LANGS = {
     "Auswahl aufheben": "Anuluj wybór",
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Przybyły trzy Lancery. Dotknij »Zaznacz« w prawym dolnym rogu i zaznacz ramką wszystkie trzy – na PC po prostu przeciągnij ramkę z wciśniętym lewym przyciskiem myszy. Potem dotknij znacznika.",
-    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Dotknij »Zaznacz« i palcem zaznacz ramką Lancery (na PC: ramka lewym przyciskiem myszy), potem znacznik."
+    "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Dotknij »Zaznacz« i palcem zaznacz ramką Lancery (na PC: ramka lewym przyciskiem myszy), potem znacznik.",
+    "Flotten werden vorbereitet …": "Przygotowywanie flot …"
   },
 };

@@ -116,7 +116,11 @@ function launch(fn) {
       /* Fassung 24: Ladebildschirm – Modelle und Shader der Partie vorab vorbereiten, dann erst starten (nicht im Mehrspieler) */
       if (R.mode3d && typeof RA3D !== 'undefined' && RA3D.preload && UI.g && UI.kind !== 'mp' && !window.__RA_TEST) {
         wait = true; UI.loading = true;
-        RA3D.preload(loadBar).then(() => { UI.loading = false; _acc = 0; _last = 0; el.hidden = true; });
+        /* Fassung 25: im Stil des Startbilds – die Fraktionen der Partie fliegen vorbei */
+        let fly = false; try { fly = !!(window.__bootShow && window.__bootShow([...new Set(UI.g.players.filter(p => p.faction && !p.threat).map(p => p.faction))], L('Flotten werden vorbereitet …')) !== false); } catch (e) { fly = false; }
+        if (fly) el.hidden = true;
+        const prog = k => { loadBar(k); if (fly && window.__bootSet) window.__bootSet(k); };
+        RA3D.preload(prog).then(() => { UI.loading = false; _acc = 0; _last = 0; el.hidden = true; if (fly && window.__bootHide) window.__bootHide(); });
       }
     } finally { if (!wait) el.hidden = true; }
   }, 50);

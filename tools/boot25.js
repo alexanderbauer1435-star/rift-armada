@@ -16,11 +16,22 @@ const F = path.resolve(process.argv[2] || 'build/rift-armada.html'), OUT = proce
     await p.waitForTimeout(1600); await p.screenshot({ path: `${OUT}/boot25-${nm}-1.jpg`, type: 'jpeg', quality: 85 });
     await p.waitForTimeout(1500); await p.screenshot({ path: `${OUT}/boot25-${nm}-2.jpg`, type: 'jpeg', quality: 85 });
     const pct = await p.evaluate(() => { const e = document.getElementById('bootPct'); return e ? e.textContent : 'weg'; });
-    let gone = false; try { await p.waitForFunction(() => !document.getElementById('boot'), null, { timeout: 30000 }); gone = true; } catch (e) { /* unten */ }
+    let gone = false; try { await p.waitForFunction(() => { const B = document.getElementById('boot'); return !B || B.style.display === 'none'; }, null, { timeout: 30000 }); gone = true; } catch (e) { /* unten */ }
     const ms = Date.now() - t0;
     const menu = await p.evaluate(() => !!document.getElementById('mStart') && !document.getElementById('menu').hidden);
     const good = gone && menu && ms < 15000; ok = ok && good;
-    res.push(`${nm}: Balken ${pct}, weg nach ${(ms / 1000).toFixed(1)} s, Menü ${menu ? 'da' : 'fehlt'} ${good ? '✓' : '✗'}`);
+    /* Ladebildschirm vor einer Partie (3D) im selben Stil: nur die Fraktionen der Partie */
+    let fl = 'übersprungen';
+    if (nm === 'quer') {
+      await p.evaluate(() => { SET.gfx = '3d'; applySet(); MENU.map = 'haven'; MENU.slots = [{ f: 'brood', lvl: 1, team: 0 }].concat(Array.from({ length: 6 }, () => ({ f: 'off', lvl: 1, team: 0 }))); MENU.faction = 'nexus'; launch(startSkirmish); });
+      await p.waitForFunction(() => UI.loading === true || UI.loading === false, null, { timeout: 20000 }); await p.waitForTimeout(200);
+      const s1 = await p.evaluate(() => { const B = document.getElementById('boot'); if (!B || B.style.display === 'none') return null; window.__loadSeen = 1; return [...B.querySelectorAll('.fg')].filter(g => g.style.display !== 'none').map(g => g.dataset.f); });
+      await p.screenshot({ path: `${OUT}/boot25-gefecht.jpg`, type: 'jpeg', quality: 85 });
+      let hid = false; try { await p.waitForFunction(() => { const B = document.getElementById('boot'); return !B || B.style.display === 'none'; }, null, { timeout: 120000 }); hid = true; } catch (e) { /* unten */ }
+      const fine = s1 && s1.length === 1 && ['nexus', 'brood'].includes(s1[0]) && hid; ok = ok && fine;
+      fl = (s1 ? s1.join('+') : 'kein Vorbeiflug') + (hid ? ', danach weg' : ', bleibt hängen') + (fine ? ' ✓' : ' ✗');
+    }
+    res.push(`${nm}: Gefecht ${fl}; Balken ${pct}, weg nach ${(ms / 1000).toFixed(1)} s, Menü ${menu ? 'da' : 'fehlt'} ${good ? '✓' : '✗'}`);
     await p.close();
   }
   ok = ok && !errs.length;

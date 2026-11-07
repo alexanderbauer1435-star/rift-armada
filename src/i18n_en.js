@@ -2761,5 +2761,6 @@ const EN = {
   "Auswahl aufheben": "Clear selection",
   "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
   "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Three Lancers have arrived. Tap »Select« at the bottom right and drag a frame around all three – on PC simply drag a frame with the left mouse button held. Then tap the marker.",
-  "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tap »Select« and drag a frame around the Lancers with your finger (on PC: frame with the left mouse button), then the marker."
+  "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tap »Select« and drag a frame around the Lancers with your finger (on PC: frame with the left mouse button), then the marker.",
+  "Flotten werden vorbereitet …": "Preparing fleets …"
 };

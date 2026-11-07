@@ -58,12 +58,27 @@
   B.style.setProperty('--o', (Math.floor(Math.random() * 5) * 5) + 's');
   txt.textContent = TX[0];
   var shown = 0.04, tick = setInterval(function () { if (ready) return; var p = Math.min(0.7, 0.04 + (Date.now() - t0) / 3400 * 0.66); if (p > shown) { shown = p; pct.textContent = Math.round(p * 100) + ' %'; } }, 120);
-  function set(p) { bar.style.animation = 'none'; bar.style.transition = 'transform 0.5s ease-out'; bar.style.transform = 'scaleX(' + p + ')'; shown = Math.max(shown, p); pct.textContent = Math.round(shown * 100) + ' %'; }
-  function leave() { if (gone) return; gone = true; clearInterval(tick); B.classList.add('out'); setTimeout(function () { if (B.parentNode) B.parentNode.removeChild(B); }, 750); }
+  function set(p) { bar.style.animation = 'none'; bar.style.transition = 'transform 0.4s ease-out'; bar.style.transform = 'scaleX(' + Math.max(shown, p) + ')'; shown = Math.max(shown, p); pct.textContent = Math.round(shown * 100) + ' %'; }
+  /* nach dem Start bleibt das Bild verborgen im Dokument: der Ladebildschirm vor Gefechten nutzt es wieder (__bootShow) */
+  function leave() { if (gone) return; gone = true; clearInterval(tick); B.classList.add('out'); setTimeout(function () { if (gone) B.style.display = 'none'; }, 750); }
+  var groups = Array.prototype.slice.call(B.querySelectorAll('.fg')), cyc = null;
+  function replay(g) { var els = g.querySelectorAll('.ship,.fl'); for (var i = 0; i < els.length; i++) { els[i].style.animation = 'none'; void els[i].offsetWidth; els[i].style.animation = ''; } }
+  /* Ladebildschirm vor einer Partie: nur die Fraktionen der Partie, je 5 s eine, Balken von außen */
+  window.__bootShow = function (facs, text) {
+    if (gone === false && !ready) return false;
+    var list = groups.filter(function (g) { return facs.indexOf(g.getAttribute('data-f')) >= 0; }); if (!list.length) list = groups;
+    B.style.setProperty('--o', '0s'); groups.forEach(function (g) { g.style.display = 'none'; g.style.setProperty('--k', '0'); });
+    var i = 0; function next() { list.forEach(function (g) { g.style.display = 'none'; }); var g = list[i++ % list.length]; g.style.display = ''; replay(g); }
+    next(); clearInterval(cyc); cyc = setInterval(next, 5200);
+    gone = false; ready = true; B.style.transition = 'none'; B.classList.remove('out'); B.style.display = ''; void B.offsetWidth; B.style.transition = '';   /* sofort deckend – das Vorbereiten blockiert gleich danach den Hauptfaden */
+    txt.textContent = text || TX[1]; shown = 0; set(0.02);
+  };
+  window.__bootSet = function (p) { set(Math.max(0.02, Math.min(1, p))); };
+  window.__bootHide = function () { clearInterval(cyc); leave(); };
   window.__bootP = function (p) { if (!gone) { set(p); txt.textContent = TX[1]; } };
   window.__bootDone = function () { if (gone) return; ready = true; set(1); txt.textContent = TX[2]; setTimeout(leave, Math.max(250, MIN - (Date.now() - t0))); };
   /* nach dem Laden: Antippen überspringt die Wartezeit */
-  B.addEventListener('pointerdown', function () { if (ready) leave(); });
+  B.addEventListener('pointerdown', function () { if (ready && !cyc) leave(); });
   /* Notausgang, falls das Spiel nie »fertig« meldet */
   setTimeout(function () { if (!gone) leave(); }, 25000);
 })();
