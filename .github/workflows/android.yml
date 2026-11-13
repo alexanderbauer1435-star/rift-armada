@@ -7,11 +7,11 @@ name: Android-App bauen
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'app/**', 'tools/build.py', 'VERSION', '.github/workflows/android.yml']
+    paths: ['src/**', 'app/**', 'tools/build.py', 'VERSION', 'APPVERSION', '.github/workflows/android.yml']
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Versionsname, z. B. 1.0.0 (leer: 0.<Fassung>.<Laufnummer>)'
+        description: 'Versionsname, z. B. 1.0.26 (leer: <APPVERSION>.<Fassung>)'
         required: false
         default: ''
 
@@ -70,13 +70,13 @@ jobs:
           RA_KEY_PASSWORD: ${{ secrets.RA_KEY_PASSWORD }}
         run: |
           FASSUNG=$(cat "$GITHUB_WORKSPACE/VERSION")
-          export VERSION_NAME="${VERSION_NAME_IN:-0.$FASSUNG.$VERSION_CODE}"
+          export VERSION_NAME="${VERSION_NAME_IN:-$(cat "$GITHUB_WORKSPACE/APPVERSION").$FASSUNG}"
           chmod +x gradlew
           mkdir -p "$GITHUB_WORKSPACE/out"
           if [ -n "$RA_KEYSTORE" ]; then
             ./gradlew --no-daemon bundleRelease assembleRelease
-            cp app/build/outputs/bundle/release/*.aab "$GITHUB_WORKSPACE/out/Rift-Armada-$VERSION_NAME.aab"
-            cp app/build/outputs/apk/release/*.apk "$GITHUB_WORKSPACE/out/Rift-Armada-$VERSION_NAME.apk"
+            cp app/build/outputs/bundle/release/*.aab "$GITHUB_WORKSPACE/out/Rift-Armada-$VERSION_NAME-b$VERSION_CODE.aab"
+            cp app/build/outputs/apk/release/*.apk "$GITHUB_WORKSPACE/out/Rift-Armada-$VERSION_NAME-b$VERSION_CODE.apk"
           else
             ./gradlew --no-daemon assembleDebug
             cp app/build/outputs/apk/debug/*.apk "$GITHUB_WORKSPACE/out/Rift-Armada-$VERSION_NAME-test.apk"

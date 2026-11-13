@@ -2763,7 +2763,14 @@ const LANGS = {
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Trois Lancer sont arrivés. Touchez « Sélection » en bas à droite et tracez un cadre autour des trois – sur PC, tracez simplement un cadre en maintenant le bouton gauche de la souris. Puis touchez le repère.",
     "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Touchez « Sélection » et tracez un cadre autour des Lancer avec le doigt (sur PC : cadre avec le bouton gauche), puis le repère.",
-    "Flotten werden vorbereitet …": "Préparation des flottes …"
+    "Flotten werden vorbereitet …": "Préparation des flottes …",
+    "Fehlerprotokoll": "Journal des erreurs",
+    "Im Spiel ist ein Fehler aufgetreten. Ein kurzer Bericht hilft, ihn zu beheben.": "Le jeu a rencontré une erreur. Un bref rapport aide à la corriger.",
+    "Bericht ansehen": "Voir le rapport",
+    "1 Eintrag aus dem Fehlerprotokoll wird angehängt.": "1 entrée du journal des erreurs sera jointe.",
+    "{0} Einträge aus dem Fehlerprotokoll werden angehängt.": "{0} entrées du journal des erreurs seront jointes.",
+    "(ohne Beschreibung)": "(sans description)",
+    "Per E-Mail senden": "Envoyer par e-mail"
   },
   es: {
     "Ziele": "Objetivos",
@@ -5525,7 +5532,14 @@ const LANGS = {
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Han llegado tres Lancer. Toca «Selección» abajo a la derecha y traza un marco alrededor de los tres; en PC basta con trazar un marco manteniendo pulsado el botón izquierdo del ratón. Luego toca la marca.",
     "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toca «Selección» y traza con el dedo un marco alrededor de los Lancer (en PC: marco con el botón izquierdo), luego la marca.",
-    "Flotten werden vorbereitet …": "Preparando flotas …"
+    "Flotten werden vorbereitet …": "Preparando flotas …",
+    "Fehlerprotokoll": "Registro de errores",
+    "Im Spiel ist ein Fehler aufgetreten. Ein kurzer Bericht hilft, ihn zu beheben.": "El juego ha tenido un error. Un breve informe ayuda a corregirlo.",
+    "Bericht ansehen": "Ver informe",
+    "1 Eintrag aus dem Fehlerprotokoll wird angehängt.": "Se adjuntará 1 entrada del registro de errores.",
+    "{0} Einträge aus dem Fehlerprotokoll werden angehängt.": "Se adjuntarán {0} entradas del registro de errores.",
+    "(ohne Beschreibung)": "(sin descripción)",
+    "Per E-Mail senden": "Enviar por correo"
   },
   it: {
     "Ziele": "Obiettivi",
@@ -8287,7 +8301,14 @@ const LANGS = {
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Sono arrivati tre Lancer. Tocca «Seleziona» in basso a destra e traccia un riquadro attorno a tutti e tre – su PC basta trascinare un riquadro tenendo premuto il tasto sinistro del mouse. Poi tocca il segnalino.",
     "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tocca «Seleziona» e traccia col dito un riquadro attorno ai Lancer (su PC: riquadro col tasto sinistro), poi il segnalino.",
-    "Flotten werden vorbereitet …": "Preparazione delle flotte …"
+    "Flotten werden vorbereitet …": "Preparazione delle flotte …",
+    "Fehlerprotokoll": "Registro errori",
+    "Im Spiel ist ein Fehler aufgetreten. Ein kurzer Bericht hilft, ihn zu beheben.": "Il gioco ha riscontrato un errore. Un breve rapporto aiuta a correggerlo.",
+    "Bericht ansehen": "Vedi rapporto",
+    "1 Eintrag aus dem Fehlerprotokoll wird angehängt.": "Verrà allegata 1 voce del registro errori.",
+    "{0} Einträge aus dem Fehlerprotokoll werden angehängt.": "Verranno allegate {0} voci del registro errori.",
+    "(ohne Beschreibung)": "(senza descrizione)",
+    "Per E-Mail senden": "Invia per e-mail"
   },
   pt: {
     "Ziele": "Objetivos",
@@ -11049,7 +11070,14 @@ const LANGS = {
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Chegaram três Lancer. Toque em «Selecionar» no canto inferior direito e desenhe um quadro em volta dos três – no PC basta arrastar um quadro com o botão esquerdo do mouse pressionado. Depois toque na marca.",
     "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Toque em «Selecionar» e desenhe com o dedo um quadro em volta dos Lancer (no PC: quadro com o botão esquerdo), depois a marca.",
-    "Flotten werden vorbereitet …": "Preparando frotas …"
+    "Flotten werden vorbereitet …": "Preparando frotas …",
+    "Fehlerprotokoll": "Registro de erros",
+    "Im Spiel ist ein Fehler aufgetreten. Ein kurzer Bericht hilft, ihn zu beheben.": "O jogo encontrou um erro. Um relatório curto ajuda a corrigi-lo.",
+    "Bericht ansehen": "Ver relatório",
+    "1 Eintrag aus dem Fehlerprotokoll wird angehängt.": "1 entrada do registro de erros será anexada.",
+    "{0} Einträge aus dem Fehlerprotokoll werden angehängt.": "{0} entradas do registro de erros serão anexadas.",
+    "(ohne Beschreibung)": "(sem descrição)",
+    "Per E-Mail senden": "Enviar por e-mail"
   },
   pl: {
     "Ziele": "Cele",
@@ -13811,6 +13839,13 @@ const LANGS = {
     "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
     "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Przybyły trzy Lancery. Dotknij »Zaznacz« w prawym dolnym rogu i zaznacz ramką wszystkie trzy – na PC po prostu przeciągnij ramkę z wciśniętym lewym przyciskiem myszy. Potem dotknij znacznika.",
     "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Dotknij »Zaznacz« i palcem zaznacz ramką Lancery (na PC: ramka lewym przyciskiem myszy), potem znacznik.",
-    "Flotten werden vorbereitet …": "Przygotowywanie flot …"
+    "Flotten werden vorbereitet …": "Przygotowywanie flot …",
+    "Fehlerprotokoll": "Dziennik błędów",
+    "Im Spiel ist ein Fehler aufgetreten. Ein kurzer Bericht hilft, ihn zu beheben.": "W grze wystąpił błąd. Krótki raport pomoże go naprawić.",
+    "Bericht ansehen": "Zobacz raport",
+    "1 Eintrag aus dem Fehlerprotokoll wird angehängt.": "Zostanie dołączony 1 wpis z dziennika błędów.",
+    "{0} Einträge aus dem Fehlerprotokoll werden angehängt.": "Dołączone zostaną wpisy z dziennika błędów: {0}.",
+    "(ohne Beschreibung)": "(bez opisu)",
+    "Per E-Mail senden": "Wyślij e-mailem"
   },
 };

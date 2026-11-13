@@ -829,5 +829,13 @@
  "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
  "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Sono arrivati tre Lancer. Tocca «Seleziona» in basso a destra e traccia un riquadro attorno a tutti e tre – su PC basta trascinare un riquadro tenendo premuto il tasto sinistro del mouse. Poi tocca il segnalino.",
  "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tocca «Seleziona» e traccia col dito un riquadro attorno ai Lancer (su PC: riquadro col tasto sinistro), poi il segnalino.",
- "Flotten werden vorbereitet …": "Preparazione delle flotte …"
+ "Flotten werden vorbereitet …": "Preparazione delle flotte …",
+ "Fehlerprotokoll": "Registro errori",
+ "Im Spiel ist ein Fehler aufgetreten. Ein kurzer Bericht hilft, ihn zu beheben.": "Il gioco ha riscontrato un errore. Un breve rapporto aiuta a correggerlo.",
+ "Bericht ansehen": "Vedi rapporto",
+ "Später": "Più tardi",
+ "1 Eintrag aus dem Fehlerprotokoll wird angehängt.": "Verrà allegata 1 voce del registro errori.",
+ "{0} Einträge aus dem Fehlerprotokoll werden angehängt.": "Verranno allegate {0} voci del registro errori.",
+ "(ohne Beschreibung)": "(senza descrizione)",
+ "Per E-Mail senden": "Invia per e-mail"
 }

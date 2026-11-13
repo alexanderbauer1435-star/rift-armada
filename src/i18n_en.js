@@ -2129,7 +2129,7 @@ const EN = {
   "Getarnt: noch {0} s. Ein Angriff hebt die Tarnung auf.": "Cloaked: {0} s left. Attacking breaks the cloak.",
   "Rückzug zur Werft: kehrt nach der Reparatur zurück.": "Retreating to the shipyard: returns after repairs.",
   "Schwer beschädigt: zieht sich zur Werft zurück": "Heavily damaged: retreating to the shipyard",
-  "Rift Armada · Fassung %V%": "Rift Armada · Build %V%",
+  "Rift Armada · Fassung %V%": "Rift Armada · Version %V%",
   "Konter:": "Counters:",
   "Flanke und Heck:": "Flank and rear:",
   "Bergung:": "Salvage:",
@@ -2762,5 +2762,12 @@ const EN = {
   "<button class=\"selX\" title=\"": "<button class=\"selX\" title=\"",
   "Drei Lancer sind eingetroffen. Tippe unten rechts auf »Auswahl« und ziehe einen Rahmen um alle drei – am PC einfach mit gedrückter linker Maustaste einen Rahmen ziehen. Dann die Markierung antippen.": "Three Lancers have arrived. Tap »Select« at the bottom right and drag a frame around all three – on PC simply drag a frame with the left mouse button held. Then tap the marker.",
   "»Auswahl« antippen und mit dem Finger einen Rahmen um die Lancer ziehen (am PC: Rahmen mit der linken Maustaste), dann die Markierung.": "Tap »Select« and drag a frame around the Lancers with your finger (on PC: frame with the left mouse button), then the marker.",
-  "Flotten werden vorbereitet …": "Preparing fleets …"
+  "Flotten werden vorbereitet …": "Preparing fleets …",
+  "Fehlerprotokoll": "Error log",
+  "Im Spiel ist ein Fehler aufgetreten. Ein kurzer Bericht hilft, ihn zu beheben.": "The game ran into an error. A short report helps to fix it.",
+  "Bericht ansehen": "View report",
+  "1 Eintrag aus dem Fehlerprotokoll wird angehängt.": "1 entry from the error log will be attached.",
+  "{0} Einträge aus dem Fehlerprotokoll werden angehängt.": "{0} entries from the error log will be attached.",
+  "(ohne Beschreibung)": "(no description)",
+  "Per E-Mail senden": "Send by e-mail"
 };

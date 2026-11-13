@@ -47,6 +47,14 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 26 (Version 1.0.26, erste Fassung nach der Veröffentlichung): Versionsname wie im Play Store (APPVERSION + Fassung,
+  im Menü und in Berichten). Fehlerprotokoll (src/errlog.js, läuft vor dem Spiel): Laufzeitfehler bleiben nur auf dem Gerät
+  (ra.errors, ohne Pfade, gleiche gezählt); beim ersten Fehler bietet das Spiel einen Bericht an, das Rückmeldungsfenster hängt
+  das Protokoll an und schickt per E-Mail (»Per E-Mail senden«) – nichts geht von selbst hinaus. Handy-Durchgang
+  (tools/mobile26.js: fünf Formate, Tippflächen, Ränder, Texte): Tippflächen kleiner Tasten vergrößert (obere Leiste,
+  Abwählen, Typ-Tasten der Auswahl, Tasten unter der Minikarte, Untätig-Marken, Gruppen), Reichweiten-Taste ragte oben aus
+  dem Bild, Versionszeile lag im Querformat über den Menütasten. Alte Store-Bilder (Fassung 22) entfernt; gültig sind
+  store/graphics/shot25-* und feature25-*. Prüfung tools/err26.js.
 - Fassung 22 (Runde 20, große Erweiterung): Artillerie feuert auch auf Schiffe (Granaten ohne Vorhalt, Flugzeit, gestrichelter
   Einschlagkreis – wer fährt, weicht aus) und auf Befehl »Feuer auf Stelle« auf erkundetes Gebiet auch ohne Sicht.
   Schiffe: Begleiten (Ring um Schiff oder Station, verteidigt), Ränge mit Genauigkeit/Nachladen/Selbstreparatur, Veteranen

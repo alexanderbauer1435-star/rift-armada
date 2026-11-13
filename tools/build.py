@@ -33,9 +33,11 @@ def build(version):
     font = open(os.path.join(SRC, 'font.css'), encoding='utf-8').read()
     js = '\n'.join(open(os.path.join(SRC, f), encoding='utf-8').read() for f in ORDER)
     bid = '%d-%s' % (version, hashlib.sha1(js.encode('utf-8')).hexdigest()[:10])
-    out = shell.replace('/*FONT*/', font).replace('<!--SCRIPT-->', '<script>window.RA_OFFLINE = 1; window.RA_VERSION = %d; window.RA_BUILD = "%s";</script>\n<script>\ntry { window.__bootP && window.__bootP(0.78); } catch (e) {}\n%s\n</script>' % (version, bid, js))
+    appv = open(os.path.join(ROOT, 'APPVERSION'), encoding='utf-8').read().strip() + '.' + str(version)   # Versionsname wie im Play Store, z. B. 1.0.26
+    errlog = open(os.path.join(SRC, 'errlog.js'), encoding='utf-8').read()
+    out = shell.replace('/*FONT*/', font).replace('<!--SCRIPT-->', '<script>window.RA_OFFLINE = 1; window.RA_VERSION = %d; window.RA_BUILD = "%s"; window.RA_APPV = "%s";\n%s</script>\n<script>\ntry { window.__bootP && window.__bootP(0.78); } catch (e) {}\n%s\n</script>' % (version, bid, appv, errlog, js))
     out = out.replace('<body>', '<body>\n' + boot_html(), 1)   # Fassung 25: Startbild als erstes im Körper
-    out = out.replace('%V%', str(version))   # auch in den Übersetzungen (sonst stand dort »Version %V%«)
+    out = out.replace('%V%', appv)   # auch in den Übersetzungen (sonst stand dort »Version %V%«)
     name = 'Rift-Armada-%02d.html' % version
     path = os.path.join(ROOT, 'build', name)
     os.makedirs(os.path.dirname(path), exist_ok=True)

@@ -74,8 +74,8 @@ button { font: inherit; color: inherit; }
 #items { display: flex; flex-wrap: wrap; gap: 0.35em; max-height: 36vh; overflow-y: auto; touch-action: pan-y; align-content: flex-start; }
 #fpsBox { position: absolute; left: calc(0.5em + env(safe-area-inset-left)); top: calc(3.6em + env(safe-area-inset-top)); z-index: 29; padding: 0.15em 0.5em; border-radius: 0.4em; background: rgba(4, 8, 18, 0.72); color: #8fe8ff; font: 600 calc(var(--ui) * 0.8) 'Barlow Condensed', sans-serif; letter-spacing: 0.04em; pointer-events: none; white-space: nowrap; }
 #fpsBox.slow { color: #ffb347; } #fpsBox.bad { color: #ff6a5a; }
-#perfHint { position: absolute; left: 50%; top: calc(4.2em + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 30; padding: 0.7em 1em; max-width: min(28em, 92vw); font-size: var(--ui); display: flex; flex-direction: column; gap: 0.5em; text-align: center; }
-#perfHint .row { display: flex; gap: 0.5em; justify-content: center; flex-wrap: wrap; }
+#perfHint, #errHint { position: absolute; left: 50%; top: calc(4.2em + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 30; padding: 0.7em 1em; max-width: min(28em, 92vw); font-size: var(--ui); display: flex; flex-direction: column; gap: 0.5em; text-align: center; }
+#perfHint .row, #errHint .row { display: flex; gap: 0.5em; justify-content: center; flex-wrap: wrap; }
 .item .role { position: absolute; left: 0.3em; top: 0.15em; font-size: 0.85em; line-height: 1; color: var(--acc); opacity: 0.85; pointer-events: none; }
 .roleT { font-size: 0.7em; color: var(--acc); font-weight: 600; margin-left: 0.3em; }
 .item { position: relative; width: 6.6em; min-height: 3em; flex-direction: column; gap: 0.1em; padding: 0.3em 0.3em; text-transform: none; }
@@ -585,6 +585,21 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
 #pgStats { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); gap: 0.2em 0.6em; font-size: 0.85em; }
 #pgCols { display: flex; gap: 0.45em; flex-wrap: wrap; margin: 0.3em 0 0.6em; } .pgC { width: 2.3em; height: 2.3em; border-radius: 50%; border: 2px solid transparent; color: #04060b; font-weight: 700; cursor: pointer; } .pgC.on { border-color: #fff; box-shadow: 0 0 0 2px var(--acc); } .pgC:disabled { opacity: 0.3; cursor: default; } .pgC.fac { background: linear-gradient(135deg,#5fb8ff,#ff6a3d 50%,#b4ff3c); }
 #endProg { margin: 0.5em 0; }
+/* Fassung 26 (Handy-Durchgang): Tippflächen kleiner Bedienelemente auf mindestens etwa 40 px vergrößern, ohne das Bild zu ändern
+   (unsichtbarer Rand um die Taste). Obere Leiste: alle drei Tasten gleich hoch – die Reichweiten-Taste ragte oben aus dem Bild. */
+#top .key { min-height: 2em; }
+#top .key::before, .key.tb::before, .grp::before, #idle .idC::before, #selCard .selX::before, #selCard .sellist button::before { content: ''; position: absolute; }
+#top .key::before { left: -0.3em; right: -0.3em; top: -0.4em; bottom: -0.75em; }
+.key.tb::before { left: -0.15em; right: -0.15em; top: -0.6em; bottom: -0.6em; }
+#abils .key::before { content: ''; position: absolute; left: 0; right: 0; top: -0.35em; bottom: -0.35em; }
+@media (max-width: 600px) { #top .key { min-height: 1.8em; } }
+.grp::before { inset: -0.17em; border-radius: 50%; }
+#idle .idC { position: relative; } #idle .idC::before { left: 0; right: 0; top: -0.7em; bottom: -0.7em; }
+#selCard .selX::before { inset: -0.75em; border-radius: 50%; }
+#selCard .sellist button { position: relative; } #selCard .sellist button::before { left: 0; right: 0; top: -0.3em; bottom: -0.3em; }
+@media (pointer: coarse) { #hpBar .tb { min-width: max(2.1em, 38px); min-height: max(2em, 36px); } #selCard .sellist button { min-height: 2.5em; } #selCard .sellist { gap: 0.45em; } #selCard .selX { width: 2.3em; height: 2.3em; } }
+/* Versionszeile: im Querformat links unten, damit sie nicht über den Menütasten liegt */
+@media (orientation: landscape) { #vers { left: 1.2em; right: auto; text-align: left; } }
 </style>
 </head>
 <body>
@@ -886,7 +901,8 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     <div class="seg" id="fbKind" data-nol></div>
     <textarea id="fbText" rows="5" maxlength="2000" placeholder="z. B. Turm schießt nicht auf getarnte Schiffe"></textarea>
     <p class="fine" id="fbCtx"></p>
-    <div class="row"><button class="key arm" id="fbShareB">Teilen</button><button class="key" id="fbCopyB">Kopieren</button><button class="key" id="fbSaveB">Nur speichern</button><button class="key" id="fbClose">Schließen</button></div>
+    <p class="fine" id="fbErr" hidden></p>
+    <div class="row"><button class="key arm" id="fbMailB">Per E-Mail senden</button><button class="key" id="fbShareB">Teilen</button><button class="key" id="fbCopyB">Kopieren</button><button class="key" id="fbSaveB">Nur speichern</button><button class="key" id="fbClose">Schließen</button></div>
     <div class="row"><span class="fine" id="fbCount"></span><button class="key" id="fbAll">Alle exportieren</button><button class="key warn" id="fbClear">Liste leeren</button></div>
   </div></div>
   <div class="ovl" id="loadWin" hidden><div class="win">

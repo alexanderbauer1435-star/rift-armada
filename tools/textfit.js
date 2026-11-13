@@ -16,7 +16,7 @@ const LANGS = (process.argv[3] || 'de,en,fr,es,it,pt,pl').split(',');
       const bad = [];
       const vis = el => { const r = el.getBoundingClientRect(); if (r.width < 2 || r.height < 2) return false; for (let e = el; e; e = e.parentElement) { const s = getComputedStyle(e); if (s.display === 'none' || s.visibility === 'hidden' || e.hidden) return false; } return true; };
       document.querySelectorAll('button, .lbl, .chip, h2, h3, .tab, label, .seg button, .cmd, .key').forEach(el => {
-        if (!vis(el) || !el.textContent.trim()) return;
+        if (!vis(el) || el.textContent.trim().length < 3) return;   /* einzelne Symbole: unsichtbarer Tipprand zählt nicht als abgeschnitten */
         const s = getComputedStyle(el);
         const over = el.scrollWidth > el.clientWidth + 3 && s.overflowX !== 'auto' && s.overflowX !== 'scroll';
         const r = el.getBoundingClientRect(), vw = innerWidth;
