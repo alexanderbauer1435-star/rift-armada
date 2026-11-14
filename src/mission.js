@@ -45,7 +45,7 @@ const CAMPAIGN = [
   { id: 'a3', name: 'Akt 3: Awakening', f: 'legion', ms: ['a3m1', 'a3m2'] },
   { id: 'a4', name: 'Akt 4: One Voice', f: 'nexus', ms: ['a4m1', 'a4m2'] },
   { id: 'a5', name: 'Akt 5: Quarantine', f: '', ms: ['a5m1'] },
-  { id: 'b', name: 'Bonus: The Hunger', f: 'brood', ms: ['b1'] }
+  { id: 'b', name: 'Bonus: The Hunger', f: 'brood', ms: ['bx1', 'bx2', 'b1'] }   /* Fassung 27: zwei Missionen vor »Der Hunger« */
 ];
 const CAMP_ORDER = CAMPAIGN.filter(c => !c.free).reduce((a, c) => a.concat(c.ms), []);
 

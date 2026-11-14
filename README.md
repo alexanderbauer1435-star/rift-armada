@@ -47,6 +47,17 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 27 (Version 1.0.27, Inhalt): EINSÄTZE (src/sorties.js) – sechs kurze Gefechte ohne Basisbau im Missionsgerüst:
+  Blockadebrecher (Allianz), Letzte Bastion (Mars), Kopfjagd (Legion), Überfall (Nexus), Fressrausch (Brood), Belagerung
+  (Allianz). Eigene Menüseite (Taste »Einsätze«), immer auf Normal, Wertung in Sternen: Sieg + zwei Nebenziele (CAMP.st).
+  Prüfungen tests/sorties.js (ohne Befehle keine drei Sterne, mit einfacher Steuerung gewinnbar, gleicher Verlauf) und
+  tools/sort27.js. BONUSAKT der Brood auf drei Missionen erweitert: »Der erste Riss« (bx1, Durchbruch am Tor, Nest
+  anlegen, Entsatzflotte) und »Die Häutung« (bx2, Kokon schützen, dann die Basis der Republik) vor »Der Hunger« (b1).
+  KLANG (audio.js): Raumhall für Geräusche (Faltungshall, drei Sendewege, SND_REV), Explosionen in Schichten (Knack,
+  Druckstoß, Rauschen, Trümmerprasseln, zweiter Stoß bei Großem), Anschlag bei Kanone und Railgun; Messung ohne
+  Lautsprecher mit tools/snd27.js (Pegel, Übersteuerung, Hörproben als WAV). Behoben: Artillerie fuhr nach dem Abschuss
+  einer Station an deren Platz (combat.js); ohne Basis beginnt die Kamera beim eigenen Verband (main.js).
+  Modellvorschläge (eigene Modelle statt abgeleiteter Rümpfe) liegen bis zur Freigabe auf dem Zweig modelle-vorschlag.
 - Fassung 26 (Version 1.0.26, erste Fassung nach der Veröffentlichung): Versionsname wie im Play Store (APPVERSION + Fassung,
   im Menü und in Berichten). Fehlerprotokoll (src/errlog.js, läuft vor dem Spiel): Laufzeitfehler bleiben nur auf dem Gerät
   (ra.errors, ohne Pfade, gleiche gezählt); beim ersten Fehler bietet das Spiel einen Bericht an, das Rückmeldungsfenster hängt

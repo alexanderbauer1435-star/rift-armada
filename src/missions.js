@@ -960,6 +960,175 @@ MISSIONS.a5m1 = {
   }
 };
 
+/* ================================================================== BONUS: THE HUNGER (Fassung 27: drei Missionen) =====
+   Was, wenn das Siegel nicht gehalten hätte? Die Brood als spielbare Seite: Durchbruch am Tor (bx1), das Schlüpfen der
+   Matriarch (bx2), dann der Kessel selbst (b1, Der Hunger). Die Stimme spricht in Klammern – sie denkt, sie redet nicht. */
+const BROOD_CORE = ['seeder', 'grazer', 'larva', 'swarm', 'spitter', 'ravager', 'leech', 'sporer', 'acidmaw'];
+const BROOD_BLDG = ['base', 'yard', 'refinery', 'reactor', 'lab', 'turret', 'relay', 'spore'];
+MISSIONS.bx1 = {
+  act: 'b', name: 'Der erste Riss', f: 'brood', who: 'voice', seed: 673, supply: false,
+  brief: ['Was, wenn das Siegel nicht gehalten hätte? Das Tor von Calder flackert, und diesmal bist du es, der hindurchkommt.',
+    'Auf der anderen Seite steht eine Wache der Alliance. Dahinter liegt eine Senke voller Eis: ein Platz für das erste Nest.'],
+  hints: ['Das Tor spuckt alle vierzig Sekunden Verstärkung aus. Warte auf den Schwarm, bevor du die Geschütze angehst.', 'Die Matriarch ist stark, aber langsam. Lass die Schwärmer vorausfliegen.', 'Aus der Brutgrube schlüpfen Larven und Schwärmer, solange Biomasse da ist.'],
+  goals: [{ id: 'watch', t: 'Vernichte die Torwache', n: 4 }, { id: 'nest', t: 'Bring den Seeder zur Senke', later: 1 }, { id: 'hold', t: 'Vernichte die Entsatzflotte', later: 1 },
+    { id: 'mat', t: 'Die Matriarch überlebt', side: 1, keep: 1, later: 1 }, { id: 'fast', t: 'Lege das Nest in unter sieben Minuten an', side: 1 }],
+  map: { w: 3600, h: 2400, starts: [{ x: 600, y: 1200, ang: 0 }, { x: 3300, y: 1200, ang: Math.PI }],
+    build(m, rng) {
+      gatePair(m, 600, 1200, 3350, 300, 'flicker');
+      iceMoon(m, 1750, 1850, rng, true); oreCluster(m, 1500, 600, rng, 3);
+      field(m, 2300, 1100, 200, rng, 0.8); field(m, 2700, 1900, 170, rng, 0.7); field(m, 1250, 380, 150, rng, 0.7);
+      misScatter(m, rng, 28);
+    } },
+  sides: [{ f: 'brood', base: false }, { f: 'alliance', name: 'Torwache Calder', base: false }],
+  lock: { ships: ['larva', 'swarm', 'spitter', 'ravager', 'grazer'], bldgs: [], noDoc: true },
+  outro: 'Das Nest atmet. Im Eis der Senke wächst die erste Brutgrube, und das Tor hinter dir flackert nicht mehr – es steht offen.',
+  setup(g, M) {
+    const gt = g.gates[0];
+    misTag(g, 'own', misBreach(g, g.human, ['ravager', 'ravager', 'spitter', 'spitter', 'swarm', 'swarm', 'swarm'], gt, 0));
+    const w = [misBldg(g, 1, 'turret', gt.x + 520, gt.y - 210, lv(g, 1, 2, 2)), misBldg(g, 1, 'turret', gt.x + 520, gt.y + 210, lv(g, 1, 2, 2)), misBldg(g, 1, 'turret', gt.x + 760, gt.y, 1), misBldg(g, 1, 'shield', gt.x + 640, gt.y + 20, lv(g, 1, 1, 2))];
+    for (const b of w) b.label = 'Torwache';
+    misTag(g, 'ward', w);
+    misTag(g, 'wship', misSpawn(g, 1, lv(g, ['lancer', 'wren', 'wren'], ['lancer', 'lancer', 'wren', 'wren'], ['bulwark', 'lancer', 'wren', 'wren']), gt.x + 620, gt.y - 30, Math.PI, { hold: true }));
+    g.players[g.human].ice = 0;
+    misSet(g, 'watch', 1, 0, 4); misSet(g, 'fast', 1);
+    M.t.next = 40; M.f.phase = 1;
+    misSay(g, '(Licht. Kälte. Fremdes Metall.)', 'voice', 1);
+    misSay(g, 'Torwache an Haven: Das Tor ist offen! Wiederhole: Das Tor ist – da kommt etwas durch!', 'foe', 5);
+  },
+  step(g, M) {
+    const gt = g.gates[0], h = g.human, P = g.players[h];
+    if (misOn(g, 'fast') && g.time > 420) misSet(g, 'fast', 3);
+    /* Verstärkung aus dem Tor, solange das Nest nicht steht */
+    /* (steht kein Kampfschiff mehr, kommt sie sofort – das Tor ist offen, der Einsatz endet nicht am ersten Rückschlag) */
+    const none = !g.ships.some(u => !u.dead && !u.derelict && u.owner === h && u.def.wpn.length);
+    if (M.f.phase < 3 && (g.time >= M.t.next || none)) { M.t.next = g.time + 40; misTag(g, 'own', misBreach(g, h, broodPack(g, lv(g, 520, 430, 390)), gt, 0)); if (!M.f.more) { M.f.more = 1; misSay(g, '(Mehr. Es kommen mehr.)', 'voice'); } }
+    if (M.f.phase === 1) {
+      const left = misCount(g, M.tag.ward);
+      misGoal(g, 'watch').v = 4 - left;
+      if (!left) {
+        M.f.phase = 2; misSet(g, 'watch', 2); misSet(g, 'nest', 1); misSet(g, 'mat', 1);
+        const m = misBreach(g, h, ['matriarch', 'seeder'], gt, 0);
+        M.f.mat = m[0].id; M.f.seed = m[1].id; m[1].auto = false;
+        misMark(g, 'sink', 1750, 1550, 170, 'Senke');
+        misCam(g, gt.x, gt.y, 0.9, 2);
+        misSay(g, '(Sie ist da. Die Mutter ist da.)', 'voice');
+        misSay(g, '(Eis. Dort unten. Ein Platz zum Wachsen.)', 'voice', 5);
+      }
+    }
+    if (misOn(g, 'mat')) { const m = g.byId.get(M.f.mat); if (!m || m.dead) misSet(g, 'mat', 3); }
+    if (M.f.phase === 2) {
+      let sd = g.byId.get(M.f.seed);
+      if (!sd || sd.dead) { if (!M.t.seed) M.t.seed = g.time + 15; if (g.time >= M.t.seed) { M.t.seed = 0; sd = misBreach(g, h, ['seeder'], gt, 0)[0]; sd.auto = false; M.f.seed = sd.id; misSay(g, '(Ein neuer Sämann.)', 'voice'); } }
+      else if (hyp(sd.x - 1750, sd.y - 1550) < 190) {
+        M.f.phase = 3; misUnmark(g, 'sink'); misSet(g, 'nest', 2); if (misOn(g, 'fast')) misSet(g, 'fast', 2);
+        ev(g, 'breach', { x: 1750, y: 1550, r: 150 }); removeShip(g, sd);
+        const b = misBldg(g, h, 'base', 1750, 1550), y = misBldg(g, h, 'yard', 1520, 1420); M.f.base = b.id; void y;
+        misBldg(g, h, 'reactor', 1560, 1700); misBldg(g, h, 'spore', 1930, 1420);
+        P.ice = lv(g, 2400, 1800, 1400); P.lock.bldgs = null;
+        recalcPower(g, h); recalcCp(g, h);
+        M.t.relief = g.time + lv(g, 55, 45, 38); M.f.wave = 0; misSet(g, 'hold', 1, 0, 0);
+        misCam(g, 1750, 1550, 0.9, 2);
+        misSay(g, '(Wurzeln. Wärme. Das Nest atmet.)', 'voice');
+        misSay(g, 'Haven an alle Schiffe im Sektor: Etwas baut sich an der Senke ein. Brennt es aus, bevor es wächst!', 'foe', 5);
+      }
+    }
+    if (M.f.phase === 3) {
+      const b = g.byId.get(M.f.base);
+      if (!b || b.dead) { misLose(g, 'Das Nest ist zerstört'); return; }
+      if (M.f.wave < 3 && g.time >= M.t.relief) {
+        const k = ++M.f.wave; M.t.relief = g.time + lv(g, 80, 70, 60);
+        const list = [['lancer', 'lancer', 'wren', 'wren'], ['bulwark', 'lancer', 'lancer', 'wren'], ['reckoning', 'bulwark', 'lancer', 'lancer', 'aegis']][k - 1].concat(lv(g, [], ['lancer'], ['lancer', 'bulwark']));
+        const pack = misTag(g, 'relief', misSpawn(g, 1, list, 3350, 900 + k * 200, Math.PI));
+        sortieCharge(g, pack, 1750, 1550);
+        misGoal(g, 'hold').n += pack.length;
+        if (k === 1) misSay(g, '(Metall. Von Osten. Es will uns verbrennen.)', 'voice');
+        if (k === 3) misSay(g, 'Hier ist die Reckoning. Wir beenden das jetzt.', 'foe');
+      }
+      const q = misGoal(g, 'hold'); q.v = q.n - misCount(g, M.tag.relief);
+      if (g.tick % 60 === 5) misHunt(g, M.tag.relief, { x: 1750, y: 1550 });
+      if (M.f.wave >= 3 && !misCount(g, M.tag.relief)) misWin(g);
+    }
+  },
+  auto(g, M) {
+    const own = g.ships.filter(u => !u.dead && u.owner === g.human && u.def.wpn.length && (u.o.t === 'idle' || u.o.t === 'hold'));
+    const sd = g.byId.get(M.f.seed);
+    if (M.f.phase === 2 && sd && !sd.dead && sd.o.t !== 'move') execCmd(g, { t: 'move', p: g.human, u: [sd.id], x: 1750, y: 1550 });
+    if (!own.length) return;
+    if (M.f.phase === 1) { const t = misLive(g, M.tag.ward)[0]; if (t && own.length >= 9) execCmd(g, { t: 'attack', p: g.human, u: own.map(u => u.id), e: t.id }); }
+    else execCmd(g, { t: 'move', p: g.human, u: own.map(u => u.id), x: 1900, y: 1500, am: 1 });
+  }
+};
+MISSIONS.bx2 = {
+  act: 'b', name: 'Die Häutung', f: 'brood', who: 'voice', seed: 677,
+  brief: ['Das Nest ist gewachsen, und in seinem Kokon häutet sich die Matriarch zur Schlachtform. Sie braucht Zeit. Die Republik hat das Nest gefunden und wird ihr keine lassen.',
+    'Schütze den Kokon, bis sie schlüpft. Danach gehört die Flotte der Republik dir.'],
+  hints: ['Säurekrater und ein Sporennest am Kokon halten die schnellen Angreifer auf.', 'Der Vorposten in der Kartenmitte lenkt die Überfälle. Fällt er, kommen sie seltener.', 'Nach dem Schlüpfen kann die Brutgrube auch Leviathane züchten.'],
+  goals: [{ id: 'coc', t: 'Schütze den Kokon, bis die Matriarch schlüpft', time: 1, n: 420 }, { id: 'eat', t: 'Verschlinge die Kommandobasis der Republik', later: 1 },
+    { id: 'hull', t: 'Der Kokon behält mehr als die halbe Hülle', side: 1, keep: 1 }, { id: 'post', t: 'Zerstöre den Vorposten der Republik', side: 1, n: 3 }],
+  map: { w: 4000, h: 2800, starts: [{ x: 650, y: 2150, ang: -0.6 }, { x: 3350, y: 650, ang: 2.5 }],
+    build(m, rng) {
+      for (const s of m.starts) misRes(m, rng, s, s.ang);
+      iceMoon(m, 1500, 900, rng); iceMoon(m, 2600, 2000, rng); oreCluster(m, 1250, 1600, rng, 3); oreCluster(m, 2750, 1150, rng, 3);
+      field(m, 2000, 700, 190, rng, 0.8); field(m, 2050, 2150, 190, rng, 0.8);
+      misScatter(m, rng, 34);
+    } },
+  sides: [{ f: 'brood' }, { f: 'mars', name: 'Dritte Flotte der Republik', ai: [1, 2, 2] }],
+  lock: { ships: BROOD_CORE, bldgs: BROOD_BLDG, noDoc: true },
+  outro: 'Die Dritte Flotte ist Biomasse. Die Matriarch wendet sich dem Kessel zu: drei Mächte, drei Kommandobasen, ein Hunger.',
+  setup(g, M) {
+    const h = g.players[g.human], T = lv(g, 360, 420, 480);
+    h.ice = lv(g, 3600, 2800, 2200);
+    misBldg(g, g.human, 'yard', 900, 2350, 2); misBldg(g, g.human, 'turret', 1150, 1950, lv(g, 2, 2, 1));
+    const c = misBldg(g, g.human, 'spore', 950, 1950, 3); c.label = 'Kokon'; M.f.coc = c.id;
+    misTag(g, 'own', misSpawn(g, g.human, lv(g, ['ravager', 'ravager', 'spitter', 'spitter', 'spitter', 'swarm', 'swarm', 'swarm'], ['ravager', 'ravager', 'spitter', 'spitter', 'swarm', 'swarm', 'swarm'], ['ravager', 'spitter', 'spitter', 'swarm', 'swarm']), 1100, 2100, -0.6));
+    misFortify(g, 1, lv(g, -2, 0, 1));
+    const p = [misBldg(g, 1, 'turret', 2050, 1320, lv(g, 1, 2, 2)), misBldg(g, 1, 'turret', 1900, 1520, lv(g, 1, 1, 2)), misBldg(g, 1, 'reactor', 2120, 1500)];
+    for (const b of p) b.label = 'Vorposten';
+    misTag(g, 'post', p);
+    misSet(g, 'coc', 1, 0, T); misSet(g, 'hull', 1); misSet(g, 'post', 1, 0, 3);
+    M.t.raid = lv(g, 80, 65, 55); M.f.raid = 0; M.f.T = T;
+    misMark(g, 'coc', 950, 1950, 120, 'Kokon'); misMark(g, 'post', 2020, 1440, 200, 'Vorposten');
+    misSay(g, '(Sie schläft. Sie wächst. Nichts darf sie wecken.)', 'voice', 1);
+    misSay(g, 'Dritte Flotte an alle Staffeln: Ziel ist der Kokon. Was da drin heranwächst, darf nicht schlüpfen.', 'foe', 7);
+  },
+  step(g, M) {
+    const c = g.byId.get(M.f.coc), h = g.human;
+    const left = misCount(g, M.tag.post);
+    misGoal(g, 'post').v = 3 - left;
+    if (!left && misOn(g, 'post')) { misSet(g, 'post', 2); misUnmark(g, 'post'); misSay(g, '(Der Dorn ist gezogen. Sie kommen langsamer.)', 'voice'); }
+    if (misOn(g, 'coc')) {
+      if (!c || c.dead) { misLose(g, 'Der Kokon ist zerstört'); return; }
+      misGoal(g, 'coc').v = Math.min(M.f.T, Math.floor(g.time));
+      if (misOn(g, 'hull') && c.hull < c.hullMax * 0.5) misSet(g, 'hull', 3);
+      /* Überfälle auf den Kokon: mit Vorposten häufiger */
+      if (g.time >= M.t.raid && g.time < M.f.T - 20) {
+        const k = ++M.f.raid; M.t.raid = g.time + (left ? lv(g, 80, 68, 58) : lv(g, 125, 110, 95));
+        const list = (k % 2 ? ['needle', 'needle', 'needle'] : ['hedgehog', 'needle', 'needle']).concat(k >= 3 ? ['spear'] : [], k >= 5 ? ['hedgehog', 'longshot'] : [], lv(g, [], [], ['needle']));
+        const from = left ? [2150, 1400] : [3100, 900], pack = misTag(g, 'raid', misSpawn(g, 1, list, from[0], from[1], 2.5));
+        sortieCharge(g, pack, c.x, c.y);
+        if (k === 1) misSay(g, '(Schnelle. Kleine. Sie wollen zur Mutter.)', 'voice');
+      }
+      if (g.tick % 60 === 5) misHunt(g, M.tag.raid, { x: c.x, y: c.y });
+      if (g.time >= M.f.T) {
+        misSet(g, 'coc', 2); if (misOn(g, 'hull')) misSet(g, 'hull', 2); misSet(g, 'eat', 1); misUnmark(g, 'coc');
+        ev(g, 'breach', { x: c.x, y: c.y, r: 160 }); c.label = 'Leere Hülle';
+        const m = misTag(g, 'own', misSpawn(g, h, lv(g, ['matriarch', 'leviathan', 'leviathan'], ['matriarch', 'leviathan'], ['matriarch']), c.x + 120, c.y - 60, -0.6));
+        M.f.mat = m[0].id;
+        const P = g.players[h]; P.lock.ships = BROOD_CORE.concat(['leviathan']);
+        const fb = g.bldgs.find(b => !b.dead && b.owner === 1 && b.role === 'base'); if (fb) misMark(g, 'foe', fb.x, fb.y, 220, 'Kommandobasis');
+        misCam(g, c.x, c.y, 0.9, 2.5);
+        misSay(g, '(Sie ist wach.)', 'voice');
+        misSay(g, 'Alle Staffeln zurück zur Basis! Es ist geschlüpft, ich wiederhole, es ist –', 'foe', 5);
+      }
+    } else if (misOn(g, 'eat')) {
+      if (!g.bldgs.some(b => !b.dead && b.owner === 1 && b.role === 'base')) { misUnmark(g, 'foe'); misWin(g); }
+    }
+  },
+  auto(g, M) {
+    const c = g.byId.get(M.f.coc), fb = g.bldgs.find(b => !b.dead && b.owner === 1 && b.role === 'base');
+    misAutoArmy(g, M, misOn(g, 'eat') && fb ? fb : null, 26, null, c && !c.dead ? { x: c.x + 120, y: c.y - 80 } : null);
+  }
+};
 /* ================================================================== BONUS: THE HUNGER (The Brood) ================ */
 MISSIONS.b1 = {
   act: 'b', name: 'Der Hunger', f: 'brood', who: 'voice', seed: 701,
