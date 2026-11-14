@@ -869,7 +869,7 @@ export { X, Geo, Bag, merge, place, T, addColor, sphG, coneG, fangG, domeG, prof
 register('boomer', M => {
   const g = new THREE.Group(), x = X(M), B = new Bag();
   const P = prof([[-20, 0, 0, 0.6], [-19.3, 2.2, 1.6, 0.6], [-15, 6.6, 4.2, 0.4], [-8, 9.4, 5.6, 0.2], [0, 9.8, 5.8, 0], [7, 8.4, 5.0, 0], [12, 6.2, 3.8, 0.1], [16, 4.6, 3.0, 0.2], [19, 3.2, 2.3, 0.2], [20.6, 1.4, 1.1, 0.1]], 0.7);
-  fleshB(B, M, P, { segs: [-16, -12, -8, -4, 0, 4, 8, 12, 15.5], groove: 0.1, gw: 0.6, nv: 56, nu: 26, T: 11 });
+  fleshB(B, M, P, { segs: [-16, -12, -8, -4, 0, 4, 8, 12, 15.5], groove: 0.1, gw: 0.6, nv: 40, nu: 18, T: 11 });
   const L = armor(B, M, P, -16, 9, 5, { c: 1.5, span: 0.6, th: 0.5, lift: 0.45, ridge: 0.2, point: 0.9, T: 11, nu: 10 });
   const R = armor(B, M, P, -16, 9, 5, { c: -1.5, span: 0.6, th: 0.5, lift: 0.45, ridge: 0.2, point: 0.9, T: 11, nu: 10 });
   const H = cap(B, M, P, 10.5, 19.8, { span: 1.35, th: 0.65, lift: 0.38, ridge: 0.5, point: 1.3, T: 11 });
@@ -888,9 +888,84 @@ register('boomer', M => {
   sacAt(g, x.sac, V(0, gy, gz), 1, [grx, gry, grz], 0.05, 1.4, 22);
   for (const s of [-1, 1]) for (const [z, r] of [[-3, 1.9], [1.5, 1.6], [5.5, 1.3]]) sacAt(g, x.sac, V(s * (8.6 - Math.abs(z) * 0.12), 2.4, z), r, [1, 1.15, 1.3], 0.09, 2 + s * 0.3 + z * 0.05, 12);
   /* Schlot */
-  const w = launcher(M, 21, 2.3, 5); w.position.set(0, 5.6, -3.5); w.rotation.x = -0.7; g.add(w);
+  const w = launcher(M, 21, 2.3, 3); w.position.set(0, 5.6, -3.5); w.rotation.x = -0.7; g.add(w);
   pair(g, mandible(M, V(2.3, 0.2, 18.6), [[2.3, 0.2, 18.6], [4.4, 0, 20.6], [4.2, -0.2, 23.2], [2.1, -0.3, 24.4]], 0.72, { teeth: 3, amp: 0.1, speed: 1.8, seg: 10, rad: 6 }));
   [-1, 0, 1].forEach(s => g.add(tentacle(M, V(s * 1.5, 0.6 + (s ? 0 : 0.5), -19), [[s * 1.5, 0.6 + (s ? 0 : 0.5), -19], [s * 2.8, 0.6, -21.4], [s * 3.3, 0.1, -23.8]], 0.62, { phase: s * 1.3, amp: 0.25, speed: 1.3, seg: 10, rad: 6 })));
   for (const s of [-1, 1]) sacAt(g, x.sacPink, V(s * 2.4, -0.3, -18.2), 1.2, [1, 0.85, 1.25], 0.12, 2.4 + s * 0.3, 12);
+  return g;
+});
+
+/* Eierleger CLUTCH – Fassung 27 eigenes Modell (vorher vergrößerter Spitter mit Eiern an Schienen, support.js): kleiner
+   Kopf an schmalem Hals, dahinter ein praller Hinterleib, auf dem unter Rippenbögen das Gelege liegt; am Heck die
+   Legeröhre, dahinter treiben frisch gelegte Eier. Drei Beinpaare. Kein Metall.
+   Silhouette im Spiel: schmal vorn, dick und gepunktet hinten. */
+register('clutch', M => {
+  const g = new THREE.Group(), x = X(M), B = new Bag();
+  const P = prof([[-19, 0, 0, 0.4], [-18.3, 2.6, 2.2, 0.4], [-15, 6.4, 5, 0.3], [-10, 8.2, 6, 0.2], [-4, 7.6, 5.4, 0.1], [1, 5, 3.8, 0.2], [5, 3, 2.6, 0.6], [9, 2.4, 2.2, 1], [13, 2.8, 2.4, 1.1], [16.5, 2.4, 2, 0.9], [18.6, 1.2, 1, 0.7]], 0.75);
+  fleshB(B, M, P, { segs: [-16, -13, -10, -7, -4, -1, 2, 5, 8, 11, 14], groove: 0.1, gw: 0.5, nv: 56, nu: 22, T: 10 });
+  const N = armor(B, M, P, 1.5, 12.5, 4, { span: 1.15, th: 0.3, lift: 0.3, ridge: 0.25, point: 0.7, T: 10, nu: 12 });
+  const H = cap(B, M, P, 12, 18.4, { span: 1.2, th: 0.4, lift: 0.25, ridge: 0.4, point: 1.1, T: 10 });
+  for (const pin of N) spike(B, M, pin(0, 0.25, -0.05), V(0, 1, -0.8), 1.2, 0.24, false);
+  spike(B, M, H(0, 0.35, -0.1), V(0, 1, -0.5), 1.8, 0.32, false);
+  eyeCluster(B, M, P, 16, 1.3, 4, 0.32, 31, 1);
+  for (const z of [-15.5, -12, -8.5, -5, -1.5]) { const k = Math.sqrt(Math.max(0.08, 1 - ((z + 8.5) / 9.5) ** 2)); horn(B, M, arc(0, 2.6, z, 7.4 * k + 0.6, 6.6 * k + 0.6, 1.5, 12), 0.4, 0.5, { sym: false, c0: 0.7, c1: 1.15, rad: 6 }); }
+  for (const z of [3.5, 7.5, 11.5]) horn(B, M, [[2.0, 0.4, z], [5.4, 1.8, z + 0.5], [7.6, -1.2, z + 1.4], [8.2, -4.2, z + 2]], 0.4, 0.1, {});
+  B.flush(g);
+  /* Gelege */
+  for (let i = 0; i < 4; i++) for (let j = -1; j <= 1; j++) sacAt(g, (i + j) % 2 ? x.sac : x.sacPink, V(j * 3.3, 7.0 - Math.abs(j) * 1.5 - Math.abs(i - 1.5) * 0.5, -14.4 + i * 3.5), 1.75, [1, 1.15, 1], 0.08, 1.6 + i * 0.2 + j * 0.1, 12);
+  const t = spitTube(M, 1.2, 4.2); t.position.set(0, -0.4, -18.2); t.rotation.set(-0.3, Math.PI, 0); g.add(t);
+  [[-24.5, -2.2, 1.15], [-27.6, -2.9, 1.0], [-30.2, -3.3, 0.85]].forEach(([z, y, r], i) => sacAt(g, i % 2 ? x.sacPink : x.sac, V(i % 2 ? 0.8 : -0.5, y, z), r, [1, 1.2, 1], 0.14, 2.2 + i, 10));
+  pair(g, mandible(M, V(1.2, 0.8, 17.6), [[1.2, 0.8, 17.6], [2.3, 0.5, 19.2], [2.0, 0.2, 21], [0.9, 0.1, 21.8]], 0.4, { teeth: 2, amp: 0.1, speed: 2, seg: 10, rad: 6 }));
+  for (const s of [-1, 1]) sacAt(g, x.sacPink, V(s * 2.2, -1.6, -16.4), 1.1, [1, 0.85, 1.2], 0.12, 2.4 + s * 0.3, 12);
+  return g;
+});
+
+/* Amme NURSE – Fassung 27 eigenes Modell (vorher vergrößerter Grazer mit Kranarmen, support.js): ein Rochen. Flacher,
+   breiter Mantel mit zwei großen Hautflügeln, auf dem Rücken die helle Heilblase, darunter ein Vorhang langer Fangarme
+   mit Leuchtspitzen, die die Wunden lecken. Silhouette im Spiel: breite Flügel, Fransen hinten. */
+register('nurse', M => {
+  const g = new THREE.Group(), x = X(M), B = new Bag();
+  const P = prof([[-18, 0, 0, 0.6], [-17.2, 2.4, 1.4, 0.6], [-13, 6, 3, 0.5], [-6, 8.4, 3.8, 0.3], [2, 8.2, 3.6, 0.2], [9, 6, 3, 0.3], [14, 3.6, 2.4, 0.5], [18, 2.2, 1.8, 0.6], [20.4, 1, 0.9, 0.5]], 0.6);
+  fleshB(B, M, P, { segs: [-14, -10, -6, -2, 2, 6, 10, 14], groove: 0.08, gw: 0.6, nv: 52, nu: 24, T: 10 });
+  const H = cap(B, M, P, 11, 20, { span: 1.3, th: 0.4, lift: 0.3, ridge: 0.4, point: 1.1, T: 10 });
+  const D = armor(B, M, P, -15.5, -8.5, 2, { span: 0.9, th: 0.35, lift: 0.3, ridge: 0.25, point: 0.7, T: 10, nu: 12 });
+  for (const pin of D) spike(B, M, pin(0, 0.3, -0.05), V(0, 1, -0.7), 1.3, 0.26, false);
+  spike(B, M, H(0, 0.4, -0.1), V(0, 1, -0.5), 1.6, 0.3, false);
+  eyeCluster(B, M, P, 17.4, 1.3, 5, 0.34, 51, 1.1);
+  B.flush(g);
+  pair(g, membrane(M, [[[7.4, 0.6, 6], [12.5, 1.4, 9.5], [18, 1.2, 10.5]], [[7.4, 0.6, 6], [13.5, 1.2, 3], [20, 0.6, 1]], [[7.4, 0.6, 6], [13, 0.8, -4], [18.5, 0, -8.5]], [[7.4, 0.6, 6], [10.5, 0.6, -9], [12.5, 0, -15.5]]], { r: 0.32, nv: 8, seg: 10, rad: 5, tips: x.glow, tipR: 0.42, sway: { axis: 'z', amp: 0.1, speed: 1.1 } }));
+  /* Heilblase im Rippenkorb */
+  sacAt(g, x.sac, V(0, 4.3, -1.5), 1, [4.8, 3.1, 6.4], 0.06, 1.3, 20);
+  for (const s of [-1, 1]) sacAt(g, x.sac, V(s * 4.4, 3.6, 7), 1.5, [1, 0.9, 1.3], 0.1, 2 + s * 0.3, 12);
+  /* Fangarme */
+  for (let k = 0; k < 6; k++) { const sx = (k - 2.5) * 2.3, a = Math.abs(k - 2.5); g.add(tentacle(M, V(sx, -1.6, -9 + a), [[sx, -1.6, -9 + a], [sx * 1.15, -3.2, -15 + a], [sx * 1.3, -2.8, -21 + a * 1.4], [sx * 1.2, -4.4, -26.5 + a * 2]], 0.55, { phase: k * 1.1, amp: 0.2, speed: 1.2, tip: x.glow, tipR: 0.5, seg: 14, rad: 6 })); }
+  for (const s of [-1, 1]) g.add(tentacle(M, V(s * 1.6, -1.2, 15), [[s * 1.6, -1.2, 15], [s * 2.6, -2.6, 19], [s * 2.2, -3.4, 23.5]], 0.34, { phase: s, amp: 0.25, speed: 1.6, tip: x.glow, tipR: 0.36, seg: 10, rad: 6 }));
+  for (const s of [-1, 1]) sacAt(g, x.sacPink, V(s * 2.2, 0.2, -16.6), 1.15, [1, 0.85, 1.25], 0.12, 2.4 + s * 0.3, 12);
+  return g;
+});
+
+/* Parasitenkapsel PARASITE POD – Fassung 27 eigenes Modell (vorher vergrößerter Leech mit Blase, support.js): ein Bohrer.
+   Spitzer Chitinkopf mit zwei Wendelgraten, dahinter ein Kranz aus sechs Widerhaken, am Leib sitzen die
+   Parasitenkapseln in Kelchen. Silhouette im Spiel: Lanze mit Hakenkranz. */
+register('parasitepod', M => {
+  const g = new THREE.Group(), x = X(M), B = new Bag();
+  const P = prof([[-20, 0, 0, 0.4], [-19.2, 2, 1.8, 0.4], [-15, 4.6, 4, 0.3], [-8, 5.6, 4.6, 0.2], [0, 5.2, 4.4, 0.1], [7, 4.4, 3.8, 0], [12, 3.4, 3, 0], [16, 2.4, 2.2, 0], [20, 1.3, 1.2, 0], [23.4, 0.3, 0.3, 0]], 0.85);
+  fleshB(B, M, P, { segs: [-16, -12, -8, -4, 0, 4, 8], groove: 0.1, gw: 0.5, nv: 56, nu: 20, T: 10 });
+  cap(B, M, P, 9.5, 23.2, { span: 1.5, th: 0.45, lift: 0.2, ridge: 0.3, point: 0.6, T: 10 });
+  cap(B, M, P, 9.5, 23.2, { c: Math.PI, span: 1.5, th: 0.45, lift: 0.2, ridge: 0.2, point: 0.6, T: 10 });
+  const L = armor(B, M, P, -16, -6, 3, { c: 1.5, span: 0.6, th: 0.4, lift: 0.4, ridge: 0.2, point: 0.8, T: 10, nu: 10 });
+  const R = armor(B, M, P, -16, -6, 3, { c: -1.5, span: 0.6, th: 0.4, lift: 0.4, ridge: 0.2, point: 0.8, T: 10, nu: 10 });
+  pores(B, M, L, [-0.3, 0.3], 0.5, 0.2); pores(B, M, R, [-0.3, 0.3], 0.5, 0.2);
+  /* Wendelgrate am Bohrkopf */
+  for (const ph of [0, Math.PI]) { const pts = []; for (let i = 0; i <= 14; i++) { const t = i / 14, z = 10.5 + t * 12.2, p = onB(P, z, ph + t * TAU * 1.4, 0.28); pts.push([p.x, p.y, p.z]); } horn(B, M, pts, 0.5, 0.3, { sym: false, seg: 28, rad: 6, c0: 0.8, c1: 1.2 }); }
+  /* Hakenkranz */
+  for (let k = 0; k < 6; k++) { const a = k / 6 * TAU + 0.52, p = onB(P, 8.6, a, -0.1), n = nrm(P, 8.6, a); fang(B, M, p, V(n.x, n.y, 0.75), V(0, 0, 1), 5.2, 0.62, false); }
+  eyeCluster(B, M, P, 10.6, 1.3, 3, 0.3, 61, 1);
+  B.flush(g);
+  /* Parasitenkapseln in Kelchen */
+  let sd = 3;
+  for (const z of [-12.5, -7.5, -2.5, 2.8]) for (const a of [-1.15, 0, 1.15]) { if (a === 0 && z < -10) continue; const q = pod(M, 1.15 - (z > 0 ? 0.2 : 0), sd++); stand(q, onB(P, z, a, -0.25), nrm(P, z, a)); g.add(q); }
+  [-1, 0, 1].forEach(s => g.add(tentacle(M, V(s * 1.4, 0.4 + (s ? 0 : 0.5), -19), [[s * 1.4, 0.4 + (s ? 0 : 0.5), -19], [s * 2.6, 0.4, -21.6], [s * 3.1, 0, -24.2]], 0.6, { phase: s * 1.3, amp: 0.25, speed: 1.4, seg: 10, rad: 6 })));
+  for (const s of [-1, 1]) sacAt(g, x.sacPink, V(s * 2.2, -0.4, -18), 1.15, [1, 0.85, 1.25], 0.12, 2.4 + s * 0.3, 12);
   return g;
 });

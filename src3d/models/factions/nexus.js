@@ -533,3 +533,83 @@ register('lodestar', M => {
   g.add(orbiters(M, X, { n: 4, r: 11, z: -6, size: 0.8, speed: 0.3, seed: 6, wob: 1 }));
   return g;
 });
+
+/* Minenleger GEODE – Fassung 27 eigenes Modell (vorher Prism mit Minenschienen, support.js): eine aufgebrochene Geode.
+   Zwei dunkle Schalenhälften klaffen nach vorn auseinander, dazwischen wachsen helle Kristalle um einen Kern; am Heck
+   zieht das Schiff eine Kette kleiner Geoden an einem Lichtfaden hinter sich her (die Minen).
+   Silhouette im Spiel: zwei dunkle Hälften mit hellem Spalt und Perlenkette. */
+register('geode', M => {
+  const X = xm(M), g = new THREE.Group(), sh = { n: 6, sx: 0.42, tf: 0.3, tb: 0.3, tw: 0.2 };
+  for (const s of [-1, 1]) {
+    const h = gem(25, 5.6, X.dark, sh); h.position.set(s * 4.9, 0, 6); h.rotation.y = s * 0.17; g.add(h);
+    const e = gemEdges(X, 25, 5.6, sh, X.vein, 0.12, 2); e.position.copy(h.position); e.rotation.copy(h.rotation); g.add(e);
+  }
+  /* Kristallrasen im Spalt */
+  [[-3, 1, 5.5, 1], [0, -1, 6.5, 2], [3.5, 1, 7.5, 3], [7, -1, 6, 4], [10.5, 1, 5, 5], [13.5, -1, 4, 6], [1.5, 1, 4, 7], [8.5, -1, 3.6, 8]].forEach(([z, up, L, k]) => {
+    const c = gem(L, 0.85, k % 3 ? X.cry : X.cryS, { n: 5, tf: 0.6, tb: 0.12, tw: 0 }); c.rotation.x = -up * (Math.PI / 2 - 0.25 - (k % 3) * 0.1); c.position.set((k % 3 - 1) * 0.9, up * L * 0.36, z); g.add(c);
+  });
+  const c0 = core(M, X, 1.6, 13, 0.12, X.haloW); c0.position.z = 5; g.add(c0);
+  g.add(beam(X, [0, 0, -5], [0, 0, 14], 0.16, X.beamSoft));
+  g.add(at(ring(6.4, 0.3, M.trim, 6, 4), 0, 0, -6.5));
+  g.add(at(field(M, X, 3.3, 5), 0, 0, -8.5));
+  /* Minenkette */
+  g.add(beam(X, [0, 0, -8], [0, 0, -20.5], 0.09, X.beamSoft));
+  [-11.5, -15.5, -19.5].forEach((z, i) => {
+    const m = new THREE.Group(), f = mesh(fragGeo(i + 2), X.dark); f.scale.setScalar(1.25 - i * 0.12); m.add(f);
+    const k = core(M, X, 0.42, 3.4, 0.3); m.add(k); m.position.set(0, 0, z); m.userData.spin = { axis: 'z', speed: 0.7 - i * 0.5 }; g.add(m);
+  });
+  g.add(orbiters(M, X, { n: 3, r: 9.5, z: 2, size: 0.75, speed: 0.35, seed: 9, wob: 1 }));
+  return g;
+});
+
+/* Heilerschiff LUMEN – Fassung 27 eigenes Modell (vorher vergrößerter Seed mit Seitenkristallen, support.js): eine
+   Laterne. Drei lange, flache Kristallblätter öffnen sich nach vorn wie ein Kelch, in ihrer Mitte hängt ein großes
+   weißes Licht in einem Sechseckring; ein weiter Lichtkreis mit drei grünen Heillichtern dreht sich darum.
+   Silhouette im Spiel: Kelch mit hellem Licht. */
+register('lumen', M => {
+  const X = xm(M), g = new THREE.Group(), pet = { n: 4, sx: 0.32, tf: 0.5, tb: 0.2, tw: 0 };
+  tri(g, () => { const p = gem(27, 2.7, X.cry, pet); p.position.set(0, 6.6, 3); p.rotation.x = -0.3; return p; });
+  tri(g, () => { const p = gemEdges(X, 27, 2.7, pet, X.veinHot, 0.1, 2); p.position.set(0, 6.6, 3); p.rotation.x = -0.3; return p; });
+  tri(g, () => { const p = gem(13, 1.5, X.cryS, pet); p.position.set(0, 3.5, 10); p.rotation.x = -0.55; return p; }, [30, 150, 270]);
+  const lamp = core(M, X, 2.3, 22, 0.1, X.haloW); lamp.position.z = 7; g.add(lamp);
+  g.add(at(ring(4.9, 0.3, M.trim, 6, 4), 0, 0, 7));
+  g.add(spinning(ring(9.2, 0.16, X.beam, 24, 3), 'z', 0.3, 9));
+  const mo = new THREE.Group(), SG = geo('lumenmote', () => new THREE.SphereGeometry(0.6, 8, 6));
+  for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, m = mesh(SG, M.green, false); m.position.set(Math.cos(a) * 9.2, Math.sin(a) * 9.2, 0); mo.add(m); }
+  g.add(spinning(mo, 'z', -0.55, 9));
+  g.add(beam(X, [0, 0, -9], [0, 0, 6], 0.28));
+  g.add(at(gem(13, 2.7, X.dark, { n: 6, tf: 0.25, tb: 0.4 }), 0, 0, -11));
+  const c = core(M, X, 1.3, 9); c.position.z = -16.5; g.add(c);
+  g.add(spinning(ring(3, 0.18, X.beam, 6, 3), 'z', 0.8, -16.5));
+  g.add(at(field(M, X, 3.2, 5), 0, 0, -19));
+  return g;
+});
+
+/* Truppentransporter ABSORBER (assimilator) – Fassung 27 eigenes Modell (vorher Binder mit Kapseln, support.js): ein
+   Käfig aus Licht. Sechseckiges Gitter um einen dunklen Kristallkiel, darin in zwei Kränzen die Konverterdrohnen, vorn
+   offen mit drei kurzen Greifklauen. Silhouette im Spiel: Sechseckkäfig mit Punkten. */
+register('assimilator', M => {
+  const X = xm(M), g = new THREE.Group();
+  const R = 7, Z = [-5, 4, 13], pts = [], ed = [];
+  Z.forEach((z, s) => { for (let k = 0; k < 6; k++) { const a = (90 + k * 60) * DEG; pts.push([Math.cos(a) * R * (s === 2 ? 0.86 : 1), Math.sin(a) * R * (s === 2 ? 0.86 : 1), z]); } });
+  for (let s = 0; s < 3; s++) for (let k = 0; k < 6; k++) { const i = s * 6 + k; ed.push([i, s * 6 + (k + 1) % 6]); if (s < 2) { ed.push([i, i + 6]); if (k % 2 === s) ed.push([i, (s + 1) * 6 + (k + 1) % 6]); } }
+  g.add(mesh(frameGeo('absorber', pts, ed, 0.15), X.beam, false));
+  g.add(mesh(nodesGeo('absorber', pts, 0.45), M.core, false));
+  g.add(at(ring(R * 1.03, 0.3, M.trim, 6, 4), 0, 0, -5));
+  /* Kiel und Drohnenkränze */
+  g.add(at(gem(34, 2.2, X.dark, { n: 6, tf: 0.3, tb: 0.3 }), 0, 0, -2));
+  g.add(at(gem(26, 0.7, X.vein, { n: 4, tw: 0 }, false), 0, 0, -2));
+  const DG = geo('absdrone', () => new THREE.OctahedronGeometry(0.95, 0));
+  [[0, 0.5, 0], [8.5, -0.5, 30]].forEach(([z, sp, off]) => {
+    const d = new THREE.Group();
+    for (let k = 0; k < 6; k++) { const a = (off + k * 60) * DEG, m = mesh(DG, X.cryS); m.position.set(Math.cos(a) * 4.2, Math.sin(a) * 4.2, 0); m.scale.set(1, 1, 1.5); d.add(m); const e = mesh(geo('absdot', () => new THREE.SphereGeometry(0.3, 6, 4)), M.core, false); e.position.set(Math.cos(a) * 4.2, Math.sin(a) * 4.2, 1.5); d.add(e); }
+    g.add(spinning(d, 'z', sp, z));
+  });
+  /* Greifklauen am offenen Bug */
+  tri(g, i => claw(M, X, [[0, 6, 13], [0, 7.8, 17], [0, 6, 21]], 0.26, 3.4, { axis: 'x', amp: 0.08, speed: 0.9, phase: i * 2 }));
+  /* Heck: Kristalltrio, Kern, Feld */
+  tri(g, () => { const b = gem(12, 1.5, X.cry, { n: 5, tf: 0.4 }); b.position.set(0, 3.6, -13.5); b.rotation.x = 0.3; return b; });
+  const c = core(M, X, 1.5, 10); c.position.z = -17; g.add(c);
+  g.add(at(field(M, X, 3.6, 5.5), 0, 0, -20));
+  return g;
+});

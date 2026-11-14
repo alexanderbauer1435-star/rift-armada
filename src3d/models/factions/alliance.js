@@ -490,3 +490,73 @@ register('tripwire', M => {
 
 /* für die Stationen (stations/alliance.js) */
 export { fx, hsec, hl, bore, engines, tower, archer, pdc, emitter, num, band, lights };
+
+/* Reparaturschiff MENDER – Fassung 27 eigenes Modell (vorher vergrößerte Pathfinder mit Kranarmen, support.js):
+   ein fliegendes Dock. Heckblock mit Brücke, davor zwei Auslegerrümpfe, dazwischen die offene Bucht mit Kranschienen,
+   Laufkatzen und grün glühenden Schweißköpfen; ein Portal überspannt die Bucht. Silhouette im Spiel: Gabel (U). */
+register('mender', M => {
+  const g = new THREE.Group(), F = fx(M);
+  g.add(hl([[-21, 9, 5], [-13, 11.6, 5.6], [-4, 11.6, 5.6, 0.6, 1.6], [-1.5, 9.4, 4.6, 0.5, 1.2]], F.hull));
+  for (const sx of [-1, 1]) {
+    const arm = hl([[-4, 3.4, 4.4], [10, 3.4, 4.2], [18, 3, 3.4, 0.4, 1], [22.5, 1.8, 2.2, 0.3, 0.6]], F.hull); arm.position.x = sx * 6.7; g.add(arm);
+    g.add(band(M, 18, 0.5, sx * 8.45, 1.0, 7));
+    g.add(at(box(1.2, 1.1, 21, F.armor, 0.2), sx * 6.7, 2.5, 7));
+    [2.5, 11.5].forEach((z, k) => {
+      const a = new THREE.Group(); a.add(box(1.9, 1, 1.9, F.dark, 0.2));
+      a.add(at(box(4.4, 0.6, 0.7, F.armor, 0.15), -sx * 2.2, -0.5, 0, 0, 0, sx * 0.3));
+      const w = sphere(0.6, M.green, 8, 6); w.position.set(-sx * 4.3, -1.3, 0); w.userData.pulse = { amp: 0.25, speed: 3 + k + (sx > 0 ? 0.5 : 0) }; a.add(w);
+      a.position.set(sx * 6.7, 3.5, z + (sx > 0 ? 2.2 : 0)); g.add(a);
+    });
+    g.add(at(box(1.3, 2.2, 2.2, F.armor, 0.2), sx * 6.7, 2.9, 17));
+  }
+  g.add(at(box(14.6, 1.1, 2.2, F.armor, 0.3), 0, 4.4, 17));
+  g.add(at(strip(M, 9, 0.2, 0.3, F.amber), 0, 3.8, 18.15));
+  /* Buchtboden mit Leitstreifen, Ersatzplatten */
+  g.add(at(box(10, 0.6, 21, F.dark, 0.2), 0, -1.7, 7));
+  for (const z of [0, 5, 10, 15]) g.add(at(strip(M, 7, 0.1, 0.4, F.amber), 0, -1.36, z));
+  for (let i = 0; i < 3; i++) g.add(at(box(5 - i * 0.4, 0.45, 3.6, F.armor, 0.1), 0, -1.15 + i * 0.5, -1));
+  /* Brücke, leuchtendes Kreuz auf dem Achterdeck */
+  const tw = tower(M, [[6.4, 1.8, 6.5, 0], [4.2, 1.5, 3.6, -0.8]]); tw.position.set(0, 2.8, -11); g.add(tw);
+  g.add(at(blk(3.6, 0.2, 1.1, M.light), 0, 2.95, -18)); g.add(at(blk(1.1, 0.2, 3.6, M.light), 0, 2.95, -18));
+  g.add(at(antenna(M, 3, 0.13), 1.6, 6.1, -12)); g.add(at(dish(M, 1.3), -1.9, 4.7, -13.5));
+  g.add(at(pdc(M, 0.8), 0, -2.9, -10, Math.PI));
+  const e = engines(M, 3, 1, 1.3, 3, 2, 5); e.position.set(0, 0, -21); g.add(e);
+  num(g, 'ACS-R7', 5.86, -0.5, -9, 1);
+  lights(g, M, 8.4, 1.8, 16);
+  return g;
+});
+
+/* Truppentransporter ENVOY – Fassung 27 eigenes Modell (vorher vergrößerter Hauler mit Kapseln, support.js): gedrungener
+   Kastenrumpf mit zwei Bugtoren und Rampe, auf dem Rücken sechs Landekapseln in zwei Reihen, Panzerschürzen mit langen
+   Fensterschlitzen, zwei getrennte Triebwerksblöcke. Silhouette im Spiel: breiter Kasten mit Kapselrücken. */
+register('envoy', M => {
+  const g = new THREE.Group(), F = fx(M);
+  g.add(hl([[-19, 9, 6.4], [-14, 11, 7.4], [9, 11, 7.4, 0.8, 2], [15.5, 9.6, 6.4, 0.7, 1.8, -0.3]], F.hull));
+  /* Bugtore, einen Spalt offen, dahinter Hangarlicht; Rampe */
+  for (const sx of [-1, 1]) g.add(at(box(4.7, 5.6, 6.4, F.armor, 0.4), sx * 2.75, -0.5, 18, 0, sx * 0.2, 0));
+  g.add(at(strip(M, 1.3, 4.4, 0.3, F.hangar), 0, -0.5, 16.4));
+  g.add(at(box(8.6, 0.5, 5.4, F.dark, 0.15), 0, -3.7, 19, 0.14));
+  for (const sx of [-1, 1]) g.add(at(strip(M, 0.3, 0.12, 5, F.amber), sx * 3.8, -3.4, 19, 0.14));
+  /* Landekapseln auf dem Rücken */
+  g.add(at(box(1.3, 1.5, 21, F.dark, 0.2), 0, 4.3, -3));
+  for (const sx of [-1, 1]) for (let i = 0; i < 3; i++) {
+    const p = new THREE.Group(), z = -10 + i * 6.6;
+    p.add(cyl(1.55, 1.55, 4.6, F.armor, 12)); p.add(at(sphere(1.55, F.armor, 12, 8), 0, 0, 2.3)); p.add(at(cyl(1.2, 1.55, 0.8, F.dark, 12), 0, 0, -2.7));
+    p.add(at(cyl(1.62, 1.62, 0.5, M.trim, 12), 0, 0, 0.6)); p.add(at(strip(M, 0.9, 0.3, 0.12, F.slit), 0, 0.9, 3.3));
+    p.position.set(sx * 2.9, 5.1, z); p.rotation.x = -0.06; g.add(p);
+    g.add(at(box(1.6, 0.9, 1.2, F.dark, 0.15), sx * 2.9, 3.9, z - 0.8));
+  }
+  /* Panzerschürzen mit Fensterschlitz, Teamband */
+  for (const sx of [-1, 1]) {
+    g.add(at(box(0.8, 3.8, 19, F.armor, 0.2), sx * 5.75, -0.7, -3));
+    g.add(at(strip(M, 0.12, 0.36, 16.5, F.slit), sx * 6.2, 0.4, -3));
+    g.add(band(M, 19, 0.45, sx * 5.62, 2.6, -3));
+    const e = engines(M, 1, 2, 1.35, 0, 2.8, 5); e.position.set(sx * 3.3, -0.2, -19); g.add(e);
+  }
+  const tw = tower(M, [[5.4, 1.5, 4.6, 0]]); tw.position.set(0, 3.7, 11.5); g.add(tw);
+  g.add(at(antenna(M, 2.6, 0.12), 1.6, 5.2, 11));
+  g.add(at(pdc(M, 0.8), 0, -3.9, 2, Math.PI));
+  num(g, 'ACS-T2', 6.2, -1.6, -3, 1);
+  lights(g, M, 5.9, 3, 12);
+  return g;
+});

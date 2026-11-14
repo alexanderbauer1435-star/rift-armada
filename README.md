@@ -57,7 +57,10 @@
   Druckstoß, Rauschen, Trümmerprasseln, zweiter Stoß bei Großem), Anschlag bei Kanone und Railgun; Messung ohne
   Lautsprecher mit tools/snd27.js (Pegel, Übersteuerung, Hörproben als WAV). Behoben: Artillerie fuhr nach dem Abschuss
   einer Station an deren Platz (combat.js); ohne Basis beginnt die Kamera beim eigenen Verband (main.js).
-  Modellvorschläge (eigene Modelle statt abgeleiteter Rümpfe) liegen bis zur Freigabe auf dem Zweig modelle-vorschlag.
+  MODELLE: die 18 abgeleiteten Schiffe (vergrößerter Rumpf eines anderen Schiffs mit Aufsatz; support.js und siege.js
+  sind dafür jetzt leer) haben eigene Modelle in den Fraktionsdateien – Artillerie (Mortar, Ballista, Lodestar, Boomer),
+  Minenleger (Caltrop, Censer, Geode, Clutch), Reparatur (Mender, Anvil, Hospitaller, Lumen, Nurse), Transporter (Envoy,
+  Breacher, Templar, Absorber, Parasite Pod). Dreieckszahlen meist unter den alten (höchstens 14,5k, Boomer).
 - Fassung 26 (Version 1.0.26, erste Fassung nach der Veröffentlichung): Versionsname wie im Play Store (APPVERSION + Fassung,
   im Menü und in Berichten). Fehlerprotokoll (src/errlog.js, läuft vor dem Spiel): Laufzeitfehler bleiben nur auf dem Gerät
   (ra.errors, ohne Pfade, gleiche gezählt); beim ersten Fehler bietet das Spiel einen Bericht an, das Rückmeldungsfenster hängt
