@@ -49,5 +49,19 @@ function pods(M, g, z0, n, x, y, w) {
 function sup(id, b, k, extra) { register(id, (M, def) => { const g = new THREE.Group(); g.add(base(M, def, b, k)); extra(M, g); return g; }); }
 /* Minenleger */
 /* Tripwire (Allianz): seit Fassung 25 eigenes Modell in factions/alliance.js */
+sup('caltrop', 'hedgehog', 1.1, (M, g) => { mineRack(M, g, -26, 3, 8.5, 2.4, 2.4); g.add(at(box(2, 0.6, 12, M.hazard || M.trim), 0, 4, -4)); });
+sup('censer', 'paladin', 1.05, (M, g) => { mineRack(M, g, -24, 3, 8, 2.2, 2.2); g.add(at(cyl(2.2, 3.2, 3, M.gold || M.trim, 12), 0, 4.2, -4)); g.add(at(sphere(1.2, M.glow, 10, 8), 0, 6, -4)); });
+sup('geode', 'prism', 1.0, (M, g) => { mineRack(M, g, -24, 3, 8.5, 1.8, 2.3); g.add(at(sphere(1.4, M.core || M.glow, 10, 8), 0, 3.5, -6)); });
+sup('clutch', 'spitter', 1.35, (M, g) => mineRack(M, g, -24, 3, 7, 2.6, 2.6));
 /* Reparaturschiffe */
+sup('mender', 'pathfinder', 1.3, (M, g) => { arms(M, g, 6, 4.5, 2.6, 8); cross(M, g, -9, 4.2, 3.4); });
+sup('anvil', 'prospector', 1.3, (M, g) => { arms(M, g, 6, 5.5, 2.8, 9); cross(M, g, -10, 4.6, 3.4); });
+sup('hospitaller', 'restorer', 1.32, (M, g) => { arms(M, g, 5, 4.6, 2.6, 8); const h = new THREE.Mesh(new THREE.TorusGeometry(5, 0.45, 8, 32), M.gold || M.trim); h.rotation.x = Math.PI / 2; h.position.set(0, 4.6, -9); g.add(h); cross(M, g, -9, 4.4, 3); });
+sup('lumen', 'seed', 1.38, (M, g) => { for (const s of [-1, 1]) { g.add(at(crystal(M, 13, 1.6, 6, M.crystal), s * 6, 2, 6, Math.PI / 2 - 0.2, s * 0.5, 0)); g.add(at(sphere(0.9, M.green, 8, 6), s * 10.5, 2, 15)); } g.add(at(sphere(2.2, M.core || M.glow, 12, 10), 0, 3.8, -6)); });
+sup('nurse', 'grazer', 1.4, (M, g) => { arms(M, g, 6, 4, 2, 9); g.add(at(sphere(4.4, M.flesh, 16, 12), 0, 3.4, -9)); g.add(at(orb(M, 2), 0, 5.4, -9)); });
 /* Truppentransporter */
+sup('envoy', 'hauler', 1.45, (M, g) => { pods(M, g, -18, 3, 9.5, 1.6, 6); g.add(at(box(9, 1, 6, M.dark), 0, 0.6, 20, -0.25, 0, 0)); });
+sup('breacher', 'boarder', 1.32, (M, g) => { pods(M, g, -20, 3, 10, 1.6, 6); both(g, at(cyl(0.2, 1.1, 9, M.hull2, 8), 3, 0.8, 23, Math.PI / 2, 0, 0)); });
+sup('templar', 'herald', 1.55, (M, g) => { pods(M, g, -18, 3, 9.5, 1.8, 5.8); g.add(at(box(1.2, 6, 1.2, M.gold || M.trim), 0, 5.5, -6)); g.add(at(box(4.4, 1.2, 1.2, M.gold || M.trim), 0, 6.6, -6)); });
+sup('assimilator', 'binder', 1.12, (M, g) => pods(M, g, -18, 3, 10.5, 1.6, 6));
+sup('parasitepod', 'leech', 1.42, (M, g) => { g.add(at(sphere(6.2, M.flesh, 18, 14), 0, 3.2, -6)); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.add(at(orb(M, 1.1, M.acid), Math.cos(a) * 5.2, 3.2 + Math.sin(a) * 3.6, -6 + Math.sin(a) * 2)); } });
