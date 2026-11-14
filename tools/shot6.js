@@ -24,7 +24,7 @@ const OUT = path.resolve(__dirname, 'shots');
   await shot('130-menu');
   check('campaign button first in menu', await page.evaluate(() => document.querySelector('.menuBtns button').id === 'mCamp'));
   await page.click('#mCamp'); await page.waitForTimeout(300);
-  check('campaign page: training plus 7 acts, 13 missions, only training and prologue open', await page.evaluate(() => document.querySelectorAll('.act').length === 8 && document.querySelectorAll('.mcard').length === 13 && document.querySelectorAll('.mcard:not(.lock)').length === 2 && document.querySelector('.mcard.next b').textContent === 'Grundausbildung'));
+  check('campaign page: training plus 7 acts, 15 missions, only training and prologue open', await page.evaluate(() => document.querySelectorAll('.act').length === 8 && document.querySelectorAll('.mcard').length === 15 && document.querySelectorAll('.mcard:not(.lock)').length === 2 && document.querySelector('.mcard.next b').textContent === 'Grundausbildung'));
   await shot('131-campaign');
   await page.evaluate(() => document.querySelectorAll('.mcard')[3].click()); await page.waitForTimeout(200);
   check('locked mission stays closed', await page.evaluate(() => document.getElementById('brief').hidden));
