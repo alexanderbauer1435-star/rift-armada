@@ -814,3 +814,59 @@ reg('dropship', M => {
 export default register;
 
 export { xm, mm, tintS, bar, beam, truss, hazUV, hazBar, hazBeam, pdc, cannon, rail, radPanel, finArray, torch, lamp, glowLine, oct2, flat, dfont, mount, aim };
+
+/* Belagerungsmörser MORTAR – Fassung 27 eigenes Modell (vorher vergrößerte Hedgehog mit Rohr, siege.js): breite, flache
+   Lafette auf vier ausgestellten Stützauslegern, mittschiffs ein kurzes, dickes Rohr in einer Gabelwiege, steil
+   angestellt; Granaten stehen in zwei Gestellen am Heck. Silhouette im Spiel: breites X mit schrägem Rohr. */
+reg('mortar', M => {
+  UV = 1 / 16; const g = new THREE.Group(), X = xm(M);
+  const P = [[-15, 10.5, 12, 5.6, .8], [6, 10.5, 12, 5.6, .8], [12, 8.4, 10.4, 4.8, .7, -.3], [17, 5.2, 7.6, 3.4, .6, -.9]];
+  g.add(H(P, M.hull));
+  topPlates(M, g, P, 7.4, 15.4, 2, .5, 5.6, .4);
+  flankPlates(M, g, P, 0, 3.2, -14, 5, 4, .5, .45, M.hull2);
+  g.add(at(slab(7, .7, 26, M.hull2, .2), 0, -3.1, -2));
+  /* Stützausleger: je Ecke ein Arm nach außen unten, Fußplatte, Warnstreifen, Positionslicht */
+  for (const s of [-1, 1]) for (const [z, dz] of [[-10, -5.5], [4, 5.5]]) {
+    g.add(beam([s * 5.6, -.4, z], [s * 12.8, -2.6, z + dz], 1.1, M.hull2, 1.4));
+    g.add(hazBeam(M, [s * 9.4, -1.5, z + dz * .52], [s * 12.2, -2.4, z + dz * .92], 1.25, .3));
+    g.add(beam([s * 5.8, 1.8, z], [s * 10.4, -1.7, z + dz * .66], .34, M.dark));
+    g.add(at(slab(3.6, .8, 4.4, M.dark, .2), s * 13.4, -3.1, z + dz));
+    g.add(at(navLight(M, .22, 'light', 1.2), s * 13.4, -2.5, z + dz));
+  }
+  /* Drehkranz, Gabelwiege und Rohr */
+  g.add(at(cyl(5.4, 5.6, 1.0, M.dark, 16), 0, 3.2, -3, HP));
+  g.add(band(P, -3, 1.2, .3, X.hazard, .25));
+  const gun = new THREE.Group();
+  gun.add(at(slab(8.6, 1.0, 7.4, M.hull, .25), 0, .5, 0));
+  for (const s of [-1, 1]) {
+    gun.add(at(slab(1.5, 5.8, 6.6, M.hull2, .3), s * 3.5, 3.4, 0));
+    gun.add(at(hazBar(M, 1.6, .5, 6.7), s * 3.5, 6.4, 0));
+    gun.add(at(cyl(1.0, 1.0, .6, M.dark, 10), s * 4.35, 4.2, 0, 0, HP));
+  }
+  const tb = new THREE.Group();
+  tb.add(at(slab(4.8, 4.8, 5.2, M.hull2, 1.0), 0, 0, -1.6));
+  tb.add(at(cyl(2.35, 2.05, 19, M.dark, 14), 0, 0, 9.5));
+  for (const [z, m] of [[3.6, M.hull2], [8.2, M.trim], [12.8, M.hull2]]) tb.add(at(cyl(2.65, 2.65, 1.1, m, 14), 0, 0, z));
+  tb.add(at(slab(5.6, 5.6, 2.6, M.hull2, 1.3), 0, 0, 19.6));
+  for (const s of [-1, 1]) tb.add(at(bar(.3, 2.2, 1.6, M.dark), s * 2.82, 0, 19.6));
+  { const mz = cyl(1.55, 1.55, .25, X.hotRim, 12); mz.position.z = 20.95; mz.userData.pulse = { amp: .08, speed: 1.6 }; tb.add(mz); }
+  for (const s of [-1, 1]) tb.add(at(cyl(.5, .5, 9, X.steel, 8), s * 1.7, 2.3, 4.5));
+  tb.position.set(0, 4.2, 0); tb.rotation.x = -.62; gun.add(tb);
+  gun.position.set(0, 3.7, -3); gun.userData.sway = { axis: 'y', amp: .1, speed: .14, phase: 1 }; gun.userData.turret = true; g.add(gun);
+  /* Granatengestelle am Heck: stehende Granaten mit farbiger Spitze */
+  for (const s of [-1, 1]) {
+    g.add(at(slab(2.6, 1.0, 8.4, M.dark, .2), s * 3.9, 3.2, -11.2));
+    for (let k = 0; k < 4; k++) { g.add(at(cyl(.8, .8, 3.0, X.steel, 8), s * 3.9, 5.0, -14.2 + k * 2.0, HP)); g.add(at(cyl(.8, .2, 1.0, M.trim, 8), s * 3.9, 7.0, -14.2 + k * 2.0, -HP)); }
+  }
+  /* Bug: Brückenschlitz, Nahbereichswaffe */
+  g.add(at(bar(3.6, .3, .1, M.glass), 0, 1.3, 16.6, -.5));
+  const c1 = cannon(M, .9, 2, 3, 3); c1.position.set(0, 2.7, 11.5); g.add(c1);
+  pdcs(M, g, [[5.6, 0, 9.5, -HP], [-5.6, 0, 9.5, HP]], 1, 5);
+  /* Antrieb */
+  const PD = [[-19, 7.5, 8.5, 4.6, .7], [-16.6, 9.5, 11, 5.4, .8], [-15, 10.5, 12, 5.6, .8]];
+  g.add(H(PD, M.hull2)); g.add(band(PD, -16.2, .6, .08, X.hazard, .3));
+  const e = torch(M, 2.0, 16); e.position.z = -19; g.add(e); struts(M, g, 2.0, -19, 4, 1.8);
+  for (const s of [-1, 1]) { const w = wing(M, 5.0, 4.4, .3, -.5, s); w.position.set(s * 5.2, 1.6, -16.4); g.add(w); }
+  nums(g, 'MCRN 7714', P, -8.5, .2, .7, .5);
+  return g;
+});
