@@ -299,7 +299,7 @@ function updateShip(g, u, dt) {
       if (lostTgt(g, u, t) || (t && t.k === 1 && t.crip && (o.guard || o.back || u.fm === 1))) {
         if (o.back) { u.o = o.back; u.path = null; u.tgt = 0; }
         else if (o.guard) { setIdle(u); }
-        else if (t && t.dead) setIdle(u);
+        else if (t && t.dead || !t && def.art) setIdle(u);   /* Fassung 27: Artillerie fuhr nach dem Abschuss einer Station an deren Platz – mitten in die übrigen Türme */
         else { u.o = { t: 'move', x: o.x, y: o.y }; u.path = null; }
         break;
       }

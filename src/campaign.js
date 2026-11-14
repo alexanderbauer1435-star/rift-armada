@@ -5,7 +5,7 @@
    im Gefecht, Entscheidungen, Kamerafahrten, Nachbesprechung und Fortschritt (localStorage 'ra.camp').
    Die Missionen selbst laufen deterministisch in mission.js / missions.js; hier wird nur angezeigt und befohlen.
    ===================================================================== */
-const CAMP = { done: {}, ch: {}, lvl: 2, fac: 'alliance', all: false, last: '' };
+const CAMP = { done: {}, ch: {}, st: {}, lvl: 2, fac: 'alliance', all: false, last: '' };   /* st: Sterne der Einsätze (sorties.js) */
 const CAMP_KEY = 'ra.camp';
 const MISUI = { brief: '', gh: '', cam: null, ask: '', fold: false, picT: 0 };
 const RADIO = { q: [], cur: null, age: 0, shown: -1, log: [] };
@@ -24,17 +24,19 @@ const CARRY_EFFECT = {
     voss: { spare: ['Ilya Voss kommt mit ihrer Flotte zu Hilfe.'], kill: ['Ohne Voss schickt die Alliance niemanden.'] },
     node: { live: ['Knoten K-7 sieht das Tor für dich und warnt vor jedem Schwarm.'], kill: ['Ohne K-7 kommen die Schwärme ohne Vorwarnung.'] } }
 };
-function campLoad() { try { const d = JSON.parse(localStorage.getItem(CAMP_KEY) || '{}'); if (d && typeof d === 'object') { Object.assign(CAMP, d); CAMP.done = d.done || {}; CAMP.ch = d.ch || {}; } } catch (e) { /* kein Fortschritt */ } }
+function campLoad() { try { const d = JSON.parse(localStorage.getItem(CAMP_KEY) || '{}'); if (d && typeof d === 'object') { Object.assign(CAMP, d); CAMP.done = d.done || {}; CAMP.ch = d.ch || {}; CAMP.st = d.st || {}; } } catch (e) { /* kein Fortschritt */ } }
 function campSave() { try { localStorage.setItem(CAMP_KEY, JSON.stringify(CAMP)); } catch (e) { /* Speicher gesperrt */ } }
 function campUnlocked(id) { if (CAMP.all) return true; const A0 = campAct(id); if (A0 && A0.free) return true; const i = CAMP_ORDER.indexOf(id); return i <= 0 || !!CAMP.done[CAMP_ORDER[i - 1]]; }
-function campNext(id) { if (id === 'tut') return CAMP.done.p1 ? '' : 'p1'; const i = CAMP_ORDER.indexOf(id); return i >= 0 && i < CAMP_ORDER.length - 1 ? CAMP_ORDER[i + 1] : ''; }
+function isSortie(id) { const A = id && campAct(id); return !!(A && A.sortie); }
+function campNext(id) { if (isSortie(id)) { const i = SORTIES.indexOf(id); return i < SORTIES.length - 1 ? SORTIES[i + 1] : ''; } if (id === 'tut') return CAMP.done.p1 ? '' : 'p1'; const i = CAMP_ORDER.indexOf(id); return i >= 0 && i < CAMP_ORDER.length - 1 ? CAMP_ORDER[i + 1] : ''; }
 function campAct(id) { return CAMPAIGN.find(a => a.ms.indexOf(id) >= 0); }
 function misLabel(id) {
   const A = campAct(id);
   if (!A) return '';
   if (A.id === 'p') return L('Prolog');
   if (A.id === 't') return L('Ausbildung');
-  if (A.id === 'b') return L('Bonus');
+  if (A.id === 'b') return A.ms.length > 1 ? L('Bonus {0}', A.ms.indexOf(id) + 1) : L('Bonus');
+  if (A.sortie) return L('Einsatz {0}', A.ms.indexOf(id) + 1);
   if (A.id === 'a5') return L('Finale');
   return A.id.slice(1) + '.' + (A.ms.indexOf(id) + 1);
 }
@@ -48,6 +50,7 @@ function campRender() {
   box.textContent = '';
   const next = !CAMP.done.tut && !Object.keys(CAMP.done).length ? 'tut' : CAMP_ORDER.find(id => !CAMP.done[id] && campUnlocked(id));
   for (const A of CAMPAIGN) {
+    if (A.sortie) continue;
     const row = document.createElement('div'), parts = A.name.split(': '), F = FACTIONS[A.f];
     row.className = 'act'; row.style.setProperty('--fc', actColor(A));
     row.innerHTML = '<h3><small>' + esc(L(parts[0])) + ' · ' + esc(F ? F.name : L('Freie Wahl')) + '</small>' + esc(L(parts[1] || parts[0])) + '</h3>';
@@ -69,6 +72,20 @@ function campRender() {
   cr.innerHTML = ch.length ? '<b>' + L('Chronik') + ':</b> ' + ch.map(esc).join(' ') : '';
   setText('campAll', L(CAMP.all ? 'Sperren wieder an' : 'Alle freischalten'));
 }
+/* ------------------------------------------------------------------ Einsätze (sorties.js): Karten mit Sternen */
+function sortRender() {
+  const box = $('sortList'); box.textContent = '';
+  let sum = 0;
+  for (const id of SORTIES) {
+    const def = MISSIONS[id], F = FACTIONS[def.f], st = CAMP.st[id] || 0, b = document.createElement('button');
+    sum += st;
+    b.className = 'scard' + (st >= 3 ? ' full' : ''); b.style.setProperty('--fc', F.team);
+    b.innerHTML = '<small>' + esc(F.name) + ' · ' + esc(L('ca. {0} min', def.mins)) + '</small><b>' + esc(L(def.name)) + '</b><span>' + esc(L(def.tease)) + '</span><i class="st">' + '★'.repeat(st) + '<u>' + '★'.repeat(3 - st) + '</u></i>';
+    b.addEventListener('click', () => { SND.play('click'); openBrief(id); });
+    box.appendChild(b);
+  }
+  setText('sortSum', L('{0} von {1} Sternen', sum, SORTIES.length * 3));
+}
 /* ------------------------------------------------------------------ Einsatzbesprechung */
 function openBrief(id) {
   const def = MISSIONS[id], A = campAct(id), who = CHARS[def.who] || CHARS.hq;
@@ -88,6 +105,7 @@ function openBrief(id) {
   $('briefFacRow').hidden = !def.pick;
   if (def.pick) { if (PLAYABLE.indexOf(CAMP.fac) < 0 || CAMP.fac === 'brood') CAMP.fac = 'alliance'; segInit('briefFac', PLAYABLE.filter(f => f !== 'brood').map(f => [f, FACTIONS[f].name]), () => CAMP.fac, v => { CAMP.fac = v; campSave(); }); }
   segInit('briefLvl', [[1, 'Leicht'], [2, 'Normal'], [3, 'Schwer']], () => CAMP.lvl, v => { CAMP.lvl = v; campSave(); });
+  $('briefLvl').parentElement.hidden = isSortie(id);   /* Einsätze laufen immer auf Normal, die Wertung sind die Sterne */
   win.hidden = false;
   win.querySelector('.win').scrollTop = 0;
   drawPortrait($('briefPic'), def.who, R.time);
@@ -96,7 +114,7 @@ function closeBrief() { $('brief').hidden = true; MISUI.brief = ''; }
 function misStart(id) {
   const def = MISSIONS[id];
   CAMP.last = id; campSave();
-  beginGame(misOpts(id, CAMP.lvl, JSON.parse(JSON.stringify(CAMP.ch)), def.pick ? CAMP.fac : undefined), 'mis');
+  beginGame(misOpts(id, isSortie(id) ? 2 : CAMP.lvl, isSortie(id) ? {} : JSON.parse(JSON.stringify(CAMP.ch)), def.pick ? CAMP.fac : undefined), 'mis');
 }
 
 /* ------------------------------------------------------------------ im Gefecht */
@@ -281,6 +299,7 @@ function chooseAsk(id, v) {
 /* ------------------------------------------------------------------ Nachbesprechung */
 function campRecord(M) {
   CAMP.done[M.id] = Math.max(CAMP.done[M.id] || 0, M.lvl);
+  if (isSortie(M.id)) CAMP.st[M.id] = Math.max(CAMP.st[M.id] || 0, sortieStars(UI.g));
   for (const k in M.ch) CAMP.ch[k] = M.ch[k];
   CAMP.last = M.id;
   campSave();
@@ -293,7 +312,8 @@ function misShowEnd() {
   $('ask').hidden = true; UI.askOpen = false;
   if (won) campRecord(M);
   $('endTitle').textContent = L(won ? 'Mission erfüllt' : 'Mission gescheitert'); $('endTitle').className = won ? 'good' : 'bad';
-  $('endText').textContent = misLabel(M.id) + ' · ' + L(def.name) + ' · ' + L(LVL_NAME[M.lvl]) + ' · ' + L('Spielzeit {0}', clock(g.time)) + (!won && M.why ? ' · ' + T(M.why) : '');
+  const so = isSortie(M.id), stars = so ? sortieStars(g) : 0;
+  $('endText').textContent = misLabel(M.id) + ' · ' + L(def.name) + ' · ' + (so ? (won ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : L('kein Stern')) : L(LVL_NAME[M.lvl])) + ' · ' + L('Spielzeit {0}', clock(g.time)) + (!won && M.why ? ' · ' + T(M.why) : '');
   const gd = misGoalDefs(g);
   $('endGoals').innerHTML = M.goals.map(q => { const d = gd.find(x => x.id === q.id); if (!q.st && d.later && !won) return ''; const ok = q.st === 2; return '<li class="' + (ok ? 'ok' : 'no') + '"><b>' + (ok ? '✓' : '✗') + '</b>' + esc(T(d.t)) + (d.side ? ' <small>(' + L('Nebenziel') + ')</small>' : '') + '</li>'; }).join('');
   const chs = Object.keys(M.ch).map(k => CARRY_TXT[k] && CARRY_TXT[k][M.ch[k]]).filter(x => x);
@@ -305,12 +325,13 @@ function misShowEnd() {
   const st = $('endStats'); st.innerHTML = '<span></span><b>' + L('Abschüsse') + '</b><b>' + L('Verluste') + '</b>' + g.players.filter(p => !p.neutral && (p.id === g.human || !p.nob || p.stats.kills)).map(p => '<span style="color:' + pcolor(p) + '">' + esc(pname(p.id)) + '</span><span>' + p.stats.kills + ' / ' + p.stats.razed + '</span><span>' + p.stats.lost + ' / ' + p.stats.bLost + '</span>').join('');
   const nx = won ? campNext(M.id) : '';
   $('eNext').hidden = !nx; if (nx) setText('eNext', L('Weiter: {0}', L(MISSIONS[nx].name)));
-  setText('eAgain', L('Noch einmal')); setText('eMenu', L('Kampagne'));
+  setText('eAgain', L('Noch einmal')); setText('eMenu', so ? L('Einsätze') : L('Kampagne'));
   setTimeout(() => { $('end').hidden = false; MUS.sting(won ? 'win' : 'lose'); SND.play(won ? 'win' : 'lose'); clearSave(); }, won ? 1600 : 1800);
 }
 function toCampaign(openId) {
+  const so = isSortie(openId || (UI.g && UI.g.mis ? UI.g.mis.id : ''));
   toMenu();
-  menuPage('camp');
+  menuPage(so ? 'sort' : 'camp');
   if (openId) openBrief(openId);
 }
 
@@ -320,6 +341,8 @@ function initCampaign() {
   if ([1, 2, 3].indexOf(CAMP.lvl) < 0) CAMP.lvl = 2;
   $('mCamp').addEventListener('click', () => { SND.init(); SND.play('click'); menuPage('camp'); });
   $('campBack').addEventListener('click', () => { SND.play('click'); menuPage('home'); });
+  $('mSort').addEventListener('click', () => { SND.init(); SND.play('click'); menuPage('sort'); });
+  $('sortBack').addEventListener('click', () => { SND.play('click'); menuPage('home'); });
   $('campAll').addEventListener('click', () => { CAMP.all = !CAMP.all; campSave(); SND.play('click'); campRender(); });
   $('briefBack').addEventListener('click', () => { SND.play('click'); closeBrief(); });
   $('briefGo').addEventListener('click', () => { const id = MISUI.brief; if (!id) return; SND.init(); closeBrief(); launch(() => misStart(id)); });

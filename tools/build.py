@@ -5,7 +5,7 @@ build/rift-armada.html (gleicher Inhalt, fester Name für die Android-App)."""
 import sys, os, re, hashlib
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = os.path.join(ROOT, 'src')
-ORDER = ['core.js', 'data.js', 'i18n.js', 'i18n_en.js', 'i18n_more.js', 'map.js', 'terrain.js', 'mapview.js', 'sim.js', 'combat.js', 'ai.js', 'waves.js', 'mission.js', 'missions.js', 'conquest.js', 'ships.js', 'fx.js', 'render3d.js', 'render.js', 'audio.js', 'music.js', 'sfx.js', 'portrait.js', 'ui.js', 'terrui.js', 'editor.js', 'campaign.js', 'cqui.js', 'save.js', 'app.js', 'qr.js', 'net.js', 'feedback.js', 'hudplus.js', 'play.js', 'replay.js', 'progress.js', 'main.js']
+ORDER = ['core.js', 'data.js', 'i18n.js', 'i18n_en.js', 'i18n_more.js', 'map.js', 'terrain.js', 'mapview.js', 'sim.js', 'combat.js', 'ai.js', 'waves.js', 'mission.js', 'missions.js', 'sorties.js', 'conquest.js', 'ships.js', 'fx.js', 'render3d.js', 'render.js', 'audio.js', 'music.js', 'sfx.js', 'portrait.js', 'ui.js', 'terrui.js', 'editor.js', 'campaign.js', 'cqui.js', 'save.js', 'app.js', 'qr.js', 'net.js', 'feedback.js', 'hudplus.js', 'play.js', 'replay.js', 'progress.js', 'main.js']
 FACS = [('alliance', 'The Alliance', '#5fb8ff', 'rgba(170,230,255,0.95)', ['archipelago', 'haven', 'wren'], 'Archipelago · Haven · Wren'),
         ('mars', 'Martian Republic', '#ff7a4a', 'rgba(255,190,110,0.95)', ['olympus', 'hammer', 'wasp'], 'Olympus · Hammer · Wasp'),
         ('legion', 'Golden Legion', '#f2c14e', 'rgba(255,230,160,0.95)', ['sovereign', 'basilica', 'herald'], 'Last Sovereign · Basilica · Herald'),

@@ -600,6 +600,16 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
 @media (pointer: coarse) { #hpBar .tb { min-width: max(2.1em, 38px); min-height: max(2em, 36px); } #selCard .sellist button { min-height: 2.5em; } #selCard .sellist { gap: 0.45em; } #selCard .selX { width: 2.3em; height: 2.3em; } }
 /* Versionszeile: im Querformat links unten, damit sie nicht über den Menütasten liegt */
 @media (orientation: landscape) { #vers { left: 1.2em; right: auto; text-align: left; } }
+/* Fassung 27: Einsätze – Karten mit Fraktionsfarbe und Sternen */
+.sorts { display: grid; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); gap: 0.5em; width: 100%; }
+.scard { --fc: var(--acc); position: relative; text-align: left; color: var(--txt); font: inherit; background: linear-gradient(180deg, rgba(20,30,52,0.9), rgba(10,16,30,0.9)); border: 1px solid var(--line); border-left: 3px solid var(--fc); border-radius: 10px; padding: 0.5em 0.7em 0.55em; min-height: 5.6em; cursor: pointer; display: flex; flex-direction: column; gap: 0.12em; }
+.scard:active { transform: scale(0.98); }
+.scard small { color: var(--fc); font-size: 0.74em; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; }
+.scard b { font-size: 1.15em; font-weight: 600; letter-spacing: 0.03em; }
+.scard span { color: var(--dim); font-size: 0.86em; line-height: 1.25; padding-right: 3.6em; }
+.scard .st { position: absolute; right: 0.6em; top: 0.4em; font-style: normal; color: var(--acc2); letter-spacing: 0.05em; }
+.scard .st u { text-decoration: none; color: rgba(255,255,255,0.16); }
+.scard.full { border-color: rgba(255,184,107,0.5); border-left-color: var(--fc); }
 </style>
 </head>
 <body>
@@ -682,6 +692,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
           <div class="tile"><svg viewBox="0 0 24 24"><path d="M3 8c3-3 6-3 9 0s6 3 9 0M3 13c3-3 6-3 9 0s6 3 9 0M3 18c3-3 6-3 9 0s6 3 9 0"/></svg><button id="mWaves">Wellen</button><span>Rift Survival und Quarantine Line gegen die Brood</span></div>
         </div>
         <div class="mini">
+          <button class="key" id="mSort"><svg viewBox="0 0 24 24"><path d="M13 2.5L5 13.5h6l-1 8 8-11h-6z"/></svg><span>Einsätze</span></button>
           <button class="key" id="mLoad"><svg viewBox="0 0 24 24"><path d="M4 4h12l4 4v12H4z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg><span>Laden</span></button>
           <button class="key" id="mMp"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="14" rx="1.5"/><rect x="13" y="5" width="8" height="14" rx="1.5"/><path d="M11 10h2M11 14h2"/></svg><span>Mehrspieler</span></button>
           <!-- KARTENEDITOR (editor.js) -->
@@ -718,6 +729,11 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
       </section>
       <section class="sec"><div class="secH">Regeln</div><div class="row"><span class="lbl">Startmittel</span><div class="seg" id="resSeg"></div></div></section>
       <div class="sheetFoot"><button class="key" id="mBack">Zurück</button><button class="key big arm" id="mStart">Start</button></div>
+    </div>
+    <div class="page sheet" id="pSort" hidden>
+      <div class="campHead"><h2>Einsätze<small>Kurze Gefechte</small></h2><p class="fine">Fester Verband, festes Ziel, drei bis acht Minuten, kein Basisbau. Ein Stern für den Sieg, je einer für die beiden Nebenziele.</p></div>
+      <div class="sorts" id="sortList"></div>
+      <div class="sheetFoot"><button class="key" id="sortBack">Zurück</button><span class="fine" id="sortSum"></span></div>
     </div>
     <div class="page sheet" id="pCamp" hidden>
       <div class="campHead"><h2>Quarantine<small>Kampagne</small></h2><p class="fine">Vierzig Jahre nach der Stille flackern die Tore der Erbauer wieder. Ein Prolog, fünf Akte, vier Fraktionen – und etwas, das durch die Tore kommt. Deine Entscheidungen reisen mit bis ins Finale.</p></div>

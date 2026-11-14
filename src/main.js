@@ -35,7 +35,7 @@ function beginGame(opts, kind, saved, seat) {
   $('hud').hidden = false;
   hudSel(); layout();
   R.cam.z = clamp(Math.min(R.cssW, R.cssH) / 380, 0.85, 1.3);
-  const hq = anyBldg(g, me);
+  const hq = anyBldg(g, me) || g.ships.find(u => !u.dead && u.owner === me && !u.convoy);   /* ohne Basis (Einsätze): beim eigenen Verband beginnen */
   if (hq) R.center(hq.x, hq.y);
   _acc = 0;
   if (saved) {
