@@ -906,3 +906,47 @@ reg('gleaner', M => {
   return g;
 });
 export { G, xm, gsec, ghull, profAt, bands, ridge, wallTrim, blk, archPts, v2, scaleUV, glassRow, row, rose, pinnacle, spire, buttress, pier, lance, halo, banner, fin, lengine, thruster, crest, vesica, thorns, censer, pd, glowSprite, crane, lturret, cherubModel, escorts, bake, wingGeo, urnGeo, sickleGeo, nameplate };
+
+/* Lanzenwerfer BALLISTA – Fassung 27 eigenes Modell (vorher vergrößerte Paladin mit Rohr, siege.js): kurzes
+   Kirchenschiff, darauf eine goldene Armbrust: Schaft bis weit vor den Bug, zwei geschwungene Bogenarme, eine Sehne
+   aus Licht, auf der Schiene liegt die Lichtlanze. Kein Heldenschiff (kein Heiligenschein, keine Cherubim).
+   Silhouette im Spiel: Armbrust von oben. */
+reg('ballista', M => {
+  const g = new THREE.Group();
+  const P = [[-24, 5, 4.4, 1.2, 1.4], [-18, 8, 5.8, 1.9, 2], [-2, 8, 5.8, 1.9, 2], [6, 6, 4.4, 1.3, 1.6], [11, 3, 2.6, .7, 1]];
+  g.add(ghull(P, M.hull));
+  g.add(ghull([[-22, 4.2, 1.4, .2, 1.5, -3.6], [4, 3.8, 1.2, .2, 1.3, -3.4], [10, 1.2, .6, .1, .4, -2.2]], M.hull2));
+  bands(g, P, [-22.5, -18, -2], M.gold, .5, .3);
+  ridge(g, M, P, -17, 4, .45);
+  both(g, wallTrim(M, 4, -.86, 2.9, -18, -2, [-16.4, -12.8, -9.2, -5.6]));
+  both(g, at(glassRow(M, row(4, -15, -5, -.4, 1.2, 2.3)), 4.0, 0, 0));
+  for (const s of [-1, 1]) for (const z of [-15, -9, -3]) { const p = pier(M, .9, 2.2, 1.4); p.position.set(s * 4.6, -.4, z); g.add(p); }
+  /* Armbrust: Schaft, Bogenarme, Sehne, Lanze, Winde */
+  const bow = new THREE.Group();
+  bow.add(at(blk(2.2, 1.2, 34, M.hull2), 0, 0, 9));
+  for (const s of [-1, 1]) bow.add(at(blk(.3, .4, 34, M.gold), s * 1.15, .55, 9));
+  bow.add(at(blk(3.4, 2, 3.4, M.gold), 0, 0, 22.5));
+  for (const s of [-1, 1]) {
+    bow.add(tube([[0, .2, 23.5], [s * 5, .2, 23], [s * 10, .3, 20], [s * 13.6, .5, 14.5], [s * 15, .7, 8.5]], .95, .4, M.gold, 22, 7));
+    bow.add(tube([[s * 1.5, .9, 23.3], [s * 6, .9, 22.4], [s * 10.6, 1, 18.6]], .3, .2, M.hull, 12, 5));
+    bow.add(at(sphere(.75, M.gold, 10, 8), s * 15, .7, 8.5));
+    const pn = pinnacle(M, .4, 2.4, M.gold); pn.position.set(s * 15, 1.2, 8.5); bow.add(pn);
+    bow.add(tube([[s * 15, .7, 8.5], [s * 7.5, .8, 2.2], [0, .9, -4]], .14, .14, M.glow, 10, 5));
+    bow.add(tube([[s * 2.4, -2.4, 9], [s * 5.5, -1, 15.5], [s * 8.4, .2, 21]], .34, .28, M.gold, 10, 5));
+    bow.add(at(mesh(G('bwd', () => new THREE.CylinderGeometry(1.5, 1.5, 1.2, 12).rotateZ(PI / 2)), M.gold), s * 1.9, .2, -6.5));
+  }
+  const l = lance(M, 27, .8, 3); l.position.set(0, 1.25, -4); bow.add(l);
+  { const nk = sphere(.7, M.glow, 10, 8); nk.position.set(0, .9, -4); nk.userData.pulse = { amp: .15, speed: 2 }; bow.add(nk); }
+  bow.add(at(blk(5.4, .5, .5, M.dark), 0, .2, -6.5));
+  bow.position.set(0, 4.5, 0); bow.rotation.x = -.1; g.add(bow);
+  /* Heck: Zwillingstürme, Rosenfenster, Punktverteidigung */
+  for (const s of [-1, 1]) { const t = spire(M, 1.2, 4.2, 6); t.position.set(s * 2.6, 2.4, -19.5); g.add(t); }
+  const ro = rose(M, 1.4, 8); ro.position.set(0, 1.4, -24.05); ro.rotation.y = PI; g.add(ro);
+  for (const s of [-1, 1]) { const q = pd(M, 1); q.position.set(s * 3, 3.3, -11); g.add(q); }
+  for (const s of [-1, 1]) { const bn = banner(M, 1.5, 4.6, s * 2); bn.position.set(s * 4.9, -1.2, -9); g.add(bn); }
+  const e0 = lengine(M, 1.5, 1.8, 9); e0.position.set(0, -.8, -24); g.add(e0);
+  for (const s of [-1, 1]) { const e = lengine(M, 1.05, 1.4, 7); e.position.set(s * 2.4, 0, -23.6); g.add(e); }
+  nameplate(g, 'BALLISTA', 4.12, 2.55, -10, .7);
+  for (const s of [-1, 1]) g.add(at(navLight(M, .3, s < 0 ? 'red' : 'green'), s * 15, 5.9, 8.3));
+  return g;
+});

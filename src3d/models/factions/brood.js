@@ -861,3 +861,36 @@ register('behemoth', M => {
 
 export default register;
 export { X, Geo, Bag, merge, place, T, addColor, sphG, coneG, fangG, domeG, prof, ellP, onB, nrm, shell, armor, cap, pores, tubeC, sweep, horn, arc, pulseG, mir, pair, sac, sacAt, eye, spike, fang, drip, maw, jaw, mandible, tentacle, membrane, spitTube, vent, pod, stand, swarmling, veinCanvas, cnv, ctex, tintC, I0 }; /* Bausteine für die Nester (stations/brood.js) */
+
+/* Sporenmörser BOOMER – Fassung 27 eigenes Modell (vorher vergrößerter Spitter mit Metallrohr, siege.js): breiter,
+   gedrungener Leib wie eine Kröte, auf dem Rücken ein dicker Muskelschlot, steil nach vorn oben, dahinter die
+   pralle Treibblase im Rippenkorb; vier Knochenbeine spreizen sich zum Abstützen. Kein Metall.
+   Silhouette im Spiel: breiter Leib mit schrägem Schlot und vier Haken. */
+register('boomer', M => {
+  const g = new THREE.Group(), x = X(M), B = new Bag();
+  const P = prof([[-20, 0, 0, 0.6], [-19.3, 2.2, 1.6, 0.6], [-15, 6.6, 4.2, 0.4], [-8, 9.4, 5.6, 0.2], [0, 9.8, 5.8, 0], [7, 8.4, 5.0, 0], [12, 6.2, 3.8, 0.1], [16, 4.6, 3.0, 0.2], [19, 3.2, 2.3, 0.2], [20.6, 1.4, 1.1, 0.1]], 0.7);
+  fleshB(B, M, P, { segs: [-16, -12, -8, -4, 0, 4, 8, 12, 15.5], groove: 0.1, gw: 0.6, nv: 56, nu: 26, T: 11 });
+  const L = armor(B, M, P, -16, 9, 5, { c: 1.5, span: 0.6, th: 0.5, lift: 0.45, ridge: 0.2, point: 0.9, T: 11, nu: 10 });
+  const R = armor(B, M, P, -16, 9, 5, { c: -1.5, span: 0.6, th: 0.5, lift: 0.45, ridge: 0.2, point: 0.9, T: 11, nu: 10 });
+  const H = cap(B, M, P, 10.5, 19.8, { span: 1.35, th: 0.65, lift: 0.38, ridge: 0.5, point: 1.3, T: 11 });
+  L.forEach(pin => spike(B, M, pin(0.9, 0.35, -0.1), V(1, -0.2, -0.8), 1.8, 0.34));
+  pores(B, M, L, [-0.4, 0.4], 0.55, 0.24); pores(B, M, R, [-0.4, 0.4], 0.55, 0.24);
+  for (const s of [-1, 1]) spike(B, M, H(s * 0.45, 0.45, -0.1), V(s * 0.5, 1, -0.7), 2.2, 0.4, false);
+  eyeCluster(B, M, P, 17.6, 1.3, 5, 0.4, 23, 1.1); eye(B, M, H(0.5, 0.12, 0), H.n(0.5, 0.12), 0.38);
+  /* Rippenkorb über der Treibblase */
+  const gz = -9, grx = 5.6, gry = 4.6, grz = 7.4, gy = 7.4;
+  for (const z of [-14.5, -11.6, -8.7, -5.8]) { const k = Math.sqrt(Math.max(0.05, 1 - ((z - gz) / grz) ** 2)); horn(B, M, arc(0, gy, z, grx * k + 0.6, gry * k + 0.6, 2.0, 12), 0.42, 0.6, { sym: false, c0: 0.7, c1: 1.15, rad: 6 }); spike(B, M, V(0, gy + gry * k + 0.85, z), V(0, 1, -0.5), 1.3 + k, 0.34, false); }
+  /* Stützbeine: je Seite zwei Knochenhaken nach außen unten */
+  for (const [z, dz] of [[-9, -5], [6, 5]]) horn(B, M, [[6.4, -0.6, z], [11, 1.2, z + dz * 0.4], [14.2, -1.6, z + dz * 0.8], [14.8, -6, z + dz]], 1.0, 0.12, {});
+  for (const s of [-1, 1]) B.add(tube([[s * 2.6, 8.6, -6], [s * 3.2, 8.2, -1.5], [s * 2.6, 7.4, 2]], 0.5, 0.36, x.sac, 16, 6).geometry, x.sac, I0);
+  drip(B, M, V(1.0, -2.6, 18.6), 0.28);
+  B.flush(g);
+  sacAt(g, x.sac, V(0, gy, gz), 1, [grx, gry, grz], 0.05, 1.4, 22);
+  for (const s of [-1, 1]) for (const [z, r] of [[-3, 1.9], [1.5, 1.6], [5.5, 1.3]]) sacAt(g, x.sac, V(s * (8.6 - Math.abs(z) * 0.12), 2.4, z), r, [1, 1.15, 1.3], 0.09, 2 + s * 0.3 + z * 0.05, 12);
+  /* Schlot */
+  const w = launcher(M, 21, 2.3, 5); w.position.set(0, 5.6, -3.5); w.rotation.x = -0.7; g.add(w);
+  pair(g, mandible(M, V(2.3, 0.2, 18.6), [[2.3, 0.2, 18.6], [4.4, 0, 20.6], [4.2, -0.2, 23.2], [2.1, -0.3, 24.4]], 0.72, { teeth: 3, amp: 0.1, speed: 1.8, seg: 10, rad: 6 }));
+  [-1, 0, 1].forEach(s => g.add(tentacle(M, V(s * 1.5, 0.6 + (s ? 0 : 0.5), -19), [[s * 1.5, 0.6 + (s ? 0 : 0.5), -19], [s * 2.8, 0.6, -21.4], [s * 3.3, 0.1, -23.8]], 0.62, { phase: s * 1.3, amp: 0.25, speed: 1.3, seg: 10, rad: 6 })));
+  for (const s of [-1, 1]) sacAt(g, x.sacPink, V(s * 2.4, -0.3, -18.2), 1.2, [1, 0.85, 1.25], 0.12, 2.4 + s * 0.3, 12);
+  return g;
+});

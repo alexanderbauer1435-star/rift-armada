@@ -501,3 +501,35 @@ register('spire', M => {
 
 /* Hilfsfunktionen für die Stationen (stations/nexus.js) */
 export { rim, xm, geo, gem, gemGeo, gemEdges, gemBands, facetCols, fragGeo, frameGeo, nodesGeo, beam, ring, spinning, core, orbiters, tri, field, navGem, hook, claw, tendril, TRI, HEX };
+
+/* Kristallkatapult LODESTAR – Fassung 27 eigenes Modell (vorher Prism mit Metallrohr, siege.js): eine Stimmgabel aus
+   zwei langen Kristallzinken, dazwischen Beschleunigerringe (Sechsecke, gegenläufig), hinten schwebt die verdichtete
+   Kristallmasse als Geschoss in einem hellen Feld. Basis wie die Geschwister: Kristalltrio, Kern, Antriebsfeld.
+   Silhouette im Spiel: Gabel mit Ringen. */
+register('lodestar', M => {
+  const X = xm(M), g = new THREE.Group();
+  tri(g, () => { const p = gem(15, 2.2, X.cry, { n: 5, tf: 0.38 }); p.position.set(0, 4.4, -13.5); p.rotation.x = 0.22; return p; });
+  const c = core(M, X, 1.9, 13); c.position.z = -13; g.add(c);
+  g.add(at(field(M, X, 4.4, 7), 0, 0, -20));
+  const r0 = ring(8.4, 0.3, M.trim, 3, 4); r0.position.z = -9; g.add(r0);
+  const sl = new THREE.Group(), pr = { n: 4, tf: 0.55, tb: 0.1, tw: 0, sq: 1 };
+  for (const s of [-1, 1]) {
+    sl.add(at(gem(36, 2.3, X.cry, pr), s * 4.8, 0, 8));
+    sl.add(at(gemEdges(X, 36, 2.3, pr, X.veinHot, 0.16), s * 4.8, 0, 8));
+    sl.add(at(gem(28, 0.7, X.vein, pr, false), s * 4.8, 0, 8));
+    const tip = core(M, X, 0.5, 4.5, 0.2, X.haloW); tip.position.set(s * 4.8, 0, 25.6); sl.add(tip);
+    sl.add(beam(X, [s * 4.8, 0, -8], [0, 0, -12.5], 0.22));
+  }
+  sl.add(beam(X, [-4.8, 0, -7], [4.8, 0, -7], 0.2));
+  [[0, 7.2, 0.42, 0.5], [7, 6.7, 0.38, -0.7], [14, 6.2, 0.34, 0.9], [21, 5.7, 0.3, -1.1]].forEach(([z, R, t, sp], i) => sl.add(spinning(ring(R, t, i % 2 ? X.beam : M.trim, 6, 4), 'z', sp, z)));
+  /* Geschoss: dichte Kristallmasse, eingefasst von einem hellen Kern */
+  const shot = new THREE.Group();
+  for (const [x, y, z, s, k] of [[0, 0, 0, 2.5, 1], [1.3, 0.8, 0.9, 1.5, 2], [-1.2, -0.7, 0.5, 1.6, 3], [0.4, -1.1, -1.1, 1.4, 4], [-0.6, 1.1, -0.8, 1.3, 5]]) { const f = mesh(fragGeo(k), k % 2 ? X.cry : X.dark); f.scale.setScalar(s * 1.25); f.position.set(x, y, z); f.rotation.set(k, k * 2, k * 3); shot.add(f); }
+  shot.userData.spin = { axis: 'z', speed: 0.5 };
+  const sp = new THREE.Group(); sp.position.z = -3.5; sp.add(shot); sl.add(sp);
+  const sc = core(M, X, 1.5, 16, 0.18, X.haloW); sc.position.z = -3.5; sl.add(sc);
+  for (const s of [-1, 1]) sl.add(beam(X, [s * 4.2, 0, -3.5], [s * 1.6, 0, -3.5], 0.14, X.beamSoft));
+  sl.position.set(0, 1.2, 0); sl.rotation.x = -0.14; g.add(sl);
+  g.add(orbiters(M, X, { n: 4, r: 11, z: -6, size: 0.8, speed: 0.3, seed: 6, wob: 1 }));
+  return g;
+});
