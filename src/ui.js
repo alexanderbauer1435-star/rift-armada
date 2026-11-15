@@ -1116,7 +1116,7 @@ function langPick(id, after) {
   sel.addEventListener('change', () => { SET.lang = sel.value; savePrefs(); setLang(sel.value); langRefresh(); if (after) after(); });
   el.appendChild(sel);
 }
-function menuPage(p) { UI.mPage = p; $('pHome').hidden = p !== 'home'; $('setup').hidden = p !== 'setup'; $('pCamp').hidden = p !== 'camp'; $('pSort').hidden = p !== 'sort'; if (p !== 'camp' && p !== 'sort') closeBrief(); if (p === 'setup') setupRender(); if (p === 'camp') campRender(); if (p === 'sort') sortRender(); }
+function menuPage(p) { UI.mPage = p; $('pHome').hidden = p !== 'home'; $('setup').hidden = p !== 'setup'; $('pCamp').hidden = p !== 'camp'; $('pSort').hidden = p !== 'sort'; if (p !== 'camp' && p !== 'sort') closeBrief(); if (p === 'setup') setupRender(); if (p === 'camp') campRender(); if (p === 'sort') sortRender(); if (p === 'home') dailyRender(); }
 /* Startplatz-Reihenfolge je Spieler: Platz 0 (du) auf MENU.myStart, falls gesetzt; sonst Zufall bei Spielstart */
 function startOrder(np) {
   /* automatisierte Tests (webdriver): fester Platz 1, damit Abläufe reproduzierbar bleiben */

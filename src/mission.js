@@ -60,7 +60,7 @@ function misMap(id, seed, mis) {
 /* Stätte ohne Abstandsprüfung zum Start (Missionen setzen sie gezielt) */
 function misSite(map, kind, x, y) { map.sites.push({ kind, x, y, r: SITE_DEF[kind].r }); }
 /* Aufstellung: Sitz 0 ist immer der Spieler. fac ersetzt die Fraktion des Spielers (Finale: frei wählbar). */
-function misOpts(id, lvl, carry, fac) {
+function misOpts(id, lvl, carry, fac, daily) {
   const def = MISSIONS[id];
   lvl = clamp(lvl | 0, 1, 3);
   const sides = typeof def.sides === 'function' ? def.sides(fac, carry || {}) : def.sides;
@@ -74,7 +74,9 @@ function misOpts(id, lvl, carry, fac) {
     if (s.color) o.color = s.color;
     return o;
   });
-  return { seed: def.seed || 1, players, mis: { id, lvl, carry: JSON.parse(JSON.stringify(carry || {})) } };
+  const o = { seed: def.seed || 1, players, mis: { id, lvl, carry: JSON.parse(JSON.stringify(carry || {})) } };
+  if (daily) { o.mis.mut = daily.mut; o.sdaily = daily.day; }   /* Tageseinsatz (campaign.js): Erschwernis und Tag */
+  return o;
 }
 function lv(g, a, b, c) { const l = g.mis.lvl; return l === 1 ? a : l === 2 ? b : c; }
 function misInit(g) {
@@ -83,6 +85,7 @@ function misInit(g) {
   const h = g.players[g.human];
   if (def.lock) h.lock = { ships: def.lock.ships ? def.lock.ships.slice() : null, bldgs: def.lock.bldgs ? def.lock.bldgs.slice() : null, noDoc: !!def.lock.noDoc };
   def.setup(g, M, M.lvl);
+  M.mut = o.mut || ''; if (M.mut) sortieMutSetup(g, M);
   for (const p of g.players) { recalcPower(g, p.id); recalcCp(g, p.id); }
   if (def.supply !== false) misSupply(g, g.human);
 }
@@ -152,6 +155,7 @@ function misStep(g) {
   if (M.res) return;
   for (let i = 0; i < M.rq.length; i++) { const r = M.rq[i]; if (g.time >= r[0]) { M.rq.splice(i--, 1); ev(g, 'radio', { k: r[1], who: r[2] }); } }
   def.step(g, M, M.lvl);
+  if (M.mut) sortieMutStep(g, M);
   if (g.over) return;
   /* Grundregel: verloren, wenn der Spieler besiegt ist; ohne Basis, wenn kein Kampfschiff mehr fliegt */
   const h = g.players[g.human];

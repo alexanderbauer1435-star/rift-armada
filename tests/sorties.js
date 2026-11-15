@@ -37,5 +37,13 @@ for (const id of X.SORTIES.filter(i => !only || i === only)) {
   ok(b.res === 1 && b.t <= 660, id + ' mit einfacher Steuerung: Ergebnis ' + b.res + ' nach ' + b.t + ' s, Sterne ' + b.stars + ', eigene Schiffe ' + b.own + (b.why ? ' (' + b.why + ')' : '') + ' | ' + b.goals);
   ok(b.hash === c.hash, id + ' gleicher Verlauf bei gleichem Start');
 }
+/* Tageseinsatz: Erschwernisse (Fassung 28) */
+if (!only) for (const id of ['e1', 'e3', 'e6']) {
+  const def = X.MISSIONS[id], n = X.createGame(X.misOpts(id, 2, {}, def.f)), m = X.createGame(X.misOpts(id, 2, {}, def.f, { mut: 'both', day: 1 }));
+  for (let i = 0; i < 40; i++) { X.stepGame(n); X.stepGame(m); }
+  const own = g => g.ships.filter(u => !u.dead && u.owner === g.human && !u.convoy && u.def.role !== 'fighter').length, foe = g => g.ships.find(u => u.owner === 1 && !u.dead);
+  ok(own(m) === own(n) - 1 && Math.abs(foe(m).hullMax / foe(n).hullMax - 1.3) < 0.01 && m.opts.sdaily === 1 && m.mis.mut === 'both', id + ' Tageseinsatz »both«: ein Schiff weniger (' + own(n) + ' → ' + own(m) + '), Gegner 30 % zäher');
+  if (id === 'e6') ok(m.ships.filter(u => u.type === 'catapult' && !u.dead).length === 3, 'e6 »lean« lässt die Catapults stehen');
+}
 console.log(fails ? 'FAILURES ' + fails : 'ALL OK');
 process.exit(fails ? 1 : 0);

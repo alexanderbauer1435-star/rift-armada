@@ -5,9 +5,9 @@
    im Gefecht, Entscheidungen, Kamerafahrten, Nachbesprechung und Fortschritt (localStorage 'ra.camp').
    Die Missionen selbst laufen deterministisch in mission.js / missions.js; hier wird nur angezeigt und befohlen.
    ===================================================================== */
-const CAMP = { done: {}, ch: {}, st: {}, lvl: 2, fac: 'alliance', all: false, last: '' };   /* st: Sterne der Einsätze (sorties.js) */
+const CAMP = { done: {}, ch: {}, st: {}, bt: {}, lvl: 2, fac: 'alliance', all: false, last: '' };   /* st: Sterne der Einsätze (sorties.js) */
 const CAMP_KEY = 'ra.camp';
-const MISUI = { brief: '', gh: '', cam: null, ask: '', fold: false, picT: 0 };
+const MISUI = { brief: '', gh: '', cam: null, ask: '', fold: false, picT: 0, daily: null, best: false };
 const RADIO = { q: [], cur: null, age: 0, shown: -1, log: [] };
 const RADIO_CPS = 52, LVL_NAME = ['', 'Leicht', 'Normal', 'Schwer'];
 /* Entscheidungen, wie die Chronik sie erzählt */
@@ -24,7 +24,7 @@ const CARRY_EFFECT = {
     voss: { spare: ['Ilya Voss kommt mit ihrer Flotte zu Hilfe.'], kill: ['Ohne Voss schickt die Alliance niemanden.'] },
     node: { live: ['Knoten K-7 sieht das Tor für dich und warnt vor jedem Schwarm.'], kill: ['Ohne K-7 kommen die Schwärme ohne Vorwarnung.'] } }
 };
-function campLoad() { try { const d = JSON.parse(localStorage.getItem(CAMP_KEY) || '{}'); if (d && typeof d === 'object') { Object.assign(CAMP, d); CAMP.done = d.done || {}; CAMP.ch = d.ch || {}; CAMP.st = d.st || {}; } } catch (e) { /* kein Fortschritt */ } }
+function campLoad() { try { const d = JSON.parse(localStorage.getItem(CAMP_KEY) || '{}'); if (d && typeof d === 'object') { Object.assign(CAMP, d); CAMP.done = d.done || {}; CAMP.ch = d.ch || {}; CAMP.st = d.st || {}; CAMP.bt = d.bt || {}; } } catch (e) { /* kein Fortschritt */ } }
 function campSave() { try { localStorage.setItem(CAMP_KEY, JSON.stringify(CAMP)); } catch (e) { /* Speicher gesperrt */ } }
 function campUnlocked(id) { if (CAMP.all) return true; const A0 = campAct(id); if (A0 && A0.free) return true; const i = CAMP_ORDER.indexOf(id); return i <= 0 || !!CAMP.done[CAMP_ORDER[i - 1]]; }
 function isSortie(id) { const A = id && campAct(id); return !!(A && A.sortie); }
@@ -80,11 +80,27 @@ function sortRender() {
     const def = MISSIONS[id], F = FACTIONS[def.f], st = CAMP.st[id] || 0, b = document.createElement('button');
     sum += st;
     b.className = 'scard' + (st >= 3 ? ' full' : ''); b.style.setProperty('--fc', F.team);
-    b.innerHTML = '<small>' + esc(F.name) + ' · ' + esc(L('ca. {0} min', def.mins)) + '</small><b>' + esc(L(def.name)) + '</b><span>' + esc(L(def.tease)) + '</span><i class="st">' + '★'.repeat(st) + '<u>' + '★'.repeat(3 - st) + '</u></i>';
+    b.innerHTML = '<small>' + esc(F.name) + ' · ' + esc(L('ca. {0} min', def.mins)) + (CAMP.bt[id] ? ' · ' + esc(L('Bestzeit {0}', clock(CAMP.bt[id]))) : '') + '</small><b>' + esc(L(def.name)) + '</b><span>' + esc(L(def.tease)) + '</span><i class="st">' + '★'.repeat(st) + '<u>' + '★'.repeat(3 - st) + '</u></i>';
     b.addEventListener('click', () => { SND.play('click'); openBrief(id); });
     box.appendChild(b);
   }
   setText('sortSum', L('{0} von {1} Sternen', sum, SORTIES.length * 3));
+  dailyRender();
+}
+/* ------------------------------------------------------------------ Tageseinsatz: jeden Tag ein Einsatz mit Erschwernis; Serie in progress.js */
+function dayNum() { const t = new Date(); return Math.round(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()) / 864e5); }
+function sortieDaily() { const dn = dayNum(); return { day: progDay(), dn, id: SORTIES[(dn * 5) % SORTIES.length], mut: ['tough', 'lean', 'both'][(dn + Math.floor(dn / 6)) % 3] }; }
+function sortieOpenDaily() { const q = sortieDaily(); if (UI.mPage !== 'sort') menuPage('sort'); MISUI.daily = q; openBrief(q.id); MISUI.daily = q; }
+function dailyRender() {
+  const q = sortieDaily(), d = progLoad(), def = MISSIONS[q.id], done = d.sd.day === q.day, n = progStreak();
+  const t = new Date(), left = 24 - t.getHours() - (t.getMinutes() ? 1 : 0);
+  const sub = esc(L(def.name)) + ' · ' + esc(L(SORTIE_MUTS[q.mut].name));
+  const st = done ? '✓ ' + '★'.repeat(d.sd.stars) + '☆'.repeat(3 - d.sd.stars) : left <= 1 ? L('noch unter 1 Std.') : L('noch {0} Std.', left);
+  const ser = n ? (n === 1 ? L('Serie: 1 Tag') : L('Serie: {0} Tage', n)) : '';
+  for (const k of ['mDaily', 'sortDaily']) {
+    const el = $(k); el.classList.toggle('done', done); el.style.setProperty('--fc', FACTIONS[def.f].team);
+    el.innerHTML = '<small>' + esc(L('Tageseinsatz')) + '</small><b>' + sub + '</b><span>' + esc(st) + (ser ? ' · ' + esc(ser) : '') + '</span>';
+  }
 }
 /* ------------------------------------------------------------------ Einsatzbesprechung */
 function openBrief(id) {
@@ -105,16 +121,17 @@ function openBrief(id) {
   $('briefFacRow').hidden = !def.pick;
   if (def.pick) { if (PLAYABLE.indexOf(CAMP.fac) < 0 || CAMP.fac === 'brood') CAMP.fac = 'alliance'; segInit('briefFac', PLAYABLE.filter(f => f !== 'brood').map(f => [f, FACTIONS[f].name]), () => CAMP.fac, v => { CAMP.fac = v; campSave(); }); }
   segInit('briefLvl', [[1, 'Leicht'], [2, 'Normal'], [3, 'Schwer']], () => CAMP.lvl, v => { CAMP.lvl = v; campSave(); });
-  $('briefLvl').parentElement.hidden = isSortie(id);   /* Einsätze laufen immer auf Normal, die Wertung sind die Sterne */
+  $('briefLvl').parentElement.hidden = isSortie(id);
+  if (MISUI.daily && MISUI.daily.id === id) { const mu = SORTIE_MUTS[MISUI.daily.mut]; $('briefText').insertAdjacentHTML('afterbegin', '<p class="dailyMut"><b>' + esc(L('Tageseinsatz')) + ' · ' + esc(L(mu.name)) + ':</b> ' + esc(L(mu.desc)) + '</p>'); }   /* Einsätze laufen immer auf Normal, die Wertung sind die Sterne */
   win.hidden = false;
   win.querySelector('.win').scrollTop = 0;
   drawPortrait($('briefPic'), def.who, R.time);
 }
-function closeBrief() { $('brief').hidden = true; MISUI.brief = ''; }
-function misStart(id) {
+function closeBrief() { $('brief').hidden = true; MISUI.brief = ''; MISUI.daily = null; }
+function misStart(id, daily) {
   const def = MISSIONS[id];
   CAMP.last = id; campSave();
-  beginGame(misOpts(id, isSortie(id) ? 2 : CAMP.lvl, isSortie(id) ? {} : JSON.parse(JSON.stringify(CAMP.ch)), def.pick ? CAMP.fac : undefined), 'mis');
+  beginGame(misOpts(id, isSortie(id) ? 2 : CAMP.lvl, isSortie(id) ? {} : JSON.parse(JSON.stringify(CAMP.ch)), def.pick ? CAMP.fac : undefined, daily), 'mis');
 }
 
 /* ------------------------------------------------------------------ im Gefecht */
@@ -299,7 +316,11 @@ function chooseAsk(id, v) {
 /* ------------------------------------------------------------------ Nachbesprechung */
 function campRecord(M) {
   CAMP.done[M.id] = Math.max(CAMP.done[M.id] || 0, M.lvl);
-  if (isSortie(M.id)) CAMP.st[M.id] = Math.max(CAMP.st[M.id] || 0, sortieStars(UI.g));
+  MISUI.best = false;
+  if (isSortie(M.id)) {
+    CAMP.st[M.id] = Math.max(CAMP.st[M.id] || 0, sortieStars(UI.g));
+    const t = Math.round(UI.g.time), old = CAMP.bt[M.id]; if (!old || t < old) { CAMP.bt[M.id] = t; MISUI.best = !!old; }
+  }
   for (const k in M.ch) CAMP.ch[k] = M.ch[k];
   CAMP.last = M.id;
   campSave();
@@ -313,7 +334,7 @@ function misShowEnd() {
   if (won) campRecord(M);
   $('endTitle').textContent = L(won ? 'Mission erfüllt' : 'Mission gescheitert'); $('endTitle').className = won ? 'good' : 'bad';
   const so = isSortie(M.id), stars = so ? sortieStars(g) : 0;
-  $('endText').textContent = misLabel(M.id) + ' · ' + L(def.name) + ' · ' + (so ? (won ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : L('kein Stern')) : L(LVL_NAME[M.lvl])) + ' · ' + L('Spielzeit {0}', clock(g.time)) + (!won && M.why ? ' · ' + T(M.why) : '');
+  $('endText').textContent = misLabel(M.id) + ' · ' + L(def.name) + ' · ' + (so ? (won ? '★'.repeat(stars) + '☆'.repeat(3 - stars) : L('kein Stern')) : L(LVL_NAME[M.lvl])) + ' · ' + L('Spielzeit {0}', clock(g.time)) + (won && MISUI.best ? ' · ' + L('Neue Bestzeit!') : '') + (!won && M.why ? ' · ' + T(M.why) : '');
   const gd = misGoalDefs(g);
   $('endGoals').innerHTML = M.goals.map(q => { const d = gd.find(x => x.id === q.id); if (!q.st && d.later && !won) return ''; const ok = q.st === 2; return '<li class="' + (ok ? 'ok' : 'no') + '"><b>' + (ok ? '✓' : '✗') + '</b>' + esc(T(d.t)) + (d.side ? ' <small>(' + L('Nebenziel') + ')</small>' : '') + '</li>'; }).join('');
   const chs = Object.keys(M.ch).map(k => CARRY_TXT[k] && CARRY_TXT[k][M.ch[k]]).filter(x => x);
@@ -345,7 +366,8 @@ function initCampaign() {
   $('sortBack').addEventListener('click', () => { SND.play('click'); menuPage('home'); });
   $('campAll').addEventListener('click', () => { CAMP.all = !CAMP.all; campSave(); SND.play('click'); campRender(); });
   $('briefBack').addEventListener('click', () => { SND.play('click'); closeBrief(); });
-  $('briefGo').addEventListener('click', () => { const id = MISUI.brief; if (!id) return; SND.init(); closeBrief(); launch(() => misStart(id)); });
+  $('briefGo').addEventListener('click', () => { const id = MISUI.brief, dq = MISUI.daily; if (!id) return; SND.init(); closeBrief(); launch(() => misStart(id, dq)); });
+  for (const k of ['mDaily', 'sortDaily']) $(k).addEventListener('click', () => { SND.init(); SND.play('click'); sortieOpenDaily(); });
   $('radio').addEventListener('click', e => { e.stopPropagation(); radioTap(); });
   $('goalsBox').addEventListener('click', e => { e.stopPropagation(); MISUI.fold = !MISUI.fold; $('goalsBox').classList.toggle('fold', MISUI.fold); SND.play('click'); });
   $('eNext').addEventListener('click', () => { if (UI.kind === 'cq') { cqLeave(UI.cqR); return; } const nx = UI.g && UI.g.mis ? campNext(UI.g.mis.id) : ''; toCampaign(nx); });

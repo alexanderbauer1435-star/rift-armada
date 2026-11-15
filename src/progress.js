@@ -24,7 +24,11 @@ const BADGES = [
   { id: 'waves20', name: 'Das Siegel hält', desc: 'Überlebe 20 Wellen.' },
   { id: 'daily', name: 'Tagwerk', desc: 'Schließe eine Tagesaufgabe ab.' },
   { id: 'daily7', name: 'Dienstplan', desc: 'Schließe sieben Tagesaufgaben ab.' },
-  { id: 'all5', name: 'Herr des Kessels', desc: 'Gewinne mit allen fünf Fraktionen.' }
+  { id: 'all5', name: 'Herr des Kessels', desc: 'Gewinne mit allen fünf Fraktionen.' },
+  { id: 'sortie', name: 'Im Einsatz', desc: 'Schließe einen Tageseinsatz ab.' },
+  { id: 'streak3', name: 'Drei am Stück', desc: 'Schließe an drei Tagen in Folge den Tageseinsatz ab.' },
+  { id: 'streak7', name: 'Eine Woche im Dienst', desc: 'Schließe an sieben Tagen in Folge den Tageseinsatz ab.' },
+  { id: 'stars', name: 'Sternenkarte', desc: 'Hole in jedem Einsatz drei Sterne.' }
 ];
 /* Flottenfarben: freigeschaltet über den Rang */
 const PROG_COLS = [['', 1, 'Fraktion'], ['#4fe3e3', 2, 'Türkis'], ['#ff7bd1', 3, 'Magenta'], ['#f2c14e', 4, 'Gold'], ['#5ddc8a', 5, 'Smaragd'], ['#c9a0ff', 6, 'Flieder'], ['#ff6a3d', 8, 'Glut'], ['#f4f1e6', 10, 'Elfenbein']];
@@ -33,6 +37,7 @@ function progLoad() {
   let d = null; try { d = JSON.parse(localStorage.getItem('ra.prog') || 'null'); } catch (e) { d = null; }
   if (!d || typeof d !== 'object') d = {};
   d.xp = d.xp || 0; d.badges = d.badges || {}; d.fs = d.fs || {}; d.daily = d.daily || {}; d.dailyN = d.dailyN || 0; d.col = d.col || '';
+  d.sd = d.sd || {}; d.streak = d.streak || { n: 0, dn: 0, best: 0 };   /* Tageseinsatz (campaign.js) und Serie aufeinanderfolgender Tage */
   PROG.d = d; return d;
 }
 function progSave() { try { localStorage.setItem('ra.prog', JSON.stringify(PROG.d)); } catch (e) { /* Speicher gesperrt */ } }
@@ -68,9 +73,31 @@ function progTrack(evs) {
     else if (e.t === 'deliver' && e.owner === UI.me && e.sal) T.sal += e.amt || 0;
   }
 }
+/* Serie: gilt, wenn der letzte Tageseinsatz heute oder gestern war */
+function progStreak() { const S = progLoad().streak, dn = dayNum(); return S.dn === dn || S.dn === dn - 1 ? S.n : 0; }
+/* Missionen und Einsätze (Fassung 28): Erfahrung für Kampagne und Einsätze, Tageseinsatz mit Serie */
+function progMis(g) {
+  const M = g.mis; if (!M || M.id === 'tut' || M.id === 'cqb' || !MISSIONS[M.id]) return null;
+  const d = progLoad(), won = M.res === 1, so = isSortie(M.id), st = so ? sortieStars(g) : 0, got = [], give = id => { if (!d.badges[id]) { d.badges[id] = Date.now(); got.push(id); } };
+  let xp = won ? (so ? 60 + 30 * st : 150 + 25 * M.lvl) : 15, sdaily = false;
+  if (won && so) {
+    const q = sortieDaily();
+    if (g.opts.sdaily === q.day && q.id === M.id && g.opts.mis.mut === q.mut) {
+      if (d.sd.day !== q.day) {
+        sdaily = true; const S = d.streak; S.n = S.dn === q.dn - 1 ? S.n + 1 : 1; S.dn = q.dn; S.best = Math.max(S.best || 0, S.n);
+        xp += 150 + Math.min(100, (S.n - 1) * 20); give('sortie'); if (S.n >= 3) give('streak3'); if (S.n >= 7) give('streak7');
+        d.sd = { day: q.day, stars: st };
+      } else d.sd.stars = Math.max(d.sd.stars || 0, st);
+    }
+    if (SORTIES.every(id => (CAMP.st[id] || 0) >= 3)) give('stars');
+  }
+  const lv0 = progLevel(d.xp); xp += got.length * 60; d.xp += xp; progSave();
+  return { xp, lv0, lv1: progLevel(d.xp), got, daily: false, sdaily, streak: d.streak.n };
+}
 /* ---------------- Auswertung am Ende ---------------- */
 function progEnd() {
-  const g = UI.g, P = UI.P; if (!g || !P || g.mis || g.cq || UI.kind === 'replay' || UI.kind === 'sandbox') return null;
+  const g = UI.g, P = UI.P; if (g && g.mis && UI.kind === 'mis') return progMis(g);
+  if (!g || !P || g.mis || g.cq || UI.kind === 'replay' || UI.kind === 'sandbox') return null;
   const d = progLoad(), T = PROG.track && PROG.track.g === g ? PROG.track : { flank: 0, super: 0, sal: 0 };
   const won = g.winTeam === P.team, min = g.time / 60, foes = g.players.filter(q => !q.neutral && !q.pirate && !q.threat && q.team !== P.team), allies = g.players.filter(q => q !== P && !q.neutral && !q.threat && q.team === P.team);
   const got = [], give = id => { if (!d.badges[id]) { d.badges[id] = Date.now(); got.push(id); } };
@@ -105,6 +132,7 @@ function progEndUi(r) {
   if (r.got.length) h += '<div class="pgBadges">' + r.got.map(id => { const B = BADGES.find(x => x.id === id); return '<span class="pgB on">★ ' + esc(L(B.name)) + '</span>'; }).join('') + '</div>';
   if (r.lv1 > r.lv0) { const c = PROG_COLS.find(x => x[1] === r.lv1); h += '<p class="fine">' + L('Neuer Rang!') + (c ? ' ' + L('Flottenfarbe freigeschaltet: {0}', L(c[2])) : '') + '</p>'; }
   if (r.daily) h += '<p class="fine good">' + L('Tagesaufgabe geschafft!') + '</p>';
+  if (r.sdaily) h += '<p class="fine good">' + L('Tageseinsatz geschafft!') + ' ' + (r.streak === 1 ? L('Serie: 1 Tag') : L('Serie: {0} Tage', r.streak)) + '</p>';
   box.innerHTML = h; box.querySelector('.pgBar i').style.width = Math.round(100 * (d.xp - a) / (b - a)) + '%';
 }
 /* ---------------- Profilfenster ---------------- */
@@ -115,6 +143,7 @@ function progRender() {
   const q = progDaily(), done = d.daily.done === q.day;
   $('pgDaily').textContent = progDailyText(q) + (done ? ' ✓' : '');
   $('pgDailyGo').textContent = L(done ? 'Nochmal spielen' : 'Starten');
+  { const n = progStreak(), S = d.streak; $('pgStreak').textContent = (n === 1 ? L('Serie: 1 Tag') : L('Serie: {0} Tage', n)) + (S.best > n ? ' · ' + L('längste Serie: {0}', S.best) : ''); }
   const n = Object.keys(d.badges).length;
   $('pgBadgeN').textContent = n + ' / ' + BADGES.length;
   $('pgBadges').innerHTML = BADGES.map(B => (d.badges[B.id] ? '<div class="pgB on"><b>★ ' : '<div class="pgB"><b>☆ ') + esc(L(B.name)) + '</b><span>' + esc(L(B.desc)) + '</span></div>').join('');
@@ -134,6 +163,7 @@ function progInit() {
   $('mProfile').addEventListener('click', () => { progRender(); $('profWin').hidden = false; SND.play('click'); });
   $('pgClose').addEventListener('click', () => { $('profWin').hidden = true; });
   $('pgDailyGo').addEventListener('click', progStartDaily);
+  $('pgSortGo').addEventListener('click', () => { $('profWin').hidden = true; sortieOpenDaily(); });
   /* eigene Flottenfarbe im Gefecht und in den Wellen (nicht im Mehrspieler: dort entscheidet die Lobby) */
   const bg = beginGame; beginGame = function (opts, kind, saved, seat) {
     const d = progLoad();

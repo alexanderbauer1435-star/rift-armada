@@ -47,6 +47,13 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 28 (Version 1.0.28, Wiederkehr): TAGESEINSATZ – jeden Tag einer der sechs Einsätze mit einer Erschwernis
+  (»Zäher Gegner« +30 % Hülle, »Kleiner Verband« ein Schiff weniger, »Unter Druck« beides; sorties.js sortieMut*,
+  Auswahl aus dem Datum in campaign.js sortieDaily, nie zweimal derselbe Einsatz hintereinander). Karte im Hauptmenü und
+  auf der Einsatzseite (offen mit Reststunden / erledigt mit Sternen), SERIE aufeinanderfolgender Tage (ra.prog streak),
+  Abzeichen »Im Einsatz«, »Drei am Stück«, »Eine Woche im Dienst«, »Sternenkarte«. Kampagnenmissionen und Einsätze geben
+  jetzt Erfahrung (progMis; bisher nur Gefecht und Wellen). BESTZEIT je Einsatz (CAMP.bt) auf der Karte und im Endbild.
+  Alles lokal, kein Server. Prüfung tools/daily28.js (Uhr im Browser verstellt), tests/sorties.js (Erschwernisse).
 - Fassung 27 (Version 1.0.27, Inhalt): EINSÄTZE (src/sorties.js) – sechs kurze Gefechte ohne Basisbau im Missionsgerüst:
   Blockadebrecher (Allianz), Letzte Bastion (Mars), Kopfjagd (Legion), Überfall (Nexus), Fressrausch (Brood), Belagerung
   (Allianz). Eigene Menüseite (Taste »Einsätze«), immer auf Normal, Wertung in Sternen: Sieg + zwei Nebenziele (CAMP.st).

@@ -610,6 +610,15 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
 .scard .st { position: absolute; right: 0.6em; top: 0.4em; font-style: normal; color: var(--acc2); letter-spacing: 0.05em; }
 .scard .st u { text-decoration: none; color: rgba(255,255,255,0.16); }
 .scard.full { border-color: rgba(255,184,107,0.5); border-left-color: var(--fc); }
+/* Fassung 28: Tageseinsatz – Karte im Hauptmenü und auf der Einsatzseite */
+.dailyCard { --fc: var(--acc2); order: 6; display: flex; flex-direction: column; gap: 0.1em; text-align: left; font: inherit; color: var(--txt); cursor: pointer; width: 100%; padding: 0.5em 0.8em 0.55em; border-radius: 12px; border: 1px solid rgba(255,184,107,0.45); border-left: 3px solid var(--fc); background: linear-gradient(90deg, rgba(255,184,107,0.16), rgba(255,184,107,0.03)); }
+.dailyCard:active { transform: scale(0.985); }
+.dailyCard small { color: var(--acc2); font-size: 0.74em; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; }
+.dailyCard b { font-size: 1.1em; font-weight: 600; letter-spacing: 0.03em; }
+.dailyCard span { color: var(--dim); font-size: 0.86em; }
+.dailyCard.done { border-color: rgba(125,220,107,0.45); background: linear-gradient(90deg, rgba(125,220,107,0.13), rgba(125,220,107,0.02)); } .dailyCard.done small { color: var(--good); }
+#sortDaily { margin-bottom: 0.5em; }
+.dailyMut { color: var(--acc2); }
 </style>
 </head>
 <body>
@@ -682,6 +691,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
         <h1 id="title">Rift Armada<small>Weltraum-Strategie</small></h1>
         <div class="titleLine"></div>
         <p class="fine" id="mNote" hidden></p>
+        <button class="dailyCard" id="mDaily"></button>
       </div>
       <div class="homeR">
         <div class="tiles menuBtns">
@@ -732,6 +742,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
     </div>
     <div class="page sheet" id="pSort" hidden>
       <div class="campHead"><h2>Einsätze<small>Kurze Gefechte</small></h2><p class="fine">Fester Verband, festes Ziel, drei bis acht Minuten, kein Basisbau. Ein Stern für den Sieg, je einer für die beiden Nebenziele.</p></div>
+      <button class="dailyCard" id="sortDaily"></button>
       <div class="sorts" id="sortList"></div>
       <div class="sheetFoot"><button class="key" id="sortBack">Zurück</button><span class="fine" id="sortSum"></span></div>
     </div>
@@ -901,6 +912,8 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
   <div class="ovl" id="profWin" hidden><div class="win">
     <h2>Profil</h2>
     <div id="pgHead"></div>
+    <div class="bSec">Tageseinsatz</div>
+    <div class="row"><span id="pgStreak" class="fine"></span><button class="key arm" id="pgSortGo">Zum Tageseinsatz</button></div>
     <div class="bSec">Tagesaufgabe</div>
     <div class="row"><span id="pgDaily" class="fine"></span><button class="key arm" id="pgDailyGo">Starten</button></div>
     <div class="bSec">Abzeichen <span id="pgBadgeN"></span></div>

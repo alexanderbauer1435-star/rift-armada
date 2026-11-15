@@ -12,6 +12,28 @@ function sortieCharge(g, ents, x, y) { for (const u of ents) if (!u.dead) { u.ho
 function sortieLost(g, M) { return (M.f.n0 || 0) - g.ships.filter(u => !u.dead && !u.derelict && u.owner === g.human && u.def.role !== 'fighter' && !u.convoy).length; }
 function sortieOwn(g, M, list, x, y, ang, opt) { const us = misTag(g, 'own', misSpawn(g, g.human, list, x, y, ang, opt)); M.f.n0 = (M.f.n0 || 0) + us.length; return us; }
 
+/* TAGESEINSATZ (Fassung 28): derselbe Einsatz mit einer Erschwernis (M.mut aus opts.mis.mut) – »tough«: feindliche Schiffe
+   und Stationen halten 30 % mehr aus; »lean«: der eigene Verband beginnt mit einem Schiff weniger; »both«: beides.
+   Welcher Einsatz an welchem Tag dran ist, bestimmt die Bedienung (campaign.js sortieDaily). */
+const SORTIE_MUTS = {
+  tough: { name: 'Zäher Gegner', desc: 'Feindliche Schiffe und Stationen halten 30 % mehr aus.' },
+  lean: { name: 'Kleiner Verband', desc: 'Du beginnst mit einem Schiff weniger.' },
+  both: { name: 'Unter Druck', desc: 'Der Gegner hält 30 % mehr aus, und du beginnst mit einem Schiff weniger.' }
+};
+function sortieMutStep(g, M) {
+  if (M.mut !== 'tough' && M.mut !== 'both') return;
+  const t = g.tm[g.human];
+  for (const u of g.ships) if (!u.mt && !u.dead && g.tm[u.owner] !== t) { u.mt = 1; u.hullMax *= 1.3; u.hull *= 1.3; }
+  for (const b of g.bldgs) if (!b.mt && !b.dead && g.tm[b.owner] !== t) { b.mt = 1; b.hullMax *= 1.3; b.hull *= 1.3; }
+}
+function sortieMutSetup(g, M) {
+  if (M.mut === 'lean' || M.mut === 'both') {
+    const keep = new Set([].concat(M.tag.art || [], M.tag.levi || [])), own = misLive(g, M.tag.own || []).filter(u => !keep.has(u.id));
+    if (own.length > 2) { removeShip(g, own[own.length - 1]); M.f.n0 = (M.f.n0 || 1) - 1; }
+  }
+  sortieMutStep(g, M);
+}
+
 /* ------------------------------------------------------------------ 1 Blockadebrecher (Alliance) */
 MISSIONS.e1 = {
   act: 'e', name: 'Blockadebrecher', f: 'alliance', who: 'voss', seed: 811, mins: 6, supply: false,
