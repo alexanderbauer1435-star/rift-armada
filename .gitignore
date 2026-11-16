@@ -24,3 +24,5 @@ tools/balance/*.log
 tools/balance/result-*.json
 tools/trailer/
 store/graphics/raw25/
+tools/promo/
+store/promo/*.mp4
