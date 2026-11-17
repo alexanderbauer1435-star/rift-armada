@@ -705,7 +705,7 @@ function updateProj(g, dt) {
         damage(g, e, q.dmg, q.kind, g.byId.get(q.sid), q.owner, x0, y0, q.aS || q.aL ? { antiS: q.aS, antiL: q.aL } : undefined);
         if (q.kind === 'acid' && !e.dead) acidOn(g, e, q.dmg * (e.k === 1 && (q.aS || q.aL) ? (e.def.cls === 'l' ? q.aL || 1 : e.def.cls === 's' || e.def.cls === 'f' ? q.aS || 1 : 1) : 1), q.owner);
         if (q.para && !e.dead) paraOn(g, e, q.owner);
-        ev(g, 'hit', { x: e.x + (x0 - e.x) * 0.5, y: e.y + (y0 - e.y) * 0.5, kind: q.kind, ang: q.ang, sh: e.shield > 0 });
+        ev(g, 'hit', { x: e.x + (x0 - e.x) * 0.5, y: e.y + (y0 - e.y) * 0.5, kind: q.kind, ang: q.ang, sh: e.shield > 0, own: q.owner });   /* Fassung 30: own nur für das Trefferbild der Fraktion */
         if (q.kind === 'rail') { (q.hit || (q.hit = [])).push(e.id); q.pierce--; q.dmg *= 0.75; if (q.pierce <= 0) hitAny = true; return hitAny; }
         hitAny = true; return true;
       }

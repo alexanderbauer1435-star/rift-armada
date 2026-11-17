@@ -50,7 +50,7 @@ function pageInit() {
 async function scene(b, name, steps, sec, opt) {
   if (ONLY && !ONLY.includes(name)) return;
   opt = opt || {};
-  const dir = path.join(OUT, 'a-' + name); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
+  const dir = path.join(OUT, (process.env.PREFIX || 'a-') + name); fs.rmSync(dir, { recursive: true, force: true }); fs.mkdirSync(dir, { recursive: true });
   /* Spielansicht: die Seite läuft mit 1,5-facher Dichte, damit die Bedienleisten in 1920×1080 scharf sind; dem Spiel
      wird Dichte 1 gemeldet, die 3D-Fläche bleibt also bei 1280×720 (sonst kostet jedes Bild mehr als das Doppelte) */
   const ctx = await b.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: opt.hud ? 1.5 : DPR });
@@ -83,7 +83,7 @@ async function scene(b, name, steps, sec, opt) {
   await ctx.close();
 }
 
-const SCENES = require('./promo29_scenes.js');
+const SCENES = require(process.env.SCENES ? path.resolve(process.env.SCENES) : './promo29_scenes.js');
 (async () => {
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   for (const s of SCENES) await scene(b, s.name, s.steps, s.sec, s.opt);

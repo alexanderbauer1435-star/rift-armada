@@ -245,6 +245,104 @@ export const spawn = {
 const FCOL = { alliance: '#8fd8ff', mars: '#ffb060', legion: '#ffd27a', nexus: '#d2a8ff', brood: '#b4ff3c', guardian: '#8fe8ff' };
 function facCol(g, o) { const p = g && g.players && g.players[o]; return (p && FCOL[p.faction]) || '#ffe0a0'; }
 
+/* ------------------------------------------------------------ Fassung 30: eigene Kampfbilder für Brood, Mars und Nexus
+   Brood frisst: wer zubeißt, hängt für die Dauer des Bisstakts mit pulsierenden Strängen am Opfer und saugt Brocken ins Maul;
+   Säure klatscht auf und frisst nach. Mars schießt heiße Leuchtspur mit Mündungsfeuer und Einschlagsglut. Nexus-Strahlen
+   sind Kristalllanzen: Pulsknoten laufen zum Ziel, zwei gezackte Lichtbögen umspielen den Kern. Alles nur Bild, keine Spielwerte. */
+const facOf = (g, o) => { const p = g && g.players && g.players[o]; return p ? p.faction : ''; };
+const FEED = new Map();          /* Angreifer-Id → { tid, until, rg, k } */
+const FLESH = '#ff5f8f', ICHOR = '#b4ff3c', NX = ['#b98cff', '#7fe9ff', '#ff9ae8'];
+const hash = n => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
+const quadRoom = () => B.quad.n < B.quad.cap * 0.7;
+function suck(s, t, time, dt, k) {
+  const a = Math.atan2(t.y - s.y, t.x - s.x), d = Math.hypot(t.x - s.x, t.y - s.y);
+  const mr = s.def.r * 0.75, tr = Math.min(d * 0.45, (t.def ? t.def.r : 12) * 0.55);
+  const mx = s.x + Math.cos(a) * mr, my = s.y + Math.sin(a) * mr, px = t.x - Math.cos(a) * tr, py = t.y - Math.sin(a) * tr;
+  const L = Math.hypot(px - mx, py - my); if (L < 2) return;
+  const nx = -(py - my) / L, ny = (px - mx) / L, h = H.proj, fc = col(FLESH), gc = col(ICHOR), full = detail > 1 && quadRoom(), n = full ? 3 : detail > 0 ? 2 : 1, seg = full ? 6 : 4;
+  const pulse = 0.75 + 0.25 * Math.sin(time * 11 + s.id), amp = (6 + L * 0.12) * k;
+  const off = (u, side, ph) => Math.sin(u * Math.PI) * (side * amp * 0.9 + Math.sin(time * 9 + ph + u * 5) * amp * 0.6);
+  for (let j = 0; j < n; j++) {
+    const ph = s.id * 1.7 + j * 2.1, side = j - (n - 1) / 2;
+    let x0 = px, y0 = py;
+    for (let i = 1; i <= seg; i++) {
+      const u = i / seg, o2 = off(u, side, ph), x1 = px + (mx - px) * u + nx * o2, y1 = py + (my - py) * u + ny * o2, w = (2.2 + 2.6 * (1 - u)) * k * pulse;
+      B.quad.write(x0, h, y0, x1, h, y1, w * 2.8, QMODE.flat, gc[0], gc[1], gc[2], 0.2);
+      B.quad.write(x0, h, y0, x1, h, y1, w, QMODE.flat, fc[0] * 1.25, fc[1] * 1.25, fc[2] * 1.25, 0.85);
+      x0 = x1; y0 = y1;
+    }
+    /* Brocken wandern den Strang entlang ins Maul und werden dabei kleiner */
+    for (let b = 0; b < 2; b++) { const u = (time * 1.9 + ph * 0.37 + b * 0.5) % 1, o2 = off(u, side, ph); B.spr.write(px + (mx - px) * u + nx * o2, h, py + (my - py) * u + ny * o2, (9 - 5 * u) * k, 0, TILE.dot, 1.6, 1.15, 0.95, 0.95); }
+  }
+  B.spr.write(px, h, py, 30 * k * pulse, time * 2, TILE.glow, fc[0], fc[1], fc[2], 0.8);
+  /* Sog: Ringe ziehen sich auf die Wunde zusammen */
+  if (Math.floor(time / 0.4 + s.id * 0.37) !== Math.floor((time - dt) / 0.4 + s.id * 0.37)) ring(px, py, 3, FLESH, 0.4, 2.2, 1.3, 0.85, 24 * k);            /* Wunde */
+  B.spr.write(mx, h, my, 20 * k * (1.55 - pulse), 0, TILE.glow, gc[0], gc[1], gc[2], 0.7);        /* Maul schluckt im Gegentakt */
+  if (detail > 0 && Math.random() < 30 * dt * K) { const life = rnd(0.25, 0.45), jx = rnd(-8, 8) * k, jy = rnd(-8, 8) * k; spr(P.spr, px + jx, h, py + jy, (mx - px - jx) / life, rnd(-4, 8), (my - py - jy) / life, life, 5.5 * k, 1.6, col(Math.random() < 0.5 ? FLESH : ICHOR), 0.9, TILE.ember, CM.fixed, 0, 1.3); }
+}
+function feeding(g, dt, time, view) {
+  const vis = (s, t) => !view || view.vp < 0 || !view.visible || view.visible(s) || view.visible(t);
+  for (const [sid, f] of FEED) {
+    const s = g.byId.get(sid), t = g.byId.get(f.tid);
+    if (!s || s.dead || !t || t.dead || time > f.until || time < f.until - 3 || Math.hypot(t.x - s.x, t.y - s.y) > f.rg) { FEED.delete(sid); continue; }
+    if (vis(s, t)) suck(s, t, time, dt, f.k);
+  }
+  /* Grazer am Wrack */
+  if (g.ships) for (const u of g.ships) { if (u.dead || !u.def.eat || !u.o || u.o.t !== 'eat') continue; const t = g.byId.get(u.o.tid); if (!t || t.dead || Math.hypot(t.x - u.x, t.y - u.y) > t.def.r + u.def.r + 40) continue; if (vis(u, t)) suck(u, t, time, dt, 0.9); }
+}
+function chomp(e) {
+  const hh = H.proj, a = e.ang || 0, cx = Math.cos(a), sy = Math.sin(a);
+  flash(e.x, e.y, 9, FLESH, 0.16, hh, TILE.glow, 1.3);
+  /* zwei Kiefer schnappen zu */
+  line(e.x - sy * 10 - cx * 4, e.y + cx * 10 - sy * 4, e.x + cx * 5, e.y + sy * 5, 2.8, '#f4ffd0', 0.14, QMODE.tail, hh, hh, 1.5);
+  line(e.x + sy * 10 - cx * 4, e.y - cx * 10 - sy * 4, e.x + cx * 5, e.y + sy * 5, 2.8, '#f4ffd0', 0.14, QMODE.tail, hh, hh, 1.5);
+  spark(e.x, e.y, 6, 95, FLESH, 0.45, hh, 1.4, 1.2); spark(e.x, e.y, 3, 60, ICHOR, 0.4, hh);
+  if (detail > 1 && Math.random() < 0.3) debris(e.x, e.y, 1, 50, 6, hh, 0.4);
+}
+function acidSplash(e) {
+  const hh = H.proj;
+  flash(e.x, e.y, 9, ICHOR, 0.2, hh); spark(e.x, e.y, 7, 80, ICHOR, 0.55, hh, 1.5, 1.4); ring(e.x, e.y, 16, ICHOR, 0.45, 1.6, 1, 0.7, 4);
+  if (e.sh) return;
+  glow(e.x, e.y, hh, 10, 20, '#7dff2a', 1.1, 0.5);   /* ätzender Fleck klingt langsam ab, darüber Blasen und grüner Dampf */
+  if (detail > 0 && later.length < 160) for (let i = 0; i < 3; i++) later.push({ at: now + 0.15 + i * 0.22, fn: () => { const x = e.x + rnd(-7, 7), y = e.y + rnd(-7, 7); flash(x, y, 4, '#d6ff6a', 0.14, hh, TILE.dot, 1.3); spr(P.smoke, x, hh, y, rnd(-3, 3), rnd(6, 12), rnd(-3, 3), rnd(0.7, 1.1), 2.5, 9, [0.25, 0.42, 0.12], 0.45, TILE.smoke, CM.smoke, 0.5, 1, rnd(-1, 1)); } });
+}
+function marsImpact(e) {
+  const hh = H.proj;
+  flash(e.x, e.y, 8, '#ffd9a0', 0.14, hh, TILE.glow, 1.3); fire(e.x, e.y, 5, 0.35, 2, hh, 0.6);
+  spark(e.x, e.y, 6, 150, '#ffe0a0', 0.35, hh, 1.6, 1.3); spark(e.x, e.y, 3, 70, '#ff7a3a', 0.5, hh);
+  if (detail > 1 && Math.random() < 0.25) debris(e.x, e.y, 1, 70, 5, hh);
+}
+function marsMuzzle(e) {
+  const cx = Math.cos(e.ang), sy = Math.sin(e.ang), mx = e.x + cx * e.r, my = e.y + sy * e.r, rail = e.kind === 'rail', big = e.big || rail, L = rail ? 34 : big ? 24 : 13, h = H.proj;
+  line(mx + cx * L, my + sy * L, mx, my, big ? 7 : 4, rail ? '#dff4ff' : '#ffd9a0', 0.08, QMODE.tail, h, h, 1.6);
+  if (!big) return;
+  /* Mündungsbremse: zwei Stichflammen quer, Pulverdampf */
+  line(mx - sy * 11, my + cx * 11, mx, my, 3, rail ? '#9fd0ff' : '#ffb060', 0.09, QMODE.tail, h, h, 1.4); line(mx + sy * 11, my - cx * 11, mx, my, 3, rail ? '#9fd0ff' : '#ffb060', 0.09, QMODE.tail, h, h, 1.4);
+  if (detail > 0) spr(P.smoke, mx, h, my, cx * 14 + rnd(-4, 4), rnd(3, 8), sy * 14 + rnd(-4, 4), rnd(0.6, 0.9), 3, 11, [0.3, 0.27, 0.24], 0.4, TILE.smoke, CM.smoke, 0.6, 1, rnd(-1, 1));
+  if (rail) { ring(mx, my, 26, '#bfe9ff', 0.3, 2, 1.2, 0.8, 5); line(e.x - cx * e.r * 0.2, e.y - sy * e.r * 0.2, mx, my, 5, '#9fd0ff', 0.2, QMODE.soft, h, h, 1.2, 0.8); }
+}
+function nexusBeam(sx, h0, sy, tx, h1, ty, bw, time, seed, dt) {
+  const dx = tx - sx, dy = ty - sy, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, v = col(NX[0]), full = detail > 1 && quadRoom();
+  const seg = Math.max(4, Math.min(full ? 9 : 5, Math.round(L / 40))), dh = h1 - h0;
+  B.quad.write(sx, h0, sy, tx, h1, ty, bw * 7, QMODE.flat, v[0], v[1], v[2], 0.12);
+  B.quad.write(sx, h0, sy, tx, h1, ty, bw * 0.6, QMODE.flat, 1.7, 1.7, 1.8, 0.95);
+  /* Pulsknoten laufen zum Ziel */
+  for (let i = 0; i < seg; i++) { const u0 = i / seg, u1 = (i + 1) / seg, um = (u0 + u1) / 2, w = bw * (1.1 + 2.3 * Math.pow(0.5 + 0.5 * Math.sin(um * L * 0.11 - time * 22 + seed), 3));
+    B.quad.write(sx + dx * u0, h0 + dh * u0, sy + dy * u0, sx + dx * u1, h0 + dh * u1, sy + dy * u1, w, QMODE.flat, v[0], v[1], v[2], 0.6); }
+  /* gezackte Lichtbögen um den Kern, sechzehnmal je Sekunde neu gewürfelt */
+  const fr = Math.floor(time * 16);
+  for (let j = 0; j < (full ? 2 : 1); j++) { const c = col(NX[1 + j]); let x0 = sx, y0 = sy, hh0 = h0;
+    for (let i = 1; i <= seg; i++) { const u = i / seg, o2 = i === seg ? 0 : (hash(seed + j * 31 + i * 7 + fr * 13) - 0.5) * Math.sin(u * Math.PI) * bw * 7, x1 = sx + dx * u + nx * o2, y1 = sy + dy * u + ny * o2, hh1 = h0 + dh * u;
+      B.quad.write(x0, hh0, y0, x1, hh1, y1, Math.max(0.8, bw * 0.45), QMODE.flat, c[0] * 1.3, c[1] * 1.3, c[2] * 1.3, 0.8); x0 = x1; y0 = y1; hh0 = hh1; } }
+  /* Kristallglanz wandert den Strahl entlang; Austritt und Einschlag als drehende Sterne */
+  for (let b = 0; b < (full ? 3 : 1); b++) { const u = (time * 1.6 + b / 3 + seed * 0.13) % 1; B.spr.write(sx + dx * u, h0 + dh * u, sy + dy * u, bw * 7, time * 4 + b, TILE.star, 1.4, 1.3, 1.6, 0.85); }
+  B.spr.write(sx, h0, sy, bw * 8, -time * 3, TILE.star, v[0] * 1.3, v[1] * 1.3, v[2] * 1.3, 0.9);
+  B.spr.write(tx, h1, ty, bw * 13 * (0.85 + 0.15 * Math.sin(time * 30 + seed)), time * 5, TILE.star, 1.5, 1.4, 1.7, 0.9);
+  B.spr.write(tx, h1, ty, bw * 11, 0, TILE.glow, v[0], v[1], v[2], 0.7);
+  if (haloOn()) B.spr.write(tx, h1, ty, bw * 26, 0, TILE.glow, v[0], v[1], v[2], 0.2);
+  if (detail > 0 && Math.random() < 24 * dt * K) spark(tx, ty, 1, 90, NX[(Math.random() * 3) | 0], 0.35, h1, 1.4, 1.3);
+}
+
 /* ------------------------------------------------------------ Ereignisse */
 /* Entität am Ereignisort (Schildereignisse tragen nur die Position des Ziels) */
 function targetAt(g, x, y) {
@@ -274,6 +372,11 @@ export function event(e, g, view) {
     }
     case 'hit': {
       const k = e.kind || 'kin', hh = H.proj;
+      /* Fassung 30: Biss, Säure und Mars-Geschosse haben ihr eigenes Trefferbild */
+      if (k === 'bite') { chomp(e); break; }
+      if (k === 'acid') { acidSplash(e); break; }
+      if (k === 'kin' && !e.sh && e.own !== undefined && facOf(g, e.own) === 'mars') { marsImpact(e); break; }
+      if (k === 'rail' && e.ang !== undefined) { const cx = Math.cos(e.ang), sy = Math.sin(e.ang); line(e.x - cx * 18, e.y - sy * 18, e.x + cx * 34, e.y + sy * 34, 3, '#dff4ff', 0.16, QMODE.tail, hh, hh, 1.6); ring(e.x, e.y, 20, '#bfe9ff', 0.3, 1.8, 1.2, 0.7, 4); }
       if (haloOn() && (k === 'torp' || k === 'rail' || Math.random() < 0.35)) glow(e.x, e.y, hh, k === 'torp' ? 34 : 18, k === 'torp' ? 52 : 26, (HIT[k] || HIT.kin)[0], k === 'torp' ? 0.4 : 0.18, 0.25);
       if (k === 'torp') light(e.x, e.y, hh, '#ffb060', 1.4, 160, 0.35); else if (k === 'rail' || (k === 'beam' && Math.random() < 0.3)) light(e.x, e.y, hh, (HIT[k] || HIT.kin)[0], k === 'rail' ? 1.0 : 0.6, 110, 0.18);
       if (k === 'torp') explode(e.x, e.y, 10, false, '#ffb060', hh);
@@ -291,6 +394,7 @@ export function event(e, g, view) {
       if (e.ang !== undefined && e.r) { const c = e.kind === 'rail' ? '#dff4ff' : e.kind === 'acid' ? '#b4ff3c' : facCol(g, e.owner), mx = e.x + Math.cos(e.ang) * e.r, my = e.y + Math.sin(e.ang) * e.r, s0 = e.big || e.kind === 'torp' ? 9 : e.kind === 'beam' ? 7 : 5;
         flash(mx, my, s0, c, 0.09, H.proj, TILE.glow, 1.5); if (haloOn()) glow(mx, my, H.proj, s0 * 3, s0 * 4.5, c, 0.16, 0.22); if (e.big || e.kind === 'torp' || e.kind === 'rail') light(mx, my, H.proj, c, 0.7, 120, 0.12); if (e.big || e.kind === 'torp') spark(mx, my, 3, 70, c, 0.25, H.proj, 1.4, 0.2); }
     }
+      if (e.ang !== undefined && e.r && (e.kind === 'kin' || e.kind === 'rail') && facOf(g, e.owner) === 'mars') marsMuzzle(e);   /* Fassung 30 */
       if (e.kind === 'rail') { flash(e.x, e.y, 12, '#dff4ff', 0.15, H.proj, TILE.star, 1.4); glow(e.x, e.y, H.proj, 20, 36, '#9fd0ff', 0.25, 0.5); }
       else if (e.kind === 'kin' && e.big) flash(e.x + Math.cos(e.ang) * 10, e.y + Math.sin(e.ang) * 10, 5, '#ffe0a0', 0.1, H.proj);
       break;
@@ -366,6 +470,7 @@ export function frame(g, dt, time, view, cam) {
     if (g.spores) spores(g, dt, time, view);
     if (g.mines && g.mines.length) mines(g, time, view);   /* Fassung 22 */
     heals(g, time, view);
+    feeding(g, dt, time, view);   /* Fassung 30 */
     if (g.wave && (g.wave.rifts || g.wave.open)) rifts(g, dt, time);
     VIEW = view; if (g.gates && g.gates.length) gatesLive(g, dt, time);
   }
@@ -389,6 +494,7 @@ function beamsOf(list, g, dt, time, view) {
       const sx = s.x + Math.cos(a) * r0, sy = s.y + Math.sin(a) * r0, tx = (bm.wx !== undefined ? bm.wx : t.x) + rnd(-1.5, 1.5), ty = (bm.wy !== undefined ? bm.wy : t.y) + rnd(-1.5, 1.5);   /* Fassung 22: am Schildwall endet der Strahl */
       const pulse = 0.92 + 0.08 * Math.sin(time * 28 + s.id);
       if (bm.extra) for (const eid of bm.extra) { const e2 = g.byId.get(eid); if (!e2 || e2.dead) continue; B.quad.write(sx, h0, sy, e2.x, h1, e2.y, bw * 2.2, QMODE.flat, c[0], c[1], c[2], 0.35); B.quad.write(sx, h0, sy, e2.x, h1, e2.y, bw * 0.5, QMODE.flat, 1.5, 1.5, 1.5, 0.8); B.spr.write(e2.x, h1, e2.y, bw * 6, 0, TILE.glow, c[0], c[1], c[2], 0.6); }
+      if (detail > 0 && facOf(g, s.owner) === 'nexus') { nexusBeam(sx, h0, sy, tx, h1, ty, bw, time, s.id * 7 + i, dt); continue; }   /* Fassung 30 */
       B.quad.write(sx, h0, sy, tx, h1, ty, bw * 6 * pulse, QMODE.flat, c[0], c[1], c[2], 0.16);
       B.quad.write(sx, h0, sy, tx, h1, ty, bw * 2.6 * pulse, QMODE.flat, c[0], c[1], c[2], 0.6);
       B.quad.write(sx, h0, sy, tx, h1, ty, bw * 0.65, QMODE.flat, 1.6, 1.6, 1.6, 0.95);
@@ -438,13 +544,37 @@ function projectiles(g, dt, time, view) {
       if (detail > 0 && Math.random() < 30 * dt) { trail(q.x - dx * 5, q.y - dy * 5, h, '#ff9a50', 6, 0.5, rnd(-10, 10), rnd(4, 12), rnd(-10, 10), 1, TILE.glow); spark(q.x, q.y, 1, 40, '#ffd27a', 0.3, h); }
     } else if (kind === 'acid') {
       const c = col(q.col || '#b4ff3c');
-      B.spr.write(q.x, h, q.y, 7, 0, TILE.glow, c[0], c[1], c[2], 0.7);
-      B.spr.write(q.x + dx * 1, h, q.y + dy * 1, 3, q.ang, TILE.dot, c[0] * 1.5, c[1] * 1.5, c[2] * 1.5, 0.95);
-      B.quad.write(q.x - dx * 7, h, q.y - dy * 7, q.x, h, q.y, 2.4, QMODE.tail, c[0], c[1], c[2], 0.5);
+      const wob = 1 + 0.25 * Math.sin(time * 22 + q.x * 0.3);   /* Fassung 30: wabernder Klumpen mit Tropfenschweif */
+      B.spr.write(q.x, h, q.y, 11 * wob, 0, TILE.glow, c[0], c[1], c[2], 0.75);
+      B.spr.write(q.x + dx * 1, h, q.y + dy * 1, 4.4 * wob, q.ang, TILE.dot, c[0] * 1.5, c[1] * 1.5, c[2] * 1.5, 0.95);
+      B.spr.write(q.x - dx * 6, h, q.y - dy * 6, 2.6 * (2 - wob), 0, TILE.dot, c[0] * 1.3, c[1] * 1.3, c[2] * 1.3, 0.8);
+      B.quad.write(q.x - dx * 13, h, q.y - dy * 13, q.x, h, q.y, 3.2, QMODE.tail, c[0], c[1], c[2], 0.55);
       if (detail > 0 && Math.random() < 24 * dt * K) trail(q.x - dx * 2, q.y - dy * 2, h, q.col || '#b4ff3c', 2.2, 0.4, rnd(-14, 14), rnd(-4, 10), rnd(-14, 14), 1.2);
     } else {
       /* kin, bite, para: kurzer Leuchtstrich in Waffenfarbe mit hellem Kern und Glutpunkt */
       const c = col(q.col || wpnColOf(g, q, null)), bite = kind === 'bite';
+      /* Fassung 30 */
+      if (bite) {
+        if (q.sid) { const s = g.byId.get(q.sid); FEED.set(q.sid, { tid: q.tid, until: now + 1.5, rg: 150 + (s ? s.def.r * 2 : 0), k: s ? Math.max(0.7, Math.min(1.8, s.def.r / 14)) : 1 }); }
+        /* zwei Fangzähne, die auf den Biss zulaufen */
+        B.quad.write(q.x - dx * 9 - dy * 5, h, q.y - dy * 9 + dx * 5, q.x, h, q.y, 2.6, QMODE.tail, 1.5, 1.6, 1.2, 0.9);
+        B.quad.write(q.x - dx * 9 + dy * 5, h, q.y - dy * 9 - dx * 5, q.x, h, q.y, 2.6, QMODE.tail, 1.5, 1.6, 1.2, 0.9);
+        B.spr.write(q.x, h, q.y, 10, 0, TILE.glow, c[0], c[1], c[2], 0.6); continue;
+      }
+      if (q.para) {
+        /* Parasit: windet sich im Flug */
+        let x0 = q.x, y0 = q.y; for (let i = 1; i <= 4; i++) { const o2 = Math.sin(time * 26 + i * 1.4 + q.x * 0.1) * 3.2, x1 = q.x - dx * i * 5 - dy * o2, y1 = q.y - dy * i * 5 + dx * o2; B.quad.write(x1, h, y1, x0, h, y0, 3 - i * 0.5, QMODE.flat, c[0] * 1.2, c[1] * 1.2, c[2] * 1.2, 0.85); x0 = x1; y0 = y1; }
+        B.spr.write(q.x, h, q.y, 11, 0, TILE.glow, c[0], c[1], c[2], 0.7); B.spr.write(q.x, h, q.y, 3.4, 0, TILE.dot, 1.6, 1.3, 1.5, 0.95); continue;
+      }
+      if (kind === 'kin' && facOf(g, q.owner) === 'mars') {
+        /* heiße Leuchtspur, schwere Granaten mit Rauch */
+        const big = q.dmg >= 20, hot = col('#ff7a3a'), L = big ? 32 : 22;
+        B.quad.write(q.x - dx * L, h, q.y - dy * L, q.x, h, q.y, big ? 5 : 3.4, QMODE.tail, hot[0], hot[1], hot[2], 0.75);
+        B.quad.write(q.x - dx * L * 0.6, h, q.y - dy * L * 0.6, q.x + dx * 2, h, q.y + dy * 2, big ? 1.8 : 1.2, QMODE.tail, 1.9, 1.7, 1.2, 0.95);
+        B.spr.write(q.x, h, q.y, big ? 16 : 10, 0, TILE.glow, hot[0], hot[1], hot[2], 0.7); B.spr.write(q.x + dx, h, q.y + dy, big ? 4 : 2.6, 0, TILE.dot, 1.8, 1.6, 1.2, 0.95);
+        if (big && detail > 0 && Math.random() < 14 * dt * K) spr(P.smoke, q.x - dx * 8, h, q.y - dy * 8, rnd(-4, 4), rnd(2, 6), rnd(-4, 4), rnd(0.4, 0.7), 1.6, 5, [0.24, 0.22, 0.2], 0.35, TILE.smoke, CM.smoke, 0.5, 1, rnd(-1, 1));
+        continue;
+      }
       B.quad.write(q.x - dx * (bite ? 7 : 16), h, q.y - dy * (bite ? 7 : 16), q.x, h, q.y, bite ? 3.4 : 3.2, QMODE.tail, c[0], c[1], c[2], 0.65);
       B.quad.write(q.x - dx * 10, h, q.y - dy * 10, q.x + dx * 1.5, h, q.y + dy * 1.5, 1.2, QMODE.tail, white[0] * 1.4, white[1] * 1.4, white[2] * 1.4, 0.95);
       B.spr.write(q.x, h, q.y, 9, 0, TILE.glow, c[0], c[1], c[2], 0.55);

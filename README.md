@@ -47,6 +47,11 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 30 (Version 1.0.30): eigene Kampfbilder für Brood, Mars und Nexus (src3d/effects/index.js, nur Bild, keine Spielwerte).
+  Brood: wer zubeißt, hängt mit pulsierenden Strängen am Opfer und saugt Brocken ins Maul (auch Grazer am Wrack), Biss mit
+  schnappenden Kiefern, Säure als wabernder Klumpen mit Fleck, Blasen und Dampf, Parasiten winden sich im Flug. Mars: heiße
+  Leuchtspur, Mündungsfeuer mit Stichflammen und Pulverdampf, Einschlagsglut, Railgun mit Druckring und Durchschlag. Nexus:
+  Strahlen als Kristalllanzen mit laufenden Pulsknoten, gezackten Lichtbögen und Sternglanz. Vergleichsbilder: tools/fx30_scenes.js.
 - Fassung 29 (Version 1.0.29, Korrektur): Auf der Einsatzseite lief eine lange Kopfzeile (Fraktion, Dauer, Bestzeit) in die
   Sterne oben rechts; die Kopfzeile hält jetzt Platz frei (shell.html .scard small, Prüfung tools/sortcard29.js in vier
   Bildschirmgrößen und drei Sprachen).
