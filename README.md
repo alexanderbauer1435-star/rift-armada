@@ -47,6 +47,8 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 32 (Version 1.0.32): weitere Samples (Einzeldateien des Projektinhabers): Biss, Schildbruch, Fähigkeit und acht
+  Bedienklänge (Klick, Befehl, Platzieren, Fehler, gebaut, bereit, Ausbau, Alarm); jetzt 24 Klänge mit 56 Varianten.
 - Fassung 31 (Version 1.0.31): (1) Geräusche aus freien Sample-Paketen: 14 Klänge mit 44 Varianten (Strahl, Abwehr, Railgun,
   Lanze, Treffer, Explosionen, Schild, Säure, Biss, Torpedo, Sprung) in src/snd/*.mp3, aufbereitet von tools/snd30.py, vom Bau
   eingebettet (rund 350 KB), gespielt von src/audio.js (sndSample); was fehlt, bleibt errechnet. Quellen: src/snd/CREDITS.md,

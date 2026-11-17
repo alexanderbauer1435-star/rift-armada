@@ -7,7 +7,7 @@ python3 tools/snd30.py <Ordner mit den entpackten Paketen>"""
 import os, sys, json, subprocess, glob
 import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__))); OUT = os.path.join(ROOT, 'src', 'snd'); SR = 44100
-K = 'kenney/Audio/'; L = 'lentikula/'; D = 'digital/**/'
+K = 'kenney/Audio/'; L = 'lentikula/'; D = 'digital/**/'; M = 'more/'   # more/: Einzeldateien des Nutzers (Fassung 32)
 # Klang → (Quellen, längste Dauer in s, Zielpegel (Spitze bei voller Lautstärke), Einblenden in s)
 MAP = {
     'beam':    ([K + 'laserLarge_00%d.ogg' % i for i in range(5)], 0.60, 0.16, 0),
@@ -21,7 +21,18 @@ MAP = {
     'bboom':   ([K + 'lowFrequency_explosion_001.ogg'], 2.00, 0.60, 0),
     'shield':  ([K + 'forceField_00%d.ogg' % i for i in range(5)], 0.45, 0.07, 0),
     'acid':    ([K + 'slime_000.ogg', K + 'slime_001.ogg'], 0.40, 0.08, 0),
-    'bite':    ([K + 'slime_001.ogg', K + 'slime_000.ogg'], 0.22, 0.08, 0),
+    # eine Quelle kann (Datei, Startzeit in s) sein, wenn die Aufnahme mehrere Ereignisse enthält
+    'bite':    ([M + 'WOODImpt_Hit_Blood_Spill*.wav', (M + 'WEAPSwrd_Sword_Slide_Cuts*.wav', 0.20), (M + 'WEAPSwrd_Sword_Slide_Cuts*.wav', 2.24), K + 'slime_001.ogg'], 0.30, 0.10, 0),
+    'shdown':  ([(M + 'ICEBrk_Skill_Freeze*.wav', 1.26)], 0.70, 0.12, 0),
+    'ability': ([(M + 'DSGNStngr_Action_Deploy*.wav', 0.14)], 1.00, 0.10, 0),
+    'click':   ([M + 'Interface_Pop_High_Short.wav'], 0.15, 0.07, 0),
+    'order':   ([M + 'Interface_Percussion_Snap.wav'], 0.12, 0.06, 0),
+    'place':   ([M + 'Interface_Accept_Glassy_Snap.wav'], 0.25, 0.08, 0),
+    'err':     ([M + 'Interface_Deny_Low_Fat_Dark.wav'], 0.50, 0.09, 0),
+    'built':   ([M + 'ROBTMvmt_Tower_Deploy*.wav'], 0.75, 0.10, 0),
+    'ready':   ([M + 'Game_Entry_Happy_Short.wav'], 0.40, 0.08, 0),
+    'upgrade': ([M + 'Interface_Arp_Reveal_Down_Long.wav'], 0.75, 0.08, 0),
+    'alert':   ([M + 'Interface_Sci-Fi_Ping_Down.wav'], 0.60, 0.09, 0),
     'torp':    ([K + 'thrusterFire_00%d.ogg' % i for i in (0, 1, 2)], 0.80, 0.13, 0.03),
     'warp':    ([D + 'phaseJump%d.mp3' % i for i in (1, 2, 3)], 0.90, 0.10, 0),
 }
@@ -41,8 +52,10 @@ def main(src):
     for name, (files, maxd, peak, fin) in MAP.items():
         ent = []
         for i, pat in enumerate(files):
+            st = 0
+            if isinstance(pat, tuple): pat, st = pat
             hit = glob.glob(os.path.join(src, pat), recursive=True); assert hit, pat
-            x = shape(load(hit[0]), maxd, fin); fn = '%s_%d.mp3' % (name, i); p = os.path.join(OUT, fn)
+            x = load(hit[0]); x = shape(x[int(st * SR):int((st + maxd + 0.5) * SR)] if st else x, maxd, fin); fn = '%s_%d.mp3' % (name, i); p = os.path.join(OUT, fn)
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', str(SR), '-ac', '1', '-i', '-', '-c:a', 'libmp3lame', '-b:a', '80k', p], input=x.astype(np.float32).tobytes(), check=True)
             d, c, r = feat(x); ent.append(fn); total += os.path.getsize(p); print('%-8s %-34s %.2f s  Schwerpunkt %5.0f Hz  rms %.3f' % (name, os.path.basename(hit[0]), d, c, r))
         out[name] = {'f': ent, 'g': round(peak / 0.81, 3), 'd': maxd}
