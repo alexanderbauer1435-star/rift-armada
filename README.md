@@ -47,6 +47,9 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 29 (Version 1.0.29, Korrektur): Auf der Einsatzseite lief eine lange Kopfzeile (Fraktion, Dauer, Bestzeit) in die
+  Sterne oben rechts; die Kopfzeile hält jetzt Platz frei (shell.html .scard small, Prüfung tools/sortcard29.js in vier
+  Bildschirmgrößen und drei Sprachen).
 - Fassung 28 (Version 1.0.28, Wiederkehr): TAGESEINSATZ – jeden Tag einer der sechs Einsätze mit einer Erschwernis
   (»Zäher Gegner« +30 % Hülle, »Kleiner Verband« ein Schiff weniger, »Unter Druck« beides; sorties.js sortieMut*,
   Auswahl aus dem Datum in campaign.js sortieDaily, nie zweimal derselbe Einsatz hintereinander). Karte im Hauptmenü und

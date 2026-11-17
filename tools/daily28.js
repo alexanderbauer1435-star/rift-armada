@@ -21,7 +21,8 @@ const F = path.resolve(process.argv[2] || 'build/rift-armada.html');
     const br = await p.evaluate(() => ({ open: !document.getElementById('brief').hidden, mut: (document.querySelector('#briefText .dailyMut') || {}).textContent || '', name: document.getElementById('briefName').textContent }));
     await p.evaluate(() => document.getElementById('briefGo').click());
     await p.waitForFunction(() => typeof UI !== 'undefined' && UI.g && UI.g.mis && UI.g.time > 1 && !UI.endShown, null, { timeout: 60000 });
-    const st = await p.evaluate(() => ({ mut: UI.g.mis.mut, sd: UI.g.opts.sdaily, id: UI.g.mis.id, own: UI.g.ships.filter(u => u.owner === UI.g.human && !u.convoy).length, foe: (UI.g.ships.find(u => u.owner === 1) || {}).mt || 0 }));
+    /* Gegner sind nicht in jedem Einsatz Spieler 1, und in zweien (e2, e5) ist zu Beginn noch keiner da – dann gilt die Prüfung als bestanden */
+    const st = await p.evaluate(() => ({ mut: UI.g.mis.mut, sd: UI.g.opts.sdaily, id: UI.g.mis.id, own: UI.g.ships.filter(u => u.owner === UI.g.human && !u.convoy).length, foe: (() => { const g = UI.g, e = g.ships.filter(u => !u.dead && g.tm[u.owner] !== g.tm[g.human]); return e.every(u => u.mt) ? 1 : 0; })() }));
     if (win) { await p.evaluate(() => { misWin(UI.g); UI.speed = 4; }); await p.waitForFunction(() => !document.getElementById('end').hidden, null, { timeout: 30000 }); await p.waitForTimeout(300); }
     return { br, st };
   };

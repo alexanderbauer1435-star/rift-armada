@@ -604,7 +604,7 @@ body.replay #mini { top: calc(0.5em + env(safe-area-inset-top)); }
 .sorts { display: grid; grid-template-columns: repeat(auto-fill, minmax(15em, 1fr)); gap: 0.5em; width: 100%; }
 .scard { --fc: var(--acc); position: relative; text-align: left; color: var(--txt); font: inherit; background: linear-gradient(180deg, rgba(20,30,52,0.9), rgba(10,16,30,0.9)); border: 1px solid var(--line); border-left: 3px solid var(--fc); border-radius: 10px; padding: 0.5em 0.7em 0.55em; min-height: 5.6em; cursor: pointer; display: flex; flex-direction: column; gap: 0.12em; }
 .scard:active { transform: scale(0.98); }
-.scard small { color: var(--fc); font-size: 0.74em; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; }
+.scard small { color: var(--fc); font-size: 0.74em; letter-spacing: 0.07em; text-transform: uppercase; font-weight: 600; padding-right: 5.2em; }   /* Platz für die Sterne oben rechts, sonst läuft eine lange Kopfzeile hinein */
 .scard b { font-size: 1.15em; font-weight: 600; letter-spacing: 0.03em; }
 .scard span { color: var(--dim); font-size: 0.86em; line-height: 1.25; padding-right: 3.6em; }
 .scard .st { position: absolute; right: 0.6em; top: 0.4em; font-style: normal; color: var(--acc2); letter-spacing: 0.05em; }
