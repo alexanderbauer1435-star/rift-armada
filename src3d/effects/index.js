@@ -251,6 +251,36 @@ function facCol(g, o) { const p = g && g.players && g.players[o]; return (p && F
    sind Kristalllanzen: Pulsknoten laufen zum Ziel, zwei gezackte Lichtbögen umspielen den Kern. Alles nur Bild, keine Spielwerte. */
 const facOf = (g, o) => { const p = g && g.players && g.players[o]; return p ? p.faction : ''; };
 const FEED = new Map();          /* Angreifer-Id → { tid, until, rg, k } */
+const PREY = new Map();          /* Opfer-Id → bis wann es gepackt ist */
+/* Fassung 31: Haltung fürs Modell – der Fresser stößt im Kautakt vor und schwillt beim Schlucken, das Opfer zittert.
+   out = [dx, dy, Maßstab]; liefert false, wenn das Schiff weder frisst noch gefressen wird */
+export function pose(u, time, out) {
+  const f = FEED.get(u.id);
+  if (f && time <= f.until) { const t = f.tx !== undefined ? Math.atan2(f.ty - u.y, f.tx - u.x) : u.ang, c = Math.sin(time * 13 + u.id), k = Math.max(0, c) * u.def.r * 0.22; out[0] = Math.cos(t) * k; out[1] = Math.sin(t) * k; out[2] = 1 + 0.07 * Math.max(0, -c); return true; }
+  const p = PREY.get(u.id);
+  if (p && time <= p && u.def.cls !== 'l') { const a = u.def.cls === 's' ? 1.6 : 0.9; out[0] = Math.sin(time * 47 + u.id) * a; out[1] = Math.cos(time * 53 + u.id * 2) * a; out[2] = 1; return true; }
+  return false;
+}
+const TENT = '#b05ae0', TENT2 = '#ff8fc0';
+/* zwei Fangarme greifen von den Flanken des Fressers um das Opfer herum; Saugnäpfe als helle Punkte */
+function tentacles(s, t, time, k) {
+  const a = Math.atan2(t.y - s.y, t.x - s.x), ca = Math.cos(a), sa = Math.sin(a), h = H.proj + 1.5, tr = t.def ? t.def.r : 12, tc = col(TENT), pc = col(TENT2), seg = detail > 1 && quadRoom() ? 8 : 5;
+  for (let j = -1; j <= 1; j += 2) {
+    const grip = 0.85 + 0.15 * Math.sin(time * 5 + s.id + j);           /* Zugreifen und Lockern */
+    const x0 = s.x + ca * s.def.r * 0.35 - sa * j * s.def.r * 0.55, y0 = s.y + sa * s.def.r * 0.35 + ca * j * s.def.r * 0.55;
+    const x2 = t.x + ca * tr * 0.35 * grip - sa * j * tr * 0.75 * grip, y2 = t.y + sa * tr * 0.35 * grip + ca * j * tr * 0.75 * grip;      /* hinter der Mitte des Opfers */
+    const bow = (tr * 0.9 + s.def.r * 0.5) * (1.1 + 0.15 * Math.sin(time * 3.3 + j * 2 + s.id)), x1 = (x0 + x2) / 2 - sa * j * bow, y1 = (y0 + y2) / 2 + ca * j * bow;
+    let px = x0, py = y0;
+    for (let i = 1; i <= seg; i++) { const u = i / seg, v = 1 - u, wob = Math.sin(time * 8 + u * 6 + j + s.id) * 1.4 * k * Math.sin(u * Math.PI);
+      const qx = v * v * x0 + 2 * v * u * x1 + u * u * x2 - sa * wob, qy = v * v * y0 + 2 * v * u * y1 + u * u * y2 + ca * wob, w = (5.2 - 3.4 * u) * k;
+      B.quad.write(px, h, py, qx, h, qy, w * 1.9, QMODE.flat, tc[0], tc[1], tc[2], 0.28);
+      B.quad.write(px, h, py, qx, h, qy, w, QMODE.flat, tc[0] * 1.15, tc[1] * 1.15, tc[2] * 1.15, 0.95);
+      B.quad.write(px, h, py, qx, h, qy, w * 0.3, QMODE.flat, pc[0] * 1.3, pc[1] * 1.3, pc[2] * 1.3, 0.9);
+      if (i < seg) B.spr.write(qx, h, qy, w * 1.1, 0, TILE.dot, 1.5, 1.1, 1.4, 0.8);
+      px = qx; py = qy; }
+    B.spr.write(x2, h, y2, 9 * k, time * 3, TILE.glow, pc[0], pc[1], pc[2], 0.75);   /* Griffpunkt glüht */
+  }
+}
 const FLESH = '#ff5f8f', ICHOR = '#b4ff3c', NX = ['#b98cff', '#7fe9ff', '#ff9ae8'];
 const hash = n => { const x = Math.sin(n * 127.1) * 43758.5453; return x - Math.floor(x); };
 const quadRoom = () => B.quad.n < B.quad.cap * 0.7;
@@ -261,6 +291,7 @@ function suck(s, t, time, dt, k) {
   const L = Math.hypot(px - mx, py - my); if (L < 2) return;
   const nx = -(py - my) / L, ny = (px - mx) / L, h = H.proj, fc = col(FLESH), gc = col(ICHOR), full = detail > 1 && quadRoom(), n = full ? 3 : detail > 0 ? 2 : 1, seg = full ? 6 : 4;
   const pulse = 0.75 + 0.25 * Math.sin(time * 11 + s.id), amp = (6 + L * 0.12) * k;
+  if (detail > 0 && k >= 0.85) tentacles(s, t, time, k);
   const off = (u, side, ph) => Math.sin(u * Math.PI) * (side * amp * 0.9 + Math.sin(time * 9 + ph + u * 5) * amp * 0.6);
   for (let j = 0; j < n; j++) {
     const ph = s.id * 1.7 + j * 2.1, side = j - (n - 1) / 2;
@@ -285,8 +316,10 @@ function feeding(g, dt, time, view) {
   for (const [sid, f] of FEED) {
     const s = g.byId.get(sid), t = g.byId.get(f.tid);
     if (!s || s.dead || !t || t.dead || time > f.until || time < f.until - 3 || Math.hypot(t.x - s.x, t.y - s.y) > f.rg) { FEED.delete(sid); continue; }
+    f.tx = t.x; f.ty = t.y; PREY.set(f.tid, time + 0.3);
     if (vis(s, t)) suck(s, t, time, dt, f.k);
   }
+  if (PREY.size > 64) for (const [id, un] of PREY) if (time > un) PREY.delete(id);
   /* Grazer am Wrack */
   if (g.ships) for (const u of g.ships) { if (u.dead || !u.def.eat || !u.o || u.o.t !== 'eat') continue; const t = g.byId.get(u.o.tid); if (!t || t.dead || Math.hypot(t.x - u.x, t.y - u.y) > t.def.r + u.def.r + 40) continue; if (vis(u, t)) suck(u, t, time, dt, 0.9); }
 }
@@ -296,26 +329,35 @@ function chomp(e) {
   /* zwei Kiefer schnappen zu */
   line(e.x - sy * 10 - cx * 4, e.y + cx * 10 - sy * 4, e.x + cx * 5, e.y + sy * 5, 2.8, '#f4ffd0', 0.14, QMODE.tail, hh, hh, 1.5);
   line(e.x + sy * 10 - cx * 4, e.y - cx * 10 - sy * 4, e.x + cx * 5, e.y + sy * 5, 2.8, '#f4ffd0', 0.14, QMODE.tail, hh, hh, 1.5);
-  spark(e.x, e.y, 6, 95, FLESH, 0.45, hh, 1.4, 1.2); spark(e.x, e.y, 3, 60, ICHOR, 0.4, hh);
-  if (detail > 1 && Math.random() < 0.3) debris(e.x, e.y, 1, 50, 6, hh, 0.4);
+  spark(e.x, e.y, 12, 120, FLESH, 0.5, hh, 1.5, 1.3); spark(e.x, e.y, 5, 70, ICHOR, 0.45, hh);
+  ring(e.x, e.y, 15, FLESH, 0.3, 2, 1.3, 0.8, 3); flash(e.x, e.y, 13, '#ffd0e0', 0.1, hh, TILE.star, 1.3);
+  if (detail > 0 && Math.random() < 0.55) debris(e.x, e.y, 1, 60, 6, hh, 0.4);
 }
 function acidSplash(e) {
   const hh = H.proj;
   flash(e.x, e.y, 9, ICHOR, 0.2, hh); spark(e.x, e.y, 7, 80, ICHOR, 0.55, hh, 1.5, 1.4); ring(e.x, e.y, 16, ICHOR, 0.45, 1.6, 1, 0.7, 4);
   if (e.sh) return;
-  glow(e.x, e.y, hh, 10, 20, '#7dff2a', 1.1, 0.5);   /* ätzender Fleck klingt langsam ab, darüber Blasen und grüner Dampf */
-  if (detail > 0 && later.length < 160) for (let i = 0; i < 3; i++) later.push({ at: now + 0.15 + i * 0.22, fn: () => { const x = e.x + rnd(-7, 7), y = e.y + rnd(-7, 7); flash(x, y, 4, '#d6ff6a', 0.14, hh, TILE.dot, 1.3); spr(P.smoke, x, hh, y, rnd(-3, 3), rnd(6, 12), rnd(-3, 3), rnd(0.7, 1.1), 2.5, 9, [0.25, 0.42, 0.12], 0.45, TILE.smoke, CM.smoke, 0.5, 1, rnd(-1, 1)); } });
+  glow(e.x, e.y, hh, 16, 32, '#7dff2a', 2.2, 0.55); glow(e.x, e.y, hh, 6, 12, '#e8ffb0', 0.5, 0.7); spark(e.x, e.y, 5, 45, '#d6ff6a', 0.8, hh, 1.2, 0.2);   /* ätzender Fleck klingt langsam ab, darüber Blasen und grüner Dampf */
+  if (detail > 0 && later.length < 160) for (let i = 0; i < 5; i++) later.push({ at: now + 0.15 + i * 0.3, fn: () => { const x = e.x + rnd(-7, 7), y = e.y + rnd(-7, 7); flash(x, y, 4, '#d6ff6a', 0.14, hh, TILE.dot, 1.3); spr(P.smoke, x, hh, y, rnd(-3, 3), rnd(6, 12), rnd(-3, 3), rnd(0.7, 1.1), 2.5, 9, [0.25, 0.42, 0.12], 0.45, TILE.smoke, CM.smoke, 0.5, 1, rnd(-1, 1)); } });
 }
 function marsImpact(e) {
   const hh = H.proj;
-  flash(e.x, e.y, 8, '#ffd9a0', 0.14, hh, TILE.glow, 1.3); fire(e.x, e.y, 5, 0.35, 2, hh, 0.6);
-  spark(e.x, e.y, 6, 150, '#ffe0a0', 0.35, hh, 1.6, 1.3); spark(e.x, e.y, 3, 70, '#ff7a3a', 0.5, hh);
-  if (detail > 1 && Math.random() < 0.25) debris(e.x, e.y, 1, 70, 5, hh);
+  /* Fassung 31: Einschlag als kleine Explosion mit Splittern, Glutfleck und Rauch */
+  flash(e.x, e.y, 12, '#ffe6b0', 0.14, hh, TILE.glow, 1.4); fire(e.x, e.y, 8, 0.45, 4, hh, 0.7);
+  spark(e.x, e.y, 11, 190, '#ffe0a0', 0.4, hh, 1.7, 1.3); spark(e.x, e.y, 4, 80, '#ff7a3a', 0.6, hh);
+  if (e.ang !== undefined) { const cx = Math.cos(e.ang), sy = Math.sin(e.ang); for (let j = -1; j <= 1; j += 2) line(e.x, e.y, e.x - cx * 16 - sy * j * 12, e.y - sy * 16 + cx * j * 12, 2, '#ffd9a0', 0.12, QMODE.tail, hh, hh, 1.5); }   /* Abpraller */
+  glow(e.x, e.y, hh, 9, 15, '#ff5a1a', 1.2, 0.6);
+  if (detail > 0) { smoke(e.x, e.y, 7, 1, 1.4, hh, 8); if (Math.random() < 0.5) debris(e.x, e.y, 1, 80, 5, hh); }
+  if (Math.random() < 0.3) light(e.x, e.y, hh, '#ffb060', 0.9, 110, 0.2);
 }
 function marsMuzzle(e) {
   const cx = Math.cos(e.ang), sy = Math.sin(e.ang), mx = e.x + cx * e.r, my = e.y + sy * e.r, rail = e.kind === 'rail', big = e.big || rail, L = rail ? 34 : big ? 24 : 13, h = H.proj;
-  line(mx + cx * L, my + sy * L, mx, my, big ? 7 : 4, rail ? '#dff4ff' : '#ffd9a0', 0.08, QMODE.tail, h, h, 1.6);
+  line(mx + cx * L * (big ? 1.7 : 1.2), my + sy * L * (big ? 1.7 : 1.2), mx, my, big ? 10 : 4.5, rail ? '#dff4ff' : '#ffd9a0', big ? 0.11 : 0.08, QMODE.tail, h, h, 1.7);
   if (!big) return;
+  /* Fassung 31: Feuerball an der Mündung, Druckring, Pulverdampf, der als Wand stehen bleibt */
+  flash(mx + cx * 6, my + sy * 6, 13, rail ? '#dff4ff' : '#ffe0a0', 0.1, h, TILE.glow, 1.6); ring(mx, my, 18, rail ? '#bfe9ff' : '#ffc890', 0.22, 1.6, 1.1, 0.6, 4);
+  if (!rail && detail > 0) for (let i = 0; i < 2; i++) { const v = rnd(10, 34), sh = rnd(0.2, 0.3); spr(P.smoke, mx + cx * rnd(2, 14), h + rnd(0, 3), my + sy * rnd(2, 14), cx * v - sy * rnd(-9, 9), rnd(2, 7), sy * v + cx * rnd(-9, 9), rnd(1.3, 2.1), 4, rnd(15, 24), [sh * 1.15, sh, sh * 0.85], 0.42, TILE.smoke, CM.smoke, 1.1, 1, rnd(-1, 1)); }
+  if (!rail && Math.random() < 0.4) light(mx, my, h, '#ffb060', 0.8, 120, 0.12);
   /* Mündungsbremse: zwei Stichflammen quer, Pulverdampf */
   line(mx - sy * 11, my + cx * 11, mx, my, 3, rail ? '#9fd0ff' : '#ffb060', 0.09, QMODE.tail, h, h, 1.4); line(mx + sy * 11, my - cx * 11, mx, my, 3, rail ? '#9fd0ff' : '#ffb060', 0.09, QMODE.tail, h, h, 1.4);
   if (detail > 0) spr(P.smoke, mx, h, my, cx * 14 + rnd(-4, 4), rnd(3, 8), sy * 14 + rnd(-4, 4), rnd(0.6, 0.9), 3, 11, [0.3, 0.27, 0.24], 0.4, TILE.smoke, CM.smoke, 0.6, 1, rnd(-1, 1));
@@ -324,8 +366,10 @@ function marsMuzzle(e) {
 function nexusBeam(sx, h0, sy, tx, h1, ty, bw, time, seed, dt) {
   const dx = tx - sx, dy = ty - sy, L = Math.hypot(dx, dy) || 1, nx = -dy / L, ny = dx / L, v = col(NX[0]), full = detail > 1 && quadRoom();
   const seg = Math.max(4, Math.min(full ? 9 : 5, Math.round(L / 40))), dh = h1 - h0;
-  B.quad.write(sx, h0, sy, tx, h1, ty, bw * 7, QMODE.flat, v[0], v[1], v[2], 0.12);
+  B.quad.write(sx, h0, sy, tx, h1, ty, bw * 10, QMODE.flat, v[0], v[1], v[2], 0.14);
   B.quad.write(sx, h0, sy, tx, h1, ty, bw * 0.6, QMODE.flat, 1.7, 1.7, 1.8, 0.95);
+  /* Fassung 31: am Ziel bricht sich der Strahl in drei farbige Fächer, die langsam kreisen */
+  for (let j = 0; j < 3; j++) { const a = time * 2.4 + j * 2.094 + seed, rl = bw * (11 + 5 * Math.sin(time * 9 + j + seed)), c = col(NX[j]); B.quad.write(tx + Math.cos(a) * rl, h1, ty + Math.sin(a) * rl, tx, h1, ty, bw * 1.5, QMODE.tail, c[0] * 1.2, c[1] * 1.2, c[2] * 1.2, 0.75); }
   /* Pulsknoten laufen zum Ziel */
   for (let i = 0; i < seg; i++) { const u0 = i / seg, u1 = (i + 1) / seg, um = (u0 + u1) / 2, w = bw * (1.1 + 2.3 * Math.pow(0.5 + 0.5 * Math.sin(um * L * 0.11 - time * 22 + seed), 3));
     B.quad.write(sx + dx * u0, h0 + dh * u0, sy + dy * u0, sx + dx * u1, h0 + dh * u1, sy + dy * u1, w, QMODE.flat, v[0], v[1], v[2], 0.6); }
@@ -530,6 +574,8 @@ function projectiles(g, dt, time, view) {
       B.quad.write(q.x - dx * 60, h, q.y - dy * 60, q.x + dx * 4, h, q.y + dy * 4, 1.6, QMODE.tail, 1.8, 1.8, 1.8, 0.95);
       B.spr.write(q.x, h, q.y, 16, 0, TILE.glow, c[0], c[1], c[2], 0.8);
       B.spr.write(q.x + dx * 2, h, q.y + dy * 2, 5, 0, TILE.dot, 1.7, 1.7, 1.7, 0.9);
+      /* Fassung 31: die Bahn glüht als ionisierte Spur nach */
+      if (detail > 0) { const b = (q.sp || 1600) * dt + 2; line(q.x - dx * b, q.y - dy * b, q.x, q.y, 3.4, '#7fb8ff', 0.6, QMODE.flat, h, h, 1.2, 0.55); line(q.x - dx * b, q.y - dy * b, q.x, q.y, 1.1, '#ffffff', 0.28, QMODE.flat, h, h, 1.5, 0.9); }
       if (detail > 0) { const sp = q.sp || 1600, n = Math.min(4, Math.ceil(sp * dt / 40)); for (let i = 0; i < n; i++) { const b = (i + Math.random()) / n * sp * dt; glow(q.x - dx * b, q.y - dy * b, h, 7, 2, '#bfe9ff', 0.35, 0.45, 1, TILE.ember, 1.3); } }
     } else if (kind === 'art') {
       /* Belagerungsgranate im Bogen: Höhe nach Flugfortschritt */
@@ -568,10 +614,11 @@ function projectiles(g, dt, time, view) {
       }
       if (kind === 'kin' && facOf(g, q.owner) === 'mars') {
         /* heiße Leuchtspur, schwere Granaten mit Rauch */
-        const big = q.dmg >= 20, hot = col('#ff7a3a'), L = big ? 32 : 22;
-        B.quad.write(q.x - dx * L, h, q.y - dy * L, q.x, h, q.y, big ? 5 : 3.4, QMODE.tail, hot[0], hot[1], hot[2], 0.75);
+        const big = q.dmg >= 20, hot = col('#ff7a3a'), L = big ? 46 : 26;
+        if (big) B.quad.write(q.x - dx * L * 1.2, h, q.y - dy * L * 1.2, q.x, h, q.y, 13, QMODE.tail, hot[0], hot[1], hot[2], 0.18);
+        B.quad.write(q.x - dx * L, h, q.y - dy * L, q.x, h, q.y, big ? 6.5 : 3.8, QMODE.tail, hot[0], hot[1], hot[2], 0.8);
         B.quad.write(q.x - dx * L * 0.6, h, q.y - dy * L * 0.6, q.x + dx * 2, h, q.y + dy * 2, big ? 1.8 : 1.2, QMODE.tail, 1.9, 1.7, 1.2, 0.95);
-        B.spr.write(q.x, h, q.y, big ? 16 : 10, 0, TILE.glow, hot[0], hot[1], hot[2], 0.7); B.spr.write(q.x + dx, h, q.y + dy, big ? 4 : 2.6, 0, TILE.dot, 1.8, 1.6, 1.2, 0.95);
+        B.spr.write(q.x, h, q.y, big ? 24 : 11, 0, TILE.glow, hot[0], hot[1], hot[2], 0.75); B.spr.write(q.x + dx, h, q.y + dy, big ? 5.5 : 2.8, 0, TILE.dot, 1.8, 1.6, 1.2, 0.95);
         if (big && detail > 0 && Math.random() < 14 * dt * K) spr(P.smoke, q.x - dx * 8, h, q.y - dy * 8, rnd(-4, 4), rnd(2, 6), rnd(-4, 4), rnd(0.4, 0.7), 1.6, 5, [0.24, 0.22, 0.2], 0.35, TILE.smoke, CM.smoke, 0.5, 1, rnd(-1, 1));
         continue;
       }

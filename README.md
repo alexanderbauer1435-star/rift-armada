@@ -47,6 +47,12 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 31 (Version 1.0.31): (1) Geräusche aus freien Sample-Paketen: 14 Klänge mit 44 Varianten (Strahl, Abwehr, Railgun,
+  Lanze, Treffer, Explosionen, Schild, Säure, Biss, Torpedo, Sprung) in src/snd/*.mp3, aufbereitet von tools/snd30.py, vom Bau
+  eingebettet (rund 350 KB), gespielt von src/audio.js (sndSample); was fehlt, bleibt errechnet. Quellen: src/snd/CREDITS.md,
+  Prüfung tools/smp30.js. (2) Kampfbilder kräftiger: Brood greift mit zwei Fangarmen um das Opfer, stößt im Kautakt vor, das
+  Opfer zittert (effects.pose → entities); Mars mit Mündungsfeuerball, Pulverdampf, Einschlagsexplosion und Glutfleck, die
+  Railgun-Bahn glüht nach; Nexus-Strahlen brechen sich am Ziel in drei farbige Fächer.
 - Fassung 30 (Version 1.0.30): eigene Kampfbilder für Brood, Mars und Nexus (src3d/effects/index.js, nur Bild, keine Spielwerte).
   Brood: wer zubeißt, hängt mit pulsierenden Strängen am Opfer und saugt Brocken ins Maul (auch Grazer am Wrack), Biss mit
   schnappenden Kiefern, Säure als wabernder Klumpen mit Fleck, Blasen und Dampf, Parasiten winden sich im Flug. Mars: heiße

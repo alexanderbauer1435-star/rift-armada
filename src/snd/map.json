@@ -1,0 +1,130 @@
+{
+ "beam": {
+  "f": [
+   "beam_0.mp3",
+   "beam_1.mp3",
+   "beam_2.mp3",
+   "beam_3.mp3",
+   "beam_4.mp3"
+  ],
+  "g": 0.198,
+  "d": 0.6
+ },
+ "pd": {
+  "f": [
+   "pd_0.mp3",
+   "pd_1.mp3",
+   "pd_2.mp3",
+   "pd_3.mp3",
+   "pd_4.mp3"
+  ],
+  "g": 0.062,
+  "d": 0.22
+ },
+ "rail": {
+  "f": [
+   "rail_0.mp3",
+   "rail_1.mp3",
+   "rail_2.mp3"
+  ],
+  "g": 0.37,
+  "d": 0.85
+ },
+ "lance": {
+  "f": [
+   "lance_0.mp3",
+   "lance_1.mp3"
+  ],
+  "g": 0.296,
+  "d": 1.2
+ },
+ "hit": {
+  "f": [
+   "hit_0.mp3",
+   "hit_1.mp3",
+   "hit_2.mp3",
+   "hit_3.mp3",
+   "hit_4.mp3"
+  ],
+  "g": 0.086,
+  "d": 0.35
+ },
+ "sboom": {
+  "f": [
+   "sboom_0.mp3",
+   "sboom_1.mp3",
+   "sboom_2.mp3"
+  ],
+  "g": 0.296,
+  "d": 0.6
+ },
+ "boom": {
+  "f": [
+   "boom_0.mp3",
+   "boom_1.mp3",
+   "boom_2.mp3"
+  ],
+  "g": 0.42,
+  "d": 1.1
+ },
+ "bigboom": {
+  "f": [
+   "bigboom_0.mp3",
+   "bigboom_1.mp3"
+  ],
+  "g": 0.617,
+  "d": 1.8
+ },
+ "bboom": {
+  "f": [
+   "bboom_0.mp3"
+  ],
+  "g": 0.741,
+  "d": 2.0
+ },
+ "shield": {
+  "f": [
+   "shield_0.mp3",
+   "shield_1.mp3",
+   "shield_2.mp3",
+   "shield_3.mp3",
+   "shield_4.mp3"
+  ],
+  "g": 0.086,
+  "d": 0.45
+ },
+ "acid": {
+  "f": [
+   "acid_0.mp3",
+   "acid_1.mp3"
+  ],
+  "g": 0.099,
+  "d": 0.4
+ },
+ "bite": {
+  "f": [
+   "bite_0.mp3",
+   "bite_1.mp3"
+  ],
+  "g": 0.099,
+  "d": 0.22
+ },
+ "torp": {
+  "f": [
+   "torp_0.mp3",
+   "torp_1.mp3",
+   "torp_2.mp3"
+  ],
+  "g": 0.16,
+  "d": 0.8
+ },
+ "warp": {
+  "f": [
+   "warp_0.mp3",
+   "warp_1.mp3",
+   "warp_2.mp3"
+  ],
+  "g": 0.123,
+  "d": 0.9
+ }
+}

@@ -31,6 +31,7 @@ const E = { born: new Map(), now: 0, tpl: new Map(), sets: new Map(), stations: 
 const M4 = new THREE.Matrix4(), M4b = new THREE.Matrix4(), POS = new THREE.Vector3(), SCL = new THREE.Vector3(1, 1, 1), EUL = new THREE.Euler(0, 0, 0, 'YZX'), QUAT = new THREE.Quaternion(), COL = new THREE.Color();
 const WHITE = new THREE.Color(1, 1, 1), TINT = { ion: new THREE.Color(), acid: new THREE.Color(0.75, 1.05, 0.6), gold: new THREE.Color(1.15, 1.0, 0.7) };
 export function setEffects(fx) { E.fx = fx; }
+const FP = [0, 0, 1];
 /* Fassung 24: Verkehr in der Basis – kleine Pendelshuttles fliegen in flachen Bögen zwischen fertigen eigenen Stationen
    (je Spieler bis zu 6, Zahl wächst mit der Basis). Rein optisch, zwei Instanz-Meshes (Rumpf in Teamfarbe, Leuchtpunkt). */
 const TR = { body: null, glow: null, list: [], cap: 64, M: new THREE.Matrix4(), Q: new THREE.Quaternion(), P: new THREE.Vector3(), S: new THREE.Vector3(1, 1, 1), C: new THREE.Color(), up: new THREE.Vector3(0, 1, 0), e: new THREE.Euler() };
@@ -510,6 +511,7 @@ export function updateEntities(g, dt, t, view) {
     /* Fassung 24: Einsprung frisch gebauter Schiffe – kommt von hinten heran, wächst mit leichtem Überschwingen */
     let jx = 0, jy = 0, js = 1; const born = E.born.get(u.id);
     if (born !== undefined) { const a = (t - born) / 0.55; if (a >= 1 || a < 0) E.born.delete(u.id); else { const e = 1 - Math.pow(1 - a, 3); js = 0.15 + 0.85 * e + Math.sin(a * Math.PI) * 0.12; const back = (1 - e) * Math.max(60, def.len * 1.5); jx = -Math.cos(u.ang) * back; jy = -Math.sin(u.ang) * back; } }
+    if (def.f === 'brood' || E.fx && E.fx.pose) { if (E.fx && E.fx.pose && E.fx.pose(u, t, FP)) { jx += FP[0]; jy += FP[1]; js *= FP[2]; } }   /* Fassung 31: Fressen und Gepacktsein */
     POS.set(u.x + jx, hover + yOff, u.y + jy); EUL.set(0, Math.PI / 2 - u.ang, u.derelict ? Math.sin(u.id) * 0.25 : u.crip ? Math.sin(t * 0.7 + u.id) * 0.35 : pv.roll); QUAT.setFromEuler(EUL); SCL.set(js, js, js);
     M4.compose(POS, QUAT, SCL);
     /* Flammen: Fahrt, G-Rausch, Sprint; keine bei Wracks und Ruhenden */

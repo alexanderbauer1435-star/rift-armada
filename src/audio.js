@@ -27,7 +27,7 @@ SND.init = function () {
     SND.comp = comp;
     /* fünf Stereokanäle von links nach rechts; ohne StereoPanner alles in die Mitte */
     SND.bus = [-0.75, -0.38, 0, 0.38, 0.75].map(p => { if (!p || !c.createStereoPanner) return SND.master; const pn = c.createStereoPanner(); pn.pan.value = p; pn.connect(SND.master); return pn; });
-    SND.dst = SND.master;
+    SND.dst = SND.master; SND.loadSamples && setTimeout(() => SND.loadSamples(), 0);
     sndReverb(c);
     MUS.init(c, comp);
     const len = Math.floor(c.sampleRate * 1.6), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
@@ -113,8 +113,22 @@ SND.play = function (name, x, y, vol) {
   SND.dst = SND.bus ? SND.bus[bus] : SND.master;
   SND.pf = cls ? 0.94 + Math.random() * 0.12 : 1;
   SND.send = SND.sends ? SND.sends[SND_REV[name] || 0] : null;
-  try { sndVoice(name, t, v); } finally { SND.dst = SND.master; SND.pf = 1; SND.send = null; }
+  try { if (!sndSample(name, t, v)) sndVoice(name, t, v); } finally { SND.dst = SND.master; SND.pf = 1; SND.send = null; }
 };
+/* Fassung 30: aufgenommene Geräusche (window.RA_SMP, vom Bau eingebettet) statt der errechneten, je Klang mehrere Varianten;
+   was dort fehlt oder sich nicht dekodieren lässt, bleibt beim errechneten Klang */
+SND.smp = {};
+SND.loadSamples = function () {
+  const M = window.RA_SMP, c = SND.ctx; if (!M || !c || SND.smpL) return; SND.smpL = 1;
+  for (const n in M) { const e = SND.smp[n] = { g: M[n].g, b: [] };
+    M[n].f.forEach(b64 => { try { const bin = atob(b64), u = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) u[k] = bin.charCodeAt(k); const pr = c.decodeAudioData(u.buffer, buf => { e.b.push(buf); }, () => {}); if (pr && pr.catch) pr.catch(() => {}); } catch (err) {} }); }
+};
+function sndSample(name, t, v) {
+  const s = SND.smp[name]; if (!s || !s.b.length) return false;
+  const c = SND.ctx, src = c.createBufferSource(), g = c.createGain();
+  src.buffer = s.b[(Math.random() * s.b.length) | 0]; src.playbackRate.value = SND.pf; g.gain.value = s.g * v;
+  src.connect(g); g.connect(SND.dst); if (SND.send) g.connect(SND.send); src.start(t); return true;
+}
 function sndVoice(name, t, v) {
   switch (name) {
     /* Waffen: kurz und weich, kein Dauerton */

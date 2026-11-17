@@ -13,8 +13,8 @@ module.exports = [
       __fwd(150); UI.speed = 0.6; } ], opt: { each: view(3.2) } },
   { name: 'mars', sec: 2, steps: [game(['mars', 'alliance']), 3000, prep, () => { const g = UI.g;
       const T = __put(1, [['bulwark', 0, 0], ['bulwark', 20, 110], ['haven', 30, -110]], __cx + 190, __cy, Math.PI); __tough(T); for (const u of T) { u.shieldMax = 0; u.shield = 0; }
-      const M = __put(0, [['hammer', 0, 0], ['olympus', -20, 110], ['spear', 10, -100], ['hedgehog', 60, -40], ['needle', 70, 60]], __cx - 130, __cy, 0); for (const u of M) u.o = { t: 'hold' };
-      __fwd(130); UI.speed = 0.6; } ], opt: { each: view(2.0) } },
+      const M = __put(0, [['hammer', 0, 0], ['olympus', -20, 110], ['spear', 10, -100], ['hedgehog', 60, -40], ['needle', 70, 60]], __cx - 130, __cy, 0); execCmd(g, { t: 'attack', p: 0, u: M.map(u => u.id), e: T[0].id });
+      __fwd(260); UI.speed = 0.6; } ], opt: { each: view(1.7) } },
   { name: 'nexus', sec: 2, steps: [game(['nexus', 'alliance']), 3000, prep, () => { const g = UI.g;
       const T = __put(1, [['bulwark', 0, 0], ['bulwark', 20, 110], ['haven', 30, -110], ['lancer', -30, 50], ['lancer', -30, -50]], __cx + 190, __cy, Math.PI); __tough(T);
       const N = __put(0, [['monolith', 0, 0], ['prism', 10, 100], ['facet', -30, -110], ['shard', 60, 50], ['spire', 50, -50]], __cx - 130, __cy, 0); for (const u of N) u.o = { t: 'hold' };

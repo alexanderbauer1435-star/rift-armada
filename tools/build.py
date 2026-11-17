@@ -36,6 +36,12 @@ def build(version):
     appv = open(os.path.join(ROOT, 'APPVERSION'), encoding='utf-8').read().strip() + '.' + str(version)   # Versionsname wie im Play Store, z. B. 1.0.26
     errlog = open(os.path.join(SRC, 'errlog.js'), encoding='utf-8').read()
     out = shell.replace('/*FONT*/', font).replace('<!--SCRIPT-->', '<script>window.RA_OFFLINE = 1; window.RA_VERSION = %d; window.RA_BUILD = "%s"; window.RA_APPV = "%s";\n%s</script>\n<script>\ntry { window.__bootP && window.__bootP(0.78); } catch (e) {}\n%s\n</script>' % (version, bid, appv, errlog, js))
+    # Fassung 30: Geräusche aus Samples (src/snd/*.mp3, aufbereitet von tools/snd30.py) als Base64 einbetten
+    mp = os.path.join(SRC, 'snd', 'map.json')
+    if os.path.exists(mp):
+        import base64, json
+        m = json.load(open(mp)); smp = {k: {'g': v['g'], 'f': [base64.b64encode(open(os.path.join(SRC, 'snd', f), 'rb').read()).decode() for f in v['f']]} for k, v in m.items()}
+        out = out.replace('window.RA_OFFLINE = 1;', 'window.RA_OFFLINE = 1; window.RA_SMP = ' + json.dumps(smp, separators=(',', ':')) + ';', 1)
     out = out.replace('<body>', '<body>\n' + boot_html(), 1)   # Fassung 25: Startbild als erstes im Körper
     out = out.replace('%V%', appv)   # auch in den Übersetzungen (sonst stand dort »Version %V%«)
     name = 'Rift-Armada-%02d.html' % version
