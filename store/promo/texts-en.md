@@ -1,9 +1,10 @@
 # Rift Armada – closed beta promo texts (English)
 
-Videos (built by `bash tools/promo28.sh` into this folder; the mp4 files are not in the repository because of their size):
+Videos (built by `bash tools/promo28.sh` and `bash tools/promo29.sh` into this folder; the mp4 files are not in the repository because of their size):
 
 | File | Format | Use |
 |---|---|---|
+| `rift-armada-action-trailer.mp4` | 1920×1080, 85 s | YouTube action trailer with narration (section 4) |
 | `rift-armada-trailer-beta.mp4` | 1920×1080, 62 s | YouTube trailer |
 | `rift-armada-short-beta.mp4` | 1080×1920, 31 s | YouTube Short |
 | `rift-armada-reel-beta.mp4` | 1080×1920, 22 s | Instagram Reel |
@@ -117,3 +118,56 @@ https://groups.google.com/g/rts_tester
 **Story sticker text (optional)**
 
 Closed beta is open. Testers wanted → link in bio
+
+---
+
+## 4. YouTube action trailer "The Gates Went Silent"
+
+**Title**
+
+Rift Armada – "The Gates Went Silent" | Action Trailer (Closed Beta, Android)
+
+**Narration (spoken in the video, also shown as subtitles)**
+
+> For a hundred years, the gates held the worlds together.
+> Then, one by one, they went silent.
+> Something had come through.
+> Mars armed itself. The Legion marched. The Nexus watched.
+> Now everyone wants the Rift. And the Rift wants everyone.
+> Rift Armada. The closed beta is open. Join the fight.
+
+**Description**
+
+For a hundred years, the gates held the worlds together. Then, one by one, they went silent.
+
+Rift Armada is a real-time space strategy game for Android phones and tablets. Five factions fight over the Rift: The Alliance, the Martian Republic, the Golden Legion, The Nexus – and the Brood that came through it.
+
+The closed beta is open and we are looking for testers. It's free:
+
+1. Join the tester group: https://groups.google.com/g/rts_tester
+2. Opt in to the test: https://play.google.com/apps/testing/com.riftarmada.game
+3. Install the game from Google Play: https://play.google.com/store/apps/details?id=com.riftarmada.game
+
+Use the same Google account for all three steps. The store page only opens after you have joined the group and opted in.
+
+In the beta:
+• Build a base, mine ice and ore, command whole fleets
+• Five factions, each with its own ships and its own way to fight
+• Jump gates, artillery, carriers and capital ships
+• A story campaign, short sorties with star ratings and a daily challenge
+• Skirmish against the AI and a wave survival mode
+• No ads, no pay-to-win, and it plays offline
+
+Feedback: use the form in the game or write to rtsgame2026@gmail.com.
+
+Everything in this trailer was rendered with the game's own engine and ship models. The first part uses a free cinematic camera; the second part shows the game as you play it. The narration is a synthetic voice. This is a beta, so things may still change.
+
+0:00 The gates went silent
+0:14 The Rift
+0:24 Mars, the Legion, the Nexus
+0:38 Gameplay
+1:15 Join the closed beta
+
+**Tags**
+
+rift armada, space rts, rts android, real time strategy, mobile rts, space strategy game, cinematic trailer, action trailer, closed beta, beta testers wanted, android beta, indie game, offline game, no ads game, fleet battles, sci-fi strategy, space battle
