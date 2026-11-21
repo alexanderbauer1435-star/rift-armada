@@ -23,7 +23,11 @@ MAP = {
     'bigboom': ([K + 'lowFrequency_explosion_000.ogg', K + 'lowFrequency_explosion_001.ogg'], 1.80, 0.50, 0),
     'bboom':   ([K + 'lowFrequency_explosion_001.ogg'], 2.00, 0.60, 0),
     'shield':  ([K + 'forceField_00%d.ogg' % i for i in range(5)], 0.45, 0.07, 0),
-    'acid':    ([K + 'slime_000.ogg', K + 'slime_001.ogg'], 0.40, 0.08, 0),
+    'acid':    ([(M + 'WATRMisc_Water_Liquid_Impact_Bubble*.wav', 0.12, 0.55), K + 'slime_000.ogg', K + 'slime_001.ogg'], 0.40, 0.08, 0),
+    # Fassung 34
+    'sizzle':  ([(M + 'WATRMisc_Water_Liquid_Impact_Bubble*.wav', 0.30, 0.50)], 0.50, 0.06, 0.02),
+    'alarm':   ([(M + 'UIAlert_Alert_Designed_Transition_Swell_Creature*.wav', 0.04, 2.60)], 2.60, 0.14, 0),
+    'salvage': ([M + 'UIAlert_Collect_Scifi_Futuristic*.wav'], 0.25, 0.07, 0),
     # eine Quelle kann (Datei, Startzeit in s) sein, wenn die Aufnahme mehrere Ereignisse enthält
     'bite':    ([M + 'WOODImpt_Hit_Blood_Spill*.wav', (M + 'GORESplt_Gore_Designed*.wav', 0, 0.40), (M + 'SWSH_SWING_IMPACTS*.wav', 6.08, 0.42), (M + 'WEAPSwrd_Sword_Slide_Cuts*.wav', 0.20), K + 'slime_001.ogg'], 0.30, 0.10, 0),
     'shdown':  ([(M + 'ICEBrk_Skill_Freeze*.wav', 1.26)], 0.70, 0.12, 0),
