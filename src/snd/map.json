@@ -44,7 +44,9 @@
    "hit_1.mp3",
    "hit_2.mp3",
    "hit_3.mp3",
-   "hit_4.mp3"
+   "hit_4.mp3",
+   "hit_5.mp3",
+   "hit_6.mp3"
   ],
   "g": 0.086,
   "d": 0.35
@@ -53,10 +55,30 @@
   "f": [
    "sboom_0.mp3",
    "sboom_1.mp3",
-   "sboom_2.mp3"
+   "sboom_2.mp3",
+   "sboom_3.mp3"
   ],
   "g": 0.296,
   "d": 0.6
+ },
+ "cannon": {
+  "f": [
+   "cannon_0.mp3",
+   "cannon_1.mp3",
+   "cannon_2.mp3",
+   "cannon_3.mp3"
+  ],
+  "g": 0.321,
+  "d": 0.55
+ },
+ "auto": {
+  "f": [
+   "auto_0.mp3",
+   "auto_1.mp3",
+   "auto_2.mp3"
+  ],
+  "g": 0.111,
+  "d": 0.22
  },
  "boom": {
   "f": [
@@ -106,7 +128,8 @@
    "bite_0.mp3",
    "bite_1.mp3",
    "bite_2.mp3",
-   "bite_3.mp3"
+   "bite_3.mp3",
+   "bite_4.mp3"
   ],
   "g": 0.123,
   "d": 0.3

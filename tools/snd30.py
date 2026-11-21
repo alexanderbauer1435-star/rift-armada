@@ -14,15 +14,18 @@ MAP = {
     'pd':      ([K + 'laserSmall_00%d.ogg' % i for i in range(5)], 0.22, 0.05, 0),
     'rail':    ([L + 'Laser Rifle %d.wav' % i for i in (1, 2, 3)], 0.85, 0.30, 0),
     'lance':   ([L + 'Laser Beam %d.wav' % i for i in (1, 2)], 1.20, 0.24, 0),
-    'hit':     ([K + 'impactMetal_00%d.ogg' % i for i in range(5)], 0.35, 0.07, 0),
-    'sboom':   ([K + 'explosionCrunch_00%d.ogg' % i for i in (0, 1, 2)], 0.60, 0.24, 0),
+    'hit':     ([K + 'impactMetal_00%d.ogg' % i for i in range(5)] + [(M + 'METLImpt_METAL_SWING_HIT*.wav', 0.30, 0.45), M + 'GOREMisc_Concrete_MetalPipe02*.wav'], 0.35, 0.07, 0),
+    'sboom':   ([K + 'explosionCrunch_00%d.ogg' % i for i in (0, 1, 2)] + [M + 'EXPLDsgn_Explosion_Small_Blast*.wav'], 0.60, 0.24, 0),
+    # Fassung 33: Geschütze des Mars aus Feuerwerksknallen (Einzelschläge) und Peitschenknall
+    'cannon':  ([(M + '13_Fireworks_powerful*.wav', t) for t in (4.18, 5.36, 6.58, 8.02)], 0.55, 0.26, 0),
+    'auto':    ([(M + 'WEAPWhip_WHIP_Snap_Crack_05*.wav', 0.14), (M + '13_Fireworks_powerful*.wav', 9.08), (M + '13_Fireworks_powerful*.wav', 10.10)], 0.22, 0.09, 0),
     'boom':    ([K + 'explosionCrunch_00%d.ogg' % i for i in (3, 4)] + [K + 'lowFrequency_explosion_000.ogg'], 1.10, 0.34, 0),
     'bigboom': ([K + 'lowFrequency_explosion_000.ogg', K + 'lowFrequency_explosion_001.ogg'], 1.80, 0.50, 0),
     'bboom':   ([K + 'lowFrequency_explosion_001.ogg'], 2.00, 0.60, 0),
     'shield':  ([K + 'forceField_00%d.ogg' % i for i in range(5)], 0.45, 0.07, 0),
     'acid':    ([K + 'slime_000.ogg', K + 'slime_001.ogg'], 0.40, 0.08, 0),
     # eine Quelle kann (Datei, Startzeit in s) sein, wenn die Aufnahme mehrere Ereignisse enthält
-    'bite':    ([M + 'WOODImpt_Hit_Blood_Spill*.wav', (M + 'WEAPSwrd_Sword_Slide_Cuts*.wav', 0.20), (M + 'WEAPSwrd_Sword_Slide_Cuts*.wav', 2.24), K + 'slime_001.ogg'], 0.30, 0.10, 0),
+    'bite':    ([M + 'WOODImpt_Hit_Blood_Spill*.wav', (M + 'GORESplt_Gore_Designed*.wav', 0, 0.40), (M + 'SWSH_SWING_IMPACTS*.wav', 6.08, 0.42), (M + 'WEAPSwrd_Sword_Slide_Cuts*.wav', 0.20), K + 'slime_001.ogg'], 0.30, 0.10, 0),
     'shdown':  ([(M + 'ICEBrk_Skill_Freeze*.wav', 1.26)], 0.70, 0.12, 0),
     'ability': ([(M + 'DSGNStngr_Action_Deploy*.wav', 0.14)], 1.00, 0.10, 0),
     'click':   ([M + 'Interface_Pop_High_Short.wav'], 0.15, 0.07, 0),
@@ -53,9 +56,10 @@ def main(src):
         ent = []
         for i, pat in enumerate(files):
             st = 0
-            if isinstance(pat, tuple): pat, st = pat
+            md = maxd
+            if isinstance(pat, tuple): md = pat[2] if len(pat) > 2 else maxd; pat, st = pat[0], pat[1]
             hit = glob.glob(os.path.join(src, pat), recursive=True); assert hit, pat
-            x = load(hit[0]); x = shape(x[int(st * SR):int((st + maxd + 0.5) * SR)] if st else x, maxd, fin); fn = '%s_%d.mp3' % (name, i); p = os.path.join(OUT, fn)
+            x = load(hit[0]); x = shape(x[int(st * SR):int((st + md + 0.5) * SR)] if st else x, md, fin); fn = '%s_%d.mp3' % (name, i); p = os.path.join(OUT, fn)
             subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'f32le', '-ar', str(SR), '-ac', '1', '-i', '-', '-c:a', 'libmp3lame', '-b:a', '80k', p], input=x.astype(np.float32).tobytes(), check=True)
             d, c, r = feat(x); ent.append(fn); total += os.path.getsize(p); print('%-8s %-34s %.2f s  Schwerpunkt %5.0f Hz  rms %.3f' % (name, os.path.basename(hit[0]), d, c, r))
         out[name] = {'f': ent, 'g': round(peak / 0.81, 3), 'd': maxd}

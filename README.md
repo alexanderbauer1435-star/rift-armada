@@ -47,6 +47,8 @@
   Rauch, Funken, Säure), Aufblitzen bei Hüllentreffern, große Schiffe brechen in zwei glühende Wrackhälften,
   Stationen explodieren in mehreren Schüben; Schadensbild im Schiffsbild zwischengespeichert. Balancing aus KI-Serien:
   Legion und Brood wirtschaften besser (Gleaner und Grazer laden mehr, Herald günstiger).
+- Fassung 33 (Version 1.0.33): Geschütze des Mars aus Aufnahmen (schwere Kanone aus Feuerwerks-Einzelschlägen, Maschinenkanone aus
+  Peitschenknall und kurzen Schlägen), dazu weitere Varianten für Biss, Treffer und kleine Explosion; 26 Klänge mit 67 Varianten.
 - Fassung 32 (Version 1.0.32): weitere Samples (Einzeldateien des Projektinhabers): Biss, Schildbruch, Fähigkeit und acht
   Bedienklänge (Klick, Befehl, Platzieren, Fehler, gebaut, bereit, Ausbau, Alarm); jetzt 24 Klänge mit 56 Varianten.
 - Fassung 31 (Version 1.0.31): (1) Geräusche aus freien Sample-Paketen: 14 Klänge mit 44 Varianten (Strahl, Abwehr, Railgun,
